@@ -1,0 +1,8 @@
+run
+build
+bin
+.gradle
+.idea
+/mcmodsrepo/ca/bradj/questown/Questown/
+out
+logs
