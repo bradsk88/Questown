@@ -1,10 +1,12 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.DoorFinder;
 import ca.bradj.questown.logic.RoomDetector;
 import ca.bradj.questown.rooms.DoorPos;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
@@ -105,8 +107,23 @@ public class TownFlagBlock extends BaseEntityBlock {
                 Entity e
         ) {
             findDoors(level, blockPos, e);
-            for (RoomDetector rd : e.doors.values()) {
-//                rd.update(level) TODO: This
+            Collection<RoomDetector> values = ImmutableList.copyOf(e.doors.values());
+            for (RoomDetector rd : values) {
+                DoorPos doorPos = rd.getDoorPos();
+                if (level.isEmptyBlock(new BlockPos(doorPos.x, doorPos.y, doorPos.z))) {
+                    e.doors.remove(doorPos);
+                    Questown.LOGGER.debug("Removed door at pos " + doorPos);
+                    continue;
+                }
+                Questown.LOGGER.debug("Updating around door" + doorPos);
+                rd.update((DoorPos dp) -> {
+                    BlockPos bp = new BlockPos(dp.x, dp.y, dp.z);
+                    return !level.isEmptyBlock(bp);
+                });
+                if (rd.isRoom()) {
+                    Questown.LOGGER.debug("Room detected");
+                    Questown.LOGGER.debug("Corners: " + rd.getCorners());
+                }
             }
             // When a room is enclosed, trigger an event
         }
@@ -116,9 +133,12 @@ public class TownFlagBlock extends BaseEntityBlock {
                 BlockPos blockPos,
                 Entity e
         ) {
-            if (level.getGameTime() % 1000 != 0) {
+            long gameTime = level.getGameTime();
+            long l = gameTime % 50;
+            if (l != 0) {
                 return;
             }
+            Questown.LOGGER.info("Checking for doors");
             Collection<DoorPos> doors = DoorFinder.LocateDoorsAroundPosition(
                     new DoorPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()),
                     (DoorPos dp) -> {
@@ -131,6 +151,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     radius
             );
             doors.forEach(dp -> {
+                Questown.LOGGER.debug("Door detected at " + dp);
                 e.putDoor(dp, level.getBlockEntity(new BlockPos(dp.x, dp.y, dp.z)));
             });
         }

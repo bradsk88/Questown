@@ -20,15 +20,22 @@ public class ZWall {
             DoorPos cornerPos,
             int maxDistFromCorner
     ) {
-        int southCornerZ = 0, northCornerZ = 0;
+        int southCornerZ = -Integer.MAX_VALUE, northCornerZ = Integer.MAX_VALUE;
+        boolean started = false;
         for (int i = 0; i < maxDistFromCorner; i++) {
             DoorPos op = cornerPos.offset(0, 0, -i);
             if (wd.IsWall(op)) {
+                started = true;
                 southCornerZ = Math.max(southCornerZ, op.z);
                 northCornerZ = Math.min(northCornerZ, op.z);
+            } else if (started) {
+                break;
             }
         }
-        if (Math.abs(northCornerZ - southCornerZ) < 3) {
+        if (!started) {
+            return Optional.empty();
+        }
+        if (Math.abs(northCornerZ - southCornerZ) < 2) {
             return Optional.empty();
         }
         return Optional.of(
@@ -41,13 +48,20 @@ public class ZWall {
             DoorPos doorPos,
             int maxDistFromCorner
     ) {
-        int southCornerZ = 0, northCornerZ = 0;
+        int southCornerZ = -Integer.MAX_VALUE, northCornerZ = Integer.MAX_VALUE;
+        boolean started = false;
         for (int i = 0; i < maxDistFromCorner; i++) {
             DoorPos op = doorPos.offset(0, 0, i);
             if (wd.IsWall(op)) {
-                southCornerZ = Math.min(southCornerZ, op.z);
-                northCornerZ = Math.max(northCornerZ, op.z);
+                started = true;
+                southCornerZ = Math.max(southCornerZ, op.z);
+                northCornerZ = Math.min(northCornerZ, op.z);
+            } else if (started) {
+                break;
             }
+        }
+        if (!started) {
+            return Optional.empty();
         }
         if (Math.abs(northCornerZ - southCornerZ) < 2) {
             return Optional.empty();
