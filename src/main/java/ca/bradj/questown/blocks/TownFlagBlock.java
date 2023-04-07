@@ -2,6 +2,9 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.logic.DoorFinder;
+import ca.bradj.questown.logic.RoomDetector;
+import ca.bradj.questown.rooms.DoorPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
@@ -10,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -18,6 +22,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -72,8 +80,11 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     public static class Entity extends BlockEntity {
 
+        private static int radius = 20; // TODO: Move to config
+
         public static final String ID = "town_flag_block_entity";
-        private Entity mainBlock;
+
+        private final Map<DoorPos, RoomDetector> doors = new HashMap();
 
         public Entity(
                 BlockPos p_155229_,
@@ -93,9 +104,42 @@ public class TownFlagBlock extends BaseEntityBlock {
                 BlockState state,
                 Entity e
         ) {
-            // TODO: Scan for doors to detect rooms
+            findDoors(level, blockPos, e);
+            for (RoomDetector rd : e.doors.values()) {
+//                rd.update(level) TODO: This
+            }
             // When a room is enclosed, trigger an event
-            // TODO: Use config to determine search distance
+        }
+
+        private static void findDoors(
+                Level level,
+                BlockPos blockPos,
+                Entity e
+        ) {
+            if (level.getGameTime() % 1000 != 0) {
+                return;
+            }
+            Collection<DoorPos> doors = DoorFinder.LocateDoorsAroundPosition(
+                    new DoorPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()),
+                    (DoorPos dp) -> {
+                        BlockPos bp = new BlockPos(dp.x, dp.y, dp.z);
+                        if (level.isEmptyBlock(bp)) {
+                            return false;
+                        }
+                        return level.getBlockState(bp).getBlock() instanceof DoorBlock;
+                    },
+                    radius
+            );
+            doors.forEach(dp -> {
+                e.putDoor(dp, level.getBlockEntity(new BlockPos(dp.x, dp.y, dp.z)));
+            });
+        }
+
+        private void putDoor(
+                DoorPos dp,
+                BlockEntity blockEntity
+        ) {
+            this.doors.put(dp, new RoomDetector(dp, 5));
         }
     }
 }
