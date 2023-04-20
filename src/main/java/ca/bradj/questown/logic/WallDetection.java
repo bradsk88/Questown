@@ -79,4 +79,72 @@ public class WallDetection {
         }
         return Optional.empty();
     }
+
+    public static Optional<XWall> findNorthOrSouthWall(
+            int maxDistFromDoor,
+            RoomDetector.WallDetector wd,
+            XWall wall
+    ) {
+        int northLength = 0;
+        int southLength = 0;
+        Optional<ZWall> northWestWall = ZWall.northFromCorner(wd, wall.westCorner, maxDistFromDoor);
+        Optional<ZWall> northEastWall = ZWall.northFromCorner(wd, wall.eastCorner, maxDistFromDoor);
+        if (northEastWall.isPresent() && northWestWall.isPresent()) {
+            northLength = Math.min(
+                    northWestWall.get().getLength(),
+                    northEastWall.get().getLength()
+            );
+        }
+        Optional<ZWall> southWestWall = ZWall.southFromCorner(wd, wall.westCorner, maxDistFromDoor);
+        Optional<ZWall> southEastWall = ZWall.southFromCorner(wd, wall.eastCorner, maxDistFromDoor);
+        if (southEastWall.isPresent() && southWestWall.isPresent()) {
+            southLength = Math.min(
+                    southWestWall.get().getLength(),
+                    southEastWall.get().getLength()
+            );
+        }
+        if (northLength != 0 && Math.abs(northLength) > Math.abs(southLength)) {
+            if (northLength > 0) {
+                XWall foundWall = new XWall(northWestWall.get().northCorner, northEastWall.get().northCorner);
+                if (XWallLogic.isConnected(foundWall, wd)) {
+                    return Optional.of(foundWall);
+                }
+                ZWall swWall = northWestWall.get();
+                ZWall seWall = northEastWall.get();
+                while (swWall.getLength() > 2) {
+                    swWall = swWall.shortenNorthEnd(1);
+                    seWall = seWall.shortenNorthEnd(1);
+                    XWall sWall = new XWall(swWall.northCorner, seWall.northCorner);
+                    if (XWallLogic.isConnected(sWall, wd)) {
+                        return Optional.of(sWall);
+                    }
+                }
+            }
+            return Optional.of(
+                    new XWall(northWestWall.get().northCorner, northEastWall.get().northCorner)
+            );
+        }
+        if (southLength != 0) {
+            if (southLength > 0) {
+                XWall foundWall = new XWall(southWestWall.get().southCorner, southEastWall.get().southCorner);
+                if (XWallLogic.isConnected(foundWall, wd)) {
+                    return Optional.of(foundWall);
+                }
+                ZWall swWall = southWestWall.get();
+                ZWall seWall = southEastWall.get();
+                while (swWall.getLength() > 2) {
+                    swWall = swWall.shortenSouthEnd(1);
+                    seWall = seWall.shortenSouthEnd(1);
+                    XWall sWall = new XWall(swWall.southCorner, seWall.southCorner);
+                    if (XWallLogic.isConnected(sWall, wd)) {
+                        return Optional.of(sWall);
+                    }
+                }
+            }
+            return Optional.of(
+                    new XWall(southWestWall.get().southCorner, southEastWall.get().southCorner)
+            );
+        }
+        return Optional.empty();
+    }
 }

@@ -6,6 +6,16 @@ import ca.bradj.questown.rooms.XWall;
 import java.util.Optional;
 
 public class XWallLogic {
+    public static boolean isConnected(XWall wall, RoomDetector.WallDetector wd) {
+        for (int i = wall.westCorner.x; i < wall.eastCorner.x; i++) {
+            if (wd.IsWall(wall.westCorner.offset(i, 0, 0))) {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
     public static Optional<XWall> eastFromCorner(
             RoomDetector.WallDetector wd,
             Position northCorner,

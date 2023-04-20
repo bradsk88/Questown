@@ -77,4 +77,15 @@ public class ZWall {
                 new ZWall(doorPos.WithZ(southCornerZ), doorPos.WithZ(northCornerZ))
         );
     }
+
+    public int getLength() {
+        return southCorner.z - northCorner.z;
+    }
+
+    public ZWall shortenSouthEnd(int i) {
+        return new ZWall(northCorner, southCorner.WithZ(southCorner.z - i));
+    }
+    public ZWall shortenNorthEnd(int i) {
+        return new ZWall(northCorner.WithZ(northCorner.z + i), southCorner);
+    }
 }

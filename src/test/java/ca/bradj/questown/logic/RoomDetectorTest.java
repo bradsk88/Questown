@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RoomDetectorTest {
 
     @Test
-    public void Test_DetectSimpleRoom() {
+    public void Test_DetectSimpleRoom_N() {
 
         // A = air
         // W = wall
@@ -20,6 +20,105 @@ class RoomDetectorTest {
         String[][] map = {
                 {"W", "D", "W", "A"},
                 {"W", "A", "W", "A"},
+                {"W", "W", "W", "A"}
+        };
+
+        RoomDetector rd = new RoomDetector(new Position(1, 0, 0), 4);
+        rd.update((Position dp) -> {
+            if (dp.x < 0 || dp.z < 0) {
+                return false;
+            }
+            if (dp.x >= map[0].length || dp.z >= map.length) {
+                return false;
+            }
+            return "W".equals(map[dp.z][dp.x]) || "D".equals(map[dp.z][dp.x]);
+        });
+        assertTrue(rd.isRoom());
+
+        ImmutableSet<Position> expectedCorners = ImmutableSet.of(
+                new Position(0, 0, 0),
+                new Position(2, 0, 0),
+                new Position(2, 0, 2),
+                new Position(0, 0, 2)
+        );
+        assertEquals(expectedCorners, rd.getCorners());
+
+    }
+@Test
+    public void Test_DetectSimpleRoom_E() {
+
+        // A = air
+        // W = wall
+        // D = door
+        String[][] map = {
+                {"W", "W", "W", "A"},
+                {"W", "A", "D", "A"},
+                {"W", "W", "W", "A"}
+        };
+
+        RoomDetector rd = new RoomDetector(new Position(1, 0, 0), 4);
+        rd.update((Position dp) -> {
+            if (dp.x < 0 || dp.z < 0) {
+                return false;
+            }
+            if (dp.x >= map[0].length || dp.z >= map.length) {
+                return false;
+            }
+            return "W".equals(map[dp.z][dp.x]) || "D".equals(map[dp.z][dp.x]);
+        });
+        assertTrue(rd.isRoom());
+
+        ImmutableSet<Position> expectedCorners = ImmutableSet.of(
+                new Position(0, 0, 0),
+                new Position(2, 0, 0),
+                new Position(2, 0, 2),
+                new Position(0, 0, 2)
+        );
+        assertEquals(expectedCorners, rd.getCorners());
+
+    }
+@Test
+    public void Test_DetectSimpleRoom_S() {
+
+        // A = air
+        // W = wall
+        // D = door
+        String[][] map = {
+                {"W", "W", "W", "A"},
+                {"W", "A", "W", "A"},
+                {"W", "D", "W", "A"}
+        };
+
+        RoomDetector rd = new RoomDetector(new Position(1, 0, 0), 4);
+        rd.update((Position dp) -> {
+            if (dp.x < 0 || dp.z < 0) {
+                return false;
+            }
+            if (dp.x >= map[0].length || dp.z >= map.length) {
+                return false;
+            }
+            return "W".equals(map[dp.z][dp.x]) || "D".equals(map[dp.z][dp.x]);
+        });
+        assertTrue(rd.isRoom());
+
+        ImmutableSet<Position> expectedCorners = ImmutableSet.of(
+                new Position(0, 0, 0),
+                new Position(2, 0, 0),
+                new Position(2, 0, 2),
+                new Position(0, 0, 2)
+        );
+        assertEquals(expectedCorners, rd.getCorners());
+
+    }
+@Test
+    public void Test_DetectSimpleRoom_W() {
+
+        // A = air
+        // W = wall
+        // D = door
+        String[][] map = {
+                {"W", "W", "W", "A"},
+                {"D", "A", "W", "A"},
                 {"W", "W", "W", "A"}
         };
 
