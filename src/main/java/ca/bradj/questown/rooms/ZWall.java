@@ -1,29 +1,36 @@
 package ca.bradj.questown.rooms;
 
+import ca.bradj.questown.core.space.Position;
 import ca.bradj.questown.logic.RoomDetector;
 
 import java.util.Optional;
 
 public class ZWall {
-    public final DoorPos northCorner;
-    public final DoorPos southCorner;
+    public final Position northCorner;
+    public final Position southCorner;
 
     public ZWall(
-            DoorPos northCorner,
-            DoorPos southCorner
+            Position northCorner,
+            Position southCorner
     ) {
-        this.northCorner = northCorner;
-        this.southCorner = southCorner;
+        Position nc = northCorner;
+        Position sc = southCorner;
+        if (nc.z > sc.z) {
+            nc = southCorner;
+            sc = northCorner;
+        }
+        this.northCorner = nc;
+        this.southCorner = sc;
     }
     public static Optional<ZWall> northFromCorner(
             RoomDetector.WallDetector wd,
-            DoorPos cornerPos,
+            Position cornerPos,
             int maxDistFromCorner
     ) {
         int southCornerZ = -Integer.MAX_VALUE, northCornerZ = Integer.MAX_VALUE;
         boolean started = false;
         for (int i = 0; i < maxDistFromCorner; i++) {
-            DoorPos op = cornerPos.offset(0, 0, -i);
+            Position op = cornerPos.offset(0, 0, -i);
             if (wd.IsWall(op)) {
                 started = true;
                 southCornerZ = Math.max(southCornerZ, op.z);
@@ -45,13 +52,13 @@ public class ZWall {
 
     public static Optional<ZWall> southFromCorner(
             RoomDetector.WallDetector wd,
-            DoorPos doorPos,
+            Position doorPos,
             int maxDistFromCorner
     ) {
         int southCornerZ = -Integer.MAX_VALUE, northCornerZ = Integer.MAX_VALUE;
         boolean started = false;
         for (int i = 0; i < maxDistFromCorner; i++) {
-            DoorPos op = doorPos.offset(0, 0, i);
+            Position op = doorPos.offset(0, 0, i);
             if (wd.IsWall(op)) {
                 started = true;
                 southCornerZ = Math.max(southCornerZ, op.z);

@@ -1,6 +1,6 @@
 package ca.bradj.questown.logic;
 
-import ca.bradj.questown.rooms.DoorPos;
+import ca.bradj.questown.core.space.Position;
 import ca.bradj.questown.rooms.XWall;
 import ca.bradj.questown.rooms.ZWall;
 import com.google.common.collect.ImmutableSet;
@@ -9,27 +9,27 @@ import java.util.Optional;
 
 public class RoomDetector {
     private final int maxDistFromDoor;
-    private final DoorPos doorPos;
-    private ImmutableSet<DoorPos> corners = ImmutableSet.of();
+    private final Position doorPos;
+    private ImmutableSet<Position> corners = ImmutableSet.of();
 
     public boolean isRoom() {
         return corners.size() == 4;
     }
 
-    public ImmutableSet<DoorPos> getCorners() {
+    public ImmutableSet<Position> getCorners() {
         return corners;
     }
 
-    public DoorPos getDoorPos() {
+    public Position getDoorPos() {
         return doorPos;
     }
 
     public interface WallDetector {
-        boolean IsWall(DoorPos dp);
+        boolean IsWall(Position dp);
     }
 
     public RoomDetector(
-            DoorPos dp,
+            Position dp,
             int maxDistanceFromDoor
     ) {
         this.doorPos = dp;
@@ -37,57 +37,129 @@ public class RoomDetector {
     }
 
     public void update(WallDetector wd) {
-        Optional<XWall> wall = findEastWestWall(wd, doorPos);
-        if (wall.isPresent()) {
-            Optional<XWall> zWalls = findNorthSouthWalls(wd, wall.get());
-            zWalls.ifPresent(xWall -> {
-                if (zWalls.get().eastCorner.z != zWalls.get().westCorner.z) {
-                    return;
-                }
-
-                if (isConnected(xWall, wd)) {
-                    this.corners = ImmutableSet.of(
-                            wall.get().westCorner,
-                            wall.get().eastCorner,
-                            xWall.eastCorner,
-                            xWall.westCorner
-                    );
-                    return;
-                }
-
-                boolean connected = false;
-                if (xWall.eastCorner.z > wall.get().eastCorner.z) {
-                    for (int i = xWall.eastCorner.z - 1; i > wall.get().eastCorner.z; i--) {
-                        XWall shifted = new XWall(xWall.westCorner.WithZ(i), xWall.eastCorner.WithZ(i));
-                        if (isConnected(shifted, wd)) {
-                            connected = true;
-                            xWall = shifted;
-                            break;
-                        }
-                    }
-                } else {
-                    for (int i = wall.get().eastCorner.z - 1; i > xWall.eastCorner.z; i--) { // TODO: Unit test for reverse comparison and --
-                        XWall shifted = new XWall(xWall.westCorner.WithZ(i), xWall.eastCorner.WithZ(i));
-                        if (isConnected(shifted, wd)) {
-                            connected = true;
-                            xWall = shifted;
-                            break;
-                        }
-                    }
-                }
-
-                if (!connected) {
-                    return;
-                }
-
-                this.corners = ImmutableSet.of(
-                        wall.get().westCorner,
-                        wall.get().eastCorner,
-                        xWall.eastCorner,
-                        xWall.westCorner
-                );
-            });
+        if (this.checkEastWestFromDoor(wd)) {
+            return;
         }
+        this.checkNorthSouthFromDoor(wd);
+    }
+
+    public boolean checkEastWestFromDoor(WallDetector wd) {
+        Optional<XWall> wall = findEastToWestWall(wd, doorPos);
+        if (wall.isEmpty()) {
+            this.corners = ImmutableSet.of();
+            return false;
+        }
+        Optional<XWall> nsWall = findNorthOrSouthWall(wd, wall.get());
+        if (nsWall.isEmpty()) {
+            return false;
+        }
+        if (nsWall.get().eastCorner.z != nsWall.get().westCorner.z) {
+            return false;
+        }
+
+        XWall doorWall = wall.get();
+        if (isConnected(nsWall.get(), wd)) {
+            this.corners = ImmutableSet.of(
+                    wall.get().westCorner,
+                    wall.get().eastCorner,
+                    nsWall.get().eastCorner,
+                    nsWall.get().westCorner
+            );
+            return true;
+        }
+
+        boolean connected = false;
+        if (doorWall.eastCorner.z > wall.get().eastCorner.z) {
+            for (int i = doorWall.eastCorner.z - 1; i > wall.get().eastCorner.z; i--) {
+                XWall shifted = new XWall(doorWall.westCorner.WithZ(i), doorWall.eastCorner.WithZ(i));
+                if (isConnected(shifted, wd)) {
+                    connected = true;
+                    doorWall = shifted;
+                    break;
+                }
+            }
+        } else {
+            for (int i = wall.get().eastCorner.z - 1; i > doorWall.eastCorner.z; i--) { // TODO: Unit test for reverse comparison and --
+                XWall shifted = new XWall(doorWall.westCorner.WithZ(i), doorWall.eastCorner.WithZ(i));
+                if (isConnected(shifted, wd)) {
+                    connected = true;
+                    doorWall = shifted;
+                    break;
+                }
+            }
+        }
+
+        if (!connected) {
+            return false;
+        }
+
+        this.corners = ImmutableSet.of(
+                wall.get().westCorner,
+                wall.get().eastCorner,
+                doorWall.eastCorner,
+                doorWall.westCorner
+        );
+        return true;
+    }
+
+    public boolean checkNorthSouthFromDoor(WallDetector wd) {
+        Optional<ZWall> doorWall = WallDetection.findNorthToSouthWall(maxDistFromDoor, wd, doorPos);
+        if (doorWall.isEmpty()) {
+            this.corners = ImmutableSet.of();
+            return false;
+        }
+        Optional<ZWall> ewWall = WallDetection.findEastOrWestWall(maxDistFromDoor, wd, doorWall.get());
+        if (ewWall.isEmpty()) {
+            this.corners = ImmutableSet.of();
+            return false;
+        }
+        if (ewWall.get().northCorner.x != ewWall.get().southCorner.x) {
+            return false;
+        }
+
+        if (ZWallLogic.isConnected(ewWall.get(), wd)) {
+            this.corners = ImmutableSet.of(
+                    doorWall.get().northCorner,
+                    doorWall.get().southCorner,
+                    ewWall.get().northCorner,
+                    ewWall.get().southCorner
+            );
+            return true;
+        }
+        return false;
+
+//        return false;
+//        boolean connected = false;
+//        if (xWall.eastCorner.z > doorWall.get().eastCorner.z) {
+//            for (int i = xWall.eastCorner.z - 1; i > doorWall.get().eastCorner.z; i--) {
+//                XWall shifted = new XWall(xWall.westCorner.WithZ(i), xWall.eastCorner.WithZ(i));
+//                if (isConnected(shifted, wd)) {
+//                    connected = true;
+//                    xWall = shifted;
+//                    break;
+//                }
+//            }
+//        } else {
+//            for (int i = doorWall.get().eastCorner.z - 1; i > xWall.eastCorner.z; i--) { // TODO: Unit test for reverse comparison and --
+//                XWall shifted = new XWall(xWall.westCorner.WithZ(i), xWall.eastCorner.WithZ(i));
+//                if (isConnected(shifted, wd)) {
+//                    connected = true;
+//                    xWall = shifted;
+//                    break;
+//                }
+//            }
+//        }
+//
+//        if (!connected) {
+//            return;
+//        }
+//
+//        this.corners = ImmutableSet.of(
+//                doorWall.get().westCorner,
+//                doorWall.get().eastCorner,
+//                xWall.eastCorner,
+//                xWall.westCorner
+//        );
     }
 
     private boolean isConnected(
@@ -103,7 +175,7 @@ public class RoomDetector {
         return true;
     }
 
-    private Optional<XWall> findNorthSouthWalls(
+    private Optional<XWall> findNorthOrSouthWall(
             WallDetector wd,
             XWall wall
     ) {
@@ -148,14 +220,14 @@ public class RoomDetector {
         return Optional.empty();
     }
 
-    private Optional<XWall> findEastWestWall(
+    private Optional<XWall> findEastToWestWall(
             WallDetector wd,
-            DoorPos doorPos
+            Position doorPos
     ) {
         int westCornerX = Integer.MAX_VALUE, eastCornerX = -Integer.MAX_VALUE;
         boolean started = false;
         for (int i = 0; i < maxDistFromDoor; i++) {
-            DoorPos op = doorPos.offset(i, 0, 0);
+            Position op = doorPos.offset(i, 0, 0);
             if (wd.IsWall(op)) {
                 started = true;
                 westCornerX = Math.min(westCornerX, op.x);
@@ -165,7 +237,7 @@ public class RoomDetector {
             }
         }
         for (int i = 0; i < maxDistFromDoor; i++) {
-            DoorPos op = doorPos.offset(-i, 0, 0);
+            Position op = doorPos.offset(-i, 0, 0);
             if (wd.IsWall(op)) {
                 started = true;
                 westCornerX = Math.min(westCornerX, op.x);

@@ -1,6 +1,6 @@
 package ca.bradj.questown.logic;
 
-import ca.bradj.questown.rooms.DoorPos;
+import ca.bradj.questown.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
@@ -20,16 +20,16 @@ class DoorFinderTest {
                 {false, false, false, false}
         };
 
-        ImmutableList<DoorPos> expected = ImmutableList.of(
-                new DoorPos(0, 0, 0),
-                new DoorPos(3, 0, 0),
-                new DoorPos(1, 0, 1),
-                new DoorPos(2, 0, 2)
+        ImmutableList<Position> expected = ImmutableList.of(
+                new Position(0, 0, 0),
+                new Position(3, 0, 0),
+                new Position(1, 0, 1),
+                new Position(2, 0, 2)
         );
 
-        Collection<DoorPos> dps = DoorFinder.LocateDoorsAroundPosition(
-                new DoorPos(0, 0, 0),
-                (DoorPos dp) -> {
+        Collection<Position> dps = DoorFinder.LocateDoorsAroundPosition(
+                new Position(0, 0, 0),
+                (Position dp) -> {
                     if (dp.x < 0 || dp.z < 0) {
                         return false;
                     }

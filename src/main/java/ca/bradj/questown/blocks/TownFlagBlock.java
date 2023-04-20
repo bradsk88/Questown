@@ -1,12 +1,13 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.adapter.Positions;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.logic.DoorFinder;
+import ca.bradj.questown.core.space.InclusiveSpace;
 import ca.bradj.questown.logic.RoomDetector;
-import ca.bradj.questown.rooms.DoorPos;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.core.space.Position;
+import ca.bradj.questown.render.RoomEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
@@ -15,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -25,7 +27,6 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,13 +81,13 @@ public class TownFlagBlock extends BaseEntityBlock {
         return InteractionResult.PASS;
     }
 
-    public static class Entity extends BlockEntity {
+    public static class Entity extends BlockEntity implements TownCycle.BlockChecker, TownCycle.DoorsListener, TownCycle.NewRoomHandler {
 
         private static int radius = 20; // TODO: Move to config
 
         public static final String ID = "town_flag_block_entity";
 
-        private final Map<DoorPos, RoomDetector> doors = new HashMap();
+        private final Map<Position, RoomDetector> doors = new HashMap();
 
         public Entity(
                 BlockPos p_155229_,
@@ -106,61 +107,55 @@ public class TownFlagBlock extends BaseEntityBlock {
                 BlockState state,
                 Entity e
         ) {
-            findDoors(level, blockPos, e);
-            Collection<RoomDetector> values = ImmutableList.copyOf(e.doors.values());
-            for (RoomDetector rd : values) {
-                DoorPos doorPos = rd.getDoorPos();
-                if (level.isEmptyBlock(new BlockPos(doorPos.x, doorPos.y, doorPos.z))) {
-                    e.doors.remove(doorPos);
-                    Questown.LOGGER.debug("Removed door at pos " + doorPos);
-                    continue;
-                }
-                Questown.LOGGER.debug("Updating around door" + doorPos);
-                rd.update((DoorPos dp) -> {
-                    BlockPos bp = new BlockPos(dp.x, dp.y, dp.z);
-                    return !level.isEmptyBlock(bp);
-                });
-                if (rd.isRoom()) {
-                    Questown.LOGGER.debug("Room detected");
-                    Questown.LOGGER.debug("Corners: " + rd.getCorners());
-                }
+            if (level.isClientSide()) {
+                return;
             }
-            // When a room is enclosed, trigger an event
-        }
 
-        private static void findDoors(
-                Level level,
-                BlockPos blockPos,
-                Entity e
-        ) {
             long gameTime = level.getGameTime();
             long l = gameTime % 50;
             if (l != 0) {
                 return;
             }
-            Questown.LOGGER.info("Checking for doors");
-            Collection<DoorPos> doors = DoorFinder.LocateDoorsAroundPosition(
-                    new DoorPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()),
-                    (DoorPos dp) -> {
-                        BlockPos bp = new BlockPos(dp.x, dp.y, dp.z);
-                        if (level.isEmptyBlock(bp)) {
-                            return false;
-                        }
-                        return level.getBlockState(bp).getBlock() instanceof DoorBlock;
-                    },
-                    radius
-            );
-            doors.forEach(dp -> {
-                Questown.LOGGER.debug("Door detected at " + dp);
-                e.putDoor(dp, level.getBlockEntity(new BlockPos(dp.x, dp.y, dp.z)));
-            });
+
+            TownCycle.townTick(Positions.FromBlockPos(e.getBlockPos()), e, e.doors.values(), e, e);
         }
 
-        private void putDoor(
-                DoorPos dp,
-                BlockEntity blockEntity
-        ) {
+        private void putDoor(Position dp) {
+            if (this.doors.containsKey(dp)) {
+                return;
+            }
             this.doors.put(dp, new RoomDetector(dp, 5));
+        }
+
+        @Override
+        public boolean IsEmpty(Position dp) {
+            return level.isEmptyBlock(Positions.ToBlock(dp));
+        }
+
+        @Override
+        public boolean IsDoor(Position dp) {
+            return level.getBlockState(Positions.ToBlock(dp)).getBlock() instanceof DoorBlock;
+        }
+
+        @Override
+        public void DoorAdded(Position dp) {
+            this.putDoor(dp);
+        }
+
+        @Override
+        public void DoorRemoved(Position dp) {
+            this.doors.remove(dp);
+        }
+
+        @Override
+        public void newRoomDetected(InclusiveSpace space) {
+            RoomEffects.renderParticlesBetween(space, (x, y, z) -> {
+                BlockPos bp = new BlockPos(x, y, z);
+                if (!level.isEmptyBlock(bp)) {
+                    return;
+                }
+                level.setBlock(bp, Blocks.ICE.defaultBlockState(), 1);
+            });
         }
     }
 }

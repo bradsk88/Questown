@@ -1,12 +1,14 @@
 package ca.bradj.questown.rooms;
 
+import ca.bradj.questown.core.space.Position;
+
 public class XWall {
-    public final DoorPos westCorner;
-    public final DoorPos eastCorner;
+    public final Position westCorner;
+    public final Position eastCorner;
 
     public XWall(
-            DoorPos westCorner,
-            DoorPos eastCorner
+            Position westCorner,
+            Position eastCorner
     ) {
         this.westCorner = westCorner;
         this.eastCorner = eastCorner;

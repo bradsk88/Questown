@@ -1,9 +1,9 @@
-package ca.bradj.questown.rooms;
+package ca.bradj.questown.core.space;
 
 import java.util.Objects;
 
-public class DoorPos {
-    public DoorPos(
+public class Position {
+    public Position(
             int x,
             int y,
             int z
@@ -26,27 +26,27 @@ public class DoorPos {
                 '}';
     }
 
-    public DoorPos offset(
+    public Position offset(
             int x,
             int y,
             int z
     ) {
-        return new DoorPos(this.x + x, this.y + y, this.z + z);
+        return new Position(this.x + x, this.y + y, this.z + z);
     }
 
-    public DoorPos WithX(int x) {
-        return new DoorPos(x, this.y, this.z);
+    public Position WithX(int x) {
+        return new Position(x, this.y, this.z);
     }
 
-    public DoorPos WithZ(int z) {
-        return new DoorPos(this.x, this.y, z);
+    public Position WithZ(int z) {
+        return new Position(this.x, this.y, z);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        DoorPos doorPos = (DoorPos) o;
+        Position doorPos = (Position) o;
         return x == doorPos.x && y == doorPos.y && z == doorPos.z;
     }
 
