@@ -401,10 +401,10 @@ class RoomDetectorTest {
         assertTrue(rd.isRoom());
 
         ImmutableSet<Position> expectedCorners = ImmutableSet.of(
-                new Position(0, 0, 0),
-                new Position(2, 0, 0),
-                new Position(2, 0, 2),
-                new Position(0, 0, 2)
+                new Position(0, 0, 1), // Top left of room
+                new Position(2, 0, 1), // Top right of room
+                new Position(2, 0, 3), // Bottom right of room
+                new Position(0, 0, 3) // Bottom left of room
         );
         assertEquals(expectedCorners, rd.getCorners());
     }
@@ -433,10 +433,10 @@ class RoomDetectorTest {
         assertTrue(rd.isRoom());
 
         ImmutableSet<Position> expectedCorners = ImmutableSet.of(
-                new Position(0, 0, 0),
-                new Position(2, 0, 0),
-                new Position(2, 0, 2),
-                new Position(0, 0, 2)
+                new Position(1, 0, 0),
+                new Position(3, 0, 0),
+                new Position(3, 0, 2),
+                new Position(1, 0, 2)
         );
         assertEquals(expectedCorners, rd.getCorners());
     }

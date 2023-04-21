@@ -44,64 +44,30 @@ public class RoomDetector {
     }
 
     public boolean findNorthOrSouthWallFromDoor(WallDetector wd) {
-        Optional<XWall> wall = findEastToWestWall(wd, doorPos);
-        if (wall.isEmpty()) {
+        Optional<XWall> doorWall = WallDetection.findEastToWestWall(maxDistFromDoor, wd, doorPos);
+        if (doorWall.isEmpty()) {
             this.corners = ImmutableSet.of();
             return false;
         }
-        Optional<XWall> nsWall = WallDetection.findNorthOrSouthWall(
-                maxDistFromDoor, wd, wall.get()
-        );
-        if (nsWall.isEmpty()) {
+        Optional<XWall> ewWall = WallDetection.findParallelRoomXWall(maxDistFromDoor, wd, doorWall.get());
+        if (ewWall.isEmpty()) {
+            this.corners = ImmutableSet.of();
             return false;
         }
-        if (nsWall.get().eastCorner.z != nsWall.get().westCorner.z) {
+        if (ewWall.get().westCorner.z != ewWall.get().eastCorner.z) {
             return false;
         }
 
-        XWall doorWall = wall.get();
-        if (isConnected(nsWall.get(), wd)) {
+        if (XWallLogic.isConnected(ewWall.get(), wd)) {
             this.corners = ImmutableSet.of(
-                    wall.get().westCorner,
-                    wall.get().eastCorner,
-                    nsWall.get().eastCorner,
-                    nsWall.get().westCorner
+                    doorWall.get().westCorner,
+                    doorWall.get().eastCorner,
+                    ewWall.get().westCorner,
+                    ewWall.get().eastCorner
             );
             return true;
         }
-
-        boolean connected = false;
-        if (doorWall.eastCorner.z > wall.get().eastCorner.z) {
-            for (int i = doorWall.eastCorner.z - 1; i > wall.get().eastCorner.z; i--) {
-                XWall shifted = new XWall(doorWall.westCorner.WithZ(i), doorWall.eastCorner.WithZ(i));
-                if (isConnected(shifted, wd)) {
-                    connected = true;
-                    doorWall = shifted;
-                    break;
-                }
-            }
-        } else {
-            for (int i = wall.get().eastCorner.z - 1; i > doorWall.eastCorner.z; i--) { // TODO: Unit test for reverse comparison and --
-                XWall shifted = new XWall(doorWall.westCorner.WithZ(i), doorWall.eastCorner.WithZ(i));
-                if (isConnected(shifted, wd)) {
-                    connected = true;
-                    doorWall = shifted;
-                    break;
-                }
-            }
-        }
-
-        if (!connected) {
-            return false;
-        }
-
-        this.corners = ImmutableSet.of(
-                wall.get().westCorner,
-                wall.get().eastCorner,
-                doorWall.eastCorner,
-                doorWall.westCorner
-        );
-        return true;
+        return false;
     }
 
     public boolean findEastOrWestWallFromDoor(WallDetector wd) {
@@ -110,7 +76,7 @@ public class RoomDetector {
             this.corners = ImmutableSet.of();
             return false;
         }
-        Optional<ZWall> ewWall = WallDetection.findEastOrWestWall(maxDistFromDoor, wd, doorWall.get());
+        Optional<ZWall> ewWall = WallDetection.findParallelRoomZWall(maxDistFromDoor, wd, doorWall.get());
         if (ewWall.isEmpty()) {
             this.corners = ImmutableSet.of();
             return false;
@@ -142,43 +108,6 @@ public class RoomDetector {
             }
         }
         return true;
-    }
-
-    private Optional<XWall> findEastToWestWall(
-            WallDetector wd,
-            Position doorPos
-    ) {
-        int westCornerX = Integer.MAX_VALUE, eastCornerX = -Integer.MAX_VALUE;
-        boolean started = false;
-        for (int i = 0; i < maxDistFromDoor; i++) {
-            Position op = doorPos.offset(i, 0, 0);
-            if (wd.IsWall(op)) {
-                started = true;
-                westCornerX = Math.min(westCornerX, op.x);
-                eastCornerX = Math.max(eastCornerX, op.x);
-            } else if (started) {
-                break;
-            }
-        }
-        for (int i = 0; i < maxDistFromDoor; i++) {
-            Position op = doorPos.offset(-i, 0, 0);
-            if (wd.IsWall(op)) {
-                started = true;
-                westCornerX = Math.min(westCornerX, op.x);
-                eastCornerX = Math.max(eastCornerX, op.x);
-            } else if (started) {
-                break;
-            }
-        }
-        if (!started) {
-            return Optional.empty();
-        }
-        if (Math.abs(eastCornerX - westCornerX) < 2) {
-            return Optional.empty();
-        }
-        return Optional.of(
-                new XWall(doorPos.WithX(westCornerX), doorPos.WithX(eastCornerX))
-        );
     }
 
 }

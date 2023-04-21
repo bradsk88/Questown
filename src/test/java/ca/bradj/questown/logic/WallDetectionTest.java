@@ -56,7 +56,7 @@ class WallDetectionTest {
                 new Position(0, 0, 2)
         );
 
-        Optional<ZWall> wall = WallDetection.findEastOrWestWall(4, (Position dp) -> {
+        Optional<ZWall> wall = WallDetection.findParallelRoomZWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }
@@ -89,7 +89,7 @@ class WallDetectionTest {
                 new Position(2, 0, 2)
         );
 
-        Optional<ZWall> wall = WallDetection.findEastOrWestWall(4, (Position dp) -> {
+        Optional<ZWall> wall = WallDetection.findParallelRoomZWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }
@@ -122,7 +122,7 @@ class WallDetectionTest {
                 new Position(2, 0, 2)
         );
 
-        Optional<XWall> wall = WallDetection.findNorthOrSouthWall(4, (Position dp) -> {
+        Optional<XWall> wall = WallDetection.findParallelRoomXWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }
@@ -155,7 +155,7 @@ class WallDetectionTest {
                 new Position(2, 0, 0)
         );
 
-        Optional<XWall> wall = WallDetection.findNorthOrSouthWall(4, (Position dp) -> {
+        Optional<XWall> wall = WallDetection.findParallelRoomXWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }
@@ -189,7 +189,7 @@ class WallDetectionTest {
                 new Position(2, 0, 3)
         );
 
-        Optional<XWall> wall = WallDetection.findNorthOrSouthWall(4, (Position dp) -> {
+        Optional<XWall> wall = WallDetection.findParallelRoomXWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }
@@ -224,7 +224,7 @@ class WallDetectionTest {
                 new Position(2, 0, 0)
         );
 
-        Optional<XWall> wall = WallDetection.findNorthOrSouthWall(4, (Position dp) -> {
+        Optional<XWall> wall = WallDetection.findParallelRoomXWall(4, (Position dp) -> {
             if (dp.x < 0 || dp.z < 0) {
                 return false;
             }

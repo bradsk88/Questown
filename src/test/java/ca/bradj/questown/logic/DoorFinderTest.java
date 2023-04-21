@@ -27,7 +27,7 @@ class DoorFinderTest {
                 new Position(2, 0, 2)
         );
 
-        Collection<Position> dps = DoorFinder.LocateDoorsAroundPosition(
+        Collection<Position> dps = DoorDetection.LocateDoorsAroundPosition(
                 new Position(0, 0, 0),
                 (Position dp) -> {
                     if (dp.x < 0 || dp.z < 0) {

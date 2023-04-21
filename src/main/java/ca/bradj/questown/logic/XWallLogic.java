@@ -7,8 +7,9 @@ import java.util.Optional;
 
 public class XWallLogic {
     public static boolean isConnected(XWall wall, RoomDetector.WallDetector wd) {
-        for (int i = wall.westCorner.x; i < wall.eastCorner.x; i++) {
-            if (wd.IsWall(wall.westCorner.offset(i, 0, 0))) {
+        for (int i = wall.westCorner.x; i <= wall.eastCorner.x; i++) {
+            Position shifted = wall.westCorner.WithX(i);
+            if (wd.IsWall(shifted)) {
                 continue;
             }
             return false;

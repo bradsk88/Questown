@@ -61,7 +61,7 @@ public class TownCycle {
             DoorsListener dl
     ) {
         Questown.LOGGER.info("Checking for doors");
-        Collection<Position> doors = DoorFinder.LocateDoorsAroundPosition(
+        Collection<Position> doors = DoorDetection.LocateDoorsAroundPosition(
                 townBlockPosition, (Position dp) -> {
                     if (blocks.IsEmpty(dp)) {
                         return false;

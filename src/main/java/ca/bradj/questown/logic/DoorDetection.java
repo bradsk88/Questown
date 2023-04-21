@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.Collection;
 
-public class DoorFinder {
+public class DoorDetection {
 
     public interface DoorChecker {
         boolean IsDoor(Position pos);

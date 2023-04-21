@@ -9,7 +9,9 @@ import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.core.space.Position;
 import ca.bradj.questown.render.RoomEffects;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -151,10 +153,13 @@ public class TownFlagBlock extends BaseEntityBlock {
         public void newRoomDetected(InclusiveSpace space) {
             RoomEffects.renderParticlesBetween(space, (x, y, z) -> {
                 BlockPos bp = new BlockPos(x, y, z);
+                if (!(level instanceof ServerLevel)) {
+                    return;
+                }
                 if (!level.isEmptyBlock(bp)) {
                     return;
                 }
-                level.setBlock(bp, Blocks.ICE.defaultBlockState(), 1);
+                ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x + 0.5D, y + 0.5D, z + 0.5D, 1, 0, 1, 0, 1);
             });
         }
     }
