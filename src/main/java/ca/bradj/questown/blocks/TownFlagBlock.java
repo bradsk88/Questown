@@ -222,7 +222,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                 level.getServer().getPlayerList().broadcastMessage(
                         new TranslatableComponent(
                                 "messages.building.room_created",
-                                new TranslatableComponent("room." + recipe.get().getId()),
+                                new TranslatableComponent("room." + recipe.get().getId().getPath()),
                                 doorPos.getUIString()
                         ),
                         ChatType.GAME_INFO, null
@@ -235,8 +235,8 @@ public class TownFlagBlock extends BaseEntityBlock {
                     level.getServer().getPlayerList().broadcastMessage(
                             new TranslatableComponent(
                                     "messages.building.room_changed",
-                                    new TranslatableComponent("room." + currentRecipe.getId()),
-                                    new TranslatableComponent("room." + recipe.get().getId()),
+                                    new TranslatableComponent("room." + currentRecipe.getId().getPath()),
+                                    new TranslatableComponent("room." + recipe.get().getId().getPath()),
                                     doorPos.getUIString()
                             ),
                             ChatType.GAME_INFO, null
@@ -253,7 +253,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             level.getServer().getPlayerList().broadcastMessage(
                     new TranslatableComponent(
                             "messages.building.room_destroyed",
-                            new TranslatableComponent("room." + roomRecipe.getId()),
+                            new TranslatableComponent("room." + roomRecipe.getId().getPath()),
                             doorPos.getUIString()
                     ),
                     ChatType.GAME_INFO, null

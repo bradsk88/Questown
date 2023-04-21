@@ -1,0 +1,8 @@
+{
+  "type": "questown:room",
+  "ingredients": [
+    {
+      "item": "minecraft:chest"
+    }
+  ]
+}
