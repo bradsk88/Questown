@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,8 +23,11 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
+    private final int recipeStrength;
+
     @Override
     public String toString() {
         return "RoomRecipe{" +
@@ -37,10 +41,12 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
 
     public RoomRecipe(
             ResourceLocation id,
-            NonNullList<Ingredient> recipeItems
+            NonNullList<Ingredient> recipeItems,
+            int recipeStrength
     ) {
         this.id = id;
         this.recipeItems = recipeItems;
+        this.recipeStrength = recipeStrength;
     }
 
     @Override
@@ -62,9 +68,13 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
                 found.add(foundIng);
             }
         }
-        ImmutableMultiset<Ingredient> foundMS = ImmutableMultiset.copyOf(found);
-        ImmutableMultiset<Ingredient> recipeMS = ImmutableMultiset.copyOf(recipeItems);
-        return foundMS.containsAll(recipeMS);
+        ImmutableMultiset<JsonElement> foundMS = ImmutableMultiset.copyOf(found.stream()
+                .map(Ingredient::toJson)
+                .collect(Collectors.toList()));
+        ImmutableMultiset<JsonElement> recipeMS = ImmutableMultiset.copyOf(recipeItems.stream()
+                .map(Ingredient::toJson)
+                .collect(Collectors.toList()));
+        return foundMS.size() >= recipeMS.size() && foundMS.containsAll(recipeMS);
     }
 
     @Override
@@ -107,7 +117,11 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
 
     @Override
     public int compareTo(@NotNull RoomRecipe roomRecipe) {
-        return Ints.compare(getIngredients().size(), roomRecipe.getIngredients().size());
+        int compare = Ints.compare(getIngredients().size(), roomRecipe.getIngredients().size());
+        if (compare == 0) {
+            return Ints.compare(this.recipeStrength, roomRecipe.recipeStrength);
+        }
+        return compare;
     }
 
     public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<RoomRecipe> {
@@ -124,7 +138,12 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
                 inputs.set(i, Ingredient.fromJson(ingredients.get(i)));
             }
 
-            return new RoomRecipe(recipeId, inputs);
+            int strength = 1;
+            if (json.has("recipe_strength")) {
+                strength = json.get("recipe_strength").getAsInt();
+            }
+
+            return new RoomRecipe(recipeId, inputs, strength);
         }
 
         @Nullable
@@ -138,7 +157,8 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
             for (int i = 0; i < rSize; i++) {
                 inputs.set(i, Ingredient.fromNetwork(buffer));
             }
-            return new RoomRecipe(recipeId, inputs);
+            int recipeStrength = buffer.readInt();
+            return new RoomRecipe(recipeId, inputs, recipeStrength);
         }
 
         @Override
@@ -151,6 +171,7 @@ public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
                 ing.toNetwork(buffer);
             }
             buffer.writeItem(recipe.getResultItem());
+            buffer.writeInt(recipe.recipeStrength);
         }
     }
 

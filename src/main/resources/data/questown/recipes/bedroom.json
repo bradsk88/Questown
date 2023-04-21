@@ -6,7 +6,10 @@
       "item": "minecraft:torch"
     },
     {
-      "item": "minecraft:crafting_table"
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
     }
   ]
 }

@@ -1,6 +1,10 @@
 {
   "type": "questown:room",
+  "recipe_strength": 1,
   "ingredients": [
+    {
+      "item": "minecraft:torch"
+    },
     {
       "item": "minecraft:chest"
     }

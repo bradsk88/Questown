@@ -6,10 +6,16 @@
       "item": "minecraft:torch"
     },
     {
-      "item": "minecraft:crafting_table"
+      "tag": "minecraft:beds"
     },
     {
-      "item": "minecraft:furnace"
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
     }
   ]
 }

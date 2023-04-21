@@ -74,7 +74,7 @@ public class TownCycle {
             Position townBlockPosition,
             DoorsListener dl
     ) {
-        Questown.LOGGER.info("Checking for doors");
+        Questown.LOGGER.trace("Checking for doors");
         Collection<Position> doors = DoorDetection.LocateDoorsAroundPosition(
                 townBlockPosition, (Position dp) -> {
                     if (blocks.IsEmpty(dp)) {
@@ -85,7 +85,7 @@ public class TownCycle {
                 30 // TODO: Constant or parameter
         );
         doors.forEach(dp -> {
-            Questown.LOGGER.debug("Door detected at " + dp);
+            Questown.LOGGER.trace("Door detected at " + dp);
             dl.DoorAdded(dp);
         });
     }
