@@ -53,7 +53,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public TownFlagBlock() {
         super(
                 BlockBehaviour.Properties.
-                        of(Material.WEB).
+                        of(Material.STONE).
                         strength(1f)
         );
     }
