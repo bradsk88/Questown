@@ -4,9 +4,9 @@ import ca.bradj.questown.adapter.Positions;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.space.InclusiveSpace;
+import ca.bradj.questown.core.space.Position;
 import ca.bradj.questown.logic.RoomDetector;
 import ca.bradj.questown.logic.TownCycle;
-import ca.bradj.questown.core.space.Position;
 import ca.bradj.questown.render.RoomEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -18,7 +18,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -131,7 +130,8 @@ public class TownFlagBlock extends BaseEntityBlock {
 
         @Override
         public boolean IsEmpty(Position dp) {
-            return level.isEmptyBlock(Positions.ToBlock(dp));
+            BlockPos bp = Positions.ToBlock(dp);
+            return level.isEmptyBlock(bp) || level.isEmptyBlock(bp.above());
         }
 
         @Override
@@ -159,7 +159,8 @@ public class TownFlagBlock extends BaseEntityBlock {
                 if (!level.isEmptyBlock(bp)) {
                     return;
                 }
-                ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x + 0.5D, y + 0.5D, z + 0.5D, 1, 0, 1, 0, 1);
+                ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 2, 0, 1, 0, 1);
+                ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y + 1, z, 2, 0, 1, 0, 1);
             });
         }
     }
