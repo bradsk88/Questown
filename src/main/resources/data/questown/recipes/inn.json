@@ -1,0 +1,48 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {
+      "item": "minecraft:torch"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "minecraft:signs"
+    }
+  ]
+}

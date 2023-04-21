@@ -1,9 +1,11 @@
 package ca.bradj.questown.logic;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.adapter.Positions;
-import ca.bradj.questown.core.space.InclusiveSpace;
-import ca.bradj.questown.core.space.Position;
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.DoorDetection;
+import ca.bradj.roomrecipes.logic.RoomDetector;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
