@@ -1,0 +1,11 @@
+{
+  "type": "questown:room",
+  "ingredients": [
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "minecraft:torch"
+    }
+  ]
+}

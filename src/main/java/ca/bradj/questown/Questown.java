@@ -3,6 +3,7 @@ package ca.bradj.questown;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.recipes.RecipesInit;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -34,6 +35,7 @@ public class Questown {
         TilesInit.TILES.register(bus);
         BlocksInit.BLOCKS.register(bus);
         ItemsInit.register(bus);
+        RecipesInit.register(bus);
     }
 
     private void setup(final FMLCommonSetupEvent event) {

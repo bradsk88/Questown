@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.adapter.Positions;
 import ca.bradj.questown.core.space.InclusiveSpace;
 import ca.bradj.questown.core.space.Position;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.Collection;
 
@@ -23,6 +24,11 @@ public class TownCycle {
 
     public interface NewRoomHandler {
         void newRoomDetected(InclusiveSpace space);
+        void roomDestroyed(Position doorPos, ImmutableSet<Position> space);
+    }
+
+    public interface RoomTicker {
+        void roomTick(Position doorPos, InclusiveSpace inclusiveSpace);
     }
 
     public static void townTick(
@@ -30,7 +36,8 @@ public class TownCycle {
             BlockChecker checker,
             Collection<RoomDetector> currentDoors,
             DoorsListener doors,
-            NewRoomHandler roomHandler
+            NewRoomHandler roomHandler,
+            RoomTicker roomTicker
     ) {
         findDoors(checker, townBlockPosition, doors);
         for (RoomDetector rd : currentDoors) {
@@ -42,6 +49,7 @@ public class TownCycle {
             }
             Questown.LOGGER.trace("Updating around door" + doorPos);
             boolean wasRoom = rd.isRoom();
+            ImmutableSet<Position> oldCorners = rd.getCorners();
             rd.update((Position dp) -> !checker.IsEmpty(dp));
 
             if (rd.isRoom() && !wasRoom) {
@@ -51,6 +59,11 @@ public class TownCycle {
                 roomHandler.newRoomDetected(space);
             } else if (wasRoom && !rd.isRoom()) {
                 Questown.LOGGER.debug("Room destroyed");
+                roomHandler.roomDestroyed(rd.getDoorPos(), oldCorners);
+            }
+
+            if (rd.isRoom()) {
+                roomTicker.roomTick(rd.getDoorPos(), Positions.getInclusiveSpace(rd.getCorners()));
             }
         }
     }

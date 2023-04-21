@@ -54,4 +54,8 @@ public class Position {
     public int hashCode() {
         return Objects.hash(x, y, z);
     }
+
+    public String getUIString() {
+        return String.format("[%d, %d, %d]", x, y, z);
+    }
 }

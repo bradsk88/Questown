@@ -1,3 +1,6 @@
 {
-	"itemGroup.questown": "Questown"
+	"itemGroup.questown": "Questown",
+	"messages.building.room_created": "%s created at location %s",
+	"messages.building.room_destroyed": "%s destroyed at location %s",
+	"room.questown:crafting_room": "Crafting Room"
 }
