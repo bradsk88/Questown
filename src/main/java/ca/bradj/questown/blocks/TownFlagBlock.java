@@ -11,7 +11,9 @@ import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.recipes.RecipesInit;
 import ca.bradj.questown.recipes.RoomRecipe;
 import ca.bradj.questown.render.RoomEffects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -135,7 +137,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             if (this.doors.containsKey(dp)) {
                 return;
             }
-            this.doors.put(dp, new RoomDetector(dp, 5));
+            this.doors.put(dp, new RoomDetector(dp, 30)); // TODO: Const
         }
 
         @Override
@@ -184,14 +186,19 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         @Override
-        public void roomTick(Position doorPos, InclusiveSpace inclusiveSpace) {
+        public void roomTick(
+                Position doorPos,
+                InclusiveSpace inclusiveSpace
+        ) {
+            // TODO: Explicitly handle nested and conjoined rooms
+
             if (!(level instanceof ServerLevel)) {
                 return;
             }
             List<Block> blocksInSpace = getBlocksBetweenCoords(
                     level,
                     Positions.ToBlock(inclusiveSpace.getCornerA()),
-                    Positions.ToBlock(inclusiveSpace.getCornerB())
+                    Positions.ToBlock(inclusiveSpace.getCornerB()).above() // TODO: Support taller rooms?
             );
             RecipeManager recipeManager = level.getRecipeManager();
 
@@ -201,7 +208,10 @@ public class TownFlagBlock extends BaseEntityBlock {
                 inv.setItem(i, stackInSlot);
             }
 
-            Optional<RoomRecipe> recipe = recipeManager.getRecipeFor(RecipesInit.ROOM, inv, level);
+            List<RoomRecipe> recipes = recipeManager.getAllRecipesFor(RecipesInit.ROOM);
+            recipes = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
+            Optional<RoomRecipe> recipe = recipes.stream().filter(r -> r.matches(inv, level)).findFirst();
+
             Questown.LOGGER.debug("Current Recipe: " + recipe);
 
             if (recipe.isEmpty() && roomRecipes.containsKey(doorPos)) {
@@ -218,12 +228,28 @@ public class TownFlagBlock extends BaseEntityBlock {
                         ChatType.GAME_INFO, null
                 );
             }
-            // TODO: Handle room changing from one type to another
-
+            if (recipe.isPresent() && roomRecipes.containsKey(doorPos)) {
+                RoomRecipe currentRecipe = roomRecipes.get(doorPos);
+                if (!currentRecipe.equals(recipe.get())) {
+                    roomRecipes.put(doorPos, recipe.get());
+                    level.getServer().getPlayerList().broadcastMessage(
+                            new TranslatableComponent(
+                                    "messages.building.room_changed",
+                                    new TranslatableComponent("room." + currentRecipe.getId()),
+                                    new TranslatableComponent("room." + recipe.get().getId()),
+                                    doorPos.getUIString()
+                            ),
+                            ChatType.GAME_INFO, null
+                    );
+                }
+            }
         }
 
         private void handleRoomDestroyed(Position doorPos) {
             RoomRecipe roomRecipe = roomRecipes.remove(doorPos);
+            if (roomRecipe == null) {
+                return;
+            }
             level.getServer().getPlayerList().broadcastMessage(
                     new TranslatableComponent(
                             "messages.building.room_destroyed",
@@ -234,7 +260,11 @@ public class TownFlagBlock extends BaseEntityBlock {
             );
         }
 
-        public List<Block> getBlocksBetweenCoords(Level level, BlockPos pos1, BlockPos pos2) {
+        public List<Block> getBlocksBetweenCoords(
+                Level level,
+                BlockPos pos1,
+                BlockPos pos2
+        ) {
             List<Block> blockList = new ArrayList<>();
 
             // Get the chunk containing the starting and ending coordinates

@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.adapter.Positions;
 import ca.bradj.questown.core.space.InclusiveSpace;
 import ca.bradj.questown.core.space.Position;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Collection;
@@ -40,7 +41,7 @@ public class TownCycle {
             RoomTicker roomTicker
     ) {
         findDoors(checker, townBlockPosition, doors);
-        for (RoomDetector rd : currentDoors) {
+        for (RoomDetector rd : ImmutableList.copyOf(currentDoors)) {
             Position doorPos = rd.getDoorPos();
             if (checker.IsEmpty(doorPos)) {
                 doors.DoorRemoved(doorPos);
@@ -81,7 +82,7 @@ public class TownCycle {
                     }
                     return blocks.IsDoor(dp);
                 },
-                10 // TODO: Constant or parameter
+                30 // TODO: Constant or parameter
         );
         doors.forEach(dp -> {
             Questown.LOGGER.debug("Door detected at " + dp);

@@ -2,6 +2,7 @@ package ca.bradj.questown.recipes;
 
 import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableMultiset;
+import com.google.common.primitives.Ints;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.core.NonNullList;
@@ -22,7 +23,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RoomRecipe implements Recipe<Container> {
+public class RoomRecipe implements Recipe<Container>, Comparable<RoomRecipe> {
     @Override
     public String toString() {
         return "RoomRecipe{" +
@@ -63,7 +64,7 @@ public class RoomRecipe implements Recipe<Container> {
         }
         ImmutableMultiset<Ingredient> foundMS = ImmutableMultiset.copyOf(found);
         ImmutableMultiset<Ingredient> recipeMS = ImmutableMultiset.copyOf(recipeItems);
-        return foundMS.equals(recipeMS);
+        return foundMS.containsAll(recipeMS);
     }
 
     @Override
@@ -102,6 +103,11 @@ public class RoomRecipe implements Recipe<Container> {
     @Override
     public @NotNull RecipeType<?> getType() {
         return RecipesInit.ROOM;
+    }
+
+    @Override
+    public int compareTo(@NotNull RoomRecipe roomRecipe) {
+        return Ints.compare(getIngredients().size(), roomRecipe.getIngredients().size());
     }
 
     public static class Serializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<RoomRecipe> {
