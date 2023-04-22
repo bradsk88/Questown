@@ -1,7 +1,10 @@
 {
   "variants": {
     "": {
-      "model": "questown:block/town_flag_block"
+      "model": "questown:block/town_flag_block",
+      "textures": {
+        "all": "minecraft:block/cobblestone"
+      }
     }
   }
 }

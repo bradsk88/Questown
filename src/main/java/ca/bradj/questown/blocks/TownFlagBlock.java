@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
@@ -23,21 +24,29 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoorHingeSide;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -45,17 +54,47 @@ import java.util.*;
 
 public class TownFlagBlock extends BaseEntityBlock {
 
+    public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
+
     public static final String ITEM_ID = "town_flag_block";
     private Entity entity;
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
 
     public TownFlagBlock() {
-        super(
-                BlockBehaviour.Properties.
-                        of(Material.STONE).
-                        strength(1f)
-        );
+        super(BlockBehaviour.Properties.copy(Blocks.COBWEB));
+        this.registerDefaultState(this.stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER));
+    }
+
+    // TODO: Fix so both blocks get destroyed when one is destroyed
+
+    public boolean canSurvive(BlockState p_52783_, LevelReader p_52784_, BlockPos p_52785_) {
+        BlockPos blockpos = p_52785_.below();
+        BlockState blockstate = p_52784_.getBlockState(blockpos);
+        return p_52783_.getValue(HALF) == DoubleBlockHalf.LOWER ? blockstate.isFaceSturdy(p_52784_, blockpos, Direction.UP) : blockstate.is(this);
+    }
+
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_52803_) {
+        p_52803_.add(HALF);
+    }
+
+    @Override
+    public void setPlacedBy(
+            Level p_49847_,
+            BlockPos p_49848_,
+            BlockState p_49849_,
+            @Nullable LivingEntity p_49850_,
+            ItemStack p_49851_
+    ) {
+        p_49847_.setBlock(p_49848_.above(), p_49849_.setValue(HALF, DoubleBlockHalf.UPPER), 3);
+    }
+
+    @Override
+    public RenderShape getRenderShape(BlockState blockState) {
+        if (blockState.getValue(HALF).equals(DoubleBlockHalf.UPPER)) {
+            return RenderShape.INVISIBLE;
+        }
+        return RenderShape.MODEL;
     }
 
     @Nullable
