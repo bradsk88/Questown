@@ -20,6 +20,7 @@ public class ItemsInit {
 					TownFlagBlock.ITEM_PROPS
 			)
 	);
+
 	public static void register(IEventBus bus) {
 		ITEMS.register(bus);
 	}

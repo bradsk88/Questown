@@ -15,6 +15,4 @@ public class BlocksInit {
 	public static final RegistryObject<Block> TOWN_FLAG = BLOCKS.register(
 			TownFlagBlock.ITEM_ID, TownFlagBlock::new
 	);
-
-
 }

@@ -3,6 +3,8 @@
   "messages.building.room_created": "%s created at location %s",
   "messages.building.room_destroyed": "%s destroyed at location %s",
   "messages.building.room_changed": "%s became %s at location %s",
+  "messages.town_flag.click_to_view_quests": "Click the Flag Base to view open quests",
+  "messages.town_flag.quest_completed": "Quest completed: %s",
   "room.crafting_room": "Crafting Room",
   "room.forge_room": "Forge",
   "room.store_room": "Storeroom",

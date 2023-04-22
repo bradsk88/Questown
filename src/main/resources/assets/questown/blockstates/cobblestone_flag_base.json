@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "": {
+      "model": "questown:block/flag_base",
+      "textures": {
+        "wall": "minecraft:block/cobblestone",
+        "wall_post": "minecraft:block/cobblestone",
+        "wall_side": "minecraft:block/cobblestone"
+      }
+    }
+  }
+}

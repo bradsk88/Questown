@@ -1,7 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -12,9 +12,9 @@ public class TilesInit {
             ForgeRegistries.BLOCK_ENTITIES, Questown.MODID
     );
 
-    public static final RegistryObject<BlockEntityType<TownFlagBlock.Entity>> TOWN_FLAG = TILES.register(
-            TownFlagBlock.Entity.ID, () -> BlockEntityType.Builder.of(
-                    TownFlagBlock.Entity::new, BlocksInit.TOWN_FLAG.get()
+    public static final RegistryObject<BlockEntityType<TownFlagBlockEntity>> TOWN_FLAG = TILES.register(
+            TownFlagBlockEntity.ID, () -> BlockEntityType.Builder.of(
+                    TownFlagBlockEntity::new, BlocksInit.TOWN_FLAG.get()
             ).build(null)
     );
 
