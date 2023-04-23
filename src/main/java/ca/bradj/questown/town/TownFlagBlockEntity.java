@@ -104,13 +104,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
     @Override
     public boolean IsEmpty(Position dp) {
-        BlockPos bp = Positions.ToBlock(dp);
+        BlockPos bp = Positions.ToBlock(dp, this.getBlockPos().getY());
         return level.isEmptyBlock(bp) || level.isEmptyBlock(bp.above());
     }
 
     @Override
     public boolean IsDoor(Position dp) {
-        return level.getBlockState(Positions.ToBlock(dp)).getBlock() instanceof DoorBlock;
+        return level.getBlockState(Positions.ToBlock(dp, this.getBlockPos().getY())).getBlock() instanceof DoorBlock;
     }
 
     @Override
@@ -143,11 +143,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         }
 
         Optional<Room> detectedRoom = state.getDetectedRoom(room.getDoorPos());
+        Questown.LOGGER.debug("Ticking room: " + room);
         if (detectedRoom.isEmpty() || !detectedRoom.get().equals(room)) {
             handleRoomChange(room);
         }
 
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this);
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
         Questown.LOGGER.debug("Current Recipe: " + recipe);
 
         handleRecipeUpdate(room, recipe);
@@ -196,7 +197,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
     private void handleRoomChange(Room room) {
         state.setDetectedRoom(room);
-        RoomEffects.renderParticlesBetween(room.getSpace(), (x, y, z) -> {
+        RoomEffects.renderParticlesBetween(room.getSpace(), (x, z) -> {
+            int y = this.getBlockPos().getY();
             BlockPos bp = new BlockPos(x, y, z);
             if (!(level instanceof ServerLevel)) {
                 return;
