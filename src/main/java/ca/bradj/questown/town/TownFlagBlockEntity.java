@@ -4,44 +4,39 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.RoomDetector;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
+import ca.bradj.roomrecipes.logic.DoorDetection;
+import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Optional;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, TownCycle.DoorsListener, TownCycle.NewRoomHandler, TownCycle.RoomTicker {
+public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, TownCycle.DoorsListener, TownCycle.NewRoomHandler, TownCycle.RoomTicker, DoorDetection.DoorChecker {
 
     private static int radius = 20; // TODO: Move to config
 
     public static final String ID = "flag_base_block_entity";
 
-    private final Map<Position, RoomDetector> doors = new HashMap<>();
+    private final Collection<Position> doors = new ArrayList<>();
 
     private final TownState state = new TownState();
 
@@ -97,14 +92,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
 
-        TownCycle.townTick(Positions.FromBlockPos(e.getBlockPos()), e, e.doors.values(), e, e, e);
+        TownCycle.roomsTick(Positions.FromBlockPos(e.getBlockPos()), e, e.doors, e, e, e);
     }
 
     private void putDoor(Position dp) {
-        if (this.doors.containsKey(dp)) {
+        if (this.doors.contains(dp)) {
             return;
         }
-        this.doors.put(dp, new RoomDetector(dp, 30)); // TODO: Const
+        this.doors.add(dp);
     }
 
     @Override
@@ -130,8 +125,78 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void newRoomDetected(InclusiveSpace space) {
-        RoomEffects.renderParticlesBetween(space, (x, y, z) -> {
+    public void roomDestroyed(
+            Position doorPos
+    ) {
+        state.unsetRoomAtDoorPos(doorPos);
+        handleRoomDestroyed(doorPos);
+    }
+
+    @Override
+    public void roomTick(
+            Room room
+    ) {
+        // TODO: Explicitly handle nested and conjoined rooms
+
+        if (!(level instanceof ServerLevel)) {
+            return;
+        }
+
+        Optional<Room> detectedRoom = state.getDetectedRoom(room.getDoorPos());
+        if (detectedRoom.isEmpty() || !detectedRoom.get().equals(room)) {
+            handleRoomChange(room);
+        }
+
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this);
+        Questown.LOGGER.debug("Current Recipe: " + recipe);
+
+        handleRecipeUpdate(room, recipe);
+
+        for (RoomRecipe quest : state.getQuests()) {
+            if (state.hasRecipe(quest)) {
+                handleQuestCompleted(quest);
+            }
+        }
+
+    }
+
+    private void handleRecipeUpdate(
+            Room room,
+            Optional<RoomRecipe> recipe
+    ) {
+        Position doorPos = room.getDoorPos();
+        if (recipe.isEmpty() && state.roomDoorExistsAt(doorPos)) {
+            handleRoomDestroyed(doorPos);
+        }
+        if (recipe.isPresent() && !state.roomDoorExistsAt(doorPos)) {
+            state.setRecipeAtDoorPosition(doorPos, recipe.get());
+            broadcastMessage(new TranslatableComponent(
+                    "messages.building.room_created",
+                    new TranslatableComponent("room." + recipe.get().getId().getPath()),
+                    doorPos.getUIString()
+            ));
+        }
+        if (recipe.isPresent() && state.roomDoorExistsAt(doorPos)) {
+            Optional<RoomRecipe> currentRecipe = state.getRecipeAtDoorPos(doorPos);
+            if (currentRecipe.isPresent() && !currentRecipe.get().equals(recipe.get())) {
+                state.setRecipeAtDoorPosition(doorPos, recipe.get());
+                broadcastMessage(new TranslatableComponent(
+                        "messages.building.room_changed",
+                        new TranslatableComponent("room." + currentRecipe.get().getId().getPath()),
+                        new TranslatableComponent("room." + recipe.get().getId().getPath()),
+                        doorPos.getUIString()
+                ));
+            }
+        }
+    }
+
+    private void broadcastMessage(TranslatableComponent msg) {
+        level.getServer().getPlayerList().broadcastMessage(msg, ChatType.GAME_INFO, null);
+    }
+
+    private void handleRoomChange(Room room) {
+        state.setDetectedRoom(room);
+        RoomEffects.renderParticlesBetween(room.getSpace(), (x, y, z) -> {
             BlockPos bp = new BlockPos(x, y, z);
             if (!(level instanceof ServerLevel)) {
                 return;
@@ -144,94 +209,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    @Override
-    public void roomDestroyed(
-            Position doorPos,
-            ImmutableSet<Position> space
-    ) {
-        handleRoomDestroyed(doorPos);
-    }
-
-    @Override
-    public void roomTick(
-            Position doorPos,
-            InclusiveSpace inclusiveSpace
-    ) {
-        // TODO: Explicitly handle nested and conjoined rooms
-
-        if (!(level instanceof ServerLevel)) {
-            return;
-        }
-        List<Block> blocksInSpace = getBlocksBetweenCoords(
-                level,
-                Positions.ToBlock(inclusiveSpace.getCornerA()),
-                Positions.ToBlock(inclusiveSpace.getCornerB()).above() // TODO: Support taller rooms?
-        );
-        RecipeManager recipeManager = level.getRecipeManager();
-
-        SimpleContainer inv = new SimpleContainer(blocksInSpace.size());
-        for (int i = 0; i < blocksInSpace.size(); i++) {
-            ItemStack stackInSlot = new ItemStack(blocksInSpace.get(i), 1);
-            inv.setItem(i, stackInSlot);
-        }
-
-        List<RoomRecipe> recipes = recipeManager.getAllRecipesFor(RecipesInit.ROOM);
-        recipes = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
-        Optional<RoomRecipe> recipe = recipes.stream().filter(r -> r.matches(inv, level)).findFirst();
-
-        Questown.LOGGER.debug("Current Recipe: " + recipe);
-
-        if (recipe.isEmpty() && state.roomDoorExistsAt(doorPos)) {
-            handleRoomDestroyed(doorPos);
-        }
-        if (recipe.isPresent() && !state.roomDoorExistsAt(doorPos)) {
-            state.setRoomAtDoorPosition(doorPos, recipe.get());
-            level.getServer().getPlayerList().broadcastMessage(
-                    new TranslatableComponent(
-                            "messages.building.room_created",
-                            new TranslatableComponent("room." + recipe.get().getId().getPath()),
-                            doorPos.getUIString()
-                    ),
-                    ChatType.GAME_INFO, null
-            );
-        }
-        if (recipe.isPresent() && state.roomDoorExistsAt(doorPos)) {
-            RoomRecipe currentRecipe = state.getRoomAtDoorPos(doorPos);
-            if (!currentRecipe.equals(recipe.get())) {
-                state.setRoomAtDoorPosition(doorPos, recipe.get());
-                level.getServer().getPlayerList().broadcastMessage(
-                        new TranslatableComponent(
-                                "messages.building.room_changed",
-                                new TranslatableComponent("room." + currentRecipe.getId().getPath()),
-                                new TranslatableComponent("room." + recipe.get().getId().getPath()),
-                                doorPos.getUIString()
-                        ),
-                        ChatType.GAME_INFO, null
-                );
-            }
-        }
-
-        for (RoomRecipe quest : state.getQuests()) {
-            if (state.hasRecipe(quest)) {
-                handleQuestCompleted(quest);
-            }
-        }
-
-    }
-
     private void handleQuestCompleted(RoomRecipe quest) {
         state.clearQuest(quest);
-        level.getServer().getPlayerList().broadcastMessage(
-                new TranslatableComponent(
-                        "messages.town_flag.quest_completed",
-                        new TranslatableComponent("room." + quest.getId().getPath())
-                ),
-                ChatType.GAME_INFO, null
-        );
+        broadcastMessage(new TranslatableComponent(
+                "messages.town_flag.quest_completed",
+                new TranslatableComponent("room." + quest.getId().getPath())
+        ));
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
                 getBlockPos().getX(),
-                getBlockPos().above().above().above().above().above().above().above().getY(),
+                getBlockPos().getY() + 10,
                 getBlockPos().getZ(),
                 Items.FIREWORK_ROCKET.getDefaultInstance()
         );
@@ -239,56 +226,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     private void handleRoomDestroyed(Position doorPos) {
-        RoomRecipe roomRecipe = state.unsetRoomAtDoorPos(doorPos);
+        RoomRecipe roomRecipe = state.unsetRecipeAtDoorPos(doorPos);
         if (roomRecipe == null) {
             return;
         }
-        level.getServer().getPlayerList().broadcastMessage(
-                new TranslatableComponent(
-                        "messages.building.room_destroyed",
-                        new TranslatableComponent("room." + roomRecipe.getId().getPath()),
-                        doorPos.getUIString()
-                ),
-                ChatType.GAME_INFO, null
-        );
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_destroyed",
+                new TranslatableComponent("room." + roomRecipe.getId().getPath()),
+                doorPos.getUIString()
+        ));
     }
 
-    public List<Block> getBlocksBetweenCoords(
-            Level level,
-            BlockPos pos1,
-            BlockPos pos2
-    ) {
-        List<Block> blockList = new ArrayList<>();
-
-        // Get the chunk containing the starting and ending coordinates
-        int xMin = Math.min(pos1.getX(), pos2.getX());
-        int xMax = Math.max(pos1.getX(), pos2.getX());
-        int zMin = Math.min(pos1.getZ(), pos2.getZ());
-        int zMax = Math.max(pos1.getZ(), pos2.getZ());
-        int chunkXMin = xMin >> 4;
-        int chunkXMax = xMax >> 4;
-        int chunkZMin = zMin >> 4;
-        int chunkZMax = zMax >> 4;
-        for (int chunkX = chunkXMin; chunkX <= chunkXMax; chunkX++) {
-            for (int chunkZ = chunkZMin; chunkZ <= chunkZMax; chunkZ++) {
-                // Iterate over all blocks in the chunk and add them to the list
-                int blockXMin = Math.max(xMin, chunkX << 4);
-                int blockXMax = Math.min(xMax, (chunkX << 4) + 15);
-                int blockZMin = Math.max(zMin, chunkZ << 4);
-                int blockZMax = Math.min(zMax, (chunkZ << 4) + 15);
-                for (int blockX = blockXMin; blockX <= blockXMax; blockX++) {
-                    for (int blockZ = blockZMin; blockZ <= blockZMax; blockZ++) {
-                        int yMin = Math.min(pos1.getY(), pos2.getY());
-                        int yMax = Math.max(pos1.getY(), pos2.getY());
-                        for (int blockY = yMin; blockY <= yMax; blockY++) {
-                            BlockPos blockPos = new BlockPos(blockX, blockY, blockZ);
-                            Block block = level.getBlockState(blockPos).getBlock();
-                            blockList.add(block);
-                        }
-                    }
-                }
-            }
-        }
-        return blockList;
-    }
 }

@@ -1,15 +1,14 @@
 package ca.bradj.questown.logic;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
-import ca.bradj.roomrecipes.logic.RoomDetector;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import ca.bradj.roomrecipes.logic.LevelRoomDetection;
 
 import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
 
 public class TownCycle {
 
@@ -26,49 +25,32 @@ public class TownCycle {
     }
 
     public interface NewRoomHandler {
-        void newRoomDetected(InclusiveSpace space);
-        void roomDestroyed(Position doorPos, ImmutableSet<Position> space);
+        void roomDestroyed(Position doorPos);
     }
 
     public interface RoomTicker {
-        void roomTick(Position doorPos, InclusiveSpace inclusiveSpace);
+        void roomTick(Room room);
     }
 
-    public static void townTick(
+    public static void roomsTick(
             Position townBlockPosition,
             BlockChecker checker,
-            Collection<RoomDetector> currentDoors,
+            Collection<Position> currentDoors,
             DoorsListener doors,
             NewRoomHandler roomHandler,
             RoomTicker roomTicker
     ) {
         findDoors(checker, townBlockPosition, doors);
-        for (RoomDetector rd : ImmutableList.copyOf(currentDoors)) {
-            Position doorPos = rd.getDoorPos();
-            if (checker.IsEmpty(doorPos)) {
-                doors.DoorRemoved(doorPos);
-                Questown.LOGGER.debug("Removed door at pos " + doorPos);
-                continue;
+        Map<Position, Optional<Room>> rooms = LevelRoomDetection.findRooms(
+                currentDoors, 20, (position) -> !checker.IsEmpty(position)
+        );
+        rooms.forEach((position, room) -> {
+            if (room.isEmpty()) {
+                roomHandler.roomDestroyed(position);
+            } else {
+                roomTicker.roomTick(room.get());
             }
-            Questown.LOGGER.trace("Updating around door" + doorPos);
-            boolean wasRoom = rd.isRoom();
-            ImmutableSet<Position> oldCorners = rd.getCorners();
-            rd.update((Position dp) -> !checker.IsEmpty(dp));
-
-            if (rd.isRoom() && !wasRoom) {
-                Questown.LOGGER.debug("Room detected");
-                Questown.LOGGER.debug("Corners: " + rd.getCorners());
-                InclusiveSpace space = Positions.getInclusiveSpace(rd.getCorners());
-                roomHandler.newRoomDetected(space);
-            } else if (wasRoom && !rd.isRoom()) {
-                Questown.LOGGER.debug("Room destroyed");
-                roomHandler.roomDestroyed(rd.getDoorPos(), oldCorners);
-            }
-
-            if (rd.isRoom()) {
-                roomTicker.roomTick(rd.getDoorPos(), Positions.getInclusiveSpace(rd.getCorners()));
-            }
-        }
+        });
     }
 
     private static void findDoors(
