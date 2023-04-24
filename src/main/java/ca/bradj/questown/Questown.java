@@ -1,11 +1,13 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.ContainerTypesInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.gui.RoomRecipesScreen;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraftforge.client.ForgeRenderTypes;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -43,7 +45,10 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
+        ContainerTypesInit.register();
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.TOWN_FLAG.get(), RenderType.cutout());
+        // FIXME: This is crashing.
+        MenuScreens.register(ContainerTypesInit.TOWN_QUESTS.get(), RoomRecipesScreen::new);
     }
 
 }

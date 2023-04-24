@@ -208,7 +208,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     private void broadcastMessage(TranslatableComponent msg) {
-        level.getServer().getPlayerList().broadcastMessage(msg, ChatType.GAME_INFO, null);
+        level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
     }
 
     private void handleRoomChange(Room room) {
