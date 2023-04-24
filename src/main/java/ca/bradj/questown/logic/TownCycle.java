@@ -35,14 +35,13 @@ public class TownCycle {
     public static void roomsTick(
             Position townBlockPosition,
             BlockChecker checker,
-            Collection<Position> currentDoors,
             DoorsListener doors,
             NewRoomHandler roomHandler,
             RoomTicker roomTicker
     ) {
-        findDoors(checker, townBlockPosition, doors);
+        Collection<Position> foundDoors = findDoors(checker, townBlockPosition, doors);
         Map<Position, Optional<Room>> rooms = LevelRoomDetection.findRooms(
-                currentDoors, 20, (position) -> !checker.IsEmpty(position)
+                foundDoors, 20, (position) -> !checker.IsEmpty(position)
         );
         rooms.forEach((position, room) -> {
             if (room.isEmpty()) {
@@ -53,7 +52,7 @@ public class TownCycle {
         });
     }
 
-    private static void findDoors(
+    private static Collection<Position> findDoors(
             BlockChecker blocks,
             Position townBlockPosition,
             DoorsListener dl
@@ -66,12 +65,13 @@ public class TownCycle {
                     }
                     return blocks.IsDoor(dp);
                 },
-                30 // TODO: Constant or parameter
+                100 // TODO: Constant or parameter
         );
         doors.forEach(dp -> {
-            Questown.LOGGER.trace("Door detected at " + dp);
+            Questown.LOGGER.debug("Door detected at " + dp);
             dl.DoorAdded(dp);
         });
+        return doors;
     }
 
 }

@@ -68,7 +68,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 Questown.LOGGER.debug("Player detected at distance: " + v);
                 if (v < 113) {
                     Player player = (Player) event.getEntity();
-                    player.sendMessage(new TranslatableComponent("messages.town_flag.click_to_view_quests"), null);
+                    // TODO: bring back but only send once per minute(?)
+//                    player.sendMessage(new TranslatableComponent("messages.town_flag.click_to_view_quests"), null);
                 }
             }
         });
@@ -92,7 +93,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
 
-        TownCycle.roomsTick(Positions.FromBlockPos(e.getBlockPos()), e, e.doors, e, e, e);
+        TownCycle.roomsTick(Positions.FromBlockPos(e.getBlockPos()), e, e, e, e);
     }
 
     private void putDoor(Position dp) {
@@ -136,7 +137,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     public void roomTick(
             Room room
     ) {
-        // TODO: Explicitly handle nested and conjoined rooms
+        // TODO: Explicitly handle nested rooms
 
         if (!(level instanceof ServerLevel)) {
             return;
@@ -150,6 +151,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
         Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
         Questown.LOGGER.debug("Current Recipe: " + recipe);
+
+        if (recipe.isPresent() && detectedRoom.isPresent() && !detectedRoom.get().equals(room)) {
+            handleRoomSizeChange(recipe.get(), detectedRoom.get().getDoorPos());
+        }
 
         handleRecipeUpdate(room, recipe);
 
@@ -189,6 +194,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 ));
             }
         }
+    }
+
+    private void handleRoomSizeChange(
+            RoomRecipe recipe,
+            Position doorPos
+    ) {
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_size_changed",
+                new TranslatableComponent("room." + recipe.getId().getPath()),
+                doorPos.getUIString()
+        ));
     }
 
     private void broadcastMessage(TranslatableComponent msg) {
