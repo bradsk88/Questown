@@ -10,6 +10,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -108,8 +109,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             }
         }, data -> {
             RoomRecipe.Serializer ser = new RoomRecipe.Serializer();
+            data.writeInt(townQuests.size());
             data.writeCollection(townQuests, (buf, recipe) -> {
-                buf.writeResourceLocation(recipe.getId());
+                ResourceLocation id = recipe.getId();
+                buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });
         });

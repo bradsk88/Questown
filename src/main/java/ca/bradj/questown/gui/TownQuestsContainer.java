@@ -1,6 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.init.ContainerTypesInit;
+import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -19,15 +19,26 @@ public class TownQuestsContainer extends AbstractContainerMenu {
             int windowId,
             Collection<RoomRecipe> quests
     ) {
-        super(ContainerTypesInit.TOWN_QUESTS.get(), windowId);
+        super(MenuTypesInit.TOWN_QUESTS.get(), windowId);
         this.quests = quests;
     }
 
-    public TownQuestsContainer(int windowId, Inventory inv, FriendlyByteBuf data) {
-        this(windowId, data.readCollection(c -> new ArrayList<>(), buf -> {
+    public TownQuestsContainer(
+            int windowId,
+            Inventory inv,
+            FriendlyByteBuf data
+    ) {
+        this(windowId, read(data));
+    }
+
+    private static Collection<RoomRecipe> read(FriendlyByteBuf data) {
+        int size = data.readInt();
+        ArrayList<RoomRecipe> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
             ResourceLocation recipeID = buf.readResourceLocation();
-            return new RoomRecipe.Serializer().fromNetwork(recipeID, buf);
-        }));
+            RoomRecipe roomRecipe = new RoomRecipe.Serializer().fromNetwork(recipeID, buf);
+            return roomRecipe;
+        });
+        return r;
     }
 
     @Override

@@ -144,7 +144,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         }
 
         Optional<Room> detectedRoom = state.getDetectedRoom(room.getDoorPos());
-        Questown.LOGGER.debug("Ticking room: " + room);
+        Questown.LOGGER.trace("Ticking room: " + room);
         if (detectedRoom.isEmpty() || !detectedRoom.get().equals(room)) {
             handleRoomChange(room);
         }
