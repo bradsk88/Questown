@@ -38,6 +38,7 @@ public class TownQuestsContainer extends AbstractContainerMenu {
             RoomRecipe roomRecipe = new RoomRecipe.Serializer().fromNetwork(recipeID, buf);
             return roomRecipe;
         });
+        r.sort(RoomRecipe::compareTo);
         return r;
     }
 

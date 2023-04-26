@@ -20,8 +20,12 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private static final int backgroundWidth = 176;
@@ -111,6 +115,7 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
+        ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
             int row = i - startIndex;
             int cardY = y + row * (CARD_HEIGHT + CARD_PADDING);
@@ -120,9 +125,12 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
             RoomRecipe recipe = quests.get(i);
             if (recipe != null) {
                 int iconY = cardY + CARD_HEIGHT - 24;
-                renderRecipeCard(poseStack, recipe, x, iconY, mouseX, mouseY, partialTicks);
+                ImmutableList<Slot> slotz = renderRecipeCard(poseStack, recipe, x, iconY, mouseX, mouseY, partialTicks);
+                b.addAll(slotz);
             }
         }
+        slots.clear();
+        slots.addAll(b.build());
 
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
@@ -132,7 +140,9 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
     private int lastRenderTick = 0;
     private int currentItemIndex = 0;
 
-    private void renderRecipeCard(
+    private List<Slot> slots = new ArrayList<>();
+
+    private ImmutableList<Slot> renderRecipeCard(
             PoseStack poseStack,
             RoomRecipe recipe,
             int x, int y, int mouseX, int mouseY,
@@ -142,6 +152,9 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
         int j = 0;
+
+        ImmutableList.Builder<Slot> b = ImmutableList.builder();
+
         for (Ingredient ing : ingredients) {
             int iconX = x + 8 + j * 18;
 
@@ -150,14 +163,22 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
                 int curSeconds = (int) (System.currentTimeMillis() / 1000);
                 ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
                 this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+                if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
+                    fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF); // transparent white square behind hovered item slot
+                    renderTooltip(poseStack, itemStack.getItem().getName(itemStack), mouseX, mouseY); // render hovered item's name as a tooltip
+                }
+                Slot element = new Slot(dummyInv, j, iconX, y + 1);
+                element.set(itemStack);
+                b.add(element);
             }
-
             j++;
         }
+
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
         String idString = new TranslatableComponent(String.format("room.%s", recipe.getId().getPath())).getString();
         this.font.draw(poseStack, idString, idX, idY, TEXT_COLOR);
+        return b.build();
     }
 
     private void renderPageNum(
@@ -230,5 +251,12 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         return ImmutableList.of(
                 new Rect2i(x, y, backgroundWidth, backgroundHeight)
         );
+    }
+
+    public ItemStack getHoveredIngredient(int mouseX, int mouseY) {
+        Predicate<Slot> slotPredicate = s -> mouseX >= s.x && mouseX <= s.x + 16 && mouseY >= s.y + 1 && mouseY <= s.y + 17;
+        Stream<Slot> matches = slots.stream().filter(slotPredicate);
+        Optional<Slot> found = matches.findAny();
+        return found.map(Slot::getItem).orElse(ItemStack.EMPTY);
     }
 }

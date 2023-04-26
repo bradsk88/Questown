@@ -8,6 +8,8 @@ import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -24,6 +26,16 @@ public class QuestownJei implements IModPlugin {
             @Override
             public List<Rect2i> getGuiExtraAreas(RoomRecipesScreen containerScreen) {
                 return containerScreen.getExtraAreas();
+            }
+
+            @Override
+            public @Nullable Object getIngredientUnderMouse(
+                    RoomRecipesScreen containerScreen,
+                    double mouseX,
+                    double mouseY
+            ) {
+                ItemStack is = containerScreen.getHoveredIngredient((int) mouseX, (int) mouseY);
+                return is;
             }
         });
     }
