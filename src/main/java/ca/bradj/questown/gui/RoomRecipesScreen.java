@@ -99,28 +99,14 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
-
-        // Draw page numbers
-        fill(poseStack,
-                x + borderPadding + buttonWidth,
-                nextPage.y,
-                x + backgroundWidth - borderPadding - buttonWidth,
-                nextPage.y + buttonHeight,
-                0x30000000);
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
-        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
         int pageStringY = y + PAGE_PADDING;
 
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
+        renderPageNum(poseStack, x);
 
         y = pageStringY + PAGE_PADDING;
 
         int startIndex = currentPage * MAX_CARDS_PER_PAGE;
         int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, quests.size());
-
-        Inventory dummyInv = new Inventory(null);
 
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
@@ -134,29 +120,64 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
             RoomRecipe recipe = quests.get(i);
             if (recipe != null) {
                 int iconY = cardY + CARD_HEIGHT - 24;
-                Collection<Ingredient> ingredients = recipe.getIngredients();
-                ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
-                int j = 0;
-                for (Ingredient ing : ingredients) {
-                    int iconX = x + 8 + j * 18;
-
-                    Slot slot = new Slot(dummyInv, j, iconX, iconY);
-                    int k = 0; // TODO: Update this to cycle through ing.getItems' items once per second
-                    slot.set(ing.getItems()[0]);
-                    this.renderSlot(poseStack, slot, mouseX, mouseY, partialTicks);
-                    j++;
-                }
-
-                int idX = x + PAGE_PADDING;
-                int idY = iconY - 10;
-                String idString = new TranslatableComponent(String.format("room.%s", recipe.getId().getPath())).getString();
-                this.font.draw(poseStack, idString, idX, idY, TEXT_COLOR);
+                renderRecipeCard(poseStack, recipe, x, iconY, mouseX, mouseY, partialTicks);
             }
         }
 
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+    }
+
+    private int lastRenderTick = 0;
+    private int currentItemIndex = 0;
+
+    private void renderRecipeCard(
+            PoseStack poseStack,
+            RoomRecipe recipe,
+            int x, int y, int mouseX, int mouseY,
+            float partialTicks
+    ) {
+        Inventory dummyInv = new Inventory(null);
+        Collection<Ingredient> ingredients = recipe.getIngredients();
+        ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        int j = 0;
+        for (Ingredient ing : ingredients) {
+            int iconX = x + 8 + j * 18;
+
+            ItemStack[] matchingStacks = ing.getItems();
+            if (matchingStacks.length > 0) {
+                int curSeconds = (int) (System.currentTimeMillis() / 1000);
+                ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
+                this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+            }
+
+            j++;
+        }
+        int idX = x + PAGE_PADDING;
+        int idY = y - 10;
+        String idString = new TranslatableComponent(String.format("room.%s", recipe.getId().getPath())).getString();
+        this.font.draw(poseStack, idString, idX, idY, TEXT_COLOR);
+    }
+
+    private void renderPageNum(
+            PoseStack poseStack,
+            int x
+    ) {
+        // Draw page numbers
+        fill(
+                poseStack,
+                x + borderPadding + buttonWidth,
+                nextPage.y,
+                x + backgroundWidth - borderPadding - buttonWidth,
+                nextPage.y + buttonHeight,
+                0x30000000);
+        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
+        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+
+        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
+        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
     }
 
     @Override
