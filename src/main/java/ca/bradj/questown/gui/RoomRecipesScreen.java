@@ -1,34 +1,44 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
+import mezz.jei.common.util.ImmutableRect2i;
+import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.Collection;
 import java.util.List;
 
 public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final int borderPadding = 6;
 
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int CARD_PADDING = 10;
-    private static final int CARD_WIDTH = (backgroundWidth) - (CARD_PADDING * 2);
-    private static final int CARD_HEIGHT = 32;
+    private static final int TEXT_COLOR = 0x404040;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - CARD_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    private static final int CARD_PADDING = 1;
+    private static final int PAGE_PADDING = 10;
+    private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
+    private static final int CARD_HEIGHT = 42;
+
+    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<RoomRecipe> quests;
     private final DrawableNineSliceTexture background;
@@ -67,11 +77,11 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
     @Override
     protected void init() {
         int y = (this.height - backgroundHeight) / 2;
-        int pageStringY = y + CARD_PADDING;
+        int pageStringY = y + borderPadding;
         int x = ((this.width - backgroundWidth) / 2);
-        this.previousPage.x = x;
+        this.previousPage.x = x + borderPadding;
         this.previousPage.y = pageStringY;
-        this.nextPage.x = x + backgroundWidth - buttonWidth;
+        this.nextPage.x = x + backgroundWidth - buttonWidth - borderPadding;
         this.nextPage.y = pageStringY;
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
@@ -87,26 +97,33 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
+        int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
 
         // Draw page numbers
+        fill(poseStack,
+                x + borderPadding + buttonWidth,
+                nextPage.y,
+                x + backgroundWidth - borderPadding - buttonWidth,
+                nextPage.y + buttonHeight,
+                0x30000000);
         int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
-        int pageStringWidth = this.font.width(pageString);
-        int pageStringX = (this.width - pageStringWidth) / 2;
-        int pageStringY = y + CARD_PADDING;
-        this.font.draw(poseStack, pageString, pageStringX, pageStringY, 0x404040);
+        int pageStringY = y + PAGE_PADDING;
 
-        y = pageStringY + CARD_PADDING;
+        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
+        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
+
+        y = pageStringY + PAGE_PADDING;
 
         int startIndex = currentPage * MAX_CARDS_PER_PAGE;
         int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, quests.size());
 
         Inventory dummyInv = new Inventory(null);
 
-        int x = ((this.width - backgroundWidth) / 2);
-        x = x + CARD_PADDING;
-        y = y + CARD_PADDING;
+        x = x + PAGE_PADDING;
+        y = y + PAGE_PADDING;
 
         for (int i = startIndex; i < endIndex; i++) {
             int row = i - startIndex;
@@ -116,14 +133,24 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
             RoomRecipe recipe = quests.get(i);
             if (recipe != null) {
-                for (int j = 0; j < recipe.getIngredients().size(); j++) {
+                int iconY = cardY + CARD_HEIGHT - 24;
+                Collection<Ingredient> ingredients = recipe.getIngredients();
+                ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+                int j = 0;
+                for (Ingredient ing : ingredients) {
                     int iconX = x + 8 + j * 18;
-                    int iconY = cardY + CARD_HEIGHT - 24;
 
                     Slot slot = new Slot(dummyInv, j, iconX, iconY);
-                    slot.set(recipe.getIngredients().get(j).getItems()[0]);
+                    int k = 0; // TODO: Update this to cycle through ing.getItems' items once per second
+                    slot.set(ing.getItems()[0]);
                     this.renderSlot(poseStack, slot, mouseX, mouseY, partialTicks);
+                    j++;
                 }
+
+                int idX = x + PAGE_PADDING;
+                int idY = iconY - 10;
+                String idString = new TranslatableComponent(String.format("room.%s", recipe.getId().getPath())).getString();
+                this.font.draw(poseStack, idString, idX, idY, TEXT_COLOR);
             }
         }
 
