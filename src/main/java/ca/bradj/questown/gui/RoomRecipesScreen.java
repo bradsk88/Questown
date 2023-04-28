@@ -44,7 +44,7 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
     private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
-    private final List<RoomRecipe> quests;
+    private final List<UIQuest> quests;
     private final DrawableNineSliceTexture background;
     private final DrawableNineSliceTexture cardBackground;
     private final GuiIconButtonSmall nextPage;
@@ -122,7 +122,7 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
             this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
 
-            RoomRecipe recipe = quests.get(i);
+            UIQuest recipe = quests.get(i);
             if (recipe != null) {
                 int iconY = cardY + CARD_HEIGHT - 24;
                 ImmutableList<Slot> slotz = renderRecipeCard(poseStack, recipe, x, iconY, mouseX, mouseY, partialTicks);
@@ -144,13 +144,14 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
     private ImmutableList<Slot> renderRecipeCard(
             PoseStack poseStack,
-            RoomRecipe recipe,
+            UIQuest recipe,
             int x, int y, int mouseX, int mouseY,
             float partialTicks
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
-        ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        ingredients = RoomRecipes.filterSpecialBlocks
+                (ingredients);
         int j = 0;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
@@ -176,8 +177,7 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        String idString = new TranslatableComponent(String.format("room.%s", recipe.getId().getPath())).getString();
-        this.font.draw(poseStack, idString, idX, idY, TEXT_COLOR);
+        this.font.draw(poseStack, recipe.getName().getString(), idX, idY, TEXT_COLOR);
         return b.build();
     }
 

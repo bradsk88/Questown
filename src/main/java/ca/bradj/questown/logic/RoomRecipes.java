@@ -1,10 +1,16 @@
 package ca.bradj.questown.logic;
 
+import ca.bradj.roomrecipes.recipes.RecipesInit;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.Level;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 public class RoomRecipes {
 
@@ -24,6 +30,15 @@ public class RoomRecipes {
             b.add(i);
         }
         return b.build();
+    }
+    public static Optional<RoomRecipe> getById(Level level, ResourceLocation id) {
+        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        for (RoomRecipe r : recipes) {
+            if (id.equals(r.getId())) {
+                return Optional.of(r);
+            }
+        }
+        return Optional.empty();
     }
 }
 

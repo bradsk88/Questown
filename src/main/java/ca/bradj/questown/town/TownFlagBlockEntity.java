@@ -10,11 +10,13 @@ import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
@@ -35,6 +37,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     private static int radius = 20; // TODO: Move to config
 
     public static final String ID = "flag_base_block_entity";
+    public static final String NBT_QUESTS = String.format("%s_quests", Questown.MODID);
+
 
     private final Collection<Position> doors = new ArrayList<>();
 
@@ -48,8 +52,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
+    public void load(CompoundTag p_155245_) {
+        this.deserializeNBT(p_155245_);
+    }
+
+    @Override
     public void deserializeNBT(CompoundTag nbt) {
-        super.deserializeNBT(nbt);
+        if (nbt.contains(NBT_QUESTS)) {
+            CompoundTag c = nbt.getCompound(NBT_QUESTS);
+            state.deserializeNBT(c);
+        }
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag p_187471_) {
+        p_187471_.put(NBT_QUESTS, state.serializeNBT());
+    }
+
+    @Override
+    public CompoundTag serializeNBT() {
+        CompoundTag c = new CompoundTag();
+        c.put(NBT_QUESTS, state.serializeNBT());
+        return c;
     }
 
     @Override
@@ -156,9 +180,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             handleRoomSizeChange(recipe.get(), detectedRoom.get().getDoorPos());
         }
 
-        handleRecipeUpdate(room, recipe);
+        handleRecipeUpdate(room, recipe.map(RoomRecipe::getId));
 
-        for (RoomRecipe quest : state.getQuests()) {
+        for (ResourceLocation quest : state.getQuests().getCompleted()) {
             if (state.hasRecipe(quest)) {
                 handleQuestCompleted(quest);
             }
@@ -168,7 +192,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
     private void handleRecipeUpdate(
             Room room,
-            Optional<RoomRecipe> recipe
+            Optional<ResourceLocation> recipe
     ) {
         Position doorPos = room.getDoorPos();
         if (recipe.isEmpty() && state.roomDoorExistsAt(doorPos)) {
@@ -178,18 +202,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             state.setRecipeAtDoorPosition(doorPos, recipe.get());
             broadcastMessage(new TranslatableComponent(
                     "messages.building.room_created",
-                    new TranslatableComponent("room." + recipe.get().getId().getPath()),
+                    new TranslatableComponent("room." + recipe.get().getPath()),
                     doorPos.getUIString()
             ));
         }
         if (recipe.isPresent() && state.roomDoorExistsAt(doorPos)) {
-            Optional<RoomRecipe> currentRecipe = state.getRecipeAtDoorPos(doorPos);
+            Optional<ResourceLocation> currentRecipe = state.getRecipeAtDoorPos(doorPos);
             if (currentRecipe.isPresent() && !currentRecipe.get().equals(recipe.get())) {
                 state.setRecipeAtDoorPosition(doorPos, recipe.get());
                 broadcastMessage(new TranslatableComponent(
                         "messages.building.room_changed",
-                        new TranslatableComponent("room." + currentRecipe.get().getId().getPath()),
-                        new TranslatableComponent("room." + recipe.get().getId().getPath()),
+                        new TranslatableComponent("room." + currentRecipe.get().getPath()),
+                        new TranslatableComponent("room." + recipe.get().getPath()),
                         doorPos.getUIString()
                 ));
             }
@@ -227,11 +251,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    private void handleQuestCompleted(RoomRecipe quest) {
-        state.clearQuest(quest);
+    private void handleQuestCompleted(ResourceLocation quest) {
+        boolean isNews = state.clearQuest(quest);
+        if (!isNews) {
+            return;
+        }
         broadcastMessage(new TranslatableComponent(
                 "messages.town_flag.quest_completed",
-                new TranslatableComponent("room." + quest.getId().getPath())
+                new TranslatableComponent("room." + quest.getPath())
         ));
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
@@ -244,15 +271,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     private void handleRoomDestroyed(Position doorPos) {
-        RoomRecipe roomRecipe = state.unsetRecipeAtDoorPos(doorPos);
+        ResourceLocation roomRecipe = state.unsetRecipeAtDoorPos(doorPos);
         if (roomRecipe == null) {
             return;
         }
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
-                new TranslatableComponent("room." + roomRecipe.getId().getPath()),
+                new TranslatableComponent("room." + roomRecipe.getPath()),
                 doorPos.getUIString()
         ));
     }
 
+    public ImmutableList<Quest> getAllQuests() {
+        return state.getQuests().getAll();
+    }
 }

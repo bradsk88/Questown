@@ -4,18 +4,19 @@ import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.google.common.collect.ImmutableList;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.*;
 import java.util.stream.Stream;
 
-public class TownState {
+public class TownState implements INBTSerializable<CompoundTag> {
 
-    private Collection<RoomRecipe> activeQuests = new ArrayList<>();
-    private final Map<Position, RoomRecipe> activeRecipes = new HashMap<>();
+    private final Quests activeQuests = new Quests();
+    private final Map<Position, ResourceLocation> activeRecipes = new HashMap<>();
     private final Map<Position, Room> rooms = new HashMap<>();
     private boolean initialized;
 
@@ -29,34 +30,35 @@ public class TownState {
 
     public void setRecipeAtDoorPosition(
             Position doorPos,
-            RoomRecipe roomRecipe
+            ResourceLocation roomRecipe
     ) {
         this.activeRecipes.put(doorPos, roomRecipe);
+        this.activeQuests.setStatus(roomRecipe, Quest.QuestStatus.COMPLETED);
     }
 
-    public Optional<RoomRecipe> getRecipeAtDoorPos(Position doorPos) {
+    public Optional<ResourceLocation> getRecipeAtDoorPos(Position doorPos) {
         if (activeRecipes.containsKey(doorPos)) {
             return Optional.of(activeRecipes.get(doorPos));
         }
         return Optional.empty();
     }
 
-    public RoomRecipe unsetRecipeAtDoorPos(Position doorPos) {
+    public ResourceLocation unsetRecipeAtDoorPos(Position doorPos) {
         return activeRecipes.remove(doorPos);
     }
 
-    public Collection<RoomRecipe> getQuests() {
-        return ImmutableList.copyOf(activeQuests);
+    public Quests getQuests() {
+        return activeQuests;
     }
 
-    public boolean hasRecipe(RoomRecipe quest) {
+    public boolean hasRecipe(ResourceLocation quest) {
         return activeRecipes.containsValue(quest);
     }
 
-    public void clearQuest(RoomRecipe quest) {
+    public boolean clearQuest(ResourceLocation quest) {
         // TODO: Instead of removing, mark as "done"
         //  That way, if the room is destroyed, the quest can be re-activated
-        activeQuests.remove(quest);
+        return activeQuests.setStatus(quest, Quest.QuestStatus.COMPLETED);
     }
 
     public void tryInitialize(RecipeManager recipeManager) {
@@ -76,7 +78,7 @@ public class TownState {
                 .filter(v -> townInitRecipe.contains(v.getId()));
         recipes.forEach(r -> {
             Questown.LOGGER.debug("Adding quest: " + r.getId());
-            this.activeQuests.add((RoomRecipe) r);
+            this.activeQuests.add(r.getId());
         });
 
         this.initialized = true;
@@ -95,5 +97,15 @@ public class TownState {
 
     public void unsetRoomAtDoorPos(Position doorPos) {
         this.rooms.remove(doorPos);
+    }
+
+    @Override
+    public CompoundTag serializeNBT() {
+        return null;
+    }
+
+    @Override
+    public void deserializeNBT(CompoundTag nbt) {
+
     }
 }

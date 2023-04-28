@@ -4,9 +4,13 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.town.Quest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
@@ -91,7 +95,18 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         // TODO: Store quest state in block (or world?)
-        List<RoomRecipe> townQuests = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+
+        List<UIQuest> quests = entity.getAllQuests().stream().map(v -> {
+            RoomRecipe q = rMap.get(v.getId());
+            if (q == null) {
+                return null;
+            }
+            int recipeStrength = 1; // TODO: Add getter to RoomRecipes
+            return new UIQuest(new RoomRecipe(v.getId(), q.getIngredients(), recipeStrength), v.getStatus());
+        }).toList();
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
             @Override
@@ -105,13 +120,13 @@ public class TownFlagBlock extends BaseEntityBlock {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new TownQuestsContainer(windowId, townQuests);
+                return new TownQuestsContainer(windowId, quests);
             }
         }, data -> {
-            RoomRecipe.Serializer ser = new RoomRecipe.Serializer();
-            data.writeInt(townQuests.size());
-            data.writeCollection(townQuests, (buf, recipe) -> {
-                ResourceLocation id = recipe.getId();
+            UIQuest.Serializer ser = new UIQuest.Serializer();
+            data.writeInt(quests.size());
+            data.writeCollection(quests, (buf, recipe) -> {
+                ResourceLocation id = recipe.getRecipeId();
                 buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });

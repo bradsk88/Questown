@@ -13,11 +13,11 @@ import java.util.Collection;
 
 public class TownQuestsContainer extends AbstractContainerMenu {
 
-    private final Collection<RoomRecipe> quests;
+    private final Collection<UIQuest> quests;
 
     public TownQuestsContainer(
             int windowId,
-            Collection<RoomRecipe> quests
+            Collection<UIQuest> quests
     ) {
         super(MenuTypesInit.TOWN_QUESTS.get(), windowId);
         this.quests = quests;
@@ -31,14 +31,13 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         this(windowId, read(data));
     }
 
-    private static Collection<RoomRecipe> read(FriendlyByteBuf data) {
+    private static Collection<UIQuest> read(FriendlyByteBuf data) {
         int size = data.readInt();
-        ArrayList<RoomRecipe> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
+        ArrayList<UIQuest> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
             ResourceLocation recipeID = buf.readResourceLocation();
-            RoomRecipe roomRecipe = new RoomRecipe.Serializer().fromNetwork(recipeID, buf);
-            return roomRecipe;
+            return new UIQuest.Serializer().fromNetwork(recipeID, buf);
         });
-        r.sort(RoomRecipe::compareTo);
+        r.sort(UIQuest::compareTo);
         return r;
     }
 
@@ -47,7 +46,7 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         return true;
     }
 
-    public Collection<RoomRecipe> GetQuests() {
+    public Collection<UIQuest> GetQuests() {
         return this.quests;
     }
 }
