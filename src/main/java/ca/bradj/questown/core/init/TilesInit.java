@@ -14,7 +14,7 @@ public class TilesInit {
 
     public static final RegistryObject<BlockEntityType<TownFlagBlockEntity>> TOWN_FLAG = TILES.register(
             TownFlagBlockEntity.ID, () -> BlockEntityType.Builder.of(
-                    TownFlagBlockEntity::new, BlocksInit.TOWN_FLAG.get()
+                    TownFlagBlockEntity::new, BlocksInit.COBBLESTONE_TOWN_FLAG.get()
             ).build(null)
     );
 

@@ -54,6 +54,21 @@ public class Quest<KEY> {
         QuestStatus(String str) {
             this.str = str;
         }
+
+        public static QuestStatus fromString(String status) {
+            switch (status) {
+                case "active":
+                    return ACTIVE;
+                case "completed":
+                    return COMPLETED;
+                default:
+                    throw new IllegalStateException("Unexpected status: " + status);
+            }
+        }
+
+        public String asString() {
+            return str;
+        }
     }
 
     interface QuestFactory<KEY, QUEST extends Quest<KEY>> {

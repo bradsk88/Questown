@@ -39,15 +39,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
 
     public static String itemId(WallType wallType) {
-        return String.format("%s_%s", wallType.name(), ITEM_ID);
+        return String.format("%s_%s", wallType.asString(), ITEM_ID);
     }
     public static final String ITEM_ID = "flag_base";
-    private TownFlagBlockEntity entity;
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
 
@@ -66,8 +66,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             BlockPos pos,
             BlockState state
     ) {
-        this.entity = TilesInit.TOWN_FLAG.get().create(pos, state);
-        return this.entity;
+        return new TownFlagBlockEntity(pos, state);
     }
 
     @Nullable
@@ -95,9 +94,14 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(true);
         }
 
+        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(p_60505_, TilesInit.TOWN_FLAG.get());
+        if (oEntity.isEmpty()) {
+            return InteractionResult.sidedSuccess(true);
+        }
+        TownFlagBlockEntity entity = oEntity.get();
         if (player.isCrouching()) {
             entity.generateRandomQuest((ServerLevel) level);
-            return InteractionResult.sidedSuccess(true);
+            return InteractionResult.sidedSuccess(false);
         }
 
         // TODO: Store quest state in block (or world?)
@@ -138,7 +142,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                 ser.toNetwork(buf, recipe);
             });
         });
-        return InteractionResult.sidedSuccess(true);
+        return InteractionResult.sidedSuccess(false);
     }
 
 }

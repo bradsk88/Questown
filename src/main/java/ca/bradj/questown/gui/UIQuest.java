@@ -74,14 +74,14 @@ public class UIQuest implements Comparable<UIQuest> {
         ) {
             String status = p_44106_.readUtf();
             RoomRecipe rec = this.recipeSerializer.fromNetwork(p_44105_, p_44106_);
-            return new UIQuest(rec, Quest.QuestStatus.valueOf(status));
+            return new UIQuest(rec, Quest.QuestStatus.fromString(status));
         }
 
         public void toNetwork(
                 FriendlyByteBuf p_44101_,
                 UIQuest p_44102_
         ) {
-            p_44101_.writeUtf(p_44102_.status.name());
+            p_44101_.writeUtf(p_44102_.status.asString());
             this.recipeSerializer.toNetwork(p_44101_, p_44102_.recipe);
         }
     }

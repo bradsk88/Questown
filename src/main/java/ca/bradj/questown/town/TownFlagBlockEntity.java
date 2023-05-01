@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
@@ -42,19 +41,18 @@ import net.minecraftforge.event.entity.EntityEvent;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
+import java.util.UUID;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, Quests.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
-
-    private static int radius = 20; // TODO: Move to config
 
     public static final String ID = "flag_base_block_entity";
     public static final String NBT_QUESTS = String.format("%s_quests", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
-
+    private static int radius = 20; // TODO: Move to config
     private final ActiveRooms activeRooms = new ActiveRooms();
     private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
     private final MCQuests quests = new MCQuests();
+    private final UUID uuid = UUID.randomUUID();
 
 
     public TownFlagBlockEntity(
@@ -64,9 +62,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         super(TilesInit.TOWN_FLAG.get(), p_155229_, p_155230_);
     }
 
-    @Override
-    public void load(CompoundTag p_155245_) {
-        this.deserializeNBT(p_155245_);
+    public static void tick(
+            Level level,
+            BlockPos blockPos,
+            BlockState state,
+            TownFlagBlockEntity e
+    ) {
+        if (level.isClientSide()) {
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+        long l = gameTime % 10;
+        if (l != 0) {
+            return;
+        }
+
+        ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
+                Positions.FromBlockPos(e.getBlockPos()), e
+        );
+        e.activeRooms.update(rooms);
+
+        e.activeRooms.getAll().forEach(room -> {
+            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, e, blockPos.getY());
+            e.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
+        });
     }
 
     @Override
@@ -126,33 +146,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
         this.quests.addChangeListener(this);
-    }
-
-    public static void tick(
-            Level level,
-            BlockPos blockPos,
-            BlockState state,
-            TownFlagBlockEntity e
-    ) {
-        if (level.isClientSide()) {
-            return;
-        }
-
-        long gameTime = level.getGameTime();
-        long l = gameTime % 10;
-        if (l != 0) {
-            return;
-        }
-
-        ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
-                Positions.FromBlockPos(e.getBlockPos()), e
-        );
-        e.activeRooms.update(rooms);
-
-        e.activeRooms.getAll().forEach(room -> {
-            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, e, blockPos.getY());
-            e.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
-        });
     }
 
     @Override

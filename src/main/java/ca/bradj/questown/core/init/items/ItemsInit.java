@@ -16,7 +16,7 @@ public class ItemsInit {
 	public static final RegistryObject<Item> TOWN_FLAG_BLOCK = ITEMS.register(
 			TownFlagBlock.ITEM_ID,
 			() -> new BlockItem(
-					BlocksInit.TOWN_FLAG.get(),
+					BlocksInit.COBBLESTONE_TOWN_FLAG.get(),
 					TownFlagBlock.ITEM_PROPS
 			)
 	);
