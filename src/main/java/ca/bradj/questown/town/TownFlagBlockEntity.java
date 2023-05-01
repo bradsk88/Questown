@@ -90,9 +90,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
+    public CompoundTag serializeNBT() {
+        return super.serializeNBT();
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
         tag.put(NBT_QUESTS, MCQuests.SERIALIZER.serializeNBT(quests));
+    }
+
+    @Override
+    public void load(CompoundTag p_155245_) {
+        super.load(p_155245_);
+        this.initializeActiveRooms(p_155245_);
+        this.initializeActiveRecipes(p_155245_);
+        this.initializeQuests(p_155245_);
     }
 
     @Override
@@ -102,9 +115,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
         informPlayersOnApproach();
-        this.initializeActiveRooms();
-        this.initializeActiveRecipes();
-        this.initializeQuests();
+        this.initializeActiveRooms(getTileData());
+        this.initializeActiveRecipes(getTileData());
+        this.initializeQuests(getTileData());
     }
 
     private void informPlayersOnApproach() {
@@ -125,23 +138,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    private void initializeActiveRooms() {
+    private void initializeActiveRooms(CompoundTag tag) {
         // TODO: Store on block entity
         this.activeRooms.addChangeListener(this);
     }
 
-    private void initializeActiveRecipes() {
-        if (getTileData().contains(NBT_ACTIVE_RECIPES)) {
-            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
+    private void initializeActiveRecipes(CompoundTag tag) {
+        if (tag.contains(NBT_ACTIVE_RECIPES)) {
+            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
             MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
             return;
         }
         this.activeRecipes.addChangeListener(this);
     }
 
-    private void initializeQuests() {
-        if (getTileData().contains(NBT_QUESTS)) {
-            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
+    private void initializeQuests(CompoundTag tag) {
+        if (tag.contains(NBT_QUESTS)) {
+            CompoundTag data = tag.getCompound(NBT_QUESTS);
             MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
             return;
         }
@@ -186,6 +199,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
         RoomRecipe recipe = recipes.get(level.getRandom().nextInt(recipes.size()));
         quests.addNewQuest(recipe.getId());
+        setChanged();
         broadcastQuestToChat(level, recipe);
     }
 
@@ -203,6 +217,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 new TranslatableComponent("room." + recipeId.getPath()),
                 room.getDoorPos().getUIString()
         ));
+        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markRecipeAsComplete(recipeId);
     }
 
@@ -216,6 +231,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 new TranslatableComponent("room." + newRecipeId.getPath()),
                 room.getDoorPos().getUIString()
         ));
+        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markRecipeAsComplete(newRecipeId);
         // TODO: Mark removed recipe as lost?
     }
@@ -227,6 +243,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 new TranslatableComponent("room." + oldRecipeId.getPath()),
                 room.getDoorPos().getUIString()
         ));
+        handleRoomChange(room, ParticleTypes.LARGE_SMOKE);
     }
 
     @Override
@@ -235,6 +252,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 "messages.town_flag.quest_completed",
                 RoomRecipes.getName(quest.getId())
         ));
+        setChanged();
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
                 getBlockPos().getX(),

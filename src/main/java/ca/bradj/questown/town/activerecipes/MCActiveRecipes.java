@@ -5,6 +5,7 @@ import ca.bradj.roomrecipes.serialization.RoomSerializer;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
@@ -41,7 +42,7 @@ public class MCActiveRecipes extends ActiveRecipes<ResourceLocation> {
         ) {
             ImmutableMap.Builder<Room, ResourceLocation> aqs = ImmutableMap.builder();
             int num = nbt.getInt(NBT_NUM_ACTIVE_RECIPES);
-            ListTag aq = nbt.getList(NBT_ACTIVE_RECIPES, num);
+            ListTag aq = nbt.getList(NBT_ACTIVE_RECIPES, Tag.TAG_COMPOUND);
             for (int i = 0; i < num; i++) {
                 CompoundTag compound = aq.getCompound(i);
                 Room room = RoomSerializer.INSTANCE.deserializeNBT(compound.getCompound(NBT_RECIPE_ROOM));

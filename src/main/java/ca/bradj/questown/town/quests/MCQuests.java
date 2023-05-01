@@ -3,6 +3,7 @@ package ca.bradj.questown.town.quests;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
@@ -46,7 +47,7 @@ public class MCQuests extends Quests<ResourceLocation, MCQuest> {
         public void deserializeNBT(CompoundTag nbt, MCQuests quests) {
             ImmutableList.Builder<MCQuest> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_QUESTS);
-            ListTag aq = nbt.getList(NBT_QUESTS, num);
+            ListTag aq = nbt.getList(NBT_QUESTS, Tag.TAG_COMPOUND);
             for (int i = 0; i < num; i++) {
                 MCQuest q = new MCQuest();
                 CompoundTag tag = aq.getCompound(i);
