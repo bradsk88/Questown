@@ -6,6 +6,8 @@
   "messages.building.room_size_changed": "%s size changed at location %s",
   "messages.town_flag.click_to_view_quests": "Click the Flag Base to view open quests",
   "messages.town_flag.quest_completed": "Quest completed: %s",
+  "messages.town_flag.quest_added": "Quest added: %s",
+  "quests.build_a": "Build a %s",
   "room.crafting_room": "Crafting Room",
   "room.forge_room": "Forge",
   "room.store_room": "Storeroom",

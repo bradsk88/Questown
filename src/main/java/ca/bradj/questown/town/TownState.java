@@ -5,6 +5,7 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -56,8 +57,6 @@ public class TownState implements INBTSerializable<CompoundTag> {
     }
 
     public boolean clearQuest(ResourceLocation quest) {
-        // TODO: Instead of removing, mark as "done"
-        //  That way, if the room is destroyed, the quest can be re-activated
         return activeQuests.setStatus(quest, Quest.QuestStatus.COMPLETED);
     }
 
@@ -107,5 +106,9 @@ public class TownState implements INBTSerializable<CompoundTag> {
     @Override
     public void deserializeNBT(CompoundTag nbt) {
 
+    }
+
+    public void addActiveQuest(ResourceLocation id) {
+        this.activeQuests.add(id);
     }
 }

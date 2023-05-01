@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -89,6 +90,17 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         this.nextPage.y = pageStringY;
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
+    }
+
+    @Override
+    public boolean keyReleased(
+            int keyCode, int scanCode, int modifiers
+    ) {
+        if (keyCode == GLFW.GLFW_KEY_Q) { // TODO: Get from user's config
+
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

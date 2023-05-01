@@ -2,12 +2,14 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
+import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import com.google.common.collect.ImmutableList;
@@ -15,6 +17,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -30,6 +33,7 @@ import net.minecraftforge.event.entity.EntityEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, TownCycle.DoorsListener, TownCycle.NewRoomHandler, TownCycle.RoomTicker, DoorDetection.DoorChecker {
@@ -284,5 +288,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
     public ImmutableList<Quest> getAllQuests() {
         return state.getQuests().getAll();
+    }
+
+    public void generateRandomQuest(ServerLevel level) {
+        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        RoomRecipe recipe = recipes.get(level.getRandom().nextInt(recipes.size()));
+        state.addActiveQuest(recipe.getId());
+        broadcastQuestToChat(level, recipe);
+    }
+
+    private void broadcastQuestToChat(ServerLevel level, RoomRecipe recipe) {
+        Component recipeName = RoomRecipes.getName(recipe.getId());
+        TranslatableComponent questName = new TranslatableComponent("quests.build_a", recipeName);
+        TranslatableComponent questAdded = new TranslatableComponent("messages.town_flag.quest_added", questName);
+        level.getServer().getPlayerList().broadcastMessage(questAdded, ChatType.CHAT, null);
     }
 }

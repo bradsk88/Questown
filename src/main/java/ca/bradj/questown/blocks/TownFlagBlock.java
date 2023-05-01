@@ -15,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -94,12 +95,18 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(true);
         }
 
+        if (player.isCrouching()) {
+            entity.generateRandomQuest((ServerLevel) level);
+            return InteractionResult.sidedSuccess(true);
+        }
+
         // TODO: Store quest state in block (or world?)
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
-        List<UIQuest> quests = entity.getAllQuests().stream().map(v -> {
+        ImmutableList<Quest> aQ = entity.getAllQuests();
+        List<UIQuest> quests = aQ.stream().map(v -> {
             RoomRecipe q = rMap.get(v.getId());
             if (q == null) {
                 return null;

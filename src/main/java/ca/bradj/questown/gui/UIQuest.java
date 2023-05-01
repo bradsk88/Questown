@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.Quest;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.gson.JsonObject;
@@ -44,7 +45,7 @@ public class UIQuest implements Comparable<UIQuest> {
     }
 
     public Component getName() {
-        return new TranslatableComponent(String.format("room.%s", recipe.getId().getPath()));
+        return RoomRecipes.getName(recipe.getId());
     }
 
     public static class Serializer {
