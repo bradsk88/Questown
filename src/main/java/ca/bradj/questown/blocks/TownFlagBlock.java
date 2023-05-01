@@ -5,8 +5,8 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
-import ca.bradj.questown.town.Quest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
@@ -105,7 +105,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
-        ImmutableList<Quest> aQ = entity.getAllQuests();
+        ImmutableList<MCQuest> aQ = entity.getAllQuests();
         List<UIQuest> quests = aQ.stream().map(v -> {
             RoomRecipe q = rMap.get(v.getId());
             if (q == null) {

@@ -5,9 +5,9 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
 
 public class TownCycle {
@@ -18,44 +18,19 @@ public class TownCycle {
         boolean IsDoor(Position dp);
     }
 
-    public interface DoorsListener {
-        void DoorAdded(Position dp);
-
-        void DoorRemoved(Position dp);
-    }
-
-    public interface NewRoomHandler {
-        void roomDestroyed(Position doorPos);
-    }
-
-    public interface RoomTicker {
-        void roomTick(Room room);
-    }
-
-    public static void roomsTick(
+    public static ImmutableMap<Position, Optional<Room>> findRooms(
             Position townBlockPosition,
-            BlockChecker checker,
-            DoorsListener doors,
-            NewRoomHandler roomHandler,
-            RoomTicker roomTicker
+            BlockChecker checker
     ) {
-        Collection<Position> foundDoors = findDoors(checker, townBlockPosition, doors);
-        Map<Position, Optional<Room>> rooms = LevelRoomDetection.findRooms(
+        Collection<Position> foundDoors = findDoors(checker, townBlockPosition);
+        return LevelRoomDetection.findRooms(
                 foundDoors, 20, (position) -> !checker.IsEmpty(position)
         );
-        rooms.forEach((position, room) -> {
-            if (room.isEmpty()) {
-                roomHandler.roomDestroyed(position);
-            } else {
-                roomTicker.roomTick(room.get());
-            }
-        });
     }
 
     private static Collection<Position> findDoors(
             BlockChecker blocks,
-            Position townBlockPosition,
-            DoorsListener dl
+            Position townBlockPosition
     ) {
         Questown.LOGGER.trace("Checking for doors");
         Collection<Position> doors = DoorDetection.LocateDoorsAroundPosition(
@@ -67,10 +42,6 @@ public class TownCycle {
                 },
                 100 // TODO: Constant or parameter
         );
-        doors.forEach(dp -> {
-            Questown.LOGGER.debug("Door detected at " + dp);
-            dl.DoorAdded(dp);
-        });
         return doors;
     }
 

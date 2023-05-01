@@ -4,6 +4,12 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.town.activerecipes.ActiveRecipes;
+import ca.bradj.questown.town.activerecipes.MCActiveRecipes;
+import ca.bradj.questown.town.activerooms.ActiveRooms;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.MCQuests;
+import ca.bradj.questown.town.quests.Quests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -13,7 +19,10 @@ import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
@@ -31,22 +40,22 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, TownCycle.DoorsListener, TownCycle.NewRoomHandler, TownCycle.RoomTicker, DoorDetection.DoorChecker {
+public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, Quests.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
 
     private static int radius = 20; // TODO: Move to config
 
     public static final String ID = "flag_base_block_entity";
     public static final String NBT_QUESTS = String.format("%s_quests", Questown.MODID);
+    public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
 
+    private final ActiveRooms activeRooms = new ActiveRooms();
+    private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
+    private final MCQuests quests = new MCQuests();
 
-    private final Collection<Position> doors = new ArrayList<>();
-
-    private final TownState state = new TownState();
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -61,23 +70,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        if (nbt.contains(NBT_QUESTS)) {
-            CompoundTag c = nbt.getCompound(NBT_QUESTS);
-            state.deserializeNBT(c);
-        }
-    }
-
-    @Override
-    protected void saveAdditional(CompoundTag p_187471_) {
-        p_187471_.put(NBT_QUESTS, state.serializeNBT());
-    }
-
-    @Override
-    public CompoundTag serializeNBT() {
-        CompoundTag c = new CompoundTag();
-        c.put(NBT_QUESTS, state.serializeNBT());
-        return c;
+    protected void saveAdditional(CompoundTag tag) {
+        tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
+        tag.put(NBT_QUESTS, MCQuests.SERIALIZER.serializeNBT(quests));
     }
 
     @Override
@@ -86,6 +81,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         if (this.level.isClientSide()) {
             return;
         }
+        informPlayersOnApproach();
+        this.initializeActiveRooms();
+        this.initializeActiveRecipes();
+        this.initializeQuests();
+    }
+
+    private void informPlayersOnApproach() {
         MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
             if (event.getEntity() instanceof Player) {
                 double v = event.getEntity().distanceToSqr(
@@ -101,8 +103,29 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 }
             }
         });
+    }
 
-        state.tryInitialize(level.getRecipeManager());
+    private void initializeActiveRooms() {
+        // TODO: Store on block entity
+        this.activeRooms.addChangeListener(this);
+    }
+
+    private void initializeActiveRecipes() {
+        if (getTileData().contains(NBT_ACTIVE_RECIPES)) {
+            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
+            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
+            return;
+        }
+        this.activeRecipes.addChangeListener(this);
+    }
+
+    private void initializeQuests() {
+        if (getTileData().contains(NBT_QUESTS)) {
+            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
+            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
+            return;
+        }
+        this.quests.addChangeListener(this);
     }
 
     public static void tick(
@@ -121,14 +144,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
 
-        TownCycle.roomsTick(Positions.FromBlockPos(e.getBlockPos()), e, e, e, e);
-    }
+        ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
+                Positions.FromBlockPos(e.getBlockPos()), e
+        );
+        e.activeRooms.update(rooms);
 
-    private void putDoor(Position dp) {
-        if (this.doors.contains(dp)) {
-            return;
-        }
-        this.doors.add(dp);
+        e.activeRooms.getAll().forEach(room -> {
+            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, e, blockPos.getY());
+            e.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
+        });
     }
 
     @Override
@@ -142,105 +166,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         return level.getBlockState(Positions.ToBlock(dp, this.getBlockPos().getY())).getBlock() instanceof DoorBlock;
     }
 
-    @Override
-    public void DoorAdded(Position dp) {
-        this.putDoor(dp);
-    }
-
-    @Override
-    public void DoorRemoved(Position dp) {
-        this.doors.remove(dp);
-        handleRoomDestroyed(dp);
-    }
-
-    @Override
-    public void roomDestroyed(
-            Position doorPos
-    ) {
-        state.unsetRoomAtDoorPos(doorPos);
-        handleRoomDestroyed(doorPos);
-    }
-
-    @Override
-    public void roomTick(
-            Room room
-    ) {
-        // TODO: Explicitly handle nested rooms
-
-        if (!(level instanceof ServerLevel)) {
-            return;
-        }
-
-        Optional<Room> detectedRoom = state.getDetectedRoom(room.getDoorPos());
-        Questown.LOGGER.trace("Ticking room: " + room);
-        if (detectedRoom.isEmpty() || !detectedRoom.get().equals(room)) {
-            handleRoomChange(room);
-        }
-
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
-        Questown.LOGGER.debug("Current Recipe: " + recipe);
-
-        if (recipe.isPresent() && detectedRoom.isPresent() && !detectedRoom.get().equals(room)) {
-            handleRoomSizeChange(recipe.get(), detectedRoom.get().getDoorPos());
-        }
-
-        handleRecipeUpdate(room, recipe.map(RoomRecipe::getId));
-
-        for (ResourceLocation quest : state.getQuests().getCompleted()) {
-            if (state.hasRecipe(quest)) {
-                handleQuestCompleted(quest);
-            }
-        }
-
-    }
-
-    private void handleRecipeUpdate(
-            Room room,
-            Optional<ResourceLocation> recipe
-    ) {
-        Position doorPos = room.getDoorPos();
-        if (recipe.isEmpty() && state.roomDoorExistsAt(doorPos)) {
-            handleRoomDestroyed(doorPos);
-        }
-        if (recipe.isPresent() && !state.roomDoorExistsAt(doorPos)) {
-            state.setRecipeAtDoorPosition(doorPos, recipe.get());
-            broadcastMessage(new TranslatableComponent(
-                    "messages.building.room_created",
-                    new TranslatableComponent("room." + recipe.get().getPath()),
-                    doorPos.getUIString()
-            ));
-        }
-        if (recipe.isPresent() && state.roomDoorExistsAt(doorPos)) {
-            Optional<ResourceLocation> currentRecipe = state.getRecipeAtDoorPos(doorPos);
-            if (currentRecipe.isPresent() && !currentRecipe.get().equals(recipe.get())) {
-                state.setRecipeAtDoorPosition(doorPos, recipe.get());
-                broadcastMessage(new TranslatableComponent(
-                        "messages.building.room_changed",
-                        new TranslatableComponent("room." + currentRecipe.get().getPath()),
-                        new TranslatableComponent("room." + recipe.get().getPath()),
-                        doorPos.getUIString()
-                ));
-            }
-        }
-    }
-
-    private void handleRoomSizeChange(
-            RoomRecipe recipe,
-            Position doorPos
-    ) {
-        broadcastMessage(new TranslatableComponent(
-                "messages.building.room_size_changed",
-                new TranslatableComponent("room." + recipe.getId().getPath()),
-                doorPos.getUIString()
-        ));
-    }
-
     private void broadcastMessage(TranslatableComponent msg) {
         level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
     }
 
-    private void handleRoomChange(Room room) {
-        state.setDetectedRoom(room);
+    private void handleRoomChange(Room room, ParticleOptions pType) {
         RoomEffects.renderParticlesBetween(room.getSpace(), (x, z) -> {
             int y = this.getBlockPos().getY();
             BlockPos bp = new BlockPos(x, y, z);
@@ -250,19 +180,67 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             if (!level.isEmptyBlock(bp)) {
                 return;
             }
-            ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 2, 0, 1, 0, 1);
-            ((ServerLevel) level).sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y + 1, z, 2, 0, 1, 0, 1);
+            ((ServerLevel) level).sendParticles(pType, x, y, z, 2, 0, 1, 0, 1);
+            ((ServerLevel) level).sendParticles(pType, x, y + 1, z, 2, 0, 1, 0, 1);
         });
     }
 
-    private void handleQuestCompleted(ResourceLocation quest) {
-        boolean isNews = state.clearQuest(quest);
-        if (!isNews) {
-            return;
-        }
+    public ImmutableList<MCQuest> getAllQuests() {
+        return quests.getAll();
+    }
+
+    public void generateRandomQuest(ServerLevel level) {
+        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        RoomRecipe recipe = recipes.get(level.getRandom().nextInt(recipes.size()));
+        quests.addNewQuest(recipe.getId());
+        broadcastQuestToChat(level, recipe);
+    }
+
+    private void broadcastQuestToChat(ServerLevel level, RoomRecipe recipe) {
+        Component recipeName = RoomRecipes.getName(recipe.getId());
+        TranslatableComponent questName = new TranslatableComponent("quests.build_a", recipeName);
+        TranslatableComponent questAdded = new TranslatableComponent("messages.town_flag.quest_added", questName);
+        level.getServer().getPlayerList().broadcastMessage(questAdded, ChatType.CHAT, null);
+    }
+
+    @Override
+    public void roomRecipeCreated(Room room, ResourceLocation recipeId) {
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_created",
+                new TranslatableComponent("room." + recipeId.getPath()),
+                room.getDoorPos().getUIString()
+        ));
+        quests.markRecipeAsComplete(recipeId);
+    }
+
+    @Override
+    public void roomRecipeChanged(
+            Room room, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
+    ) {
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_changed",
+                new TranslatableComponent("room." + oldRecipeId.getPath()),
+                new TranslatableComponent("room." + newRecipeId.getPath()),
+                room.getDoorPos().getUIString()
+        ));
+        quests.markRecipeAsComplete(newRecipeId);
+        // TODO: Mark removed recipe as lost?
+    }
+
+    @Override
+    public void roomRecipeDestroyed(Room room, ResourceLocation oldRecipeId) {
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_destroyed",
+                new TranslatableComponent("room." + oldRecipeId.getPath()),
+                room.getDoorPos().getUIString()
+        ));
+    }
+
+    @Override
+    public void questCompleted(MCQuest quest) {
         broadcastMessage(new TranslatableComponent(
                 "messages.town_flag.quest_completed",
-                new TranslatableComponent("room." + quest.getPath())
+                RoomRecipes.getName(quest.getId())
         ));
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
@@ -274,33 +252,50 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         level.addFreshEntity(firework);
     }
 
-    private void handleRoomDestroyed(Position doorPos) {
-        ResourceLocation roomRecipe = state.unsetRecipeAtDoorPos(doorPos);
-        if (roomRecipe == null) {
-            return;
-        }
+    @Override
+    public void roomAdded(
+            Position doorPos,
+            Room room
+    ) {
+        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
+        this.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
         broadcastMessage(new TranslatableComponent(
-                "messages.building.room_destroyed",
-                new TranslatableComponent("room." + roomRecipe.getPath()),
+                "messages.building.room_created",
+                RoomRecipes.getName(recipe),
                 doorPos.getUIString()
         ));
     }
 
-    public ImmutableList<Quest> getAllQuests() {
-        return state.getQuests().getAll();
+    @Override
+    public void roomResized(
+            Position doorPos,
+            Room oldRoom,
+            Room newRoom
+    ) {
+        handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
+        this.activeRecipes.update(oldRoom, Optional.empty());
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, newRoom, this, this.getBlockPos().getY());
+        this.activeRecipes.update(newRoom, recipe.map(RoomRecipe::getId));
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_size_changed",
+                RoomRecipes.getName(recipe),
+                doorPos.getUIString()
+        ));
     }
 
-    public void generateRandomQuest(ServerLevel level) {
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-        RoomRecipe recipe = recipes.get(level.getRandom().nextInt(recipes.size()));
-        state.addActiveQuest(recipe.getId());
-        broadcastQuestToChat(level, recipe);
-    }
-
-    private void broadcastQuestToChat(ServerLevel level, RoomRecipe recipe) {
-        Component recipeName = RoomRecipes.getName(recipe.getId());
-        TranslatableComponent questName = new TranslatableComponent("quests.build_a", recipeName);
-        TranslatableComponent questAdded = new TranslatableComponent("messages.town_flag.quest_added", questName);
-        level.getServer().getPlayerList().broadcastMessage(questAdded, ChatType.CHAT, null);
+    @Override
+    public void roomDestroyed(
+            Position doorPos,
+            Room room
+    ) {
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
+        broadcastMessage(new TranslatableComponent(
+                "messages.building.room_destroyed",
+                RoomRecipes.getName(recipe),
+                doorPos.getUIString()
+        ));
+        handleRoomChange(room, ParticleTypes.SMOKE);
+        this.activeRecipes.update(room, Optional.empty());
     }
 }

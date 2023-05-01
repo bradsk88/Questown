@@ -1,12 +1,11 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.town.Quest;
+import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;

@@ -127,7 +127,9 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
-    implementation 'org.junit.jupiter:junit-jupiter:5.4.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.4.0'
+    testImplementation 'org.mockito:mockito-core:3.12.4'
+    testImplementation 'junit:junit:4.13.1'
 
     // Specify the version of Minecraft to use, If this is any group other then 'net.minecraft' it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
@@ -137,6 +139,7 @@ dependencies {
     implementation fg.deobf("mezz.jei:jei-1.18.2:9.7.0.195")
 
     implementation 'ca.bradj:RoomRecipes:0.0.1'
+
 
     // You may put jars on which you depend on in ./libs or you may define them like so..
     // compile "some.group:artifact:version:classifier"
