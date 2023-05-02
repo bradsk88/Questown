@@ -32,7 +32,7 @@ public class ActiveRecipes<KEY> {
             Room room,
             Optional<KEY> recipe
     ) {
-        Questown.LOGGER.debug("Updating recipe at " + room.getDoorPos() + " to " + recipe + " for room with space " + room.getSpace());
+        Questown.LOGGER.trace("Updating recipe at " + room.getDoorPos() + " to " + recipe + " for room with space " + room.getSpace());
 
         if (recipe.isPresent()) {
             if (activeRecipes.containsKey(room)) {
