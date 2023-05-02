@@ -1,13 +1,17 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.RoomRecipesScreen;
+import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -40,6 +44,7 @@ public class Questown {
         TilesInit.TILES.register(bus);
         ItemsInit.register(bus);
         MenuTypesInit.register(bus);
+        EntitiesInit.register(bus);
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -49,6 +54,12 @@ public class Questown {
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         event.enqueueWork(() -> {
             MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), RoomRecipesScreen::new);
+        });
+        event.enqueueWork(() -> {
+            EntityRenderers.register(
+                    EntitiesInit.VISITOR.get(),
+                    VisitorMobRenderer::new
+            );
         });
     }
 
