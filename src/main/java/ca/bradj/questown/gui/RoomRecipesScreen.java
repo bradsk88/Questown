@@ -1,8 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import ca.bradj.questown.town.quests.Quest;
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
@@ -14,6 +15,7 @@ import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -132,13 +134,26 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
             int row = i - startIndex;
             int cardY = y + row * (CARD_HEIGHT + CARD_PADDING);
 
-            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
-
             UIQuest recipe = quests.get(i);
+            if (recipe == null) {
+                continue;
+            }
+            Component recipeName = new TextComponent(recipe.getName().getString());
+            if (recipe.status == Quest.QuestStatus.COMPLETED) {
+                RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
+                recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);
+            }
+            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+
             if (recipe != null) {
                 int iconY = cardY + CARD_HEIGHT - 24;
-                ImmutableList<Slot> slotz = renderRecipeCard(poseStack, recipe, x, iconY, mouseX, mouseY, partialTicks);
+                ImmutableList<Slot> slotz = renderRecipeCardIcons(poseStack, recipe, x, iconY, mouseX, mouseY);
                 b.addAll(slotz);
+
+                int idX = x + PAGE_PADDING;
+                int idY = iconY - 10;
+                this.font.draw(poseStack, recipeName.getString(), idX, idY, TEXT_COLOR);
             }
         }
         slots.clear();
@@ -149,16 +164,12 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
     }
 
-    private int lastRenderTick = 0;
-    private int currentItemIndex = 0;
-
     private List<Slot> slots = new ArrayList<>();
 
-    private ImmutableList<Slot> renderRecipeCard(
+    private ImmutableList<Slot> renderRecipeCardIcons(
             PoseStack poseStack,
             UIQuest recipe,
-            int x, int y, int mouseX, int mouseY,
-            float partialTicks
+            int x, int y, int mouseX, int mouseY
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
@@ -186,10 +197,6 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
             }
             j++;
         }
-
-        int idX = x + PAGE_PADDING;
-        int idY = y - 10;
-        this.font.draw(poseStack, recipe.getName().getString(), idX, idY, TEXT_COLOR);
         return b.build();
     }
 

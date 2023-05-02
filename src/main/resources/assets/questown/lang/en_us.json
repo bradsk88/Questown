@@ -8,6 +8,7 @@
   "messages.town_flag.quest_completed": "Quest completed: %s",
   "messages.town_flag.quest_added": "Quest added: %s",
   "quests.build_a": "Build a %s",
+  "quests.completed_suffix": "%s (Completed)",
   "room.no_recipe": "Room",
   "room.crafting_room": "Crafting Room",
   "room.forge_room": "Forge",
