@@ -15,5 +15,6 @@
   "room.store_room": "Storeroom",
   "room.bedroom": "Bedroom",
   "room.big_bedroom": "Big Bedroom",
-  "room.inn": "Inn"
+  "room.inn": "Inn",
+  "block.questown.cobblestone_flag_base": "Cobblestone Flag Base"
 }

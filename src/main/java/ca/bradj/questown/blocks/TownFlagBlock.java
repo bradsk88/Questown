@@ -1,6 +1,5 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
@@ -29,7 +28,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -106,11 +104,11 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         TownFlagBlockEntity entity = oEntity.get();
         if (player.isCrouching()) {
-            // TODO: This is throwaway code
-//            entity.generateRandomQuest((ServerLevel) level);
-            boolean spawned = spawnVisitorNearby((ServerLevel) level, pos);
-            Questown.LOGGER.debug("Spawned: " + spawned);
-            return InteractionResult.sidedSuccess(false);
+//             TODO: This is throwaway code
+            entity.generateRandomQuest((ServerLevel) level);
+//            boolean spawned = spawnVisitorNearby((ServerLevel) level, pos);
+//            Questown.LOGGER.debug("Spawned: " + spawned);
+//            return InteractionResult.sidedSuccess(false);
         }
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();

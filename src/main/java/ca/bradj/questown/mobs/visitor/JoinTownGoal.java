@@ -21,6 +21,19 @@ public class JoinTownGoal extends RandomStrollGoal {
         this.targetBlock = bp;
     }
 
+    @Override
+    public boolean canUse() {
+        double distance = mob.distanceToSqr(
+                targetBlock.getPosition().getX(),
+                targetBlock.getPosition().getY(),
+                targetBlock.getPosition().getZ()
+        );
+        if (distance < 100) { // 100 is 10^2, the squared distance for 10 blocks away TODO: Add to config
+            return false;
+        }
+        return super.canUse();
+    }
+
     @Nullable
     @Override
     protected Vec3 getPosition() {

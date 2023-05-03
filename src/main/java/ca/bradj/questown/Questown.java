@@ -1,5 +1,6 @@
 package ca.bradj.questown;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.MenuTypesInit;
@@ -11,10 +12,11 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -45,6 +47,8 @@ public class Questown {
         ItemsInit.register(bus);
         MenuTypesInit.register(bus);
         EntitiesInit.register(bus);
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
     }
 
     private void setup(final FMLCommonSetupEvent event) {

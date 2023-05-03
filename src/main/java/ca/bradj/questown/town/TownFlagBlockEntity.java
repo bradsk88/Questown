@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
@@ -20,6 +21,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -53,6 +55,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
     private final MCQuests quests = new MCQuests();
     private final UUID uuid = UUID.randomUUID();
+    private boolean isInitializedQuests = false;
 
 
     public TownFlagBlockEntity(
@@ -70,6 +73,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     ) {
         if (level.isClientSide()) {
             return;
+        }
+
+        if (!e.isInitializedQuests) {
+            e.initialize(level);
         }
 
         long gameTime = level.getGameTime();
@@ -95,17 +102,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
+    public void deserializeNBT(CompoundTag nbt) {
+        super.deserializeNBT(nbt);
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
         tag.put(NBT_QUESTS, MCQuests.SERIALIZER.serializeNBT(quests));
     }
 
-    @Override
-    public void load(CompoundTag p_155245_) {
-        super.load(p_155245_);
-        this.initializeActiveRooms(p_155245_);
-        this.initializeActiveRecipes(p_155245_);
-        this.initializeQuests(p_155245_);
+    public void initialize(Level level) {
+        this.initializeActiveRooms();
+        this.initializeActiveRecipes();
+        this.initializeQuests(level);
     }
 
     @Override
@@ -115,9 +125,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
         informPlayersOnApproach();
-        this.initializeActiveRooms(getTileData());
-        this.initializeActiveRecipes(getTileData());
-        this.initializeQuests(getTileData());
+        // TODO: Store active rooms?
+        if (getTileData().contains(NBT_ACTIVE_RECIPES)) {
+            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
+            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
+        }
+        if (getTileData().contains(NBT_QUESTS)) {
+            CompoundTag data = getTileData().getCompound(NBT_QUESTS);
+            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
+            this.isInitializedQuests = true;
+        }
     }
 
     private void informPlayersOnApproach() {
@@ -138,27 +155,30 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    private void initializeActiveRooms(CompoundTag tag) {
-        // TODO: Store on block entity
+    private void initializeActiveRooms() {
         this.activeRooms.addChangeListener(this);
     }
 
-    private void initializeActiveRecipes(CompoundTag tag) {
-        if (tag.contains(NBT_ACTIVE_RECIPES)) {
-            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
-            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
-            return;
-        }
+    private void initializeActiveRecipes() {
         this.activeRecipes.addChangeListener(this);
     }
 
-    private void initializeQuests(CompoundTag tag) {
-        if (tag.contains(NBT_QUESTS)) {
-            CompoundTag data = tag.getCompound(NBT_QUESTS);
-            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
-            return;
-        }
+    private void initializeQuests(Level level) {
+        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        final List<RoomRecipe> recipesCopy = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
+
+        List<? extends String> initialQuests = Config.village_start_quests.get();
+
+        initialQuests.forEach(iq -> {
+            Optional<RoomRecipe> match = recipesCopy.stream().filter(v -> v.getId().toString().equals(iq)).findFirst();
+            if (match.isEmpty()) {
+                Questown.LOGGER.error("Unrecognized recipe ID provided for {}: {}", Config.VILLAGE_START_QUESTS, iq);
+                return;
+            }
+            quests.addNewQuest(match.get().getId());
+        });
         this.quests.addChangeListener(this);
+        this.isInitializedQuests = true;
     }
 
     @Override
@@ -176,7 +196,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
     }
 
-    private void handleRoomChange(Room room, ParticleOptions pType) {
+    private void handleRoomChange(
+            Room room,
+            ParticleOptions pType
+    ) {
         RoomEffects.renderParticlesBetween(room.getSpace(), (x, z) -> {
             int y = this.getBlockPos().getY();
             BlockPos bp = new BlockPos(x, y, z);
@@ -203,7 +226,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         broadcastQuestToChat(level, recipe);
     }
 
-    private void broadcastQuestToChat(ServerLevel level, RoomRecipe recipe) {
+    private void broadcastQuestToChat(
+            ServerLevel level,
+            RoomRecipe recipe
+    ) {
         Component recipeName = RoomRecipes.getName(recipe.getId());
         TranslatableComponent questName = new TranslatableComponent("quests.build_a", recipeName);
         TranslatableComponent questAdded = new TranslatableComponent("messages.town_flag.quest_added", questName);
@@ -211,7 +237,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void roomRecipeCreated(Room room, ResourceLocation recipeId) {
+    public void roomRecipeCreated(
+            Room room,
+            ResourceLocation recipeId
+    ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
                 new TranslatableComponent("room." + recipeId.getPath()),
@@ -223,7 +252,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
     @Override
     public void roomRecipeChanged(
-            Room room, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
+            Room room,
+            ResourceLocation oldRecipeId,
+            ResourceLocation newRecipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_changed",
@@ -237,7 +268,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void roomRecipeDestroyed(Room room, ResourceLocation oldRecipeId) {
+    public void roomRecipeDestroyed(
+            Room room,
+            ResourceLocation oldRecipeId
+    ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
                 new TranslatableComponent("room." + oldRecipeId.getPath()),
