@@ -29,6 +29,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -40,6 +43,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -75,10 +80,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
 
-        if (!e.isInitializedQuests) {
-            e.initialize(level);
-        }
-
         long gameTime = level.getGameTime();
         long l = gameTime % 10;
         if (l != 0) {
@@ -107,15 +108,42 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
+    protected void saveAdditional(@NotNull CompoundTag tag) {
+        super.saveAdditional(tag);
+        this.writeTownData(tag);
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        // TODO: Store active rooms?
+        if (tag.contains(NBT_ACTIVE_RECIPES)) {
+            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
+            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
+        }
+        if (tag.contains(NBT_QUESTS)) {
+            CompoundTag data = tag.getCompound(NBT_QUESTS);
+            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
+            this.isInitializedQuests = true;
+        }
+    }
+
+    private void writeTownData(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
         tag.put(NBT_QUESTS, MCQuests.SERIALIZER.serializeNBT(quests));
     }
 
-    public void initialize(Level level) {
-        this.initializeActiveRooms();
-        this.initializeActiveRecipes();
-        this.initializeQuests(level);
+    @Override
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = super.getUpdateTag();
+        this.writeTownData(tag);
+        return tag;
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override
@@ -125,16 +153,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             return;
         }
         informPlayersOnApproach();
-        // TODO: Store active rooms?
-        if (getTileData().contains(NBT_ACTIVE_RECIPES)) {
-            CompoundTag data = getTileData().getCompound(NBT_ACTIVE_RECIPES);
-            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
+        if (!this.isInitializedQuests) {
+            this.initializeQuests(level);
         }
-        if (getTileData().contains(NBT_QUESTS)) {
-            CompoundTag data = getTileData().getCompound(NBT_QUESTS);
-            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
-            this.isInitializedQuests = true;
-        }
+        this.quests.addChangeListener(this);
+        this.activeRecipes.addChangeListener(this);
+        this.activeRooms.addChangeListener(this);
+        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
     }
 
     private void informPlayersOnApproach() {
@@ -155,14 +180,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    private void initializeActiveRooms() {
-        this.activeRooms.addChangeListener(this);
-    }
-
-    private void initializeActiveRecipes() {
-        this.activeRecipes.addChangeListener(this);
-    }
-
     private void initializeQuests(Level level) {
         List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
         final List<RoomRecipe> recipesCopy = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
@@ -177,7 +194,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             }
             quests.addNewQuest(match.get().getId());
         });
-        this.quests.addChangeListener(this);
         this.isInitializedQuests = true;
     }
 
