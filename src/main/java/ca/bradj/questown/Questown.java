@@ -1,10 +1,7 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.init.BlocksInit;
-import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.RoomRecipesScreen;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
@@ -47,6 +44,7 @@ public class Questown {
         ItemsInit.register(bus);
         MenuTypesInit.register(bus);
         EntitiesInit.register(bus);
+        RewardsInit.register(bus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
     }

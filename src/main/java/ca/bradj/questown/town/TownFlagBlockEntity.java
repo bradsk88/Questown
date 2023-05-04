@@ -9,8 +9,10 @@ import ca.bradj.questown.town.activerecipes.ActiveRecipes;
 import ca.bradj.questown.town.activerecipes.MCActiveRecipes;
 import ca.bradj.questown.town.activerooms.ActiveRooms;
 import ca.bradj.questown.town.quests.MCQuest;
-import ca.bradj.questown.town.quests.MCQuests;
-import ca.bradj.questown.town.quests.Quests;
+import ca.bradj.questown.town.quests.MCQuestBatch;
+import ca.bradj.questown.town.quests.MCQuestBatches;
+import ca.bradj.questown.town.quests.QuestBatch;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -50,15 +52,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, Quests.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
+public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
 
     public static final String ID = "flag_base_block_entity";
-    public static final String NBT_QUESTS = String.format("%s_quests", Questown.MODID);
+    public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
     private final ActiveRooms activeRooms = new ActiveRooms();
     private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
-    private final MCQuests quests = new MCQuests();
+    private final MCQuestBatches questBatches = new MCQuestBatches();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
 
@@ -114,23 +116,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void load(CompoundTag tag) {
+    public void load(@NotNull CompoundTag tag) {
         super.load(tag);
         // TODO: Store active rooms?
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
             MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
         }
-        if (tag.contains(NBT_QUESTS)) {
-            CompoundTag data = tag.getCompound(NBT_QUESTS);
-            MCQuests.SERIALIZER.deserializeNBT(data, this.quests);
+        if (tag.contains(NBT_QUEST_BATCHES)) {
+            CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
+            MCQuestBatches.SERIALIZER.deserializeNBT(this, data, this.questBatches);
             this.isInitializedQuests = true;
         }
     }
 
     private void writeTownData(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
-        tag.put(NBT_QUESTS, MCQuests.SERIALIZER.serializeNBT(quests));
+        tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
     }
 
     @Override
@@ -149,14 +151,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     @Override
     public void onLoad() {
         super.onLoad();
-        if (this.level.isClientSide()) {
+        if (!(level instanceof ServerLevel sl)) {
             return;
         }
         informPlayersOnApproach();
         if (!this.isInitializedQuests) {
-            this.initializeQuests(level);
+            this.initializeQuests(sl);
         }
-        this.quests.addChangeListener(this);
+        this.questBatches.addChangeListener(this);
         this.activeRecipes.addChangeListener(this);
         this.activeRooms.addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
@@ -180,20 +182,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         });
     }
 
-    private void initializeQuests(Level level) {
+    private void initializeQuests(ServerLevel level) {
         List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
         final List<RoomRecipe> recipesCopy = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
 
         List<? extends String> initialQuests = Config.village_start_quests.get();
 
+        MCQuestBatch qb = new MCQuestBatch(new SpawnVisitorReward(this));
         initialQuests.forEach(iq -> {
             Optional<RoomRecipe> match = recipesCopy.stream().filter(v -> v.getId().toString().equals(iq)).findFirst();
             if (match.isEmpty()) {
                 Questown.LOGGER.error("Unrecognized recipe ID provided for {}: {}", Config.VILLAGE_START_QUESTS, iq);
                 return;
             }
-            quests.addNewQuest(match.get().getId());
+            qb.addNewQuest(match.get().getId());
         });
+        questBatches.add(qb);
         this.isInitializedQuests = true;
     }
 
@@ -231,15 +235,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     public ImmutableList<MCQuest> getAllQuests() {
-        return quests.getAll();
+        return questBatches.getAll();
     }
 
     public void generateRandomQuest(ServerLevel level) {
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-        RoomRecipe recipe = recipes.get(level.getRandom().nextInt(recipes.size()));
-        quests.addNewQuest(recipe.getId());
+        RoomRecipe recipe = getRandomQuest(level);
+        MCQuestBatch qb = new MCQuestBatch(new SpawnVisitorReward(this));
+        questBatches.add(qb);
         setChanged();
         broadcastQuestToChat(level, recipe);
+    }
+
+    private static RoomRecipe getRandomQuest(ServerLevel level) {
+        // TODO: Take "difficulty" as input
+        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        return recipes.get(level.getRandom().nextInt(recipes.size()));
     }
 
     private void broadcastQuestToChat(
@@ -263,7 +273,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 room.getDoorPos().getUIString()
         ));
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markRecipeAsComplete(recipeId);
+        questBatches.markRecipeAsComplete(recipeId);
     }
 
     @Override
@@ -279,7 +289,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 room.getDoorPos().getUIString()
         ));
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markRecipeAsComplete(newRecipeId);
+        questBatches.markRecipeAsComplete(newRecipeId);
         // TODO: Mark removed recipe as lost?
     }
 
@@ -311,6 +321,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
                 Items.FIREWORK_ROCKET.getDefaultInstance()
         );
         level.addFreshEntity(firework);
+    }
+
+    @Override
+    public void questBatchCompleted(QuestBatch<?, ?> quest) {
+        // TODO: Handle this
     }
 
     @Override

@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class QuestsTest {
 
-    private Quests<Integer, TestQuest> quests;
+    private QuestBatch<Integer, TestQuest> quests;
 
     @BeforeEach
     void setUp() {
-        quests = new Quests<Integer, TestQuest>(new Quest.QuestFactory<Integer, TestQuest>() {
+        quests = new QuestBatch<Integer, TestQuest>(new Quest.QuestFactory<Integer, TestQuest>() {
             @Override
             public TestQuest newQuest(Integer recipeId) {
                 return new TestQuest(recipeId);
@@ -30,7 +30,7 @@ class QuestsTest {
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
-        });
+        }, new Reward(null, () -> {}));
     }
 
     @Test
@@ -71,7 +71,7 @@ class QuestsTest {
     @Test
     void initialize_throwsException_whenQuestsAlreadyInitialized() {
         quests.addNewQuest(1);
-        assertThrows(IllegalStateException.class, () -> quests.initialize(ImmutableList.of()));
+        assertThrows(IllegalStateException.class, () -> quests.initialize(ImmutableList.of(), null));
     }
 
     @Test
@@ -100,10 +100,20 @@ class QuestsTest {
         quests.addNewQuest(1);
 
         TestQuest completedQuest = quests.getAll().get(0);
-        Quests.ChangeListener<TestQuest> listener = q -> {
-            assertEquals(completedQuest.getUUID(), q.getUUID());
-            assertEquals(completedQuest.getId(), q.getId());
-            assertEquals(Quest.QuestStatus.COMPLETED, q.getStatus());
+        QuestBatch.ChangeListener<TestQuest> listener = new QuestBatch.ChangeListener<TestQuest>() {
+
+            @Override
+            public void questCompleted(TestQuest q) {
+
+                assertEquals(completedQuest.getUUID(), q.getUUID());
+                assertEquals(completedQuest.getId(), q.getId());
+                assertEquals(Quest.QuestStatus.COMPLETED, q.getStatus());
+            }
+
+            @Override
+            public void questBatchCompleted(QuestBatch<?, ?> quest) {
+
+            }
         };
         quests.addChangeListener(listener);
 

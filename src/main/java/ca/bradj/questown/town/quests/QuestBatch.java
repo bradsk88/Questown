@@ -9,23 +9,34 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 // Quests is a unit testable module for the quests of a town
-public class Quests<KEY, QUEST extends Quest<KEY>> {
+public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
 
     private final List<QUEST> quests = new ArrayList<>();
+    protected Reward reward;
+
     private final Quest.QuestFactory<KEY, QUEST> questFactory;
 
     // TODO: Support multiple?
-    private ChangeListener<QUEST> changeListener = new ChangeListener<QUEST>() {
+    private ChangeListener<QUEST> changeListener = new ChangeListener<>() {
         @Override
         public void questCompleted(QUEST quest) {
             // No op by default
         }
+
+        @Override
+        public void questBatchCompleted(
+                QuestBatch<?, ?> quest
+        ) {
+            // No op by default
+        }
     };
 
-    Quests(
-            Quest.QuestFactory<KEY, QUEST> sc
+    QuestBatch(
+            Quest.QuestFactory<KEY, QUEST> qf,
+            Reward reward
     ) {
-        this.questFactory = sc;
+        this.questFactory = qf;
+        this.reward = reward;
     }
 
     public void addChangeListener(ChangeListener<QUEST> changeListener) {
@@ -44,27 +55,45 @@ public class Quests<KEY, QUEST extends Quest<KEY>> {
         return ImmutableList.copyOf(this.quests);
     }
 
-    void initialize(ImmutableList<QUEST> aqs) {
+    void initialize(
+            ImmutableList<QUEST> aqs,
+            Reward reward
+    ) {
         if (this.quests.size() > 0) {
             throw new IllegalStateException("Quests already initialized");
         }
         this.quests.addAll(aqs);
+        this.reward = reward;
     }
 
-    public void markRecipeAsComplete(KEY recipe) {
+    public boolean markRecipeAsComplete(KEY recipe) {
         Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getId()));
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
-            return;
+            return false;
         }
         QUEST quest = incomplete.get();
         this.quests.remove(quest);
         QUEST updated = this.questFactory.withStatus(quest, Quest.QuestStatus.COMPLETED);
         this.quests.add(updated);
         this.changeListener.questCompleted(updated);
+
+        matches = this.quests.stream().filter(v -> recipe.equals(v.getId()));
+        incomplete = matches.filter(v -> !v.isComplete()).findFirst();
+        if (incomplete.isEmpty()) {
+            this.reward.claim();
+            this.changeListener.questBatchCompleted(this);
+        }
+        return true;
+    }
+
+    public static <QUEST extends Quest<?>> Stream<QUEST> stream(QuestBatch<?, QUEST> batch) {
+        return batch.quests.stream();
     }
 
     public interface ChangeListener<QUEST extends Quest<?>> {
         void questCompleted(QUEST quest);
+
+        void questBatchCompleted(QuestBatch<?, ?> quest);
     }
 }
