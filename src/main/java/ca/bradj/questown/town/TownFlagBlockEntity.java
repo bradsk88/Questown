@@ -78,7 +78,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
             BlockState state,
             TownFlagBlockEntity e
     ) {
-        if (level.isClientSide()) {
+        if (level == null || level.isClientSide()) {
             return;
         }
 

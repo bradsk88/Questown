@@ -20,7 +20,10 @@ public class Reward {
         void apply();
     }
 
-    public Reward(RewardType<? extends Reward> rType, RewardApplier applier) {
+    public Reward(
+            RewardType<? extends Reward> rType,
+            RewardApplier applier
+    ) {
         this.applier = applier;
         this.rType = rType;
     }
@@ -34,7 +37,10 @@ public class Reward {
 
         private static final String NBT_REWARD_TYPE = "reward_type";
 
-        public Reward deserializeNBT(TownFlagBlockEntity entity, CompoundTag tag) {
+        public Reward deserializeNBT(
+                TownFlagBlockEntity entity,
+                CompoundTag tag
+        ) {
             ResourceLocation rewardType = new ResourceLocation(tag.getString(NBT_REWARD_TYPE));
             RewardType<? extends Reward> rType = Registry.REWARD_TYPES.getValue(rewardType);
             if (rType == null) {

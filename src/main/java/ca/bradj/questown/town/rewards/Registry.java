@@ -1,7 +1,6 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.town.quests.Reward;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.registries.IForgeRegistry;

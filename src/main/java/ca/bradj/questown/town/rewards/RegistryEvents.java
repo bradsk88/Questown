@@ -15,7 +15,10 @@ public class RegistryEvents {
 
     @SubscribeEvent()
     public static void register(NewRegistryEvent event) {
-        Registry.REWARD_TYPES = event.create(makeRegistry(Registry.Keys.REWARD_TYPES, (Class<RewardType<?>>) (Class<?>) RewardType.class)).get();
+        event.create(
+                makeRegistry(Registry.Keys.REWARD_TYPES, (Class<RewardType<?>>) (Class<?>) RewardType.class),
+                reg -> Registry.REWARD_TYPES = reg
+        );
     }
 
     private static <T extends IForgeRegistryEntry<T>> RegistryBuilder<T> makeRegistry(ResourceKey<? extends net.minecraft.core.Registry<T>> key, Class<T> type)
