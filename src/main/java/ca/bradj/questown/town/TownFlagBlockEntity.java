@@ -424,10 +424,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
 
     @Override
     public BlockPos getWanderTarget() {
-        return Positions.ToBlock(getWanderTargetPosition(), getBlockPos().getY());
+        Position wt = getWanderTargetPosition();
+        BlockPos bp = getBlockPos();
+        if (wt != null) {
+            bp = Positions.ToBlock(wt, getBlockPos().getY());
+        }
+        return bp;
     }
 
-    private Position getWanderTargetPosition() {
+    private @Nullable Position getWanderTargetPosition() {
         Collection<Room> all = this.activeRooms.getAll();
         for (Room r : all) {
             if (level.getRandom().nextInt(all.size()) == 0) {
@@ -445,6 +450,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
                 return r.getDoorPos();
             }
         }
-        return Positions.FromBlockPos(getBlockPos());
+        return null;
     }
 }

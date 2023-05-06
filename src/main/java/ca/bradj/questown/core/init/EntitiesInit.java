@@ -24,7 +24,7 @@ public class EntitiesInit {
                             (EntityType<VisitorMobEntity> a, Level b) -> new VisitorMobEntity(a, b, null),
                             MobCategory.CREATURE
                     )
-                    .sized(2f, 1f)
+                    .sized(0.6f, 1.6f)
                     .build(new ResourceLocation(Questown.MODID, "visitor").toString())
     );
 

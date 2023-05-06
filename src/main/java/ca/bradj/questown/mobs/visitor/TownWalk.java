@@ -4,9 +4,7 @@ import ca.bradj.questown.Questown;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
@@ -31,7 +29,7 @@ public class TownWalk extends Goal {
     }
 
     public void stop() {
-        this.trader.setWanderTarget((BlockPos) null);
+        this.trader.setWanderTarget(null);
         trader.getNavigation().stop();
         this.stuckTicks = 0;
     }
@@ -42,13 +40,6 @@ public class TownWalk extends Goal {
         this.stuckTicks = 0;
         trader.newWanderTarget();
         BlockPos wt = trader.getWanderTarget();
-        trader.level.addFreshEntity(new ItemEntity(
-                trader.level,
-                wt.above().getX(),
-                wt.above().getY(),
-                wt.above().getZ(),
-                new ItemStack(Items.FLINT)
-        ));
         Questown.LOGGER.debug("{} navigating to {}", this.trader.getUUID(), wt);
     }
 

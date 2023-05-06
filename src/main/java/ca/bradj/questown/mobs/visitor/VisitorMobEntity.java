@@ -8,11 +8,13 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 
 public class VisitorMobEntity extends PathfinderMob {
 
@@ -47,7 +49,9 @@ public class VisitorMobEntity extends PathfinderMob {
         super.registerGoals();
         this.goalSelector.addGoal(1, new SlowWake(this));
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(3, new TownWalk(this, 2.0D, 0.35D));
+        this.goalSelector.addGoal(3, new TownWalk(this, 2.0D, 0.25D));
+        this.goalSelector.addGoal(4, new TownWalk(this, 2.0D, 0.50D));
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(11, new LookAtPlayerGoal(this, Player.class, 8.0F));
     }
 
