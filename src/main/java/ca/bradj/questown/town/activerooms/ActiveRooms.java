@@ -5,6 +5,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public class ActiveRooms {
         }
     };
 
-    public Iterable<Room> getAll() {
+    public Collection<Room> getAll() {
         return rooms.values();
     }
 

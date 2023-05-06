@@ -21,7 +21,7 @@ public class EntitiesInit {
     public static final RegistryObject<EntityType<VisitorMobEntity>> VISITOR = ENTITY_TYPES.register(
             "visitor",
             () -> EntityType.Builder.of(
-                            (EntityType<VisitorMobEntity> a, Level b) -> new VisitorMobEntity(a, b),
+                            (EntityType<VisitorMobEntity> a, Level b) -> new VisitorMobEntity(a, b, null),
                             MobCategory.CREATURE
                     )
                     .sized(2f, 1f)

@@ -5,7 +5,12 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -44,5 +49,25 @@ public class TownCycle {
         );
         return doors;
     }
+
+
+    public static Optional<BlockPos> findCampfire(
+            BlockPos pos, Level level
+    ) {
+        // TODO: Move to RoomRecipes?
+
+        int radius = 10; // TODO: Config
+        for(int z = -radius; z < radius; ++z) {
+            for(int x = -radius; x < radius; ++x) {
+                BlockPos cfPos = pos.offset(x, 0, z);
+                if (level.getBlockState(cfPos).getBlock().equals(Blocks.CAMPFIRE)) {
+                    return Optional.of(cfPos);
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
 
 }

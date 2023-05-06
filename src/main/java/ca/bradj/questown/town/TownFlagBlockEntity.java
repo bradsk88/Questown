@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -39,14 +40,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,6 +67,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
+    private BlockPos visitorSpot = null;
 
 
     public TownFlagBlockEntity(
@@ -86,6 +92,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         if (l != 0) {
             return;
         }
+
+        // TODO: Add campfire to quests
+        // TODO: Consider adding non-room town "features" as quests
+        // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag
+        Optional<BlockPos> fire = TownCycle.findCampfire(blockPos, level);
+        e.visitorSpot = fire.orElse(null);
 
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
                 Positions.FromBlockPos(e.getBlockPos()), e
@@ -188,9 +200,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         List<? extends String> initialQuests = Config.village_start_quests.get();
 
         UUID visitorUUID = UUID.randomUUID();
-        MCRewardList reward = new MCRewardList(this,
-            new SpawnVisitorReward(this, visitorUUID),
-            new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
+        MCRewardList reward = new MCRewardList(
+                this,
+                new SpawnVisitorReward(this, visitorUUID),
+                new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
         );
         MCQuestBatch qb = new MCQuestBatch(reward);
         initialQuests.forEach(iq -> {
@@ -389,13 +402,49 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         int numNewQuests = 3; // TODO: Determine this based on town "progress"
         UUID nextVisitorUUID = UUID.randomUUID();
-        MCQuestBatch qb = new MCQuestBatch(new MCRewardList(this,
-           new SpawnVisitorReward(this, nextVisitorUUID),
-            new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
+        MCQuestBatch qb = new MCQuestBatch(new MCRewardList(
+                this,
+                new SpawnVisitorReward(this, nextVisitorUUID),
+                new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
         ));
         for (int i = 0; i < numNewQuests; i++) {
             qb.addNewQuest(getRandomQuest(sl).getId());
         }
         this.questBatches.add(qb);
+    }
+
+    @Override
+    public Vec3 getVisitorJoinPos() {
+        BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
+        while (!level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
+            vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
+        }
+        return new Vec3(vs.getX(), vs.getY(), vs.getZ());
+    }
+
+    @Override
+    public BlockPos getWanderTarget() {
+        return Positions.ToBlock(getWanderTargetPosition(), getBlockPos().getY());
+    }
+
+    private Position getWanderTargetPosition() {
+        Collection<Room> all = this.activeRooms.getAll();
+        for (Room r : all) {
+            if (level.getRandom().nextInt(all.size()) == 0) {
+                Position ac = r.getSpace().getCornerA();
+                Position bc = r.getSpace().getCornerB();
+                if (level.getRandom().nextBoolean()) {
+                    return new Position((ac.x + bc.x) / 2, (ac.z + bc.z) / 2);
+                }
+                if (level.getRandom().nextBoolean()) {
+                    return ac.offset(1, 1);
+                }
+                if (level.getRandom().nextBoolean()) {
+                    return bc.offset(-1, -1);
+                }
+                return r.getDoorPos();
+            }
+        }
+        return Positions.FromBlockPos(getBlockPos());
     }
 }
