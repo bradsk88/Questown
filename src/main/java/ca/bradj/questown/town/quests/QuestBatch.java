@@ -9,10 +9,10 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 // Quests is a unit testable module for the quests of a town
-public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
+public class QuestBatch<KEY, QUEST extends Quest<KEY>, REWARD extends Reward> {
 
     private final List<QUEST> quests = new ArrayList<>();
-    protected Reward reward;
+    protected REWARD reward;
 
     private final Quest.QuestFactory<KEY, QUEST> questFactory;
 
@@ -25,7 +25,7 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
 
         @Override
         public void questBatchCompleted(
-                QuestBatch<?, ?> quest
+                QuestBatch<?, ?, ?> quest
         ) {
             // No op by default
         }
@@ -33,7 +33,7 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
 
     QuestBatch(
             Quest.QuestFactory<KEY, QUEST> qf,
-            Reward reward
+            REWARD reward
     ) {
         this.questFactory = qf;
         this.reward = reward;
@@ -57,7 +57,7 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
 
     void initialize(
             ImmutableList<QUEST> aqs,
-            Reward reward
+            REWARD reward
     ) {
         if (this.quests.size() > 0) {
             throw new IllegalStateException("Quests already initialized");
@@ -78,8 +78,7 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
         this.quests.add(updated);
         this.changeListener.questCompleted(updated);
 
-        matches = this.quests.stream().filter(v -> recipe.equals(v.getId()));
-        incomplete = matches.filter(v -> !v.isComplete()).findFirst();
+        incomplete = this.quests.stream().filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
             this.reward.claim();
             this.changeListener.questBatchCompleted(this);
@@ -87,13 +86,13 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>> {
         return true;
     }
 
-    public static <QUEST extends Quest<?>> Stream<QUEST> stream(QuestBatch<?, QUEST> batch) {
+    public static <QUEST extends Quest<?>> Stream<QUEST> stream(QuestBatch<?, QUEST, ?> batch) {
         return batch.quests.stream();
     }
 
     public interface ChangeListener<QUEST extends Quest<?>> {
         void questCompleted(QUEST quest);
 
-        void questBatchCompleted(QuestBatch<?, ?> quest);
+        void questBatchCompleted(QuestBatch<?, ?, ?> quest);
     }
 }

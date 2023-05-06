@@ -1,9 +1,6 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.core.init.RewardsInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.rewards.Registry;
-import ca.bradj.questown.town.rewards.RewardType;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -11,14 +8,14 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
-public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest> {
+public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward> {
     public static final Serializer SERIALIZER = new Serializer();
 
     MCQuestBatch() {
         this(null);
     }
 
-    public MCQuestBatch(Reward reward) {
+    public MCQuestBatch(MCReward reward) {
         super(new Quest.QuestFactory<>() {
             @Override
             public MCQuest newQuest(ResourceLocation recipeId) {
@@ -49,11 +46,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest> {
                 aq.add(MCQuest.SERIALIZER.serializeNBT(q));
             }
             ct.put(NBT_QUESTS, aq);
-            ct.put(NBT_REWARD, Reward.SERIALIZER.serializeNBT(quests.reward));
+            ct.put(NBT_REWARD, MCReward.SERIALIZER.serializeNBT(quests.reward));
             return ct;
         }
 
-        public void deserializeNBT(TownFlagBlockEntity entity, CompoundTag nbt, MCQuestBatch quests) {
+        public void deserializeNBT(TownInterface entity, CompoundTag nbt, MCQuestBatch quests) {
             ImmutableList.Builder<MCQuest> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_QUESTS);
             ListTag aq = nbt.getList(NBT_QUESTS, Tag.TAG_COMPOUND);
@@ -63,7 +60,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest> {
                 MCQuest.SERIALIZER.deserializeNBT(tag, q);
                 aqs.add(q);
             }
-            Reward reward = Reward.SERIALIZER.deserializeNBT(entity, nbt.getCompound(NBT_REWARD));
+            MCReward reward = MCReward.SERIALIZER.deserializeNBT(entity, nbt.getCompound(NBT_REWARD));
             quests.initialize(aqs.build(), reward);
         }
     }

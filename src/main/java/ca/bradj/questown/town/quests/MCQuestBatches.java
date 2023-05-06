@@ -1,20 +1,19 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
-public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCQuestBatch> {
+public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCReward, MCQuestBatch> {
 
     public static final Serializer SERIALIZER = new Serializer();
 
     public static class Serializer {
         private static final String NBT_NUM_BATCHES = "num_quest_batches";
         private static final String NBT_BATCHES = "quest_batches";
-        private static final String NBT_REWARD_TYPE = "reward_type";
 
         public CompoundTag serializeNBT(MCQuestBatches batches) {
             CompoundTag ct = new CompoundTag();
@@ -29,7 +28,7 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCQu
             return ct;
         }
 
-        public void deserializeNBT(TownFlagBlockEntity entity, CompoundTag nbt, MCQuestBatches batches) {
+        public void deserializeNBT(TownInterface entity, CompoundTag nbt, MCQuestBatches batches) {
             ImmutableList.Builder<MCQuestBatch> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_BATCHES);
             ListTag aq = nbt.getList(NBT_BATCHES, Tag.TAG_COMPOUND);

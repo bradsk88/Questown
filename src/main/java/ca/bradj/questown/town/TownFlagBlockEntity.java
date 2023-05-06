@@ -8,10 +8,9 @@ import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.activerecipes.ActiveRecipes;
 import ca.bradj.questown.town.activerecipes.MCActiveRecipes;
 import ca.bradj.questown.town.activerooms.ActiveRooms;
-import ca.bradj.questown.town.quests.MCQuest;
-import ca.bradj.questown.town.quests.MCQuestBatch;
-import ca.bradj.questown.town.quests.MCQuestBatches;
-import ca.bradj.questown.town.quests.QuestBatch;
+import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.*;
+import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
@@ -52,7 +51,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
 
     public static final String ID = "flag_base_block_entity";
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
@@ -188,7 +187,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
 
         List<? extends String> initialQuests = Config.village_start_quests.get();
 
-        MCQuestBatch qb = new MCQuestBatch(new SpawnVisitorReward(this));
+        UUID visitorUUID = UUID.randomUUID();
+        MCRewardList reward = new MCRewardList(this,
+            new SpawnVisitorReward(this, visitorUUID),
+            new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
+        );
+        MCQuestBatch qb = new MCQuestBatch(reward);
         initialQuests.forEach(iq -> {
             Optional<RoomRecipe> match = recipesCopy.stream().filter(v -> v.getId().toString().equals(iq)).findFirst();
             if (match.isEmpty()) {
@@ -324,8 +328,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
     }
 
     @Override
-    public void questBatchCompleted(QuestBatch<?, ?> quest) {
-        // TODO: Handle this
+    public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
+        // TODO: Handle this by informing the user, etc.
     }
 
     @Override
@@ -373,5 +377,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownCycle.BlockC
         ));
         handleRoomChange(room, ParticleTypes.SMOKE);
         this.activeRecipes.update(room, Optional.empty());
+    }
+
+    @Override
+    public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
+        if (level == null) {
+            throw new IllegalCallerException("Cannot add reward to null level");
+        }
+        if (!(level instanceof ServerLevel sl)) {
+            throw new IllegalCallerException("Cannot add reward to client level");
+        }
+        int numNewQuests = 3; // TODO: Determine this based on town "progress"
+        UUID nextVisitorUUID = UUID.randomUUID();
+        MCQuestBatch qb = new MCQuestBatch(new MCRewardList(this,
+           new SpawnVisitorReward(this, nextVisitorUUID),
+            new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
+        ));
+        for (int i = 0; i < numNewQuests; i++) {
+            qb.addNewQuest(getRandomQuest(sl).getId());
+        }
+        this.questBatches.add(qb);
     }
 }

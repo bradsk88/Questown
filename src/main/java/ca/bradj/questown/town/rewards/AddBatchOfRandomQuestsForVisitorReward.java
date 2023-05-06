@@ -15,42 +15,33 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
-public class SpawnVisitorReward extends MCReward {
+public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
 
-    public static final String ID = "spawn_visitor_reward";
+    public static final String ID = "add_random_batch_of_quests";
 
-    public SpawnVisitorReward(
+    public AddBatchOfRandomQuestsForVisitorReward(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
-            @Nullable UUID visitorUUID
+            @NotNull UUID visitorUUID
     ) {
         super(rType, () -> {
-            while (!spawnVisitorNearby(entity, visitorUUID)) {
-            } // FIXME: Instead of "while" loop, set state on entity and try adding during ticks
+            entity.addBatchOfRandomQuestsForVisitor(visitorUUID);
         });
     }
 
-    public SpawnVisitorReward(TownInterface entity) {
-        this(entity, null);
+    public AddBatchOfRandomQuestsForVisitorReward(
+            @NotNull TownInterface entity,
+            @NotNull UUID visitorUUID
+    ) {
+        this(RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get(), entity, visitorUUID);
     }
 
-    public SpawnVisitorReward(
-            TownInterface entity,
-            UUID visitorUUID
-    ) {
-        this(RewardsInit.VISITOR.get(), entity, visitorUUID);
-    }
-
-    private static boolean spawnVisitorNearby(
-            TownInterface entity,
-            @Nullable UUID visitorUUID
-    ) {
+    private static boolean spawnVisitorNearby(TownInterface entity) {
         if (entity.getLevel() == null || !(entity.getLevel() instanceof ServerLevel sl)) {
             return false;
         }
@@ -84,11 +75,8 @@ public class SpawnVisitorReward extends MCReward {
                     random.nextFloat() * 360,
                     0
             );
-            if (visitorUUID != null) {
-                vEntity.setUUID(visitorUUID);
-            }
             sl.addFreshEntity(vEntity);
-            Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), surfacePos);
+            Questown.LOGGER.debug("Spawned visitor at " + surfacePos);
 
             entity.generateRandomQuest(sl);
             return true;

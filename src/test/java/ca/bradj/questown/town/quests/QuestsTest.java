@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class QuestsTest {
 
-    private QuestBatch<Integer, TestQuest> quests;
+    private QuestBatch<Integer, TestQuest, Reward> quests;
 
     @BeforeEach
     void setUp() {
-        quests = new QuestBatch<Integer, TestQuest>(new Quest.QuestFactory<Integer, TestQuest>() {
+        quests = new QuestBatch<>(new Quest.QuestFactory<>() {
             @Override
             public TestQuest newQuest(Integer recipeId) {
                 return new TestQuest(recipeId);
@@ -30,7 +30,13 @@ class QuestsTest {
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
-        }, new Reward(null, () -> {}));
+        }, new Reward(() -> {
+        }) {
+            @Override
+            protected String getName() {
+                return "Test reward";
+            }
+        });
     }
 
     @Test
@@ -111,7 +117,7 @@ class QuestsTest {
             }
 
             @Override
-            public void questBatchCompleted(QuestBatch<?, ?> quest) {
+            public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
 
             }
         };

@@ -1,12 +1,13 @@
 package ca.bradj.questown.town.quests;
 
 import com.google.common.collect.ImmutableList;
-import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class QuestBatches<KEY, QUEST extends Quest<KEY>, BATCH extends QuestBatch<KEY, QUEST>> implements QuestBatch.ChangeListener<QUEST> {
+public class QuestBatches<KEY, QUEST extends Quest<KEY>, REWARD
+        extends Reward, BATCH extends QuestBatch<KEY, QUEST, REWARD>>
+        implements QuestBatch.ChangeListener<QUEST> {
 
     protected final List<BATCH> batches = new ArrayList<>();
     private QuestBatch.ChangeListener<QUEST> changeListener = new QuestBatch.ChangeListener<QUEST>() {
@@ -16,7 +17,7 @@ public class QuestBatches<KEY, QUEST extends Quest<KEY>, BATCH extends QuestBatc
         }
 
         @Override
-        public void questBatchCompleted(QuestBatch<?, ?> quest) {
+        public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
             // No op by default
         }
     };
@@ -37,7 +38,7 @@ public class QuestBatches<KEY, QUEST extends Quest<KEY>, BATCH extends QuestBatc
     }
 
     @Override
-    public void questBatchCompleted(QuestBatch<?, ?> quest) {
+    public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
         this.changeListener.questBatchCompleted(quest);
     }
 

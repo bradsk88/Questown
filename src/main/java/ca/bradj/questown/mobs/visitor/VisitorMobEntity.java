@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -17,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class VisitorMobEntity extends PathfinderMob {
 
-    private final TownFlagBlockEntity townFlag;
+    final TownFlagBlockEntity townFlag;
     private boolean goingHome = false;
 
     public VisitorMobEntity(
@@ -37,7 +38,6 @@ public class VisitorMobEntity extends PathfinderMob {
 
         // TODO: Store flag entity UUID in NBT and use level.getEntityByUuid
         this.townFlag = null;
-        this.kill();
     }
 
     public static AttributeSupplier setAttributes() {
@@ -47,34 +47,50 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(11, new TurtleGoHomeGoal(this, 0.5));
+        this.goalSelector.addGoal(0, new RemoveSelfGoal(this));
+        this.goalSelector.addGoal(1, new GoToFlagGoal(this, 0.5, 6));
         this.goalSelector.addGoal(2, new RandomStrollGoal(this, 0.25));
+        this.goalSelector.addGoal(3, new VisitFlagGoal(this, 0.25, 2.5));
         this.goalSelector.addGoal(11, new LookAtPlayerGoal(this, Player.class, 8.0F));
     }
 
-    static class TurtleGoHomeGoal extends Goal {
-        private final VisitorMobEntity visitor;
+    static class GoToFlagGoal extends Goal {
+        protected final VisitorMobEntity visitor;
         private final double speedModifier;
+        private final double closeRadius;
         private boolean stuck;
         private int closeToHomeTryTicks;
         private static final int GIVE_UP_TICKS = 600;
+        private int stuckTicks;
 
-        TurtleGoHomeGoal(VisitorMobEntity p_30253_, double p_30254_) {
+        GoToFlagGoal(
+                VisitorMobEntity p_30253_,
+                double speed,
+                double closeRadius
+        ) {
             this.visitor = p_30253_;
-            this.speedModifier = p_30254_;
+            this.speedModifier = speed;
+            this.closeRadius = closeRadius;
         }
 
         public boolean canUse() {
             if (this.visitor.townFlag == null) {
                 return false;
             }
-            return this.closeToHomeTryTicks <= this.adjustedTickDelay(600);
+            return this.closeToHomeTryTicks <= this.adjustedTickDelay(600) ||
+                    this.stuckTicks <= this.adjustedTickDelay(600);
         }
 
         public void start() {
+            Questown.LOGGER.debug(
+                    "Visitor {} going to flag (close radius = {})",
+                    this.visitor.getUUID(),
+                    this.closeRadius
+            );
             this.visitor.setGoingHome(true);
             this.stuck = false;
             this.closeToHomeTryTicks = 0;
+            this.stuckTicks = 0;
         }
 
         public void stop() {
@@ -82,35 +98,51 @@ public class VisitorMobEntity extends PathfinderMob {
         }
 
         public boolean canContinueToUse() {
-            boolean can = !this.visitor.getHomePos()
-                    .closerToCenterThan(
-                            this.visitor.position(),
-                            2.0D
-                    ) && this.closeToHomeTryTicks <= this.adjustedTickDelay(600);
+            if (this.visitor.townFlag == null) {
+                return false;
+            }
+            BlockPos home = this.visitor.getHomePos();
+            Vec3 pos = this.visitor.position();
+            boolean atFlag = home.closerToCenterThan(pos, 2.0D);
+            boolean can = !atFlag &&
+                    this.closeToHomeTryTicks <= this.adjustedTickDelay(600) &&
+                    this.stuckTicks <= this.adjustedTickDelay(600);
             return can;
         }
 
         public void tick() {
+            if (this.visitor.townFlag == null) {
+                return;
+            }
+
             BlockPos blockpos = this.visitor.getHomePos();
 
             if (stuck) {
+                stuckTicks++;
                 blockpos = blockpos.relative(Direction.getRandom(this.visitor.getRandom()), 10);
             }
 
-            boolean flag = blockpos.closerToCenterThan(this.visitor.position(), 8.0D); // TODO: Get radius from town?
-            if (flag) {
+            boolean closeToHome = blockpos.closerToCenterThan(this.visitor.position(), closeRadius);
+            if (closeToHome) {
                 ++this.closeToHomeTryTicks;
             }
 
             if (this.visitor.getNavigation().isDone()) {
                 Vec3 vec3 = Vec3.atBottomCenterOf(blockpos);
-                Vec3 vec31 = DefaultRandomPos.getPosTowards(this.visitor, 16, 3, vec3, (double)((float)Math.PI / 10F));
+                Vec3 vec31 = DefaultRandomPos.getPosTowards(
+                        this.visitor,
+                        16,
+                        3,
+                        vec3,
+                        (float) Math.PI / 10F
+                );
                 if (vec31 == null) {
-                    vec31 = DefaultRandomPos.getPosTowards(this.visitor, 8, 7, vec3, (double)((float)Math.PI / 2F));
+                    vec31 = DefaultRandomPos.getPosTowards(this.visitor, 8, 7, vec3, (double) ((float) Math.PI / 2F));
                 }
 
-                if (vec31 != null && !flag && !this.visitor.level.getBlockState(new BlockPos(vec31)).is(Blocks.WATER)) {
-                    vec31 = DefaultRandomPos.getPosTowards(this.visitor, 16, 5, vec3, (double)((float)Math.PI / 2F));
+                if (vec31 != null && !closeToHome && !this.visitor.level.getBlockState(new BlockPos(vec31))
+                        .is(Blocks.WATER)) {
+                    vec31 = DefaultRandomPos.getPosTowards(this.visitor, 16, 5, vec3, (double) ((float) Math.PI / 2F));
                 }
 
                 if (vec31 == null) {
@@ -131,5 +163,24 @@ public class VisitorMobEntity extends PathfinderMob {
     private BlockPos getHomePos() {
         return this.townFlag.getBlockPos();
 //        return new Vec3i(bp.getX(), bp.getY(), bp.getZ());
+    }
+
+    static class VisitFlagGoal extends GoToFlagGoal {
+
+        VisitFlagGoal(
+                VisitorMobEntity p_30253_,
+                double speed,
+                double closeRadius
+        ) {
+            super(p_30253_, speed, closeRadius);
+        }
+
+        @Override
+        public boolean canUse() {
+            if (visitor.goingHome) {
+                return false;
+            }
+            return true;
+        }
     }
 }
