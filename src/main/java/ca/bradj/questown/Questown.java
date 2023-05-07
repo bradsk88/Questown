@@ -45,6 +45,7 @@ public class Questown {
         MenuTypesInit.register(bus);
         EntitiesInit.register(bus);
         RewardsInit.register(bus);
+        ScheduleInit.register(bus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
     }

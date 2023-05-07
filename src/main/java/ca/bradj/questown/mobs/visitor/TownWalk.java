@@ -3,6 +3,8 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.Questown;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -39,12 +41,19 @@ public class TownWalk extends Goal {
         super.start();
         this.stuckTicks = 0;
         trader.newWanderTarget();
+        trader.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(trader.getWanderTarget(), 0.5f, 1));
         BlockPos wt = trader.getWanderTarget();
         Questown.LOGGER.debug("{} navigating to {}", this.trader.getUUID(), wt);
     }
 
     public boolean canUse() {
         if (this.stuckTicks > this.adjustedTickDelay(GIVE_UP_TICKS)) {
+            return false;
+        }
+        if (trader.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
+            return false;
+        }
+        if (trader.isSleeping()) {
             return false;
         }
         return true;
@@ -55,31 +64,34 @@ public class TownWalk extends Goal {
         if (this.stuckTicks > this.adjustedTickDelay(GIVE_UP_TICKS)) {
             return false;
         }
+        if (trader.isSleeping()) {
+            return false;
+        }
         return true;
     }
 
     public void tick() {
         BlockPos startPos = this.trader.getOnPos();
-        BlockPos blockpos = this.trader.getWanderTarget();
-        if (blockpos != null && trader.getNavigation().isDone()) {
-            PathNavigation nav = trader.getNavigation();
-            if (this.isTooFarAway(blockpos, 10.0D)) {
-                Vec3 vec3 = (new Vec3(
-                        (double) blockpos.getX() - this.trader.getX(),
-                        (double) blockpos.getY() - this.trader.getY(),
-                        (double) blockpos.getZ() - this.trader.getZ()
-                )).normalize();
-                Vec3 vec31 = vec3.scale(10.0D).add(this.trader.getX(), this.trader.getY(), this.trader.getZ());
-                nav.moveTo(vec31.x, vec31.y, vec31.z, this.speedModifier);
-            } else {
-                nav.moveTo(
-                        (double) blockpos.getX(),
-                        (double) blockpos.getY(),
-                        (double) blockpos.getZ(),
-                        this.speedModifier
-                );
-            }
-        }
+//        BlockPos blockpos = this.trader.getWanderTarget();
+//        if (blockpos != null && trader.getNavigation().isDone()) {
+//            PathNavigation nav = trader.getNavigation();
+//            if (this.isTooFarAway(blockpos, 10.0D)) {
+//                Vec3 vec3 = (new Vec3(
+//                        (double) blockpos.getX() - this.trader.getX(),
+//                        (double) blockpos.getY() - this.trader.getY(),
+//                        (double) blockpos.getZ() - this.trader.getZ()
+//                )).normalize();
+//                Vec3 vec31 = vec3.scale(10.0D).add(this.trader.getX(), this.trader.getY(), this.trader.getZ());
+//                nav.moveTo(vec31.x, vec31.y, vec31.z, this.speedModifier);
+//            } else {
+//                nav.moveTo(
+//                        (double) blockpos.getX(),
+//                        (double) blockpos.getY(),
+//                        (double) blockpos.getZ(),
+//                        this.speedModifier
+//                );
+//            }
+//        }
         if (startPos.equals(this.trader.getOnPos())) {
             stuckTicks++;
         } else {
