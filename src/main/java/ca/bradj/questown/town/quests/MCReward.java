@@ -30,6 +30,7 @@ public abstract class MCReward extends Reward {
 
         private static final String NBT_REWARD_TYPE = "reward_type";
         private static final String NBT_REWARD_DATA = "reward_data";
+        private static final String NBT_REWARD_APPLIED = "reward_applied";
 
         public MCReward deserializeNBT(
                 TownInterface entity,
@@ -42,6 +43,9 @@ public abstract class MCReward extends Reward {
             }
             MCReward r = rType.create(rType, entity);
             r.deserializeNbt(entity, tag.getCompound(NBT_REWARD_DATA));
+            if (tag.contains(NBT_REWARD_APPLIED) && tag.getBoolean(NBT_REWARD_APPLIED)) {
+                r.markApplied();
+            }
             return r;
         }
 
@@ -49,6 +53,7 @@ public abstract class MCReward extends Reward {
             CompoundTag tag = new CompoundTag();
             tag.putString(NBT_REWARD_TYPE, reward.rType.getRegistryName().toString());
             tag.put(NBT_REWARD_DATA, reward.serializeNbt());
+            tag.putBoolean(NBT_REWARD_APPLIED, reward.isApplied());
             return tag;
         }
     }

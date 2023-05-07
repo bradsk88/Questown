@@ -17,6 +17,10 @@ public abstract class Reward {
         this.applier = applier;
     }
 
+    protected void markApplied() {
+        this.applied = true;
+    }
+
     void claim() {
         if (this.applied) {
             Questown.LOGGER.error("Refusing to apply reward more than once: {}", this.getName());
@@ -24,6 +28,10 @@ public abstract class Reward {
         }
         this.applier.apply();
         this.applied = true;
+    }
+
+    public boolean isApplied() {
+        return applied;
     }
 
     protected abstract String getName();

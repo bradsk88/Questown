@@ -49,7 +49,7 @@ public class MCRewardList extends MCReward {
         CompoundTag tag = new CompoundTag();
         ListTag cs = new ListTag();
         for (MCReward r : this.children) {
-            cs.add(r.serializeNbt());
+            cs.add(MCReward.SERIALIZER.serializeNBT(r));
         }
         tag.put(NBT_CHILDREN, cs);
         return tag;

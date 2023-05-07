@@ -19,6 +19,8 @@ import java.util.UUID;
 public class SpawnVisitorReward extends MCReward {
 
     public static final String ID = "spawn_visitor_reward";
+    private static final String NBT_VISITOR_UUID = "visitor_uuid";
+    private UUID visitorUUID;
 
     public SpawnVisitorReward(
             RewardType<? extends MCReward> rType,
@@ -26,6 +28,7 @@ public class SpawnVisitorReward extends MCReward {
             @Nullable UUID visitorUUID
     ) {
         super(rType, () -> spawnVisitorNearby(entity, visitorUUID));
+        this.visitorUUID = visitorUUID;
     }
 
     public SpawnVisitorReward(TownInterface entity) {
@@ -60,8 +63,11 @@ public class SpawnVisitorReward extends MCReward {
 
     @Override
     protected Tag serializeNbt() {
-        // No data. This reward is completely random when claimed.
-        return new CompoundTag();
+        CompoundTag tag = new CompoundTag();
+        if (this.visitorUUID != null) {
+            tag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
+        }
+        return tag;
     }
 
     @Override
@@ -69,6 +75,8 @@ public class SpawnVisitorReward extends MCReward {
             TownInterface entity,
             CompoundTag tag
     ) {
-        // No data. This reward is completely random when claimed.
+        if (tag.contains(NBT_VISITOR_UUID)) {
+            this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
+        }
     }
 }

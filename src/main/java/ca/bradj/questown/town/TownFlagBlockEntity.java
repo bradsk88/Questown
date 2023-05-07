@@ -217,6 +217,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         });
         questBatches.add(qb);
         this.isInitializedQuests = true;
+        setChanged();
     }
 
     @Override
@@ -344,6 +345,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
         // TODO: Handle this by informing the user, etc.
+        setChanged();
     }
 
     @Override
@@ -412,10 +414,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             qb.addNewQuest(getRandomQuest(sl).getId());
         }
         this.questBatches.add(qb);
+        setChanged();
     }
 
     @Override
     public Vec3 getVisitorJoinPos() {
+        if (this.visitorSpot == null) {
+            return new Vec3(getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ());
+        }
         BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
         while (!level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
             vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
