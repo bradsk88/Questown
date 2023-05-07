@@ -18,5 +18,5 @@ public interface TownInterface {
 
     Vec3 getVisitorJoinPos();
 
-    BlockPos getWanderTarget();
+    BlockPos getRandomWanderTarget();
 }

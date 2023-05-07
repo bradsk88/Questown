@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -9,9 +10,11 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
@@ -32,12 +35,17 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 
 public class VisitorMobEntity extends PathfinderMob {
+
+    private static final String NBT_TOWN_X = "town_x";
+    private static final String NBT_TOWN_Y = "town_y";
+    private static final String NBT_TOWN_Z = "town_z";
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())
@@ -52,7 +60,7 @@ public class VisitorMobEntity extends PathfinderMob {
             SensorType.NEAREST_BED
     );
 
-    private final TownInterface town;
+    private TownInterface town;
     boolean sitting = true;
     private BlockPos wanderTarget;
 
@@ -65,11 +73,41 @@ public class VisitorMobEntity extends PathfinderMob {
         // TODO: Store town UUID on NBT
         this.town = town;
         if (town != null) {
-            this.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
-            this.getBrain().setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
-            this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
-            this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
-            this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
+            initBrain();
+        }
+    }
+
+    private void initBrain() {
+        this.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
+    }
+
+    @Override
+    public boolean save(CompoundTag p_20224_) {
+        BlockPos bp = this.town.getBlockPos();
+        p_20224_.putInt(NBT_TOWN_X, bp.getX());
+        p_20224_.putInt(NBT_TOWN_Y, bp.getY());
+        p_20224_.putInt(NBT_TOWN_Z, bp.getZ());
+        return super.save(p_20224_);
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
+            BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
+            if (this.level instanceof ServerLevel sl) {
+                BlockEntity entity = sl.getBlockEntity(bp);
+                if (!(entity instanceof TownFlagBlockEntity flag)) {
+                    Questown.LOGGER.error("Entity at {} was not a TownFlag", bp);
+                    return;
+                }
+                this.town = flag;
+                this.initBrain();
+            }
         }
     }
 
@@ -117,16 +155,15 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getIdlePackage(
+            VisitorMobEntity entity
     ) {
-        return ImmutableList.of(
-                Pair.of(
-                        2,
-                        new RunOne<>(ImmutableList.of(
-                                Pair.of(new DoNothing(30, 60), 1)
-                        ))
-                ),
-                Pair.of(99, new UpdateActivityFromSchedule())
-        );
+        ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
+        b.add(Pair.of(2, new DoNothing(30, 60)));
+        b.add(Pair.of(4, new Admire(200)));
+        b.add(Pair.of(3, new TownWalk(0.25f)));
+        b.add(Pair.of(10, new TownWalk(0.40f)));
+        b.add(Pair.of(99, new UpdateActivityFromSchedule()));
+        return b.build();
     }
 
     @Override
@@ -155,7 +192,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 MemoryModuleType.WALK_TARGET,
                 MemoryModuleType.PATH,
                 MemoryModuleType.NEAREST_BED,
-                MemoryModuleType.INTERACTION_TARGET
+                MemoryModuleType.INTERACTION_TARGET,
+                MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM
         ), SENSOR_TYPES);
     }
 
@@ -163,12 +201,18 @@ public class VisitorMobEntity extends PathfinderMob {
     protected Brain<?> makeBrain(Dynamic<?> p_21069_) {
         Brain<VisitorMobEntity> brain = (Brain<VisitorMobEntity>) super.makeBrain(p_21069_);
         brain.setSchedule(VisitorMobEntity.DEFAULT_SCHEDULE);
-        brain.addActivity(Activity.IDLE, getIdlePackage());
+        brain.addActivity(Activity.IDLE, getIdlePackage(this));
         brain.addActivity(Activity.REST, getRestPackage());
         brain.addActivity(Activity.CORE, getCorePackage());
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
         brain.updateActivityFromSchedule(this.level.getDayTime(), this.level.getGameTime());
         return brain;
+    }
+
+    @Override
+    public void die(DamageSource p_21014_) {
+        this.releasePoi(MemoryModuleType.HOME);
+        super.die(p_21014_);
     }
 
     @Override
@@ -215,12 +259,13 @@ public class VisitorMobEntity extends PathfinderMob {
         }
     }
 
-    public void newWanderTarget() {
+    public BlockPos newWanderTarget() {
         if (town == null) {
             this.kill();
-            return;
+            return null;
         }
-        this.setWanderTarget(town.getWanderTarget());
+        this.setWanderTarget(town.getRandomWanderTarget());
+        return this.getWanderTarget();
     }
 
 

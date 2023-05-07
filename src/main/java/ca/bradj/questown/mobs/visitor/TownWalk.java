@@ -1,108 +1,63 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.Vec3;
 
-import java.util.EnumSet;
+public class TownWalk extends Behavior<VisitorMobEntity> {
+    private static final int REPEAT_BUFFER = 20;
+    private static final int PAUSE_TICKS = 100;
 
-public class TownWalk extends Goal {
-    private static final int GIVE_UP_TICKS = 100;
+    final float speedModifier;
+    private long nextUpdate;
+    private BlockPos target;
 
-    final VisitorMobEntity trader;
-    final double stopDistance;
-    final double speedModifier;
-    private int stuckTicks;
-
-    TownWalk(
-            VisitorMobEntity p_35899_,
-            double p_35900_,
-            double p_35901_
+    public TownWalk(
+            float speedModifier
     ) {
-        this.trader = p_35899_;
-        this.stopDistance = p_35900_;
-        this.speedModifier = p_35901_;
-        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
-    }
-
-    public void stop() {
-        this.trader.setWanderTarget(null);
-        trader.getNavigation().stop();
-        this.stuckTicks = 0;
+        super(ImmutableMap.of(
+                MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_ABSENT,
+                MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryStatus.VALUE_PRESENT
+        ));
+        this.speedModifier = speedModifier;
     }
 
     @Override
-    public void start() {
-        super.start();
-        this.stuckTicks = 0;
-        trader.newWanderTarget();
-        trader.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(trader.getWanderTarget(), 0.5f, 1));
-        BlockPos wt = trader.getWanderTarget();
-        Questown.LOGGER.debug("{} navigating to {}", this.trader.getUUID(), wt);
-    }
-
-    public boolean canUse() {
-        if (this.stuckTicks > this.adjustedTickDelay(GIVE_UP_TICKS)) {
+    protected boolean checkExtraStartConditions(
+            ServerLevel p_23879_,
+            VisitorMobEntity e
+    ) {
+        if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
             return false;
         }
-        if (trader.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
+        if (e.getBrain().getMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM).orElse(false)) {
             return false;
         }
-        if (trader.isSleeping()) {
+        if (p_23879_.getGameTime() - this.nextUpdate < REPEAT_BUFFER) {
+            return false;
+        }
+        this.target = e.newWanderTarget();
+        if (target == null) {
             return false;
         }
         return true;
     }
 
     @Override
-    public boolean canContinueToUse() {
-        if (this.stuckTicks > this.adjustedTickDelay(GIVE_UP_TICKS)) {
-            return false;
-        }
-        if (trader.isSleeping()) {
-            return false;
-        }
-        return true;
-    }
-
-    public void tick() {
-        BlockPos startPos = this.trader.getOnPos();
-//        BlockPos blockpos = this.trader.getWanderTarget();
-//        if (blockpos != null && trader.getNavigation().isDone()) {
-//            PathNavigation nav = trader.getNavigation();
-//            if (this.isTooFarAway(blockpos, 10.0D)) {
-//                Vec3 vec3 = (new Vec3(
-//                        (double) blockpos.getX() - this.trader.getX(),
-//                        (double) blockpos.getY() - this.trader.getY(),
-//                        (double) blockpos.getZ() - this.trader.getZ()
-//                )).normalize();
-//                Vec3 vec31 = vec3.scale(10.0D).add(this.trader.getX(), this.trader.getY(), this.trader.getZ());
-//                nav.moveTo(vec31.x, vec31.y, vec31.z, this.speedModifier);
-//            } else {
-//                nav.moveTo(
-//                        (double) blockpos.getX(),
-//                        (double) blockpos.getY(),
-//                        (double) blockpos.getZ(),
-//                        this.speedModifier
-//                );
-//            }
-//        }
-        if (startPos.equals(this.trader.getOnPos())) {
-            stuckTicks++;
-        } else {
-            stuckTicks = 0;
-        }
-    }
-
-    private boolean isTooFarAway(
-            BlockPos p_35904_,
-            double p_35905_
+    protected void start(
+            ServerLevel lvl,
+            VisitorMobEntity e,
+            long p_23884_
     ) {
-        return !p_35904_.closerToCenterThan(this.trader.position(), p_35905_);
+        this.nextUpdate = lvl.getGameTime() + (long) lvl.getRandom().nextInt(REPEAT_BUFFER);
+        BlockPos bp = this.target;
+        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, 1));
+        e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
+        Questown.LOGGER.debug("{} navigating to {}", e.getUUID(), bp);
     }
 }

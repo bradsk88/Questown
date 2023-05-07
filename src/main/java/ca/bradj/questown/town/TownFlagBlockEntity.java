@@ -36,6 +36,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
@@ -423,7 +424,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     @Override
-    public BlockPos getWanderTarget() {
+    public BlockPos getRandomWanderTarget() {
         Position wt = getWanderTargetPosition();
         BlockPos bp = getBlockPos();
         if (wt != null) {
