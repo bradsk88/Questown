@@ -16,5 +16,7 @@
   "room.bedroom": "Bedroom",
   "room.big_bedroom": "Big Bedroom",
   "room.inn": "Inn",
+  "special_quest.campfire": "Build a campfire",
+  "special_quest.broken": "Quest failed to load",
   "block.questown.cobblestone_flag_base": "Cobblestone Flag Base"
 }

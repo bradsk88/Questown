@@ -12,6 +12,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -37,12 +38,10 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -53,10 +52,7 @@ import net.minecraftforge.event.entity.EntityEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface, TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
 
@@ -67,6 +63,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     private final ActiveRooms activeRooms = new ActiveRooms();
     private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
     private final MCQuestBatches questBatches = new MCQuestBatches();
+    private final List<MCDelayedReward> timedRewards = new ArrayList<>();
+
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     private BlockPos visitorSpot = null;
@@ -95,10 +93,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             return;
         }
 
-        // TODO: Add campfire to quests
+        float timeOfDay = level.getDayTime() % 24000L;
+        for (MCDelayedReward r : ImmutableList.copyOf(e.timedRewards)) {
+            if (r.tryClaim(timeOfDay)) {
+                e.timedRewards.remove(r);
+            }
+        }
+
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag
         Optional<BlockPos> fire = TownCycle.findCampfire(blockPos, level);
+        if (e.visitorSpot == null) {
+            fire.ifPresent((bp) -> e.questBatches.markRecipeAsComplete(SpecialQuests.CAMPFIRE));
+        }
         e.visitorSpot = fire.orElse(null);
 
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
@@ -169,7 +176,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         informPlayersOnApproach();
         if (!this.isInitializedQuests) {
-            this.initializeQuests(sl);
+            this.setUpQuestsForNewlyPlacedFlag(sl);
         }
         this.questBatches.addChangeListener(this);
         this.activeRecipes.addChangeListener(this);
@@ -195,7 +202,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         });
     }
 
-    private void initializeQuests(ServerLevel level) {
+    private void setUpQuestsForNewlyPlacedFlag(ServerLevel level) {
         List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
         final List<RoomRecipe> recipesCopy = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
 
@@ -207,7 +214,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
                 new SpawnVisitorReward(this, visitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
         );
-        MCQuestBatch qb = new MCQuestBatch(reward);
+        MCQuestBatch qb = new MCQuestBatch(new MCDelayedReward(this, reward, 0, level.getDayTime() % 24000L));
+
+        qb.addNewQuest(SpecialQuests.CAMPFIRE);
+
         initialQuests.forEach(iq -> {
             Optional<RoomRecipe> match = recipesCopy.stream().filter(v -> v.getId().toString().equals(iq)).findFirst();
             if (match.isEmpty()) {
@@ -440,6 +450,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             bp = Positions.ToBlock(wt, getBlockPos().getY());
         }
         return bp;
+    }
+
+    @Override
+    public void addTimedReward(MCDelayedReward r) {
+        this.timedRewards.add(r);
     }
 
     private @Nullable Position getWanderTargetPosition() {

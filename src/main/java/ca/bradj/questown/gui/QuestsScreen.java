@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -30,7 +31,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContainer> {
+public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -55,7 +56,7 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
 
     private int currentPage = 0;
 
-    public RoomRecipesScreen(
+    public QuestsScreen(
             TownQuestsContainer container,
             Inventory playerInv,
             Component title
@@ -139,9 +140,12 @@ public class RoomRecipesScreen extends AbstractContainerScreen<TownQuestsContain
                 continue;
             }
             Component recipeName = new TextComponent(recipe.getName().getString());
-            if (recipe.status == Quest.QuestStatus.COMPLETED) {
+            if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
                 recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);
+            }
+            if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
+                RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
             }
             this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);

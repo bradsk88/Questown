@@ -1,7 +1,7 @@
 package ca.bradj.questown.integration.jei;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.gui.RoomRecipesScreen;
+import ca.bradj.questown.gui.QuestsScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
@@ -22,15 +22,15 @@ public class QuestownJei implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addGuiContainerHandler(RoomRecipesScreen.class, new IGuiContainerHandler<>() {
+        registration.addGuiContainerHandler(QuestsScreen.class, new IGuiContainerHandler<>() {
             @Override
-            public List<Rect2i> getGuiExtraAreas(RoomRecipesScreen containerScreen) {
+            public List<Rect2i> getGuiExtraAreas(QuestsScreen containerScreen) {
                 return containerScreen.getExtraAreas();
             }
 
             @Override
             public @Nullable Object getIngredientUnderMouse(
-                    RoomRecipesScreen containerScreen,
+                    QuestsScreen containerScreen,
                     double mouseX,
                     double mouseY
             ) {

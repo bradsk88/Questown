@@ -1,14 +1,14 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
@@ -35,7 +35,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +42,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -112,6 +110,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
@@ -143,7 +142,13 @@ public class TownFlagBlock extends BaseEntityBlock {
             UIQuest.Serializer ser = new UIQuest.Serializer();
             data.writeInt(quests.size());
             data.writeCollection(quests, (buf, recipe) -> {
-                ResourceLocation id = recipe.getRecipeId();
+                ResourceLocation id;
+                if (recipe == null) {
+                    id = SpecialQuests.BROKEN;
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE);
+                } else {
+                    id = recipe.getRecipeId();
+                }
                 buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });

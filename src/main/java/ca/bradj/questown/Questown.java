@@ -3,7 +3,7 @@ package ca.bradj.questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.gui.RoomRecipesScreen;
+import ca.bradj.questown.gui.QuestsScreen;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -56,7 +56,7 @@ public class Questown {
     private void doClientStuff(final FMLClientSetupEvent event) {
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         event.enqueueWork(() -> {
-            MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), RoomRecipesScreen::new);
+            MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
         });
         event.enqueueWork(() -> {
             EntityRenderers.register(

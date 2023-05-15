@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.town.quests.MCDelayedReward;
 import ca.bradj.questown.town.quests.MCRewardList;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.Registry;
@@ -23,6 +24,13 @@ public class RewardsInit {
             () -> RewardType.Builder
                     .of(MCRewardList::new)
                     .build(new ResourceLocation(Questown.MODID, MCRewardList.ID).toString())
+    );
+
+    public static final RegistryObject<RewardType<MCDelayedReward>> DELAYED = REWARD_TYPES.register(
+            MCDelayedReward.ID,
+            () -> RewardType.Builder
+                    .of(MCDelayedReward::new)
+                    .build(new ResourceLocation(Questown.MODID, MCDelayedReward.ID).toString())
     );
 
     public static final RegistryObject<RewardType<SpawnVisitorReward>> VISITOR = REWARD_TYPES.register(
