@@ -14,6 +14,7 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
@@ -239,18 +240,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             Room room,
             ParticleOptions pType
     ) {
-        RoomEffects.renderParticlesBetween(room.getSpace(), (x, z) -> {
-            int y = this.getBlockPos().getY();
-            BlockPos bp = new BlockPos(x, y, z);
-            if (!(level instanceof ServerLevel)) {
-                return;
-            }
-            if (!level.isEmptyBlock(bp)) {
-                return;
-            }
-            ((ServerLevel) level).sendParticles(pType, x, y, z, 2, 0, 1, 0, 1);
-            ((ServerLevel) level).sendParticles(pType, x, y + 1, z, 2, 0, 1, 0, 1);
-        });
+        for (InclusiveSpace space : room.getSpaces()) {
+            RoomEffects.renderParticlesBetween(space, (x, z) -> {
+                int y = this.getBlockPos().getY();
+                BlockPos bp = new BlockPos(x, y, z);
+                if (!(level instanceof ServerLevel)) {
+                    return;
+                }
+                if (!level.isEmptyBlock(bp)) {
+                    return;
+                }
+                ((ServerLevel) level).sendParticles(pType, x, y, z, 2, 0, 1, 0, 1);
+                ((ServerLevel) level).sendParticles(pType, x, y + 1, z, 2, 0, 1, 0, 1);
+            });
+        }
     }
 
     public ImmutableList<MCQuest> getAllQuests() {
