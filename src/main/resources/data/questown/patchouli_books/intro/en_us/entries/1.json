@@ -5,7 +5,10 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "This is a test entry, but it should show up!"
+      "text": "Dear traveler,$(br2)You have stumbled upon the place I once called home.$(br2)My people and I are leaving now and will not return. But I don't believe you will be alone for long. Something about this place draws people from all ends of the world."
+    }, {
+      "type": "patchouli:text",
+      "text": "Don't believe me? Just light a campfire by the flag and wait until morning."
     }
   ]
 }
