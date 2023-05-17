@@ -18,5 +18,9 @@
   "room.inn": "Inn",
   "special_quest.campfire": "Build a campfire",
   "special_quest.broken": "Quest failed to load",
-  "block.questown.cobblestone_flag_base": "Cobblestone Flag Base"
+  "block.questown.cobblestone_flag_base": "Cobblestone Flag Base",
+  "dialog.visitors.first_contact.intro": "Hey! I came as soon as I noticed your campfire on the horizon.",
+  "dialog.visitors.first_contact.request": "I'm pretty tired and don't have anywhere else to stay. Would you build somewhere for me to sleep?",
+  "dialog.visitors.first_contact.instruction": "Right-click the town flag base at any time to view your active quests"
+
 }

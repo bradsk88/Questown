@@ -13,6 +13,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
 
     public static final String ID = "add_random_batch_of_quests";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
+    private final TownInterface town;
     private UUID visitorUUID;
 
     public AddBatchOfRandomQuestsForVisitorReward(
@@ -20,10 +21,9 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
             @NotNull TownInterface entity,
             @NotNull UUID visitorUUID
     ) {
-        super(rType, () -> {
-            entity.addBatchOfRandomQuestsForVisitor(visitorUUID);
-        });
+        super(rType);
         this.visitorUUID = visitorUUID;
+        this.town = entity;
     }
 
     public AddBatchOfRandomQuestsForVisitorReward(
@@ -31,6 +31,11 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
             @NotNull UUID visitorUUID
     ) {
         this(RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get(), entity, visitorUUID);
+    }
+
+    @Override
+    protected @NotNull RewardApplier getApplier() {
+        return () -> town.addBatchOfRandomQuestsForVisitor(visitorUUID);
     }
 
     @Override

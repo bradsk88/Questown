@@ -11,6 +11,10 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCRe
 
     public static final Serializer SERIALIZER = new Serializer();
 
+    public ImmutableList<MCQuestBatch> getAllBatches() {
+        return ImmutableList.copyOf(this.batches);
+    }
+
     public static class Serializer {
         private static final String NBT_NUM_BATCHES = "num_quest_batches";
         private static final String NBT_BATCHES = "quest_batches";
@@ -34,8 +38,7 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCRe
             ListTag aq = nbt.getList(NBT_BATCHES, Tag.TAG_COMPOUND);
             for (int i = 0; i < num; i++) {
                 CompoundTag tag = aq.getCompound(i);
-                MCQuestBatch q = new MCQuestBatch();
-                MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag, q);
+                MCQuestBatch q = MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag);
                 aqs.add(q);
             }
             batches.initialize(aqs.build());

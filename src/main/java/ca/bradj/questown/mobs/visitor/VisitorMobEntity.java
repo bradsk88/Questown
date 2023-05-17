@@ -1,8 +1,13 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -11,9 +16,16 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.game.DebugPackets;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -31,12 +43,19 @@ import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -286,5 +305,53 @@ public class VisitorMobEntity extends PathfinderMob {
                 }
             });
         }
+    }
+
+    @Override
+    public InteractionResult interactAt(
+            Player player,
+            Vec3 p_19981_,
+            InteractionHand p_19982_
+    ) {
+        boolean isClientSide = player.level.isClientSide();
+        if (isClientSide) {
+            return InteractionResult.sidedSuccess(isClientSide);
+        }
+
+        Collection<UIQuest> quests = UIQuest.fromLevel(
+            level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
+        );
+
+        NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
+            @Override
+            public @NotNull Component getDisplayName() {
+                return TextComponent.EMPTY;
+            }
+
+            @Override
+            public @NotNull AbstractContainerMenu createMenu(
+                    int windowId,
+                    @NotNull Inventory inv,
+                    @NotNull Player p
+            ) {
+                return new VisitorQuestsContainer(windowId, quests);
+            }
+        }, data -> {
+            UIQuest.Serializer ser = new UIQuest.Serializer();
+            data.writeInt(quests.size());
+            data.writeCollection(quests, (buf, recipe) -> {
+                ResourceLocation id;
+                if (recipe == null) {
+                    id = SpecialQuests.BROKEN;
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE);
+                } else {
+                    id = recipe.getRecipeId();
+                }
+                buf.writeResourceLocation(id);
+                ser.toNetwork(buf, recipe);
+            });
+        });
+
+        return InteractionResult.sidedSuccess(isClientSide);
     }
 }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,11 +31,15 @@ class QuestsTest {
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
-        }, new Reward(() -> {
-        }) {
+        }, new Reward() {
             @Override
             protected String getName() {
                 return "Test reward";
+            }
+
+            @Override
+            protected @NotNull RewardApplier getApplier() {
+                return () -> {};
             }
         });
     }

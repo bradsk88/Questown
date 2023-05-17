@@ -5,6 +5,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import org.jetbrains.annotations.NotNull;
 
 public class MCDelayedReward extends MCReward {
 
@@ -24,18 +25,23 @@ public class MCDelayedReward extends MCReward {
             long timeOfDay,
             long rewardedAtTimeOfDay
     ) {
-        super(RewardsInit.DELAYED.get(), () -> {});
+        super(RewardsInit.DELAYED.get());
         this.town = town;
         this.child = child;
         this.timeOfDay = timeOfDay;
         this.rewardedAtTimeOfDay = rewardedAtTimeOfDay;
     }
 
+    @Override
+    protected @NotNull RewardApplier getApplier() {
+        return () -> town.addTimedReward(this);
+    }
+
     public MCDelayedReward(
             RewardType<? extends MCReward> rType,
             TownInterface town
     ) {
-        super(rType, () -> {});
+        super(rType);
         this.town = town;
     }
 
@@ -51,11 +57,6 @@ public class MCDelayedReward extends MCReward {
         }
         this.child.claim();
         return true;
-    }
-
-    @Override
-    void claim() {
-        this.town.addTimedReward(this);
     }
 
     protected Tag serializeNbt() {

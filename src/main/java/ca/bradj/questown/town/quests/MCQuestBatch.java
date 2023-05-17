@@ -6,16 +6,20 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
 public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward> {
     public static final Serializer SERIALIZER = new Serializer();
+    private final UUID owner;
 
     MCQuestBatch() {
-        this(null);
+        this(null, null);
     }
 
-    public MCQuestBatch(MCReward reward) {
+    public MCQuestBatch(@Nullable UUID owner, MCReward reward) {
         super(new Quest.QuestFactory<>() {
             @Override
             public MCQuest newQuest(ResourceLocation recipeId) {
@@ -30,6 +34,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
                 return input.withStatus(status);
             }
         }, reward);
+        this.owner = owner;
+    }
+
+    public UUID getOwner() {
+        return owner;
     }
 
     public static class Serializer {
@@ -50,7 +59,8 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
             return ct;
         }
 
-        public void deserializeNBT(TownInterface entity, CompoundTag nbt, MCQuestBatch quests) {
+        public MCQuestBatch deserializeNBT(TownInterface entity, CompoundTag nbt) {
+            MCQuestBatch quests = new MCQuestBatch();
             ImmutableList.Builder<MCQuest> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_QUESTS);
             ListTag aq = nbt.getList(NBT_QUESTS, Tag.TAG_COMPOUND);
@@ -62,6 +72,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
             }
             MCReward reward = MCReward.SERIALIZER.deserializeNBT(entity, nbt.getCompound(NBT_REWARD));
             quests.initialize(aqs.build(), reward);
+            return quests;
         }
     }
 }

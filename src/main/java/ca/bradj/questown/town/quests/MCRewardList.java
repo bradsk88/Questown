@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -23,11 +24,7 @@ public class MCRewardList extends MCReward {
             TownInterface town,
             MCReward... children
     ) {
-        super(rType, () -> {
-            for (Reward r : children) {
-                r.claim();
-            }
-        });
+        super(rType);
         this.children = ImmutableList.copyOf(children);
     }
 
@@ -43,6 +40,15 @@ public class MCRewardList extends MCReward {
             MCReward... children
     ) {
         this(RewardsInit.LIST.get(), town, children);
+    }
+
+    @Override
+    protected @NotNull RewardApplier getApplier() {
+        return () -> {
+            for (Reward r : children) {
+                r.claim();
+            }
+        };
     }
 
     protected Tag serializeNbt() {

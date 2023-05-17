@@ -20,6 +20,7 @@ public class SpawnVisitorReward extends MCReward {
 
     public static final String ID = "spawn_visitor_reward";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
+    private final TownInterface town;
     private UUID visitorUUID;
 
     public SpawnVisitorReward(
@@ -27,8 +28,9 @@ public class SpawnVisitorReward extends MCReward {
             @NotNull TownInterface entity,
             @Nullable UUID visitorUUID
     ) {
-        super(rType, () -> spawnVisitorNearby(entity, visitorUUID));
+        super(rType);
         this.visitorUUID = visitorUUID;
+        this.town = entity;
     }
 
     public SpawnVisitorReward(TownInterface entity) {
@@ -40,6 +42,11 @@ public class SpawnVisitorReward extends MCReward {
             UUID visitorUUID
     ) {
         this(RewardsInit.VISITOR.get(), entity, visitorUUID);
+    }
+
+    @Override
+    protected @NotNull RewardApplier getApplier() {
+        return () -> spawnVisitorNearby(town, visitorUUID);
     }
 
     private static void spawnVisitorNearby(

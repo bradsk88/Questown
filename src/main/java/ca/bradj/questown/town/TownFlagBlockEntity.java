@@ -202,31 +202,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         });
     }
 
-    private void setUpQuestsForNewlyPlacedFlag(ServerLevel level) {
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-        final List<RoomRecipe> recipesCopy = Lists.reverse(ImmutableList.sortedCopyOf(recipes));
-
-        List<? extends String> initialQuests = Config.village_start_quests.get();
-
+    private void setUpQuestsForNewlyPlacedFlag(ServerLevel sl) {
         UUID visitorUUID = UUID.randomUUID();
         MCRewardList reward = new MCRewardList(
                 this,
                 new SpawnVisitorReward(this, visitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
         );
-        MCQuestBatch qb = new MCQuestBatch(new MCDelayedReward(this, reward, 0, level.getDayTime() % 24000L));
 
-        qb.addNewQuest(SpecialQuests.CAMPFIRE);
+        MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(
+                this, reward, 0, sl.getDayTime() % 24000L
+        ));
+        fireQuest.addNewQuest(SpecialQuests.CAMPFIRE);
 
-        initialQuests.forEach(iq -> {
-            Optional<RoomRecipe> match = recipesCopy.stream().filter(v -> v.getId().toString().equals(iq)).findFirst();
-            if (match.isEmpty()) {
-                Questown.LOGGER.error("Unrecognized recipe ID provided for {}: {}", Config.VILLAGE_START_QUESTS, iq);
-                return;
-            }
-            qb.addNewQuest(match.get().getId());
-        });
-        questBatches.add(qb);
+        questBatches.add(fireQuest);
         this.isInitializedQuests = true;
         setChanged();
     }
@@ -272,7 +261,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
 
     public void generateRandomQuest(ServerLevel level) {
         RoomRecipe recipe = getRandomQuest(level);
-        MCQuestBatch qb = new MCQuestBatch(new SpawnVisitorReward(this));
+        MCQuestBatch qb = new MCQuestBatch(null, new SpawnVisitorReward(this));
         questBatches.add(qb);
         setChanged();
         broadcastQuestToChat(level, recipe);
@@ -418,7 +407,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         int numNewQuests = 3; // TODO: Determine this based on town "progress"
         UUID nextVisitorUUID = UUID.randomUUID();
-        MCQuestBatch qb = new MCQuestBatch(new MCRewardList(
+        MCQuestBatch qb = new MCQuestBatch(visitorUUID, new MCRewardList(
                 this,
                 new SpawnVisitorReward(this, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
@@ -455,6 +444,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     @Override
     public void addTimedReward(MCDelayedReward r) {
         this.timedRewards.add(r);
+    }
+
+    @Override
+    public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
+        return this.questBatches.getAllBatches()
+                .stream()
+                .filter(b -> uuid.equals(b.getOwner()))
+                .flatMap(v -> v.getAll().stream())
+                .toList();
+    }
+
+    @Override
+    public void addBatchOfQuests(
+            MCQuestBatch batch
+    ) {
+        this.questBatches.add(batch);
     }
 
     private @Nullable Position getWanderTargetPosition() {

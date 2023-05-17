@@ -2,6 +2,7 @@ package ca.bradj.questown.integration.jei;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.QuestsScreen;
+import ca.bradj.questown.gui.VisitorDialogScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
@@ -36,6 +37,12 @@ public class QuestownJei implements IModPlugin {
             ) {
                 ItemStack is = containerScreen.getHoveredIngredient((int) mouseX, (int) mouseY);
                 return is;
+            }
+        });
+        registration.addGuiContainerHandler(VisitorDialogScreen.class, new IGuiContainerHandler<>() {
+            @Override
+            public List<Rect2i> getGuiExtraAreas(VisitorDialogScreen containerScreen) {
+                return containerScreen.getExtraAreas();
             }
         });
     }

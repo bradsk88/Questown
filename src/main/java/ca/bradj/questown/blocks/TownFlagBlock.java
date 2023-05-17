@@ -109,20 +109,8 @@ public class TownFlagBlock extends BaseEntityBlock {
 //            return InteractionResult.sidedSuccess(false);
         }
 
-        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
-        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
-
         ImmutableList<MCQuest> aQ = entity.getAllQuests();
-        List<UIQuest> quests = aQ.stream().map(v -> {
-            RoomRecipe q = rMap.get(v.getId());
-            if (q == null) {
-                return null;
-            }
-            int recipeStrength = 1; // TODO: Add getter to RoomRecipes
-            return new UIQuest(new RoomRecipe(v.getId(), q.getIngredients(), recipeStrength), v.getStatus());
-        }).toList();
+        List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
             @Override

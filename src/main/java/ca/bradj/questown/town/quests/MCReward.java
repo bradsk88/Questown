@@ -14,10 +14,9 @@ public abstract class MCReward extends Reward {
     private final RewardType<? extends MCReward> rType;
 
     public MCReward(
-            RewardType<? extends MCReward> rType,
-            RewardApplier applier
+            RewardType<? extends MCReward> rType
     ) {
-        super(applier);
+        super();
         this.rType = rType;
     }
 
