@@ -323,6 +323,10 @@ public class VisitorMobEntity extends PathfinderMob {
             level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
         );
 
+        AdvancementsInit.VISITOR_TRIGGER.trigger(
+                sp, VisitorTrigger.Triggers.FirstVisitor
+        );
+
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -352,9 +356,6 @@ public class VisitorMobEntity extends PathfinderMob {
                 ser.toNetwork(buf, recipe);
             });
         });
-        AdvancementsInit.VISITOR_TRIGGER.trigger(
-                sp, VisitorTrigger.Triggers.FirstVisitor
-        );
 
         return InteractionResult.sidedSuccess(isClientSide);
     }

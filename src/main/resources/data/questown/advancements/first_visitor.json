@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "New Friends",
+      "color": "white"
+    },
+    "description": {
+      "text": "Attract a visitor to your village and introduce yourself"
+    },
+    "icon": {
+      "item": "minecraft:player_head"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:visitor_trigger",
+      "conditions": {
+        "context": "first_visitor"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:root"
+}

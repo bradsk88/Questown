@@ -54,14 +54,14 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
             EntityPredicate.Composite predicate,
             DeserializationContext parser
     ) {
-        if (!json.has("visitor_id")) {
+        if (!json.has("context")) {
             throw new IllegalStateException(String.format(
-                    "Trigger of type %s is missing visitor_id [ID: %s]",
+                    "Trigger of type %s is missing context [ID: %s]",
                     ID, parser.getAdvancementId()
             ));
         }
 
-        return new VisitorTrigger.Instance(predicate, Triggers.fromJSON(json.get("visitor_id")));
+        return new VisitorTrigger.Instance(predicate, Triggers.fromJSON(json.get("context")));
     }
 
     @Override
@@ -80,23 +80,23 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
     }
 
     public static class Instance extends AbstractCriterionTriggerInstance {
-        private final Triggers trickID;
+        private final Triggers context;
 
         public Instance(
                 EntityPredicate.Composite p_i231464_2_,
-                Triggers trickID
+                Triggers context
         ) {
             super(VisitorTrigger.ID, p_i231464_2_);
-            if (Triggers.Invalid.equals(trickID)) {
-                throw new IllegalArgumentException("visitorID must not be invalid");
+            if (Triggers.Invalid.equals(context)) {
+                throw new IllegalArgumentException("context must not be invalid");
             }
-            this.trickID = trickID;
+            this.context = context;
         }
 
         public boolean matches(
                 Triggers trickID
         ) {
-            return this.trickID.equals(trickID);
+            return this.context.equals(trickID);
         }
     }
 }

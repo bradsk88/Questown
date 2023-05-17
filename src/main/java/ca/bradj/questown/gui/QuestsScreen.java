@@ -13,6 +13,7 @@ import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.textures.Textures;
+import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -281,5 +282,28 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         Stream<Slot> matches = slots.stream().filter(slotPredicate);
         Optional<Slot> found = matches.findAny();
         return found.map(Slot::getItem).orElse(ItemStack.EMPTY);
+    }
+
+
+    @Override
+    public boolean mouseScrolled(double scrollX, double scrollY, double scrollDelta) {
+        final double x = MouseUtil.getX();
+        final double y = MouseUtil.getY();
+        if (isMouseOver(x, y)) {
+            if (scrollDelta < 0) {
+                this.nextPage();
+                return true;
+            } else if (scrollDelta > 0) {
+                this.previousPage();
+                return true;
+            }
+        }
+        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        // TODO: Make smarter
+        return true;
     }
 }
