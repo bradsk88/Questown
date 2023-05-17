@@ -1,0 +1,35 @@
+{
+  "display": {
+    "title": {
+      "text": "Questown",
+      "color": "white"
+    },
+    "description": {
+      "text": "Find an abandoned town flag"
+    },
+    "icon": {
+      "item": "questown:flag_base"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:approach_town",
+      "conditions": {
+        "context": "first_visit"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

@@ -1,7 +1,8 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -314,7 +315,7 @@ public class VisitorMobEntity extends PathfinderMob {
             InteractionHand p_19982_
     ) {
         boolean isClientSide = player.level.isClientSide();
-        if (isClientSide) {
+        if (!(player instanceof ServerPlayer sp)) {
             return InteractionResult.sidedSuccess(isClientSide);
         }
 
@@ -322,7 +323,7 @@ public class VisitorMobEntity extends PathfinderMob {
             level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
         );
 
-        NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
+        NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
                 return TextComponent.EMPTY;
@@ -351,6 +352,9 @@ public class VisitorMobEntity extends PathfinderMob {
                 ser.toNetwork(buf, recipe);
             });
         });
+        AdvancementsInit.VISITOR_TRIGGER.trigger(
+                sp, VisitorTrigger.Triggers.FirstVisitor
+        );
 
         return InteractionResult.sidedSuccess(isClientSide);
     }

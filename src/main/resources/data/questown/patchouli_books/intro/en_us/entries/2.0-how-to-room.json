@@ -1,0 +1,25 @@
+{
+  "name": "Entry 2: Rooms",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "If you followed my advice, you've probably received your first visitor.$(br2)I hope you're a skilled builder; It's a rare talent these days!$(br2)I bet your visitors would appreciate a bit of shelter.$(br2)Visitors are picky. Keep the room shape simple."
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "T": "minecraft:oak_door[facing=west,half=upper]"
+        },
+        "pattern": [
+          ["WWWW", "W  W", "WWTW"],
+          ["WWWW", "W 0W", "WWDW"]
+        ]
+      },
+      "text": "Hint: Rooms should have four walls (at least 2 blocks tall) and a door. Build them near the town flag."
+    }
+  ]
+}

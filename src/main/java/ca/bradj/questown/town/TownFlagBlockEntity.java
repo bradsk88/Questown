@@ -1,7 +1,8 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.advancements.ApproachTownTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
@@ -24,7 +25,6 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
@@ -38,7 +38,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -174,7 +174,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
-        informPlayersOnApproach();
+        grantAdvancementOnApproach();
         if (!this.isInitializedQuests) {
             this.setUpQuestsForNewlyPlacedFlag(sl);
         }
@@ -184,19 +184,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
     }
 
-    private void informPlayersOnApproach() {
+    private void grantAdvancementOnApproach() {
         MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
-            if (event.getEntity() instanceof Player) {
+            if (event.getEntity() instanceof ServerPlayer sp) {
                 double v = event.getEntity().distanceToSqr(
                         this.worldPosition.getX() + 0.5D,
                         this.worldPosition.getY() + 0.5D,
                         this.worldPosition.getZ() + 0.5D
                 );
-                Questown.LOGGER.debug("Player detected at distance: " + v);
-                if (v < 113) {
-                    Player player = (Player) event.getEntity();
-                    // TODO: bring back but only send once per minute(?)
-//                    player.sendMessage(new TranslatableComponent("messages.town_flag.click_to_view_quests"), null);
+                Questown.LOGGER.debug("Distance {}", v);
+                if (v < 100) {
+                    AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
+                            sp, ApproachTownTrigger.Triggers.FirstVisit
+                    );
                 }
             }
         });

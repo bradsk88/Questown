@@ -1,5 +1,5 @@
 {
-  "name": "Entry 1",
+  "name": "Entry 1: Welcome!",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
   "pages": [
@@ -7,7 +7,16 @@
       "type": "patchouli:text",
       "text": "Dear traveler,$(br2)You have stumbled upon the place I once called home.$(br2)My people and I are leaving now and will not return. But I don't believe you will be alone for long. Something about this place draws people from all ends of the world."
     }, {
-      "type": "patchouli:text",
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "F": "questown:cobblestone_flag_base",
+          "C": "minecraft:campfire"
+        },
+        "pattern": [
+          ["F0C"]
+        ]
+      },
       "text": "Don't believe me? Just light a campfire by the flag and wait until morning."
     }
   ]

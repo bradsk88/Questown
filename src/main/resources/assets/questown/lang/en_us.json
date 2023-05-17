@@ -7,6 +7,7 @@
   "messages.town_flag.click_to_view_quests": "Click the Flag Base to view open quests",
   "messages.town_flag.quest_completed": "Quest completed: %s",
   "messages.town_flag.quest_added": "Quest added: %s",
+  "messages.town_flag.first_visit_journal": "You find an old journal on the ground",
   "quests.build_a": "Build a %s",
   "quests.completed_suffix": "%s (Completed)",
   "room.no_recipe": "Room",
@@ -21,6 +22,7 @@
   "block.questown.cobblestone_flag_base": "Cobblestone Flag Base",
   "dialog.visitors.first_contact.intro": "Hey! I came as soon as I noticed your campfire on the horizon.",
   "dialog.visitors.first_contact.request": "I'm pretty tired and don't have anywhere else to stay. Would you build somewhere for me to sleep?",
-  "dialog.visitors.first_contact.instruction": "Right-click the town flag base at any time to view your active quests"
-
+  "dialog.visitors.first_contact.page": "I also found this piece of paper on the ground. Does it mean anything to you?",
+  "dialog.visitors.first_contact.instruction": "Right-click the town flag base at any time to view your active quests",
+  "dialog.visitors.first_contact.page_instruction": "A page was added to the old journal."
 }

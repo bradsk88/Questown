@@ -5,12 +5,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.textures.Textures;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -64,29 +67,37 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);
-        int y = (this.height - backgroundHeight) / 2;
-        int pageStringY = y + PAGE_PADDING;
-        y = pageStringY + PAGE_PADDING;
+        int y = ((this.height - backgroundHeight) / 2) + PAGE_PADDING;
         x = x + PAGE_PADDING;
 
+        TextComponent str = getFirstVisitorMessage();
+        str.setStyle(Style.EMPTY.withColor(ChatFormatting.BLACK));
+        this.font.drawWordWrap(
+                str, x, y,
+                backgroundWidth - (2 * PAGE_PADDING),
+                backgroundHeight - (2 * PAGE_PADDING)
+        );
+    }
+
+    @NotNull
+    private static TextComponent getFirstVisitorMessage() {
         TranslatableComponent intro = new TranslatableComponent(
                 "dialog.visitors.first_contact.intro"
         );
         TranslatableComponent request = new TranslatableComponent(
                 "dialog.visitors.first_contact.request"
         );
+        TranslatableComponent page = new TranslatableComponent(
+                "dialog.visitors.first_contact.page"
+        );
         TranslatableComponent instruction = new TranslatableComponent(
                 "dialog.visitors.first_contact.instruction"
         );
-        TextComponent str = new TextComponent(String.format(
-                "%s%n%n%s%n%n(%s)",
-                intro.getString(), request.getString(), instruction.getString()
+        return new TextComponent(String.format(
+                "%s%n%n%s%n%n%s%n%n(%s)",
+                intro.getString(), request.getString(), page.getString(),
+                instruction.getString()
         ));
-        this.font.drawWordWrap(
-                str, x, y,
-                backgroundWidth - (2 * PAGE_PADDING),
-                backgroundHeight - (2 * PAGE_PADDING)
-        );
     }
 
     @Override
