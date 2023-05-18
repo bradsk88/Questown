@@ -13,7 +13,7 @@ import java.util.UUID;
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
 public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward> {
     public static final Serializer SERIALIZER = new Serializer();
-    private final UUID owner;
+    private UUID owner;
 
     MCQuestBatch() {
         this(null, null);
@@ -45,9 +45,13 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
         private static final String NBT_NUM_QUESTS = "num_quests";
         private static final String NBT_QUESTS = "quests";
         private static final String NBT_REWARD = "reward";
+        private static final String NBT_OWNER_UUID = "owner_uuid";
 
         public CompoundTag serializeNBT(MCQuestBatch quests) {
             CompoundTag ct = new CompoundTag();
+            if (quests.owner != null) {
+                ct.putUUID(NBT_OWNER_UUID, quests.owner);
+            }
             ImmutableList<MCQuest> aqs = quests.getAll();
             ct.putInt(NBT_NUM_QUESTS, aqs.size());
             ListTag aq = new ListTag();
@@ -61,6 +65,9 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
 
         public MCQuestBatch deserializeNBT(TownInterface entity, CompoundTag nbt) {
             MCQuestBatch quests = new MCQuestBatch();
+            if (nbt.contains(NBT_OWNER_UUID)) {
+                quests.owner = nbt.getUUID(NBT_OWNER_UUID);
+            }
             ImmutableList.Builder<MCQuest> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_QUESTS);
             ListTag aq = nbt.getList(NBT_QUESTS, Tag.TAG_COMPOUND);

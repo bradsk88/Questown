@@ -8,15 +8,13 @@ import mezz.jei.gui.textures.Textures;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.*;
 import net.minecraft.world.entity.player.Inventory;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Random;
 
 public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsContainer> {
     private static final int backgroundWidth = 176;
@@ -26,6 +24,8 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
 
     private final DrawableNineSliceTexture background;
     private final VisitorQuestsContainer container;
+    private final Random random;
+    private BaseComponent dialog;
 
     public VisitorDialogScreen(
             VisitorQuestsContainer container,
@@ -39,10 +39,24 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.container = container;
+        this.random = new Random();
     }
 
     @Override
     protected void init() {
+        BaseComponent str;
+        if (this.container.isFirstVisitor() && this.container.isNewVisitor()) {
+            str = getFirstVisitorMessage();
+        }
+        else if (this.container.isNewVisitor()) {
+            str = getNewVisitorMessage();
+        }
+        else {
+            str = getGenericVisitorMessage(random);
+        }
+
+        str.setStyle(Style.EMPTY.withColor(ChatFormatting.BLACK));
+        this.dialog = str;
     }
 
     @Override
@@ -72,37 +86,34 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
         int y = ((this.height - backgroundHeight) / 2) + PAGE_PADDING;
         x = x + PAGE_PADDING;
 
-        TextComponent str;
-        if (this.container.isFirstVisitor() && this.container.isNewVisitor()) {
-            str = getFirstVisitorMessage();
-        }
-        else if (this.container.isNewVisitor()) {
-            str = getNewVisitorMessage();
-        }
-        else {
-            str = getGenericVisitorMessage();
-        }
-
-        str.setStyle(Style.EMPTY.withColor(ChatFormatting.BLACK));
         this.font.drawWordWrap(
-                str, x, y,
+                dialog, x, y,
                 backgroundWidth - (2 * PAGE_PADDING),
                 backgroundHeight - (2 * PAGE_PADDING)
         );
     }
 
-    private TextComponent getGenericVisitorMessage() {
-        // TODO: Dialog
-        return new TextComponent("Not implemented (generic)");
+    private BaseComponent getGenericVisitorMessage(Random random) {
+        String intro = String.format("dialog.visitors.generic.%d", random.nextInt(45)+1);
+        return new TranslatableComponent(intro);
     }
 
-    private TextComponent getNewVisitorMessage() {
-        // TODO: Dialog
-        return new TextComponent("Not implemented (new visitor)");
+    private BaseComponent getNewVisitorMessage() {
+        String intro = String.format("dialog.visitors.new_visitor_introduction.%d", random.nextInt(8)+1);
+        String request = String.format("dialog.visitors.new_visitor_request.%d", random.nextInt(10)+1);
+        String closing = String.format("dialog.visitors.new_visitor_closing.%d", random.nextInt(10)+1);
+        String instruction = "dialog.visitors.instruction.flag_quests";
+        return new TextComponent(String.format(
+                "%s%n%n%s%n%n%s%n%n(%s)",
+                new TranslatableComponent(intro).getString(),
+                new TranslatableComponent(request).getString(),
+                new TranslatableComponent(closing).getString(),
+                new TranslatableComponent(instruction).getString()
+        ));
     }
 
     @NotNull
-    private static TextComponent getFirstVisitorMessage() {
+    private static BaseComponent getFirstVisitorMessage() {
         TranslatableComponent intro = new TranslatableComponent(
                 "dialog.visitors.first_contact.intro"
         );
@@ -113,7 +124,7 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
                 "dialog.visitors.first_contact.page"
         );
         TranslatableComponent instruction = new TranslatableComponent(
-                "dialog.visitors.first_contact.instruction"
+                "dialog.visitors.instruction.flag_quests"
         );
         return new TextComponent(String.format(
                 "%s%n%n%s%n%n%s%n%n(%s)",
