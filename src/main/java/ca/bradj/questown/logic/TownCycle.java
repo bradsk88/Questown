@@ -5,12 +5,10 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CampfireBlock;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -19,6 +17,7 @@ public class TownCycle {
 
     public interface BlockChecker {
         boolean IsEmpty(Position dp);
+        boolean IsWall(Position dp);
 
         boolean IsDoor(Position dp);
     }
@@ -29,7 +28,7 @@ public class TownCycle {
     ) {
         Collection<Position> foundDoors = findDoors(checker, townBlockPosition);
         return LevelRoomDetection.findRooms(
-                foundDoors, 20, (position) -> !checker.IsEmpty(position)
+                foundDoors, 20, checker::IsWall
         );
     }
 

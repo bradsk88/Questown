@@ -49,7 +49,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.event.world.SleepFinishedTimeEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -229,7 +228,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     @Override
     public boolean IsEmpty(Position dp) {
         BlockPos bp = Positions.ToBlock(dp, this.getBlockPos().getY());
-        return level.isEmptyBlock(bp) || level.isEmptyBlock(bp.above());
+        BlockPos abp = bp.above();
+        boolean empty = level.isEmptyBlock(bp);
+        boolean emptyAbove = level.isEmptyBlock(abp);
+        return empty || emptyAbove;
+    }
+
+    @Override
+    public boolean IsWall(Position dp) {
+        BlockPos bp = Positions.ToBlock(dp, this.getBlockPos().getY());
+        BlockPos abp = bp.above();
+        if (this.IsEmpty(dp)) {
+            return false;
+        }
+        BlockState blockState = level.getBlockState(bp);
+        BlockState aboveBlockState = level.getBlockState(abp);
+        if (blockState.getShape(level, bp).bounds().getSize() >= 1) {
+            if (aboveBlockState.getShape(level, abp).bounds().getSize() >= 1) {
+                return true;
+            }
+        }
+
+        if (IsDoor(dp)) {
+            return true;
+        }
+
+        // TODO: Windows
+
+        return false;
     }
 
     @Override
