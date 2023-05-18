@@ -56,7 +56,9 @@ public class ActiveRecipes<KEY> {
             return;
         }
 
-        Questown.LOGGER.error("An unexpected recipe was removed. This is likely a bug.");
+        if (recipe.isPresent()) {
+            Questown.LOGGER.error("An unexpected recipe was removed. This is likely a bug.");
+        }
     }
 
     public interface ChangeListener<KEY> {

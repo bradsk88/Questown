@@ -12,14 +12,34 @@ import java.util.Collection;
 
 public class VisitorQuestsContainer extends AbstractContainerMenu {
 
+    public boolean isNewVisitor() {
+        return ctx.isNewVisitor;
+    }
+
+    public static class VisitorContext {
+        public final boolean isFirstVillager;
+        public final boolean isNewVisitor;
+
+        public VisitorContext(
+                boolean isFirstVillager,
+                boolean isNewVisitor
+        ) {
+            this.isFirstVillager = isFirstVillager;
+            this.isNewVisitor = isNewVisitor;
+        }
+    }
+
     private final Collection<UIQuest> quests;
+    private VisitorContext ctx;
 
     public VisitorQuestsContainer(
             int windowId,
-            Collection<UIQuest> quests
+            Collection<UIQuest> quests,
+            VisitorContext ctx
     ) {
         super(MenuTypesInit.VISITOR_QUESTS.get(), windowId);
         this.quests = quests;
+        this.ctx = ctx;
     }
 
     public VisitorQuestsContainer(
@@ -27,10 +47,10 @@ public class VisitorQuestsContainer extends AbstractContainerMenu {
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        this(windowId, read(data));
+        this(windowId, readQuests(data), readVisitor(data));
     }
 
-    private static Collection<UIQuest> read(FriendlyByteBuf data) {
+    private static Collection<UIQuest> readQuests(FriendlyByteBuf data) {
         int size = data.readInt();
         ArrayList<UIQuest> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
             ResourceLocation recipeID = buf.readResourceLocation();
@@ -40,6 +60,12 @@ public class VisitorQuestsContainer extends AbstractContainerMenu {
         return r;
     }
 
+    private static VisitorContext readVisitor(FriendlyByteBuf data) {
+        boolean isFirstVillager = data.readBoolean();
+        boolean isNewVisitor = data.readBoolean();
+        return new VisitorContext(isFirstVillager, isNewVisitor);
+    }
+
     @Override
     public boolean stillValid(Player p_38874_) {
         return true;
@@ -47,5 +73,9 @@ public class VisitorQuestsContainer extends AbstractContainerMenu {
 
     public Collection<UIQuest> GetQuests() {
         return this.quests;
+    }
+
+    public boolean isFirstVisitor() {
+        return this.ctx.isFirstVillager;
     }
 }

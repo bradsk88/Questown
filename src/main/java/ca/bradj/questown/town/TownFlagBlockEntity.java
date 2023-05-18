@@ -49,21 +49,24 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraftforge.event.world.SleepFinishedTimeEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface, TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
 
     public static final String ID = "flag_base_block_entity";
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
+    public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
     private final ActiveRooms activeRooms = new ActiveRooms();
     private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
     private final MCQuestBatches questBatches = new MCQuestBatches();
-    private final List<MCDelayedReward> timedRewards = new ArrayList<>();
+    private final MCMorningRewards morningRewards = new MCMorningRewards(this);
 
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
@@ -91,13 +94,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         long l = gameTime % 10;
         if (l != 0) {
             return;
-        }
-
-        float timeOfDay = level.getDayTime() % 24000L;
-        for (MCDelayedReward r : ImmutableList.copyOf(e.timedRewards)) {
-            if (r.tryClaim(timeOfDay)) {
-                e.timedRewards.remove(r);
-            }
         }
 
         // TODO: Consider adding non-room town "features" as quests
@@ -153,6 +149,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     private void writeTownData(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
+        tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
     }
 
     @Override
@@ -175,6 +172,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             return;
         }
         grantAdvancementOnApproach();
+        grantDelayedRewardsInMorning();
         if (!this.isInitializedQuests) {
             this.setUpQuestsForNewlyPlacedFlag(sl);
         }
@@ -182,6 +180,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         this.activeRecipes.addChangeListener(this);
         this.activeRooms.addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
+    }
+
+    private void grantDelayedRewardsInMorning() {
+        MinecraftForge.EVENT_BUS.addListener(this.morningRewards);
+    }
+
+    @Override
+    public void addMorningReward(MCReward ev) {
+        this.morningRewards.add(ev);
+        this.setChanged();
     }
 
     private void grantAdvancementOnApproach() {
@@ -210,9 +218,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
                 new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
         );
 
-        MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(
-                this, reward, 0, sl.getDayTime() % 24000L
-        ));
+        MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(this, reward));
         fireQuest.addNewQuest(SpecialQuests.CAMPFIRE);
 
         questBatches.add(fireQuest);
@@ -407,11 +413,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         int numNewQuests = 3; // TODO: Determine this based on town "progress"
         UUID nextVisitorUUID = UUID.randomUUID();
-        MCQuestBatch qb = new MCQuestBatch(visitorUUID, new MCRewardList(
+        MCRewardList reward = new MCRewardList(
                 this,
                 new SpawnVisitorReward(this, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
-        ));
+        );
+        MCQuestBatch qb = new MCQuestBatch(visitorUUID, new MCDelayedReward(this, reward));
         for (int i = 0; i < numNewQuests; i++) {
             qb.addNewQuest(getRandomQuest(sl).getId());
         }
@@ -442,11 +449,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     @Override
-    public void addTimedReward(MCDelayedReward r) {
-        this.timedRewards.add(r);
-    }
-
-    @Override
     public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
         return this.questBatches.getAllBatches()
                 .stream()
@@ -460,6 +462,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             MCQuestBatch batch
     ) {
         this.questBatches.add(batch);
+    }
+
+    @Override
+    public Set<UUID> getVillagers() {
+        return this.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner).collect(Collectors.toSet());
     }
 
     private @Nullable Position getWanderTargetPosition() {

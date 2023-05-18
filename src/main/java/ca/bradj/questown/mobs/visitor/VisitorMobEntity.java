@@ -7,6 +7,7 @@ import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -56,10 +57,9 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 
 public class VisitorMobEntity extends PathfinderMob {
 
@@ -320,13 +320,21 @@ public class VisitorMobEntity extends PathfinderMob {
         }
 
         Collection<UIQuest> quests = UIQuest.fromLevel(
-            level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
+                level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
         );
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
                 sp, VisitorTrigger.Triggers.FirstVisitor
         );
 
+        Set<MCQuest> finishedQuests = town.getQuestsForVillager(getUUID())
+                .stream()
+                .filter(Quest::isComplete)
+                .collect(Collectors.toSet());
+        VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
+                town.getVillagers().stream().filter(Objects::nonNull).toList().size() == 1,
+                finishedQuests.size() == 0
+        );
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -339,7 +347,7 @@ public class VisitorMobEntity extends PathfinderMob {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new VisitorQuestsContainer(windowId, quests);
+                return new VisitorQuestsContainer(windowId, quests, ctx);
             }
         }, data -> {
             UIQuest.Serializer ser = new UIQuest.Serializer();
@@ -355,6 +363,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });
+            data.writeBoolean(ctx.isFirstVillager);
+            data.writeBoolean(ctx.isNewVisitor);
         });
 
         return InteractionResult.sidedSuccess(isClientSide);

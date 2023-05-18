@@ -17,7 +17,7 @@ public class MCRewardList extends MCReward {
     public static final String ID = "list";
     private static final String NBT_CHILDREN = "children";
 
-    private List<? extends MCReward> children;
+    private List<MCReward> children;
 
     public MCRewardList(
             RewardType<? extends MCReward> rType,
@@ -45,27 +45,29 @@ public class MCRewardList extends MCReward {
     @Override
     protected @NotNull RewardApplier getApplier() {
         return () -> {
-            for (Reward r : children) {
+            for (Reward r : getChildren()) {
                 r.claim();
             }
         };
     }
 
+    @Override
     protected Tag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         ListTag cs = new ListTag();
-        for (MCReward r : this.children) {
+        for (MCReward r : this.getChildren()) {
             cs.add(MCReward.SERIALIZER.serializeNBT(r));
         }
         tag.put(NBT_CHILDREN, cs);
         return tag;
     }
 
+    @Override
     protected void deserializeNbt(
             TownInterface entity,
             CompoundTag tag
     ) {
-        if (this.children != null && this.children.size() > 0) {
+        if (this.getChildren() != null && this.getChildren().size() > 0) {
             throw new IllegalStateException("Already initialized");
         }
         ListTag l = tag.getList(NBT_CHILDREN, Tag.TAG_COMPOUND);
@@ -73,6 +75,15 @@ public class MCRewardList extends MCReward {
         for (int i = 0; i < l.size(); i++) {
             b.add(MCReward.SERIALIZER.deserializeNBT(entity, l.getCompound(i)));
         }
-        this.children = b.build();
+        ImmutableList<MCReward> cz = b.build();
+        this.children = cz;
+        this.initializeChildren();
+    }
+
+    protected void initializeChildren() {
+    }
+
+    protected Collection<MCReward> getChildren() {
+        return children;
     }
 }

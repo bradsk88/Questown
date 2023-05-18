@@ -25,6 +25,7 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
     private static final int PAGE_PADDING = 10;
 
     private final DrawableNineSliceTexture background;
+    private final VisitorQuestsContainer container;
 
     public VisitorDialogScreen(
             VisitorQuestsContainer container,
@@ -37,6 +38,7 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
 
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
+        this.container = container;
     }
 
     @Override
@@ -70,13 +72,33 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
         int y = ((this.height - backgroundHeight) / 2) + PAGE_PADDING;
         x = x + PAGE_PADDING;
 
-        TextComponent str = getFirstVisitorMessage();
+        TextComponent str;
+        if (this.container.isFirstVisitor() && this.container.isNewVisitor()) {
+            str = getFirstVisitorMessage();
+        }
+        else if (this.container.isNewVisitor()) {
+            str = getNewVisitorMessage();
+        }
+        else {
+            str = getGenericVisitorMessage();
+        }
+
         str.setStyle(Style.EMPTY.withColor(ChatFormatting.BLACK));
         this.font.drawWordWrap(
                 str, x, y,
                 backgroundWidth - (2 * PAGE_PADDING),
                 backgroundHeight - (2 * PAGE_PADDING)
         );
+    }
+
+    private TextComponent getGenericVisitorMessage() {
+        // TODO: Dialog
+        return new TextComponent("Not implemented (generic)");
+    }
+
+    private TextComponent getNewVisitorMessage() {
+        // TODO: Dialog
+        return new TextComponent("Not implemented (new visitor)");
     }
 
     @NotNull
