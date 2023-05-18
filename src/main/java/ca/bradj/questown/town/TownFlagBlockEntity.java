@@ -6,9 +6,6 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
-import ca.bradj.questown.town.activerecipes.ActiveRecipes;
-import ca.bradj.questown.town.activerecipes.MCActiveRecipes;
-import ca.bradj.questown.town.activerooms.ActiveRooms;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
@@ -19,10 +16,13 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
+import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
+import ca.bradj.roomrecipes.rooms.ActiveRooms;
+import ca.bradj.roomrecipes.serialization.ActiveRecipesSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -63,7 +63,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
     private final ActiveRooms activeRooms = new ActiveRooms();
-    private final MCActiveRecipes activeRecipes = new MCActiveRecipes();
+    private ActiveRecipes<ResourceLocation> activeRecipes = new ActiveRecipes<>();
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
 
@@ -136,7 +136,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         // TODO: Store active rooms?
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
-            MCActiveRecipes.SERIALIZER.deserializeNBT(data, this.activeRecipes);
+            this.activeRecipes = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
@@ -146,7 +146,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     private void writeTownData(CompoundTag tag) {
-        tag.put(NBT_ACTIVE_RECIPES, MCActiveRecipes.SERIALIZER.serializeNBT(activeRecipes));
+        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(activeRecipes));
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
     }
