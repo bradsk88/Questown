@@ -1,13 +1,14 @@
 package ca.bradj.questown.town.activerecipes;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.RoomSerializer;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.HashMap;
 import java.util.Map;
 
 // MCActiveRecipes is a simple wrapper for ActiveRecipes that is coupled to Minecraft
@@ -40,15 +41,18 @@ public class MCActiveRecipes extends ActiveRecipes<ResourceLocation> {
                 CompoundTag nbt,
                 MCActiveRecipes recipes
         ) {
-            ImmutableMap.Builder<Room, ResourceLocation> aqs = ImmutableMap.builder();
+            Map<Room, ResourceLocation> aqs = new HashMap<>();
             int num = nbt.getInt(NBT_NUM_ACTIVE_RECIPES);
             ListTag aq = nbt.getList(NBT_ACTIVE_RECIPES, Tag.TAG_COMPOUND);
             for (int i = 0; i < num; i++) {
                 CompoundTag compound = aq.getCompound(i);
                 Room room = RoomSerializer.INSTANCE.deserializeNBT(compound.getCompound(NBT_RECIPE_ROOM));
+                if (aqs.containsKey(room)) {
+                    Questown.LOGGER.error("Room is already present in map. This is probably a bug!");
+                }
                 aqs.put(room, new ResourceLocation(compound.getString(NBT_RECIPE_ID)));
             }
-            recipes.initialize(aqs.build().entrySet());
+            recipes.initialize(aqs.entrySet());
         }
     }
 }
