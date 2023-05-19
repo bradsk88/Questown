@@ -55,15 +55,15 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownInterface, TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, ActiveRooms.ChangeListener {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest> {
 
     public static final String ID = "flag_base_block_entity";
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
-    private final Map<Integer, ActiveRooms> activeRooms = new HashMap<>();
-    private ActiveRecipes<ResourceLocation> activeRecipes = new ActiveRecipes<>();
+    private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
+    private final Map<Integer, ActiveRecipes<ResourceLocation>> activeRecipes = new HashMap<>();
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
@@ -71,6 +71,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     private BlockPos visitorSpot = null;
+
+    private int scanLevel = 0;
+    private int scanBuffer = 0;
 
 
     public TownFlagBlockEntity(
@@ -96,6 +99,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             return;
         }
 
+        e.scanBuffer = (e.scanBuffer + 1) % 10;
+        int scanLevel = 0;
+        if (e.scanBuffer == 0) {
+            e.scanLevel = (e.scanLevel + 1) % 5;
+            scanLevel = e.scanLevel + 1;
+        }
+
         e.asapRewards.popClaim();
 
         // TODO: Consider adding non-room town "features" as quests
@@ -106,29 +116,46 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         e.visitorSpot = fire.orElse(null);
 
-        updateActiveRooms(level, blockPos, e);
+        updateActiveRooms(level, blockPos, e, 0);
+
+        if (scanLevel != 0) {
+            int y = 2 * scanLevel;
+            updateActiveRooms(level, blockPos.offset(0, y, 0), e, scanLevel);
+        }
     }
 
     private static void updateActiveRooms(
             Level level,
             BlockPos blockPos,
-            TownFlagBlockEntity e
+            TownFlagBlockEntity e,
+            int scanLevel
     ) {
-        if (!e.activeRooms.containsKey(0)) {
-            ActiveRooms v = new ActiveRooms();
-            e.activeRooms.put(0, v);
-            v.addChangeListener(e);
-        }
+       TownRooms ars = e.getOrCreateRooms(scanLevel, blockPos.getY());
 
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
-                Positions.FromBlockPos(e.getBlockPos()), e
+                Positions.FromBlockPos(blockPos), ars
         );
-        e.activeRooms.get(0).update(rooms);
+        ars.update(rooms);
 
-        e.activeRooms.get(0).getAll().forEach(room -> {
-            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, e, blockPos.getY());
-            e.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
+        ars.getAll().forEach(room -> {
+            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, ars, blockPos.getY());
+            e.activeRecipes.get(scanLevel).update(room, recipe.map(RoomRecipe::getId));
         });
+    }
+
+    private TownRooms getOrCreateRooms(int scanLevel, int yCoord) {
+        if (!activeRecipes.containsKey(scanLevel)) {
+            ActiveRecipes<ResourceLocation> v = new ActiveRecipes<>();
+            activeRecipes.put(scanLevel, v);
+            v.addChangeListener(this);
+        }
+
+        if (!activeRooms.containsKey(scanLevel)) {
+            TownRooms v = new TownRooms(scanLevel, this);
+            activeRooms.put(scanLevel, v);
+        }
+
+        return activeRooms.get(scanLevel);
     }
 
     @Override
@@ -153,7 +180,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         // TODO: Store active rooms?
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
-            this.activeRecipes = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
+            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
+            this.activeRecipes.put(0, ars); // TODO: Support more levels
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
@@ -167,7 +195,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     private void writeTownData(CompoundTag tag) {
-        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(activeRecipes));
+        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(activeRecipes.get(0)));
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
     }
@@ -196,7 +224,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             this.setUpQuestsForNewlyPlacedFlag(sl);
         }
         this.questBatches.addChangeListener(this);
-        this.activeRecipes.addChangeListener(this);
+        this.activeRecipes.get(0).addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
         if (!level.isClientSide()) {
             TownFlags.register(uuid, this);
@@ -256,45 +284,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         setChanged();
     }
 
-    @Override
-    public boolean IsEmpty(Position dp) {
-        BlockPos bp = Positions.ToBlock(dp, this.getBlockPos().getY());
-        BlockPos abp = bp.above();
-        boolean empty = level.isEmptyBlock(bp);
-        boolean emptyAbove = level.isEmptyBlock(abp);
-        return empty || emptyAbove;
-    }
-
-    @Override
-    public boolean IsWall(Position dp) {
-        BlockPos bp = Positions.ToBlock(dp, this.getBlockPos().getY());
-        BlockPos abp = bp.above();
-        if (this.IsEmpty(dp)) {
-            return false;
-        }
-        BlockState blockState = level.getBlockState(bp);
-        BlockState aboveBlockState = level.getBlockState(abp);
-        if (blockState.getShape(level, bp).bounds().getSize() >= 1 && !blockState.propagatesSkylightDown(level, bp) && !blockState.getCollisionShape(level, bp).isEmpty()) {
-            if (aboveBlockState.getShape(level, abp).bounds().getSize() >= 1 && !aboveBlockState.getCollisionShape(level, abp).isEmpty()) {
-                return true;
-            }
-        }
-
-        if (IsDoor(dp)) {
-            return true;
-        }
-
-        // TODO: Windows
-
-        return false;
-    }
-
-    @Override
-    public boolean IsDoor(Position dp) {
-        return level.getBlockState(Positions.ToBlock(dp, this.getBlockPos().getY())).getBlock() instanceof DoorBlock;
-    }
-
-    private void broadcastMessage(TranslatableComponent msg) {
+    void broadcastMessage(TranslatableComponent msg) {
         level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
     }
 
@@ -406,53 +396,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     @Override
-    public void roomAdded(
-            Position doorPos,
-            Room room
-    ) {
-        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
-        this.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
-        broadcastMessage(new TranslatableComponent(
-                "messages.building.room_created",
-                RoomRecipes.getName(recipe),
-                doorPos.getUIString()
-        ));
-    }
-
-    @Override
-    public void roomResized(
-            Position doorPos,
-            Room oldRoom,
-            Room newRoom
-    ) {
-        handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
-        this.activeRecipes.update(oldRoom, Optional.empty());
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, newRoom, this, this.getBlockPos().getY());
-        this.activeRecipes.update(newRoom, recipe.map(RoomRecipe::getId));
-        broadcastMessage(new TranslatableComponent(
-                "messages.building.room_size_changed",
-                RoomRecipes.getName(recipe),
-                doorPos.getUIString()
-        ));
-    }
-
-    @Override
-    public void roomDestroyed(
-            Position doorPos,
-            Room room
-    ) {
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, this, this.getBlockPos().getY());
-        broadcastMessage(new TranslatableComponent(
-                "messages.building.room_destroyed",
-                RoomRecipes.getName(recipe),
-                doorPos.getUIString()
-        ));
-        handleRoomChange(room, ParticleTypes.SMOKE);
-        this.activeRecipes.update(room, Optional.empty());
-    }
-
-    @Override
     public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
         if (level == null) {
             throw new IllegalCallerException("Cannot add reward to null level");
@@ -543,5 +486,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         for (MCReward r : this.morningRewards.getChildren()) {
             this.asapRewards.push(r);
         }
+    }
+
+    public void updateActiveRecipe(
+            int scanLevel,
+            Room room,
+            Optional<ResourceLocation> resourceLocation
+    ) {
+        activeRecipes.get(scanLevel).update(room, resourceLocation);
     }
 }
