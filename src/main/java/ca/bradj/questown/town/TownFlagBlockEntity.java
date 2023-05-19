@@ -248,8 +248,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         BlockState blockState = level.getBlockState(bp);
         BlockState aboveBlockState = level.getBlockState(abp);
-        if (blockState.getShape(level, bp).bounds().getSize() >= 1) {
-            if (aboveBlockState.getShape(level, abp).bounds().getSize() >= 1) {
+        if (blockState.getShape(level, bp).bounds().getSize() >= 1 && !blockState.propagatesSkylightDown(level, bp) && !blockState.getCollisionShape(level, bp).isEmpty()) {
+            if (aboveBlockState.getShape(level, abp).bounds().getSize() >= 1 && !aboveBlockState.getCollisionShape(level, abp).isEmpty()) {
                 return true;
             }
         }
