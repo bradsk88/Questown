@@ -103,7 +103,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         TownFlagBlockEntity entity = oEntity.get();
         if (player.isCrouching()) {
 //             TODO: This is throwaway code
-            entity.generateRandomQuest((ServerLevel) level);
+//            entity.generateRandomQuest((ServerLevel) level);
 //            boolean spawned = spawnVisitorNearby((ServerLevel) level, pos);
 //            Questown.LOGGER.debug("Spawned: " + spawned);
 //            return InteractionResult.sidedSuccess(false);

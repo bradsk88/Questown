@@ -20,10 +20,6 @@ public class MCMorningRewards extends MCRewardList {
         this.initializeChildren();
     }
 
-    public void runAll() {
-        getApplier().apply();
-    }
-
     public void add(MCReward ev) {
         this.currentChildren.add(ev);
     }
@@ -35,7 +31,7 @@ public class MCMorningRewards extends MCRewardList {
     }
 
     @Override
-    protected Collection<MCReward> getChildren() {
+    public Collection<MCReward> getChildren() {
         return ImmutableList.copyOf(this.currentChildren);
     }
 

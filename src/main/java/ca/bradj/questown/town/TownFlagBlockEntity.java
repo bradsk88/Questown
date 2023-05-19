@@ -66,6 +66,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     private ActiveRecipes<ResourceLocation> activeRecipes = new ActiveRecipes<>();
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
+    private final MCAsapRewards asapRewards = new MCAsapRewards();
 
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
@@ -94,6 +95,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         if (l != 0) {
             return;
         }
+
+        e.asapRewards.popClaim();
 
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag
@@ -511,6 +514,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     void onMorning() {
-        this.morningRewards.runAll();
+        for (MCReward r : this.morningRewards.getChildren()) {
+            this.asapRewards.push(r);
+        }
     }
 }
