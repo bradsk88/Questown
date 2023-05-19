@@ -143,6 +143,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             MCQuestBatches.SERIALIZER.deserializeNBT(this, data, this.questBatches);
             this.isInitializedQuests = true;
         }
+        if (tag.contains(NBT_MORNING_REWARDS)) {
+            CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
+            this.morningRewards.deserializeNbt(this, data);
+        }
     }
 
     private void writeTownData(CompoundTag tag) {
@@ -171,7 +175,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             return;
         }
         grantAdvancementOnApproach();
-        grantDelayedRewardsInMorning();
         if (!this.isInitializedQuests) {
             this.setUpQuestsForNewlyPlacedFlag(sl);
         }
@@ -179,10 +182,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         this.activeRecipes.addChangeListener(this);
         this.activeRooms.addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
-    }
-
-    private void grantDelayedRewardsInMorning() {
-        MinecraftForge.EVENT_BUS.addListener(this.morningRewards);
+        if (!level.isClientSide()) {
+            TownFlags.register(uuid, this);
+        }
     }
 
     @Override
@@ -289,14 +291,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
 
     public ImmutableList<MCQuest> getAllQuests() {
         return questBatches.getAll();
-    }
-
-    public void generateRandomQuest(ServerLevel level) {
-        RoomRecipe recipe = getRandomQuest(level);
-        MCQuestBatch qb = new MCQuestBatch(null, new SpawnVisitorReward(this));
-        questBatches.add(qb);
-        setChanged();
-        broadcastQuestToChat(level, recipe);
     }
 
     private static RoomRecipe getRandomQuest(ServerLevel level) {
@@ -514,5 +508,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
             }
         }
         return null;
+    }
+
+    void onMorning() {
+        this.morningRewards.runAll();
     }
 }

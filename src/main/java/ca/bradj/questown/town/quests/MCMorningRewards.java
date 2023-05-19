@@ -4,14 +4,12 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraftforge.event.world.SleepFinishedTimeEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 
-public class MCMorningRewards extends MCRewardList implements Consumer<SleepFinishedTimeEvent> {
+public class MCMorningRewards extends MCRewardList {
 
     private final List<MCReward> currentChildren = new ArrayList<>();
 
@@ -22,8 +20,7 @@ public class MCMorningRewards extends MCRewardList implements Consumer<SleepFini
         this.initializeChildren();
     }
 
-    @Override
-    public void accept(SleepFinishedTimeEvent t) {
+    public void runAll() {
         getApplier().apply();
     }
 

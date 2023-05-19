@@ -64,8 +64,6 @@ public class SpawnVisitorReward extends MCReward {
         }
         sl.addFreshEntity(vEntity);
         Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
-
-        entity.generateRandomQuest(sl);
     }
 
     @Override

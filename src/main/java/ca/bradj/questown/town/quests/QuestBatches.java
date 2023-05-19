@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class QuestBatches<KEY, QUEST extends Quest<KEY>, REWARD
 
     public void initialize(ImmutableList<BATCH> bs) {
         if (batches.size() > 0) {
-            throw new IllegalStateException("Quest Batches already initialized");
+            Questown.LOGGER.error("QuestBatches were initialized twice :(");
         }
         batches.addAll(bs);
         for (BATCH b : batches) {

@@ -19,8 +19,6 @@ public interface TownInterface {
 
     void addMorningReward(MCReward ev);
 
-    void generateRandomQuest(ServerLevel sl);
-
     void addBatchOfRandomQuestsForVisitor(UUID visitorUUID);
 
     Vec3 getVisitorJoinPos();
