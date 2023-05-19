@@ -62,7 +62,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
-    private final ActiveRooms activeRooms = new ActiveRooms();
+    private final Map<Integer, ActiveRooms> activeRooms = new HashMap<>();
     private ActiveRecipes<ResourceLocation> activeRecipes = new ActiveRecipes<>();
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
@@ -106,12 +106,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         e.visitorSpot = fire.orElse(null);
 
+        updateActiveRooms(level, blockPos, e);
+    }
+
+    private static void updateActiveRooms(
+            Level level,
+            BlockPos blockPos,
+            TownFlagBlockEntity e
+    ) {
+        if (!e.activeRooms.containsKey(0)) {
+            ActiveRooms v = new ActiveRooms();
+            e.activeRooms.put(0, v);
+            v.addChangeListener(e);
+        }
+
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
                 Positions.FromBlockPos(e.getBlockPos()), e
         );
-        e.activeRooms.update(rooms);
+        e.activeRooms.get(0).update(rooms);
 
-        e.activeRooms.getAll().forEach(room -> {
+        e.activeRooms.get(0).getAll().forEach(room -> {
             Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, e, blockPos.getY());
             e.activeRecipes.update(room, recipe.map(RoomRecipe::getId));
         });
@@ -183,7 +197,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
         }
         this.questBatches.addChangeListener(this);
         this.activeRecipes.addChangeListener(this);
-        this.activeRooms.addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
         if (!level.isClientSide()) {
             TownFlags.register(uuid, this);
@@ -506,7 +519,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     private @Nullable Position getWanderTargetPosition() {
-        Collection<Room> all = this.activeRooms.getAll();
+        Collection<Room> all = this.activeRooms.get(0).getAll();
         for (Room r : all) {
             if (level.getRandom().nextInt(all.size()) == 0) {
                 Position ac = r.getSpace().getCornerA();
