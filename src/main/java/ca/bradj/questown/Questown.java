@@ -30,6 +30,7 @@ public class Questown {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public Questown() {
+        Questown.LOGGER.info("Main load");
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the doClientStuff method for modloading
@@ -56,11 +57,11 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
+        Questown.LOGGER.info("Doing client stuff");
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
-        event.enqueueWork(() -> {
-            MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
-            MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
-        });
+        MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
+        MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
+        Questown.LOGGER.info("Registered screens");
         event.enqueueWork(() -> {
             EntityRenderers.register(
                     EntitiesInit.VISITOR.get(),

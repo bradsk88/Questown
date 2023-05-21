@@ -5,17 +5,17 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
 public interface TownInterface {
-    Level getLevel();
+    @Nullable ServerLevel getServerLevel();
 
-    BlockPos getBlockPos();
+    BlockPos getTownFlagBasePos();
 
     void addMorningReward(MCReward ev);
 

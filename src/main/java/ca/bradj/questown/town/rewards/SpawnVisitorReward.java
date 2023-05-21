@@ -53,7 +53,8 @@ public class SpawnVisitorReward extends MCReward {
             TownInterface entity,
             @Nullable UUID visitorUUID
     ) {
-        if (entity.getLevel() == null || !(entity.getLevel() instanceof ServerLevel sl)) {
+        ServerLevel sl = entity.getServerLevel();
+        if (sl == null) {
             return;
         }
 

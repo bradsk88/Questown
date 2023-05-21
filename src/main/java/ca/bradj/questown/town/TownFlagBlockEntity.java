@@ -191,6 +191,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, T
     }
 
     @Override
+    public ServerLevel getServerLevel() {
+        if (getLevel() instanceof ServerLevel sl) {
+            return sl;
+        }
+        return null;
+    }
+
+    @Override
+    public BlockPos getTownFlagBasePos() {
+        return getBlockPos();
+    }
+
+    @Override
     public void addMorningReward(MCReward ev) {
         this.morningRewards.add(ev);
         this.setChanged();

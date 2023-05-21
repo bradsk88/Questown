@@ -107,7 +107,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     @Override
     public boolean save(CompoundTag p_20224_) {
-        BlockPos bp = this.town.getBlockPos();
+        BlockPos bp = this.town.getTownFlagBasePos();
         p_20224_.putInt(NBT_TOWN_X, bp.getX());
         p_20224_.putInt(NBT_TOWN_Y, bp.getY());
         p_20224_.putInt(NBT_TOWN_Z, bp.getZ());
