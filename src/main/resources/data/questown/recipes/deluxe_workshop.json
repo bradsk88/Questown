@@ -1,0 +1,24 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {
+      "item": "minecraft:lantern"
+    },
+    {
+      "item": "minecraft:lantern"
+    },
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "minecraft:chest"
+    },
+    {
+      "item": "minecraft:chest"
+    }
+  ]
+}

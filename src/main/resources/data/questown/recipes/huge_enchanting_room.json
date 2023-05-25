@@ -1,0 +1,30 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {
+      "item": "minecraft:torch"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:bookshelf"
+    },
+    {
+      "item": "minecraft:enchanting_table"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {
+      "item": "minecraft:torch"
+    },
+    {
+      "item": "minecraft:torch"
+    },
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "minecraft:crafting_table"
+    }
+  ]
+}
