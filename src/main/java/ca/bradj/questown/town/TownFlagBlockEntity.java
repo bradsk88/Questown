@@ -224,6 +224,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             this.setUpQuestsForNewlyPlacedFlag(sl);
         }
         this.questBatches.addChangeListener(this);
+        this.getOrCreateRooms(0, getBlockPos().getY());
         this.activeRecipes.get(0).addChangeListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
         if (!level.isClientSide()) {
