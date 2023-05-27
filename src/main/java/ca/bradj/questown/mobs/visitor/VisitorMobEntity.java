@@ -139,7 +139,7 @@ public class VisitorMobEntity extends PathfinderMob {
     ) {
         return ImmutableList.of(
                 Pair.of(0, new Swim(0.8F)),
-                Pair.of(0, new InteractWithDoor()),
+//                Pair.of(0, new InteractWithDoor()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTargetSink()),

@@ -15,13 +15,11 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
-import ca.bradj.roomrecipes.rooms.ActiveRooms;
 import ca.bradj.roomrecipes.serialization.ActiveRecipesSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,7 +40,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -61,13 +58,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
+    public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
     private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
     private final Map<Integer, ActiveRecipes<ResourceLocation>> activeRecipes = new HashMap<>();
     private final MCQuestBatches questBatches = new MCQuestBatches();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
-
+    private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     private BlockPos visitorSpot = null;
@@ -89,8 +87,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState state,
             TownFlagBlockEntity e
     ) {
-        if (level == null || level.isClientSide()) {
+        if (!(level instanceof ServerLevel sl)) {
             return;
+        }
+
+        if (!e.asapRandomAwdForVisitor.isEmpty()) {
+            PendingQuests pop = e.asapRandomAwdForVisitor.pop();
+            Optional<MCQuestBatch> o = pop.grow(sl);
+            o.ifPresentOrElse(
+                    e.questBatches::add,
+                    () -> e.asapRandomAwdForVisitor.push(pop)
+            );
         }
 
         long gameTime = level.getGameTime();
@@ -99,7 +106,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        e.scanBuffer = (e.scanBuffer + 1) % 10;
+        e.scanBuffer = (e.scanBuffer + 1) % 2;
         int scanLevel = 0;
         if (e.scanBuffer == 0) {
             e.scanLevel = (e.scanLevel + 1) % 5;
@@ -192,12 +199,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
             this.morningRewards.deserializeNbt(this, data);
         }
+        if (tag.contains(NBT_ASAP_QUESTS)) {
+            CompoundTag data = tag.getCompound(NBT_ASAP_QUESTS);
+            Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
+            l.forEach(this.asapRandomAwdForVisitor::push);
+        }
     }
 
     private void writeTownData(CompoundTag tag) {
         tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(activeRecipes.get(0)));
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
+        tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));
+        // TODO: Serialization for ASAPs
     }
 
     @Override
@@ -309,8 +323,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
     }
 
-    public ImmutableList<MCQuest> getAllQuests() {
-        return questBatches.getAll();
+    public ImmutableList<Quest<ResourceLocation>> getAllQuests() {
+        return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation>) v).toList());
     }
 
     private static RoomRecipe getRandomQuest(ServerLevel level) {
@@ -398,24 +412,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
-        if (level == null) {
-            throw new IllegalCallerException("Cannot add reward to null level");
-        }
-        if (!(level instanceof ServerLevel sl)) {
-            throw new IllegalCallerException("Cannot add reward to client level");
-        }
-        int numNewQuests = 3; // TODO: Determine this based on town "progress"
+        int minItems = 40 + (100 * getVillagers().size())/2;
+
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList reward = new MCRewardList(
                 this,
                 new SpawnVisitorReward(this, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
         );
-        MCQuestBatch qb = new MCQuestBatch(visitorUUID, new MCDelayedReward(this, reward));
-        for (int i = 0; i < numNewQuests; i++) {
-            qb.addNewQuest(getRandomQuest(sl).getId());
-        }
-        this.questBatches.add(qb);
+        this.asapRandomAwdForVisitor.push(new PendingQuests(
+                minItems, visitorUUID, new MCDelayedReward(this, reward)
+        ));
         setChanged();
     }
 

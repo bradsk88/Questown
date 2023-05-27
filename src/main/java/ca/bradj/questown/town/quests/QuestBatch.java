@@ -2,10 +2,7 @@ package ca.bradj.questown.town.quests;
 
 import com.google.common.collect.ImmutableList;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Stream;
 
 // Quests is a unit testable module for the quests of a town
@@ -88,6 +85,14 @@ public class QuestBatch<KEY, QUEST extends Quest<KEY>, REWARD extends Reward> {
 
     public static <QUEST extends Quest<?>> Stream<QUEST> stream(QuestBatch<?, QUEST, ?> batch) {
         return batch.quests.stream();
+    }
+
+    public REWARD getReward() {
+        return reward;
+    }
+
+    public int size() {
+        return this.quests.size();
     }
 
     public interface ChangeListener<QUEST extends Quest<?>> {

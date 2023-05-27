@@ -1,6 +1,7 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.QuestsScreen;
@@ -51,6 +52,7 @@ public class Questown {
         AdvancementsInit.register();
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
     }
 
     private void setup(final FMLCommonSetupEvent event) {

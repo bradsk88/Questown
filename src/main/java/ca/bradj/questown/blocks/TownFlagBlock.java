@@ -109,7 +109,7 @@ public class TownFlagBlock extends BaseEntityBlock {
 //            return InteractionResult.sidedSuccess(false);
         }
 
-        ImmutableList<MCQuest> aQ = entity.getAllQuests();
+        ImmutableList<Quest<ResourceLocation>> aQ = entity.getAllQuests();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {

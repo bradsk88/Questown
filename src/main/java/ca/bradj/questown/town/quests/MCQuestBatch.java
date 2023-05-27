@@ -47,10 +47,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
         private static final String NBT_REWARD = "reward";
         private static final String NBT_OWNER_UUID = "owner_uuid";
 
-        public CompoundTag serializeNBT(MCQuestBatch quests) {
+        public CompoundTag serializeNBT(
+                MCQuestBatch quests
+        ) {
             CompoundTag ct = new CompoundTag();
-            if (quests.owner != null) {
-                ct.putUUID(NBT_OWNER_UUID, quests.owner);
+            if (quests.getOwner() != null) {
+                ct.putUUID(NBT_OWNER_UUID, quests.getOwner());
             }
             ImmutableList<MCQuest> aqs = quests.getAll();
             ct.putInt(NBT_NUM_QUESTS, aqs.size());

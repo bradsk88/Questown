@@ -9,7 +9,7 @@ public class Config {
 
     public static final String VILLAGE_START_QUESTS = "Village start quests";
 
-    public static final String FILENAME = "questown-common.toml";
+    public static final String FILENAME = "questown-server.toml";
 
     static {
         BUILDER.push("Questown.Config");
