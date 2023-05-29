@@ -50,7 +50,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
-    private static int radius = 20; // TODO: Move to config
     private final TownRoomsMap roomsMap = new TownRoomsMap();
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();

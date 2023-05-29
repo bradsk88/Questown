@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -28,7 +29,7 @@ public class PendingQuests {
 
     public Optional<MCQuestBatch> grow(ServerLevel level) {
         attempts++;
-        if (attempts > 50 && batch.size() > 0) { // TODO: Use config to set attempts
+        if (attempts > Config.QUEST_GENERATION_MAX_TICKS.get() && batch.size() > 0) {
             return Optional.of(batch);
         }
         int cost = batch.getAll().stream()
@@ -39,14 +40,15 @@ public class PendingQuests {
         if (cost >= maxItemWeight) {
             return Optional.of(batch);
         }
-        if (attempts > 25 && cost > maxItemWeight * 0.5) { // TODO: Use config to set attempts
+        int idealTicks = Config.IDEAL_QUEST_THRESHOLD_TICKS.get();
+        if (attempts > idealTicks && cost > maxItemWeight * 0.5) {
             return Optional.of(batch);
         }
         List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
         List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
         ResourceLocation id = ids.get(level.getRandom().nextInt(ids.size()));
         int newCost = computeCosts(level, id, maxItemWeight);
-        if (attempts < 25 && (newCost < maxItemWeight / 4)) {
+        if (attempts < idealTicks && (newCost < maxItemWeight / 4)) {
             // Ignore small rooms early on
             // TODO: compartmentalize pre-computed costs so we can grab expensive
             //  recipes first and then fill empty space with cheaper ones later.

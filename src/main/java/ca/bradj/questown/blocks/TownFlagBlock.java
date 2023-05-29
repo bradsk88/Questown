@@ -101,13 +101,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(true);
         }
         TownFlagBlockEntity entity = oEntity.get();
-        if (player.isCrouching()) {
-//             TODO: This is throwaway code
-//            entity.generateRandomQuest((ServerLevel) level);
-//            boolean spawned = spawnVisitorNearby((ServerLevel) level, pos);
-//            Questown.LOGGER.debug("Spawned: " + spawned);
-//            return InteractionResult.sidedSuccess(false);
-        }
 
         ImmutableList<Quest<ResourceLocation>> aQ = entity.getAllQuests();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);

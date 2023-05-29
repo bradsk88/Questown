@@ -1,6 +1,7 @@
 package ca.bradj.questown.logic;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
@@ -44,7 +45,7 @@ public class TownCycle {
                     }
                     return blocks.IsDoor(dp);
                 },
-                100 // TODO: Constant or parameter
+                Config.DOOR_SEARCH_RADIUS.get()
         );
         return doors;
     }
@@ -55,7 +56,7 @@ public class TownCycle {
     ) {
         // TODO: Move to RoomRecipes?
 
-        int radius = 10; // TODO: Config
+        int radius = Config.CAMPFIRE_SEARCH_RADIUS.get();
         for(int z = -radius; z < radius; ++z) {
             for(int x = -radius; x < radius; ++x) {
                 BlockPos cfPos = pos.offset(x, 0, z);

@@ -66,7 +66,6 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
             int modifiers
     ) {
         if (keyCode == GLFW.GLFW_KEY_Q) { // TODO: Get from user's config
-
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);

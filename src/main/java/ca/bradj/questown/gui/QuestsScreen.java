@@ -303,7 +303,6 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
-        // TODO: Make smarter
         return true;
     }
 }

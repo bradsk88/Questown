@@ -11,8 +11,33 @@ public class Config {
 
     public static final String FILENAME = "questown-server.toml";
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
+
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
+
+    public static final ForgeConfigSpec.ConfigValue<Integer> IDEAL_QUEST_THRESHOLD_TICKS;
+
+    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
+
     static {
         BUILDER.push("Questown.Config");
+        DOOR_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for doors for room detection"
+        ).define("DoorSearchRadius", 100);
+        CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for campfires which attract visitors"
+        ).define("DoorSearchRadius", 10);
+        IDEAL_QUEST_THRESHOLD_TICKS = BUILDER.comment(
+                "When a new batch of quests is added, the mod makes several attempts to find a large quest to add" +
+                        " to the batch randomly. This determines how many ticks it will try before giving up and " +
+                        "filling the empty space with simpler quests."
+        ).define("IdealQuestThresholdTicks", 25);
+        QUEST_GENERATION_MAX_TICKS = BUILDER.comment(
+                "When a new batch of quests is added, the mod makes several attempts to find quests to add" +
+                        " to the batch randomly. This determines how many ticks it will try before giving up and " +
+                        "leaving the remaining space empty."
+        ).define("IdealQuestThresholdTicks", 25);
+
         BUILDER.pop();
         SPEC = BUILDER.build();
     }
