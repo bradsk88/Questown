@@ -5,28 +5,19 @@ import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
-import ca.bradj.roomrecipes.recipes.RecipeDetection;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import ca.bradj.roomrecipes.render.RoomEffects;
 import ca.bradj.roomrecipes.serialization.ActiveRecipesSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
@@ -50,28 +41,24 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest> {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
 
     public static final String ID = "flag_base_block_entity";
+    // TODO: Extract serialization
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
     private static int radius = 20; // TODO: Move to config
-    private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
-    private final Map<Integer, ActiveRecipes<ResourceLocation>> activeRecipes = new HashMap<>();
-    private final MCQuestBatches questBatches = new MCQuestBatches();
+    private final TownRoomsMap roomsMap = new TownRoomsMap();
+    private final TownQuests quests = new TownQuests();
+    private final TownPois pois = new TownPois();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
     private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
-    private BlockPos visitorSpot = null;
-
-    private int scanLevel = 0;
-    private int scanBuffer = 0;
 
 
     public TownFlagBlockEntity(
@@ -91,14 +78,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        if (!e.asapRandomAwdForVisitor.isEmpty()) {
-            PendingQuests pop = e.asapRandomAwdForVisitor.pop();
-            Optional<MCQuestBatch> o = pop.grow(sl);
-            o.ifPresentOrElse(
-                    e.questBatches::add,
-                    () -> e.asapRandomAwdForVisitor.push(pop)
-            );
-        }
+        e.quests.tick(sl);
 
         long gameTime = level.getGameTime();
         long l = gameTime % 10;
@@ -106,64 +86,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        e.scanBuffer = (e.scanBuffer + 1) % 2;
-        int scanLevel = 0;
-        if (e.scanBuffer == 0) {
-            e.scanLevel = (e.scanLevel + 1) % 5;
-            scanLevel = e.scanLevel + 1;
-        }
+        e.roomsMap.tick(sl, blockPos);
 
-        e.asapRewards.popClaim();
+        e.asapRewards.tick();
 
-        // TODO: Consider adding non-room town "features" as quests
-        // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag
-        Optional<BlockPos> fire = TownCycle.findCampfire(blockPos, level);
-        if (e.visitorSpot == null) {
-            fire.ifPresent((bp) -> e.questBatches.markRecipeAsComplete(SpecialQuests.CAMPFIRE));
-        }
-        e.visitorSpot = fire.orElse(null);
-
-        updateActiveRooms(level, blockPos, e, 0);
-
-        if (scanLevel != 0) {
-            int y = 2 * scanLevel;
-            updateActiveRooms(level, blockPos.offset(0, y, 0), e, scanLevel);
-        }
+        e.pois.tick(sl, blockPos);
     }
 
-    private static void updateActiveRooms(
-            Level level,
-            BlockPos blockPos,
-            TownFlagBlockEntity e,
-            int scanLevel
-    ) {
-       TownRooms ars = e.getOrCreateRooms(scanLevel, blockPos.getY());
-
-        ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
-                Positions.FromBlockPos(blockPos), ars
-        );
-        ars.update(rooms);
-
-        ars.getAll().forEach(room -> {
-            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, ars, blockPos.getY());
-            e.activeRecipes.get(scanLevel).update(room.getDoorPos(), recipe.map(RoomRecipe::getId).orElse(null));
-        });
-    }
-
-    private TownRooms getOrCreateRooms(int scanLevel, int yCoord) {
-        if (!activeRecipes.containsKey(scanLevel)) {
-            ActiveRecipes<ResourceLocation> v = new ActiveRecipes<>();
-            activeRecipes.put(scanLevel, v);
-            v.addChangeListener(this);
-        }
-
-        if (!activeRooms.containsKey(scanLevel)) {
-            TownRooms v = new TownRooms(scanLevel, this);
-            activeRooms.put(scanLevel, v);
-        }
-
-        return activeRooms.get(scanLevel);
-    }
 
     @Override
     public CompoundTag serializeNBT() {
@@ -188,11 +117,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
             ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
-            this.activeRecipes.put(0, ars); // TODO: Support more levels
+            this.roomsMap.initialize(ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-            MCQuestBatches.SERIALIZER.deserializeNBT(this, data, this.questBatches);
+            MCQuestBatches.SERIALIZER.deserializeNBT(this, data, quests.questBatches); // TODO: Serialize "quests"
             this.isInitializedQuests = true;
         }
         if (tag.contains(NBT_MORNING_REWARDS)) {
@@ -207,8 +136,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     private void writeTownData(CompoundTag tag) {
-        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(activeRecipes.get(0)));
-        tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(questBatches));
+        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.get(0)));
+        tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));
         // TODO: Serialization for ASAPs
@@ -235,11 +164,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
         grantAdvancementOnApproach();
         if (!this.isInitializedQuests) {
-            this.setUpQuestsForNewlyPlacedFlag(sl);
+            this.setUpQuestsForNewlyPlacedFlag();
         }
-        this.questBatches.addChangeListener(this);
-        this.getOrCreateRooms(0, getBlockPos().getY());
-        this.activeRecipes.get(0).addChangeListener(this);
+        this.quests.setChangeListener(this);
+        this.roomsMap.addChangeListener(this);
+        this.pois.setListener(this);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
         if (!level.isClientSide()) {
             TownFlags.register(uuid, this);
@@ -283,18 +212,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
     }
 
-    private void setUpQuestsForNewlyPlacedFlag(ServerLevel sl) {
-        UUID visitorUUID = UUID.randomUUID();
-        MCRewardList reward = new MCRewardList(
-                this,
-                new SpawnVisitorReward(this, visitorUUID),
-                new AddBatchOfRandomQuestsForVisitorReward(this, visitorUUID)
-        );
-
-        MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(this, reward));
-        fireQuest.addNewQuest(SpecialQuests.CAMPFIRE);
-
-        questBatches.add(fireQuest);
+    private void setUpQuestsForNewlyPlacedFlag() {
+        TownQuests.setUpQuestsForNewlyPlacedFlag(this, quests);
         this.isInitializedQuests = true;
         setChanged();
     }
@@ -303,34 +222,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
     }
 
-    private void handleRoomChange(
-            Room room,
-            ParticleOptions pType
-    ) {
-        for (InclusiveSpace space : room.getSpaces()) {
-            RoomEffects.renderParticlesBetween(space, (x, z) -> {
-                int y = this.getBlockPos().getY();
-                BlockPos bp = new BlockPos(x, y, z);
-                if (!(level instanceof ServerLevel)) {
-                    return;
-                }
-                if (!level.isEmptyBlock(bp)) {
-                    return;
-                }
-                ((ServerLevel) level).sendParticles(pType, x, y, z, 2, 0, 1, 0, 1);
-                ((ServerLevel) level).sendParticles(pType, x, y + 1, z, 2, 0, 1, 0, 1);
-            });
-        }
-    }
-
     public ImmutableList<Quest<ResourceLocation>> getAllQuests() {
-        return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation>) v).toList());
-    }
-
-    private static RoomRecipe getRandomQuest(ServerLevel level) {
-        // TODO: Take "difficulty" as input
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-        return recipes.get(level.getRandom().nextInt(recipes.size()));
+        return quests.getAll();
     }
 
     private void broadcastQuestToChat(
@@ -355,7 +248,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         ));
         // TODO: get room
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        questBatches.markRecipeAsComplete(recipeId);
+        quests.markQuestAsComplete(recipeId);
     }
 
     @Override
@@ -372,8 +265,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         ));
         // TODO: Get room
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        if (!oldRecipeId.equals(newRecipeId)) {
-            questBatches.markRecipeAsComplete(newRecipeId);
+        if (!oldRecipeId.equals(newRecipeId)) { // TODO: Add quests as a listener instead of doing this call
+            quests.markQuestAsComplete(newRecipeId);
         }
         // TODO: Mark removed recipe as lost?
     }
@@ -397,7 +290,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         broadcastMessage(new TranslatableComponent(
                 "messages.town_flag.quest_completed",
                 RoomRecipes.getName(quest.getId())
-        ));
+        )); // TODO: Do this in a different quest listener (specialized in "messaging")
         setChanged();
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
@@ -417,30 +310,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
-        int minItems = 40 + (100 * getVillagers().size())/2;
-
-        UUID nextVisitorUUID = UUID.randomUUID();
-        MCRewardList reward = new MCRewardList(
-                this,
-                new SpawnVisitorReward(this, nextVisitorUUID),
-                new AddBatchOfRandomQuestsForVisitorReward(this, nextVisitorUUID)
-        );
-        this.asapRandomAwdForVisitor.push(new PendingQuests(
-                minItems, visitorUUID, new MCDelayedReward(this, reward)
-        ));
+        TownQuests.addRandomBatchForVisitor(this, quests, visitorUUID);
         setChanged();
     }
 
     @Override
     public Vec3 getVisitorJoinPos() {
-        if (this.visitorSpot == null) {
-            return new Vec3(getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ());
-        }
-        BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
-        while (!level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
-            vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
-        }
-        return new Vec3(vs.getX(), vs.getY(), vs.getZ());
+        return pois.getVisitorJoinPos(getServerLevel(), getBlockPos());
     }
 
     @Override
@@ -455,44 +331,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
-        return this.questBatches.getAllBatches()
-                .stream()
-                .filter(b -> uuid.equals(b.getOwner()))
-                .flatMap(v -> v.getAll().stream())
-                .toList();
+        return this.quests.getAllForVillager(uuid);
     }
 
     @Override
     public void addBatchOfQuests(
             MCQuestBatch batch
     ) {
-        this.questBatches.add(batch);
+        this.quests.addBatch(batch);
     }
 
     @Override
     public Set<UUID> getVillagers() {
-        return this.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner).collect(Collectors.toSet());
+        return TownQuests.getVillagers(quests);
     }
 
     private @Nullable Position getWanderTargetPosition() {
-        Collection<Room> all = this.activeRooms.get(0).getAll();
-        for (Room r : all) {
-            if (level.getRandom().nextInt(all.size()) == 0) {
-                Position ac = r.getSpace().getCornerA();
-                Position bc = r.getSpace().getCornerB();
-                if (level.getRandom().nextBoolean()) {
-                    return new Position((ac.x + bc.x) / 2, (ac.z + bc.z) / 2);
-                }
-                if (level.getRandom().nextBoolean()) {
-                    return ac.offset(1, 1);
-                }
-                if (level.getRandom().nextBoolean()) {
-                    return bc.offset(-1, -1);
-                }
-                return r.getDoorPos();
-            }
-        }
-        return null;
+        Collection<Room> all = roomsMap.getAllRooms();
+        return pois.getWanderTarget(getServerLevel(), all);
     }
 
     void onMorning() {
@@ -501,11 +357,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
     }
 
-    public void updateActiveRecipe(
-            int scanLevel,
-            Position roomDoorPos,
-            @Nullable ResourceLocation resourceLocation
-    ) {
-        activeRecipes.get(scanLevel).update(roomDoorPos, resourceLocation);
+    @Override
+    public void campfireFound() {
+        quests.markQuestAsComplete(SpecialQuests.CAMPFIRE);
     }
 }

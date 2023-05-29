@@ -16,15 +16,27 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
 
 public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener {
+
+    private RecipeRoomChangeListener changeListener;
+
+    public void setRecipeRoomChangeListener(RecipeRoomChangeListener townRoomsMap) {
+        this.changeListener = townRoomsMap;
+    }
+
+    public interface RecipeRoomChangeListener {
+        void updateRecipeForRoom(int scanLevel, Position doorPos, @Nullable ResourceLocation resourceLocation);
+    }
 
     private final ActiveRooms rooms = new ActiveRooms();
     private final int scanLevel;
@@ -108,7 +120,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     ) {
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getLevel(), room, this, getY());
-        entity.updateActiveRecipe(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
+        changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
                 RoomRecipes.getName(recipe),
@@ -125,7 +137,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
         handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getLevel(), newRoom, this, getY());
-        entity.updateActiveRecipe(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
+        this.changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_size_changed",
                 RoomRecipes.getName(recipe),
@@ -145,8 +157,9 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                 doorPos.getUIString()
         ));
         handleRoomChange(room, ParticleTypes.SMOKE);
-        entity.updateActiveRecipe(scanLevel, doorPos, null);
+        changeListener.updateRecipeForRoom(scanLevel, doorPos, null);
     }
+
 
     private void handleRoomChange(
             Room room,

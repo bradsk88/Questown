@@ -8,7 +8,7 @@ public class MCAsapRewards {
 
     private final Stack<MCReward> rewards = new Stack<>();
 
-    public boolean popClaim() {
+    public boolean tick() {
         if (this.rewards.empty()) {
             return false;
         }
