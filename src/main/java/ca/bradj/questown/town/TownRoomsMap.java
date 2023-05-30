@@ -26,12 +26,17 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
 
+    TownRoomsMap(TownFlagBlockEntity entity) {
+        changeListener = entity;
+//        getOrCreateRooms(0);
+    }
+
     private void updateActiveRooms(
             Level level,
             BlockPos blockPos,
             int scanLevel
     ) {
-        TownRooms ars = getOrCreateRooms(scanLevel, blockPos.getY());
+        TownRooms ars = getOrCreateRooms(scanLevel);
 
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
                 Positions.FromBlockPos(blockPos), ars
@@ -44,7 +49,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         });
     }
 
-    private TownRooms getOrCreateRooms(int scanLevel, int yCoord) {
+    private TownRooms getOrCreateRooms(int scanLevel) {
         if (!activeRecipes.containsKey(scanLevel)) {
             ActiveRecipes<ResourceLocation> v = new ActiveRecipes<>();
             activeRecipes.put(scanLevel, v);
@@ -79,17 +84,23 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
     }
 
-    public void initialize(Map<Integer, ActiveRecipes<ResourceLocation>> ars) {
+    public void initialize(
+            TownFlagBlockEntity owner,
+            Map<Integer, ActiveRecipes<ResourceLocation>> ars
+    ) {
         if (this.activeRecipes.size() > 0) {
             throw new IllegalStateException("Double initialization");
         }
         this.activeRecipes.putAll(ars);
+        for (ActiveRecipes<ResourceLocation> r : ars.values()) {
+            r.addChangeListener(owner);
+        }
     }
 
     /**
      * @deprecated Used for a migration only.
      */
-    public ActiveRecipes<ResourceLocation> get(int i) {
+    public ActiveRecipes<ResourceLocation> getRecipes(int i) {
         return activeRecipes.get(i);
     }
 
@@ -104,5 +115,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     @Override
     public void updateRecipeForRoom(int scanLevel, Position doorPos, @Nullable ResourceLocation resourceLocation) {
         this.activeRecipes.get(scanLevel).update(doorPos, resourceLocation);
+    }
+
+    public int numRecipes() {
+        return this.activeRecipes.size();
     }
 }

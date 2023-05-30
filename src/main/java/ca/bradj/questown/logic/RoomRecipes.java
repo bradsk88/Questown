@@ -75,22 +75,32 @@ public class RoomRecipes {
                 return weight;
             }
             JsonElement js = in.toJson();
+            boolean foundWeight = false;
             if (js.getAsJsonObject().has("item")) {
                 String id = js.getAsJsonObject().get("item").getAsString();
                 if (allWeights.contains(String.format("%s", id))) {
                     weight += allWeights.getInt(id);
-                    continue;
+                    foundWeight = true;
+                } else {
+                    Questown.LOGGER.error(
+                            "No weight specified for tag. Default of 100 will be used. [{}]", id
+                    );
                 }
-                Questown.LOGGER.error("No weight specified for tag. Default of 100 will be used. [{}]", id);
             }
             if (js.getAsJsonObject().has("tag")) {
                 String id = js.getAsJsonObject().get("tag").getAsString();
                 String tID = String.format("#%s", id);
                 if (allWeights.contains(tID)) {
                     weight += allWeights.getInt(tID);
-                    continue;
+                    foundWeight = true;
+                } else {
+                    Questown.LOGGER.error(
+                            "No weight specified for item. Default of 100 will be used. [{}]", id
+                    );
                 }
-                Questown.LOGGER.error("No weight specified for item. Default of 100 will be used. [{}]", id);
+            }
+            if (!foundWeight) {
+                weight += ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT.get();
             }
         }
         return weight;

@@ -19,6 +19,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_ITEM_WEIGHT;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -36,7 +38,11 @@ public class Config {
                 "When a new batch of quests is added, the mod makes several attempts to find quests to add" +
                         " to the batch randomly. This determines how many ticks it will try before giving up and " +
                         "leaving the remaining space empty."
-        ).define("IdealQuestThresholdTicks", 25);
+        ).define("QuestGenerationMaxTicks", 50);
+        DEFAULT_ITEM_WEIGHT = BUILDER.comment(
+                "The default weight that will be assigned to items when choosing new quests. " +
+                        "See questown-item-weights-server.toml"
+        ).define("DefaultItemWeight", 100);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

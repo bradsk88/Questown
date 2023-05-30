@@ -52,15 +52,15 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     }
 
     int getY() {
-        return entity.getBlockPos().getY() + (scanLevel * 2);
+        return entity.getTownFlagBasePos().getY() + (scanLevel * 2);
     }
 
     @Override
     public boolean IsEmpty(Position dp) {
         BlockPos bp = Positions.ToBlock(dp, getY());
         BlockPos abp = bp.above();
-        boolean empty = entity.getLevel().isEmptyBlock(bp);
-        boolean emptyAbove = entity.getLevel().isEmptyBlock(abp);
+        boolean empty = entity.getServerLevel().isEmptyBlock(bp);
+        boolean emptyAbove = entity.getServerLevel().isEmptyBlock(abp);
         return empty || emptyAbove;
     }
 
@@ -71,7 +71,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         if (this.IsEmpty(dp)) {
             return false;
         }
-        Level level = entity.getLevel();
+        Level level = entity.getServerLevel();
         BlockState blockState = level.getBlockState(bp);
         BlockState aboveBlockState = level.getBlockState(abp);
         if (isSolid(bp, level, blockState)) {
@@ -102,7 +102,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     @Override
     public boolean IsDoor(Position dp) {
-        return entity.getLevel().getBlockState(Positions.ToBlock(dp, getY())).getBlock() instanceof DoorBlock;
+        return entity.getServerLevel().getBlockState(Positions.ToBlock(dp, getY())).getBlock() instanceof DoorBlock;
     }
 
     public void update(ImmutableMap<Position, Optional<Room>> rooms) {
@@ -119,7 +119,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Room room
     ) {
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getLevel(), room, this, getY());
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
         changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
@@ -136,7 +136,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     ) {
 
         handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getLevel(), newRoom, this, getY());
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), newRoom, this, getY());
         this.changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_size_changed",
@@ -150,7 +150,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             Room room
     ) {
-        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getLevel(), room, this, getY());
+        Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
                 RoomRecipes.getName(recipe),
@@ -168,10 +168,8 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         for (InclusiveSpace space : room.getSpaces()) {
             RoomEffects.renderParticlesBetween(space, (x, z) -> {
                 BlockPos bp = new BlockPos(x, getY(), z);
-                if (!(entity.getLevel() instanceof ServerLevel sl)) {
-                    return;
-                }
-                if (!entity.getLevel().isEmptyBlock(bp)) {
+                ServerLevel sl = entity.getServerLevel();
+                if (!sl.isEmptyBlock(bp)) {
                     return;
                 }
                 sl.sendParticles(pType, x, getY(), z, 2, 0, 1, 0, 1);

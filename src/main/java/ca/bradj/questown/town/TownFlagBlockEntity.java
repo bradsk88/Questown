@@ -17,7 +17,6 @@ import ca.bradj.roomrecipes.serialization.ActiveRecipesSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
@@ -34,7 +33,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
 import org.jetbrains.annotations.NotNull;
@@ -50,7 +48,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
-    private final TownRoomsMap roomsMap = new TownRoomsMap();
+    private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
@@ -116,7 +114,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
             ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
-            this.roomsMap.initialize(ImmutableMap.of(0, ars)); // TODO: Support more levels
+            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
@@ -135,7 +133,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     private void writeTownData(CompoundTag tag) {
-        tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.get(0)));
+        if (roomsMap.numRecipes() > 0) {
+            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
+        }
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));

@@ -41,7 +41,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     public static void addRandomBatchForVisitor(TownInterface town, TownQuests quests, UUID visitorUUID) {
-        int minItems = 40 + (100 * getVillagers(quests).size())/2;
+        int minItems = 100 + (100 * (getVillagers(quests).size() + 1))/2;
 
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList reward = new MCRewardList(
@@ -58,6 +58,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         return quests.questBatches.getAllBatches()
                 .stream()
                 .map(MCQuestBatch::getOwner)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
 
