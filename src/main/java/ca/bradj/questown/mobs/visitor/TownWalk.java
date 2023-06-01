@@ -58,6 +58,6 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         BlockPos bp = this.target;
         e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, 1));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
-        Questown.LOGGER.debug("{} navigating to {}", e.getUUID(), bp);
+        Questown.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
     }
 }

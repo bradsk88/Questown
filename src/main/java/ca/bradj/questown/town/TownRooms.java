@@ -21,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -52,7 +53,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     }
 
     int getY() {
-        return entity.getTownFlagBasePos().getY() + (scanLevel * 2);
+        return entity.getTownFlagBasePos().getY() + scanLevel;
     }
 
     @Override
@@ -102,7 +103,8 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     @Override
     public boolean IsDoor(Position dp) {
-        return entity.getServerLevel().getBlockState(Positions.ToBlock(dp, getY())).getBlock() instanceof DoorBlock;
+        BlockState bs = entity.getServerLevel().getBlockState(Positions.ToBlock(dp, getY()));
+        return DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 
     public void update(ImmutableMap<Position, Optional<Room>> rooms) {

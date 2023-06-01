@@ -70,17 +70,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             BlockPos blockPos
     ) {
 
-        scanBuffer = (scanBuffer + 1) % 2;
-        int scanLevel = 0;
-        if (scanBuffer == 0) {
+//        scanBuffer = (scanBuffer + 1) % 2;
+//        if (scanBuffer == 0) {
             scanLevel = (scanLevel + 1) % 5;
-            scanLevel = scanLevel + 1;
-        }
+//        }
         updateActiveRooms(level, blockPos, 0);
 
         if (scanLevel != 0) {
-            int y = 2 * scanLevel;
-            updateActiveRooms(level, blockPos.offset(0, y, 0), scanLevel);
+            updateActiveRooms(level, blockPos.offset(0, scanLevel, 0), scanLevel);
         }
     }
 
