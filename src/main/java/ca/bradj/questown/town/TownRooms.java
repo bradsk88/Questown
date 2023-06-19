@@ -1,5 +1,8 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.core.advancements.ApproachTownTrigger;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -18,6 +21,8 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -120,6 +125,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             Room room
     ) {
+        grantAdvancement(doorPos);
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
         changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.map(RoomRecipe::getId).orElse(null));
@@ -128,6 +134,27 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                 RoomRecipes.getName(recipe),
                 doorPos.getUIString()
         ));
+    }
+
+    private void grantAdvancement(
+            Position doorPos
+    ) {
+        // TODO: Do we need to be smarter than this?
+        //  Is it possible we will grant the advancement to the wrong player?
+        ServerLevel level = entity.getServerLevel();
+        if (level == null) {
+            return;
+        }
+        int y = entity.getBlockPos().getY();
+        Player np = level.getNearestPlayer(
+                doorPos.x, y, doorPos.z, 8.0D, false
+        );
+        if (!(np instanceof ServerPlayer sp)) {
+            return;
+        }
+        AdvancementsInit.ROOM_TRIGGER.trigger(
+                sp, RoomTrigger.Triggers.FirstRoom
+        );
     }
 
     @Override

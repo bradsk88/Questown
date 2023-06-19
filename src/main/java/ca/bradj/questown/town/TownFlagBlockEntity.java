@@ -201,7 +201,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                         this.worldPosition.getY() + 0.5D,
                         this.worldPosition.getZ() + 0.5D
                 );
-                Questown.LOGGER.debug("Distance {}", v);
+                Questown.LOGGER.trace("Distance {}", v);
                 if (v < 100) {
                     AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
                             sp, ApproachTownTrigger.Triggers.FirstVisit
