@@ -1,0 +1,29 @@
+{
+  "name": "Entry 3: Quests",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_room",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "An empty room is better than nothing, but I'm sure your guests will want something more specific.$(br2)Make sure you light up the room with a torch!"
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "T": "minecraft:oak_door[facing=west,half=upper]",
+          "C": "minecraft:crafting_table",
+          "X": "minecraft:chest[facing=east]",
+          "R": "minecraft:wall_torch[facing=east]"
+        },
+        "pattern": [
+          ["WWWW", " R  ", "    ", "    "],
+          ["WWWW", "WCXW", "W 0W", "WWDW"]
+        ]
+      },
+      "text": "Hint: Right-click on the base of the town flag to view active room quests."
+    }
+  ]
+}
