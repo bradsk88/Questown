@@ -45,7 +45,13 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
     @Override
     protected void init() {
         BaseComponent str;
-        if (this.container.isFirstVisitor() && this.container.isNewVisitor()) {
+        if (this.container.finishedQuests() > 0 && this.container.unfinishedQuests() > 0) {
+            str = getVisitorMidQuestsMessage();
+        }
+        else if (this.container.finishedQuests() > 0 && this.container.unfinishedQuests() == 0) {
+            str = getVisitorDoneQuestsMessage();
+        }
+        else if (this.container.isFirstVisitor() && this.container.isNewVisitor()) {
             str = getFirstVisitorMessage();
         }
         else if (this.container.isNewVisitor()) {
@@ -108,6 +114,40 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
                 new TranslatableComponent(request).getString(),
                 new TranslatableComponent(closing).getString(),
                 new TranslatableComponent(instruction).getString()
+        ));
+    }
+
+    @NotNull
+    private static BaseComponent getVisitorMidQuestsMessage() {
+        TranslatableComponent intro = new TranslatableComponent(
+                "dialog.visitors.some_quests_done.1"
+        );
+        TranslatableComponent instruction = new TranslatableComponent(
+                "dialog.visitors.instruction.flag_quests"
+        );
+        return new TextComponent(String.format(
+                "%s%n%n(%s)",
+                intro.getString(),
+                instruction.getString()
+        ));
+    }
+
+    @NotNull
+    private static BaseComponent getVisitorDoneQuestsMessage() {
+        TranslatableComponent intro = new TranslatableComponent(
+                "dialog.visitors.all_quests_done.thanks.1"
+        );
+        TranslatableComponent outcome = new TranslatableComponent(
+                "dialog.visitors.all_quests_done.outcome.1"
+        );
+        TranslatableComponent instruction = new TranslatableComponent(
+                "dialog.visitors.instruction.sleep_visitors"
+        );
+        return new TextComponent(String.format(
+                "%s%n%n%s%n%n(%s)",
+                intro.getString(),
+                outcome.getString(),
+                instruction.getString()
         ));
     }
 

@@ -13,19 +13,30 @@ import java.util.Collection;
 public class VisitorQuestsContainer extends AbstractContainerMenu {
 
     public boolean isNewVisitor() {
-        return ctx.isNewVisitor;
+        return ctx.finishedQuests == 0 && ctx.unfinishedQuests > 0;
+    }
+
+    public int finishedQuests() {
+        return ctx.finishedQuests;
+    }
+
+    public int unfinishedQuests() {
+        return ctx.unfinishedQuests;
     }
 
     public static class VisitorContext {
         public final boolean isFirstVillager;
-        public final boolean isNewVisitor;
+        public final int finishedQuests;
+        public final int unfinishedQuests;
 
         public VisitorContext(
                 boolean isFirstVillager,
-                boolean isNewVisitor
+                int finishedQuests,
+                int unfinishedQuests
         ) {
             this.isFirstVillager = isFirstVillager;
-            this.isNewVisitor = isNewVisitor;
+            this.finishedQuests = finishedQuests;
+            this.unfinishedQuests = unfinishedQuests;
         }
     }
 
@@ -62,8 +73,11 @@ public class VisitorQuestsContainer extends AbstractContainerMenu {
 
     private static VisitorContext readVisitor(FriendlyByteBuf data) {
         boolean isFirstVillager = data.readBoolean();
-        boolean isNewVisitor = data.readBoolean();
-        return new VisitorContext(isFirstVillager, isNewVisitor);
+        int finishedQuests = data.readInt();
+        int unfinishedQuests = data.readInt();
+        return new VisitorContext(
+                isFirstVillager, finishedQuests, unfinishedQuests
+        );
     }
 
     @Override

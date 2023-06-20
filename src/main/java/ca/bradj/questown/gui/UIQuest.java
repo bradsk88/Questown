@@ -36,7 +36,7 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public static List<UIQuest> fromLevel(
             Level level,
-            ImmutableList<? extends Quest<ResourceLocation>> aQ
+            Collection<? extends Quest<ResourceLocation>> aQ
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);

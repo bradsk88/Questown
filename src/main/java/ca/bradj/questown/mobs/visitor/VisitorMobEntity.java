@@ -59,6 +59,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class VisitorMobEntity extends PathfinderMob {
@@ -319,21 +320,27 @@ public class VisitorMobEntity extends PathfinderMob {
             return InteractionResult.sidedSuccess(isClientSide);
         }
 
-        Collection<UIQuest> quests = UIQuest.fromLevel(
-                level, ImmutableList.copyOf(town.getQuestsForVillager(getUUID()))
-        );
+        Collection<MCQuest> q4v = town.getQuestsForVillager(getUUID());
+        Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
                 sp, VisitorTrigger.Triggers.FirstVisitor
         );
 
-        Set<MCQuest> finishedQuests = town.getQuestsForVillager(getUUID())
+        Predicate<MCQuest> isComplete = Quest::isComplete;
+        Set<MCQuest> finishedQuests = q4v
                 .stream()
-                .filter(Quest::isComplete)
+                .filter(isComplete)
                 .collect(Collectors.toSet());
+        Set<MCQuest> unfinishedQuests = q4v
+                .stream()
+                .filter(isComplete.negate())
+                .collect(Collectors.toSet());
+
         VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
                 town.getVillagers().stream().filter(Objects::nonNull).toList().size() == 1,
-                finishedQuests.size() == 0
+                finishedQuests.size(),
+                unfinishedQuests.size()
         );
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
@@ -364,7 +371,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 ser.toNetwork(buf, recipe);
             });
             data.writeBoolean(ctx.isFirstVillager);
-            data.writeBoolean(ctx.isNewVisitor);
+            data.writeInt(ctx.finishedQuests);
+            data.writeInt(ctx.unfinishedQuests);
         });
 
         return InteractionResult.sidedSuccess(isClientSide);
