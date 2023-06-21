@@ -6,18 +6,14 @@ import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -28,19 +24,22 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -49,12 +48,35 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static String itemId(WallType wallType) {
         return String.format("%s_%s", wallType.asString(), ITEM_ID);
     }
+
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
 
+    private Map<Player, Long> informedPlayers = new HashMap<>();
+
     public TownFlagBlock() {
-        super(BlockBehaviour.Properties.copy(Blocks.COBWEB));
+        super(
+                BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
+                        .strength(10.0F, 1200.0F)
+        );
+    }
+
+    @Override
+    public void attack(BlockState p_60499_, Level level, BlockPos p_60501_, Player player) {
+        super.attack(p_60499_, level, p_60501_, player);
+        if (level.isClientSide()) {
+            return;
+        }
+        if (informedPlayers.containsKey(player)) {
+            if (level.getGameTime() - informedPlayers.get(player) < 1000L) {
+                return;
+            }
+        }
+        player.sendMessage(
+                new TranslatableComponent("messages.town_flag.damaged"), null
+        );
+        informedPlayers.put(player, level.getGameTime());
     }
 
     @Override
