@@ -20,15 +20,16 @@ public class RecipeItemConfig {
         //    MinedResource(Items.COAL, Rarity.MEDIUM),
         //    CraftedResource(Items.Stick, [CraftedResource(Items.OAK_PLANKS, [RawResource(Items.OAK_WOOD)])])
         //  ]).calculate()
+        defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), 10);
         defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), 20);
+        defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), 20);
         defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), 30);
         defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), 40);
-        defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), 20);
         defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), 40);
-        defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), 250);
-        defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), 135);
-        defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), 10);
         defaultItemWeights.add(String.format("#%s", ItemTags.SIGNS.location()), 50);
+        defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), 135);
+        defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), 250);
+        defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), 350);
     }
 
     public static final String FILENAME = "questown-item-weights-server.toml";
