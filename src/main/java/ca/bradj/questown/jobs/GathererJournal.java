@@ -56,7 +56,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         NIGHT
     }
 
-    enum Statuses {
+    public enum Statuses {
         IDLE,
         NO_SPACE,
         NO_FOOD,

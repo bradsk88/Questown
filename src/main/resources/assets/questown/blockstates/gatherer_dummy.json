@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "status=idle": {
+      "model": "questown:block/gatherer_dummy"
+    },
+    "status=no_food": {
+      "model": "questown:block/gatherer_dummy_nofood"
+    },
+    "status=no_space": {
+      "model": "questown:block/gatherer_dummy_nospace"
+    },
+    "status=gathering": {
+      "model": "questown:block/gatherer_dummy_gathering"
+    },
+    "status=staying": {
+      "model": "questown:block/gatherer_dummy_staying"
+    },
+    "status=returned_success": {
+      "model": "questown:block/gatherer_dummy_returned_success"
+    }
+  }
+}
