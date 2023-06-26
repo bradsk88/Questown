@@ -15,6 +15,9 @@
     "status=staying": {
       "model": "questown:block/gatherer_dummy_staying"
     },
+    "status=returning": {
+      "model": "questown:block/gatherer_dummy_returning"
+    },
     "status=returned_success": {
       "model": "questown:block/gatherer_dummy_returned_success"
     }

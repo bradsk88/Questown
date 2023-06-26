@@ -16,8 +16,13 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         return inventory;
     }
 
+    public void initializeStatus(Statuses statuses) {
+        this.status = statuses;
+    }
+
     public interface Item {
         boolean isEmpty();
+
         boolean isFood();
     }
 
@@ -30,7 +35,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     }
 
     private final ArrayList<I> inventory;
-    private Statuses status = Statuses.IDLE;
+    private Statuses status = Statuses.UNSET;
 
     public int getCapacity() {
         return 6;
@@ -57,6 +62,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     }
 
     public enum Statuses {
+        UNSET,
         IDLE,
         NO_SPACE,
         NO_FOOD,
@@ -64,7 +70,8 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         GATHERING,
         RETURNED_SUCCESS,
         RETURNED_FAILURE,
-        CAPTURED
+        RETURNING,
+        CAPTURED;
     }
 
     public GathererJournal(
@@ -83,35 +90,89 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     public void tick(
             LootProvider<I> loot
     ) {
+        if (status == Statuses.UNSET) {
+            throw new IllegalStateException("Must initialize status");
+        }
         switch (sigs.getSignal()) {
             case MORNING -> {
+                if (
+                        status == Statuses.NO_FOOD ||
+                                status == Statuses.NO_SPACE ||
+                                status == Statuses.GATHERING
+                ) {
+                    return;
+                }
                 if (this.inventoryIsFull()) {
-                    this.status = Statuses.NO_SPACE;
+                    this.changeStatus(Statuses.NO_SPACE);
                     return;
                 }
                 if (this.inventoryHasFood()) {
-                    this.status = Statuses.GATHERING;
+                    this.changeStatus(Statuses.GATHERING);
                     return;
                 }
-                this.status = Statuses.NO_FOOD;
+                this.changeStatus(Statuses.NO_FOOD);
             }
             case NOON -> {
-                if (!inventoryHasFood()) {
-                    this.status = Statuses.STAYING;
+                if (
+                        this.status == Statuses.STAYING ||
+                                status == Statuses.RETURNING
+                ) {
                     return;
                 }
+                if (
+                        status == Statuses.RETURNED_SUCCESS ||
+                                status == Statuses.RETURNED_FAILURE
+                ) {
+                    changeStatus(Statuses.NO_FOOD);
+                    return;
+                }
+                if (
+                        this.status == Statuses.NO_FOOD ||
+                                this.status == Statuses.NO_SPACE
+                ) {
+                    changeStatus(Statuses.STAYING);
+                    return;
+                }
+                changeStatus(Statuses.RETURNING);
+                // TODO: What if the gatherer is out but doesn't have food (somehow)
                 this.removeFood();
                 this.addLoot(loot.getLoot());
             }
             case EVENING -> {
+                if (
+                        status == Statuses.NO_FOOD ||
+                                status == Statuses.NO_SPACE
+                ) {
+                    changeStatus(Statuses.STAYING);
+                    return;
+                }
+
+                if (
+                        this.status == Statuses.STAYING ||
+                                status == Statuses.RETURNED_FAILURE ||
+                                status == Statuses.RETURNED_SUCCESS
+                ) {
+                    return;
+                }
                 // TODO: Random failure
-                this.status = Statuses.RETURNED_SUCCESS;
+                this.changeStatus(Statuses.RETURNED_SUCCESS);
             }
             case NIGHT -> {
+                if (
+                        this.status == Statuses.STAYING ||
+                                this.status == Statuses.RETURNED_FAILURE ||
+                                this.status == Statuses.RETURNED_SUCCESS
+                ) {
+                    return;
+                }
                 // TODO: Late return?
                 // TODO: Gatherers can get captured and must be rescued by knight?
             }
         }
+    }
+
+    protected void changeStatus(Statuses s) {
+        this.status = s;
     }
 
     private boolean removeFood() {
