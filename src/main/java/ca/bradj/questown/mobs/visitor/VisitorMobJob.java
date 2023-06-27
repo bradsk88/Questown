@@ -1,7 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.GathererDummyBlock;
 import ca.bradj.questown.integration.minecraft.GathererStatuses;
 import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -11,10 +10,10 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
@@ -45,11 +44,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tick(
-            Level level
+            Level level, BlockPos entityPos
     ) {
         processSignal(level, this);
         // TODO: Go to a chest and get food instead
         simulateFoodAcquisition(level);
+        simulateLootDeposit(level, entityPos);
     }
 
     private void simulateFoodAcquisition(Level level) {
@@ -63,6 +63,20 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             }
             Questown.LOGGER.debug("Adding bread to inventory: {}", this.journal.getItems());
             this.journal.addItem(new MCTownItem(Items.BREAD));
+        }
+    }
+
+    private void simulateLootDeposit(Level level,
+                                     BlockPos entityPos
+    ) {
+        if (journal.getStatus() != GathererJournal.Statuses.RETURNED_SUCCESS) {
+            return;
+        }
+        if (level.getRandom().nextInt(100) == 0) {
+            Collection<MCTownItem> removed = journal.removeItems(v -> !v.isFood());
+            removed.forEach(v -> level.addFreshEntity(new ItemEntity(
+                    level, entityPos.getX(), entityPos.getY(), entityPos.getZ(), new ItemStack(v.get())
+            )));
         }
     }
 
@@ -104,7 +118,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         LootTable lootTable = level.getServer().getLootTables().get(
                 // TODO: Own loot table
-                new ResourceLocation("minecraft", "spawn_bonus_chest")
+                new ResourceLocation("minecraft", "chests/spawn_bonus_chest")
         );
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);

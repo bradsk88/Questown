@@ -2,10 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.town.TownInventory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Optional;
+import java.util.*;
 
 public class GathererJournal<Inventory extends TownInventory<?, I>, I extends GathererJournal.Item> {
 
@@ -18,6 +15,20 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     public void initializeStatus(Statuses statuses) {
         this.status = statuses;
+    }
+
+    public interface ItemFilter {
+        boolean check(Item i);
+    }
+
+    public Collection<I> removeItems(ItemFilter o) {
+        Collection<I> list = inventory.stream().filter(o::check).toList();
+        list.forEach(
+                item -> {
+                    inventory.set(inventory.lastIndexOf(item), emptyFactory.makeEmptyItem());
+                }
+        );
+        return list;
     }
 
     public interface Item {

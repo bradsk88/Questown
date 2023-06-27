@@ -109,7 +109,7 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        job.tick(level);
+        job.tick(level, blockPosition());
     }
 
     private void initBrain() {
