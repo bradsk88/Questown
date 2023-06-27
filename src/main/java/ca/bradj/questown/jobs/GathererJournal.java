@@ -47,13 +47,16 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         }
         Item emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
+        if (status == Statuses.NO_FOOD && item.isFood()) { // TODO: Test
+            changeStatus(Statuses.IDLE);
+        }
     }
 
     public interface EmptyFactory<I extends Item> {
         I makeEmptyItem();
     }
 
-    enum Signals {
+    public enum Signals {
         UNDEFINED,
         MORNING,
         NOON,
@@ -200,7 +203,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         return this.inventory.stream().anyMatch(Item::isFood);
     }
 
-    private boolean inventoryIsFull() {
+    public boolean inventoryIsFull() {
         return this.inventory.stream().noneMatch(Item::isEmpty);
     }
 

@@ -5,6 +5,10 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
+import ca.bradj.questown.integration.minecraft.GathererStatuses;
+import ca.bradj.questown.integration.minecraft.MCTownInventory;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -51,6 +55,7 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -81,6 +86,8 @@ public class VisitorMobEntity extends PathfinderMob {
             SensorType.NEAREST_BED
     );
 
+    private final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
+
     private TownInterface town;
     boolean sitting = true;
     private BlockPos wanderTarget;
@@ -96,6 +103,13 @@ public class VisitorMobEntity extends PathfinderMob {
         if (town != null) {
             initBrain();
         }
+        job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT?
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        job.tick(level);
     }
 
     private void initBrain() {
@@ -285,7 +299,12 @@ public class VisitorMobEntity extends PathfinderMob {
             this.kill();
             return null;
         }
-        this.setWanderTarget(town.getRandomWanderTarget());
+        BlockPos target = job.getTarget(town);
+        if (target != null) {
+            this.setWanderTarget(target);
+        } else {
+            this.setWanderTarget(town.getRandomWanderTarget());
+        }
         return this.getWanderTarget();
     }
 
