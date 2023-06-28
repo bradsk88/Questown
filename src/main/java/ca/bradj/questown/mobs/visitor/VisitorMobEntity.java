@@ -25,6 +25,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.game.DebugPackets;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -69,6 +72,10 @@ import java.util.stream.Collectors;
 
 public class VisitorMobEntity extends PathfinderMob {
 
+    private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
+    );
+
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
     private static final String NBT_TOWN_Z = "town_z";
@@ -107,9 +114,19 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(visible, true);
+    }
+
+    @Override
     public void tick() {
         super.tick();
         job.tick(level, blockPosition());
+        if (!level.isClientSide()) {
+            boolean vis = !job.shouldDisappear(town, blockPosition());
+            this.entityData.set(visible, vis);
+        }
     }
 
     private void initBrain() {
@@ -118,6 +135,19 @@ public class VisitorMobEntity extends PathfinderMob {
         this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
         this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
         this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
+    }
+
+    @Override
+    public boolean shouldRender(
+            double p_20296_,
+            double p_20297_,
+            double p_20298_
+    ) {
+        Boolean isVisible = this.entityData.get(visible);
+        if (!isVisible) {
+            return false;
+        }
+        return super.shouldRender(p_20296_, p_20297_, p_20298_);
     }
 
     @Override

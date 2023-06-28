@@ -17,6 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -44,7 +45,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tick(
-            Level level, BlockPos entityPos
+            Level level,
+            BlockPos entityPos
     ) {
         processSignal(level, this);
         // TODO: Go to a chest and get food instead
@@ -66,8 +68,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
     }
 
-    private void simulateLootDeposit(Level level,
-                                     BlockPos entityPos
+    private void simulateLootDeposit(
+            Level level,
+            BlockPos entityPos
     ) {
         if (journal.getStatus() != GathererJournal.Statuses.RETURNED_SUCCESS) {
             return;
@@ -149,7 +152,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public BlockPos getTarget(TownInterface town) {
-        BlockPos enterExitPos = town.getTownFlagBasePos().offset(10, 0, 0); // TODO: Smarter logic? Town gate?
+        BlockPos enterExitPos = getEnterExitPos(town); // TODO: Smarter logic? Town gate?
         switch (journal.getStatus()) {
             case NO_FOOD -> {
                 Questown.LOGGER.debug("Visitor is searching for food");
@@ -166,5 +169,28 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             }
         }
         return null;
+    }
+
+    @NotNull
+    private static BlockPos getEnterExitPos(TownInterface town) {
+        return town.getTownFlagBasePos().offset(10, 0, 0);
+    }
+
+    public boolean shouldDisappear(
+            TownInterface town,
+            BlockPos entityPos
+    ) {
+        if (
+                journal.getStatus() == GathererJournal.Statuses.GATHERING ||
+                        journal.getStatus() == GathererJournal.Statuses.RETURNING ||
+                        journal.getStatus() == GathererJournal.Statuses.CAPTURED
+        ) {
+            double d = getEnterExitPos(town).distToCenterSqr(
+                    entityPos.getX(), entityPos.getY(), entityPos.getZ()
+            );
+            Questown.LOGGER.trace("Distance to join pos {}", d);
+            return d < 5;
+        }
+        return false;
     }
 }
