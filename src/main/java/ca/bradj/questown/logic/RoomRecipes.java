@@ -55,8 +55,8 @@ public class RoomRecipes {
         return new TranslatableComponent(String.format("room.%s", id.getPath()));
     }
 
-    public static Component getName(Optional<RoomRecipe> recipe) {
-        return recipe.map(roomRecipe -> getName(roomRecipe.getId()))
+    public static Component getName(Optional<ResourceLocation> recipe) {
+        return recipe.map(RoomRecipes::getName)
                 .orElseGet(() -> new TranslatableComponent("room.no_recipe"));
     }
 

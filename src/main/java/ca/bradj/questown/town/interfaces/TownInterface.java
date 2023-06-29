@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.mobs.visitor.FoodTarget;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -32,4 +34,10 @@ public interface TownInterface {
     );
 
     Set<UUID> getVillagers();
+
+    interface Checker {
+        boolean matches(MCTownItem item);
+    }
+
+    FoodTarget findMatchingContainer(Checker c);
 }

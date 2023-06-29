@@ -5,10 +5,12 @@ import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mobs.visitor.FoodTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
@@ -40,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<ResourceLocation>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<RoomRecipeMatch>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
 
     public static final String ID = "flag_base_block_entity";
     // TODO: Extract serialization
@@ -114,7 +116,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
             CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
             ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
-            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
+//            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
@@ -134,7 +136,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     private void writeTownData(CompoundTag tag) {
         if (roomsMap.numRecipes() > 0) {
-            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
+//            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
         }
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
@@ -238,34 +240,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void roomRecipeCreated(
             Position roomDoorPos,
-            ResourceLocation recipeId
+            RoomRecipeMatch recipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
-                new TranslatableComponent("room." + recipeId.getPath()),
+                new TranslatableComponent("room." + recipeId.getRecipeID().getPath()),
                 roomDoorPos.getUIString()
         ));
         // TODO: get room
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markQuestAsComplete(recipeId);
+        quests.markQuestAsComplete(recipeId.getRecipeID());
     }
 
     @Override
     public void roomRecipeChanged(
             Position roomDoorPos,
-            ResourceLocation oldRecipeId,
-            ResourceLocation newRecipeId
+            RoomRecipeMatch oldRecipeId,
+            RoomRecipeMatch newRecipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_changed",
-                new TranslatableComponent("room." + oldRecipeId.getPath()),
-                new TranslatableComponent("room." + newRecipeId.getPath()),
+                new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
+                new TranslatableComponent("room." + newRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getUIString()
         ));
         // TODO: Get room
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         if (!oldRecipeId.equals(newRecipeId)) { // TODO: Add quests as a listener instead of doing this call
-            quests.markQuestAsComplete(newRecipeId);
+            quests.markQuestAsComplete(newRecipeId.getRecipeID());
         }
         // TODO: Mark removed recipe as lost?
     }
@@ -273,11 +275,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void roomRecipeDestroyed(
             Position roomDoorPos,
-            ResourceLocation oldRecipeId
+            RoomRecipeMatch oldRecipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
-                new TranslatableComponent("room." + oldRecipeId.getPath()),
+                new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getUIString()
         ));
         // TODO: Get room
@@ -345,6 +347,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         return TownQuests.getVillagers(quests);
     }
 
+    @Override
+    public FoodTarget findMatchingContainer(Checker c) {
+        return TownContainers.findMatching(this, c);
+    }
+
     private @Nullable Position getWanderTargetPosition() {
         Collection<Room> all = roomsMap.getAllRooms();
         return pois.getWanderTarget(getServerLevel(), all);
@@ -359,5 +366,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void campfireFound() {
         quests.markQuestAsComplete(SpecialQuests.CAMPFIRE);
+    }
+
+    public Collection<RoomRecipeMatch> getMatches() {
+        return this.roomsMap.getAllMatches();
     }
 }

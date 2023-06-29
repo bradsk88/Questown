@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
@@ -18,10 +19,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
-    private final Map<Integer, ActiveRecipes<ResourceLocation>> activeRecipes = new HashMap<>();
+    private final Map<Integer, ActiveRecipes<RoomRecipeMatch>> activeRecipes = new HashMap<>();
     private int scanLevel = 0;
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
@@ -44,14 +47,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ars.update(rooms);
 
         ars.getAll().forEach(room -> {
-            Optional<RoomRecipe> recipe = RecipeDetection.getActiveRecipe(level, room, ars, blockPos.getY());
-            activeRecipes.get(scanLevel).update(room.getDoorPos(), recipe.map(RoomRecipe::getId).orElse(null));
+            Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(level, room, ars, blockPos.getY());
+            activeRecipes.get(scanLevel).update(room.getDoorPos(), recipe.orElse(null));
         });
     }
 
     private TownRooms getOrCreateRooms(int scanLevel) {
         if (!activeRecipes.containsKey(scanLevel)) {
-            ActiveRecipes<ResourceLocation> v = new ActiveRecipes<>();
+            ActiveRecipes<RoomRecipeMatch> v = new ActiveRecipes<>();
             activeRecipes.put(scanLevel, v);
             v.addChangeListener(changeListener);
         }
@@ -83,13 +86,13 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void initialize(
             TownFlagBlockEntity owner,
-            Map<Integer, ActiveRecipes<ResourceLocation>> ars
+            Map<Integer, ActiveRecipes<RoomRecipeMatch>> ars
     ) {
         if (this.activeRecipes.size() > 0) {
             throw new IllegalStateException("Double initialization");
         }
         this.activeRecipes.putAll(ars);
-        for (ActiveRecipes<ResourceLocation> r : ars.values()) {
+        for (ActiveRecipes<RoomRecipeMatch> r : ars.values()) {
             r.addChangeListener(owner);
         }
     }
@@ -97,7 +100,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     /**
      * @deprecated Used for a migration only.
      */
-    public ActiveRecipes<ResourceLocation> getRecipes(int i) {
+    public ActiveRecipes<RoomRecipeMatch> getRecipes(int i) {
         return activeRecipes.get(i);
     }
 
@@ -110,11 +113,19 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     }
 
     @Override
-    public void updateRecipeForRoom(int scanLevel, Position doorPos, @Nullable ResourceLocation resourceLocation) {
+    public void updateRecipeForRoom(int scanLevel, Position doorPos, @Nullable RoomRecipeMatch resourceLocation) {
         this.activeRecipes.get(scanLevel).update(doorPos, resourceLocation);
     }
 
     public int numRecipes() {
         return this.activeRecipes.size();
+    }
+
+    public Collection<RoomRecipeMatch> getAllMatches() {
+        Stream<RoomRecipeMatch> objectStream = this.activeRecipes.values()
+                .stream()
+                .map(ActiveRecipes::entrySet)
+                .flatMap(v -> v.stream().map(Map.Entry::getValue));
+        return objectStream.collect(Collectors.toSet());
     }
 }

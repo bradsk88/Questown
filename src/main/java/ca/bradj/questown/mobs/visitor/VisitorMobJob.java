@@ -39,6 +39,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     };
 
     private final @Nullable ServerLevel level;
+    private FoodTarget foodTarget;
 
     public VisitorMobJob(@Nullable ServerLevel level) {
         this.level = level;
@@ -156,7 +157,20 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         switch (journal.getStatus()) {
             case NO_FOOD -> {
                 Questown.LOGGER.debug("Visitor is searching for food");
-                return town.getRandomWanderTarget();
+                if (this.foodTarget != null) {
+                    if (!this.foodTarget.hasItem(MCTownItem::isFood)) {
+                        this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
+                    }
+                } else {
+                    this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
+                }
+                if (this.foodTarget != null) {
+                    Questown.LOGGER.debug("Located food at {}", this.foodTarget.getPosition());
+                    return this.foodTarget.getPosition();
+                } else {
+                    Questown.LOGGER.debug("No food exists in town");
+                    return town.getRandomWanderTarget();
+                }
             }
             case UNSET, IDLE, NO_SPACE, STAYING -> {
                 return null;
