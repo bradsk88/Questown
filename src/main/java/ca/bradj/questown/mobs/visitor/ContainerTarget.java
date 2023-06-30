@@ -6,12 +6,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 
-public class FoodTarget {
+public class ContainerTarget {
 
     BlockPos position;
     Container container;
 
-    public FoodTarget(
+    public ContainerTarget(
             BlockPos position,
             Container container
     ) {
@@ -27,7 +27,7 @@ public class FoodTarget {
         return container.hasAnyOf(items);
     }
 
-    interface CheckFn {
+    public interface CheckFn {
         boolean Matches(MCTownItem item);
     }
 

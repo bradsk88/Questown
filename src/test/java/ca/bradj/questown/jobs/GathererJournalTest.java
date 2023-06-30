@@ -131,6 +131,26 @@ class GathererJournalTest {
     }
 
     @Test
+    void testMorningSignalWithFoodAndLootAvailable() {
+        TestSignals sigs = new TestSignals();
+        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+                sigs, () -> new TestItem("")
+        );
+        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+
+        // Add food and loot
+        gatherer.addItem(new TestItem("bread"));
+        gatherer.addItem(new TestItem("seeds"));
+
+        // Trigger morning signal
+        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        gatherer.tick(ImmutableList::of);
+
+        // Assert that the status is set to "hungry"
+        Assertions.assertEquals(GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus());
+    }
+
+    @Test
     void testAfternoonSignalSetsStatusToReturning() {
         TestSignals sigs = new TestSignals();
         GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(

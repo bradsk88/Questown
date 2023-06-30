@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -39,7 +38,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     };
 
     private final @Nullable ServerLevel level;
-    FoodTarget foodTarget;
+    ContainerTarget foodTarget;
+    ContainerTarget successTarget;
 
     public VisitorMobJob(@Nullable ServerLevel level) {
         this.level = level;
@@ -50,38 +50,6 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             BlockPos entityPos
     ) {
         processSignal(level, this);
-        // TODO: Go to a chest and get food instead
-//        simulateFoodAcquisition(level);
-        simulateLootDeposit(level, entityPos);
-    }
-
-    private void simulateFoodAcquisition(Level level) {
-        if (journal.getStatus() != GathererJournal.Statuses.NO_FOOD) {
-            return;
-        }
-        if (level.getRandom().nextInt(100) == 0) {
-            if (journal.inventoryIsFull()) {
-                Questown.LOGGER.debug("Not adding food because inventory is full");
-                return;
-            }
-            Questown.LOGGER.debug("Adding bread to inventory: {}", this.journal.getItems());
-            this.journal.addItem(new MCTownItem(Items.BREAD));
-        }
-    }
-
-    private void simulateLootDeposit(
-            Level level,
-            BlockPos entityPos
-    ) {
-        if (journal.getStatus() != GathererJournal.Statuses.RETURNED_SUCCESS) {
-            return;
-        }
-        if (level.getRandom().nextInt(100) == 0) {
-            Collection<MCTownItem> removed = journal.removeItems(v -> !v.isFood());
-            removed.forEach(v -> level.addFreshEntity(new ItemEntity(
-                    level, entityPos.getX(), entityPos.getY(), entityPos.getZ(), new ItemStack(v.get())
-            )));
-        }
     }
 
     private static void processSignal(
@@ -156,21 +124,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         BlockPos enterExitPos = getEnterExitPos(town); // TODO: Smarter logic? Town gate?
         switch (journal.getStatus()) {
             case NO_FOOD -> {
-                Questown.LOGGER.debug("Visitor is searching for food");
-                if (this.foodTarget != null) {
-                    if (!this.foodTarget.hasItem(MCTownItem::isFood)) {
-                        this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
-                    }
-                } else {
-                    this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
-                }
-                if (this.foodTarget != null) {
-                    Questown.LOGGER.debug("Located food at {}", this.foodTarget.getPosition());
-                    return this.foodTarget.getPosition();
-                } else {
-                    Questown.LOGGER.debug("No food exists in town");
-                    return town.getRandomWanderTarget();
-                }
+                return handleNoFoodStatus(town);
             }
             case UNSET, IDLE, NO_SPACE, STAYING -> {
                 return null;
@@ -178,11 +132,54 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             case GATHERING, RETURNING, CAPTURED -> {
                 return enterExitPos;
             }
-            case RETURNED_SUCCESS, RETURNED_FAILURE -> {
+            case RETURNED_SUCCESS -> {
+                return handleSuccessStatus(town);
+            }
+            case RETURNED_FAILURE -> {
                 return new BlockPos(town.getVisitorJoinPos());
             }
         }
         return null;
+    }
+
+    private BlockPos handleNoFoodStatus(TownInterface town) {
+        if (journal.hasAnyNonFood()) {
+            return handleSuccessStatus(town);
+        }
+
+        Questown.LOGGER.debug("Visitor is searching for food");
+        if (this.foodTarget != null) {
+            if (!this.foodTarget.hasItem(MCTownItem::isFood)) {
+                this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
+            }
+        } else {
+            this.foodTarget = town.findMatchingContainer(MCTownItem::isFood);
+        }
+        if (this.foodTarget != null) {
+            Questown.LOGGER.debug("Located food at {}", this.foodTarget.getPosition());
+            return this.foodTarget.getPosition();
+        } else {
+            Questown.LOGGER.debug("No food exists in town");
+            return town.getRandomWanderTarget();
+        }
+    }
+
+    private BlockPos handleSuccessStatus(TownInterface town) {
+        Questown.LOGGER.debug("Visitor is searching for chest space");
+        if (this.successTarget != null) {
+            if (!this.successTarget.hasItem(MCTownItem::isEmpty)) {
+                this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+            }
+        } else {
+            this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+        }
+        if (this.successTarget != null) {
+            Questown.LOGGER.debug("Located chest at {}", this.successTarget.getPosition());
+            return this.successTarget.getPosition();
+        } else {
+            Questown.LOGGER.debug("No chests exist in town");
+            return town.getRandomWanderTarget();
+        }
     }
 
     @NotNull
@@ -226,7 +223,22 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return isCloseTo(entityPos, foodTarget.getPosition());
     }
 
+    public boolean isCloseToChest(
+            @NotNull BlockPos entityPos
+    ) {
+        if (successTarget == null) {
+            return false;
+        }
+        if (!successTarget.hasItem(MCTownItem::isEmpty)) {
+            return false;
+        }
+        return isCloseTo(entityPos, successTarget.getPosition());
+    }
+
     public void tryTakeFood(BlockPos entityPos) {
+        if (journal.getStatus() != GathererJournal.Statuses.NO_FOOD) {
+            return;
+        }
         if (journal.hasAnyFood()) {
             return;
         }
@@ -241,6 +253,36 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 journal.addItem(mcTownItem);
                 foodTarget.container.removeItem(i, 1);
                 break;
+            }
+        }
+    }
+
+    public void tryDropLoot(BlockPos entityPos) {
+        if (!journal.hasAnyNonFood()) {
+            return;
+        }
+        if (!isCloseToChest(entityPos)) {
+            return;
+        }
+        for (MCTownItem mct : journal.getItems()) {
+            if (mct.isEmpty()) {
+                continue;
+            }
+            Questown.LOGGER.debug("Gatherer is putting {} in {}", mct, successTarget);
+            boolean added = false;
+            for (int i = 0; i < successTarget.container.getContainerSize(); i++) {
+                if (added) {
+                    break;
+                }
+                // TODO: Allow stacking?
+                if (successTarget.container.getItem(i).isEmpty()) {
+                    journal.removeItem(mct);
+                    successTarget.container.setItem(i, new ItemStack(mct.get(), 1));
+                    added = true;
+                }
+            }
+            if (!added) {
+                Questown.LOGGER.debug("Nope. No space for {}", mct);
             }
         }
     }

@@ -2,8 +2,12 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.TownInventory;
+import com.google.common.collect.ImmutableList;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Optional;
 
 public class GathererJournal<Inventory extends TownInventory<?, I>, I extends GathererJournal.Item> {
 
@@ -11,8 +15,8 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     private final EmptyFactory<I> emptyFactory;
     private boolean ate = false;
 
-    public Collection<I> getItems() {
-        return inventory;
+    public ImmutableList<I> getItems() {
+        return ImmutableList.copyOf(inventory);
     }
 
     public void initializeStatus(Statuses statuses) {
@@ -23,18 +27,20 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         return inventory.stream().anyMatch(Item::isFood);
     }
 
-    public interface ItemFilter {
-        boolean check(Item i);
+    public boolean hasAnyNonFood() {
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isFood());
     }
 
-    public Collection<I> removeItems(ItemFilter o) {
-        Collection<I> list = inventory.stream().filter(o::check).toList();
-        list.forEach(
-                item -> {
-                    inventory.set(inventory.lastIndexOf(item), emptyFactory.makeEmptyItem());
-                }
-        );
-        return list;
+    public boolean hasAnyItems() {
+        return !inventory.stream().allMatch(Item::isEmpty);
+    }
+
+    public void removeItem(I mct) {
+        int index = inventory.lastIndexOf(mct);
+        inventory.set(index, emptyFactory.makeEmptyItem());
+        if (!hasAnyNonFood()) { // TODO: Test
+            changeStatus(Statuses.IDLE);
+        }
     }
 
     public interface Item {
@@ -123,6 +129,16 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 ) {
                     return;
                 }
+
+                if (this.hasAnyNonFood()) {
+                    if (status == Statuses.RETURNED_SUCCESS) {
+                        return;
+                    }
+                    this.changeStatus(Statuses.RETURNED_SUCCESS);
+                    return;
+                }
+
+
                 if (this.inventoryIsFull()) {
                     this.changeStatus(Statuses.NO_SPACE);
                     return;

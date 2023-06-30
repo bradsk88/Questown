@@ -5,7 +5,7 @@ import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.mobs.visitor.FoodTarget;
+import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -15,9 +15,7 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import ca.bradj.roomrecipes.serialization.ActiveRecipesSerializer;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
@@ -348,7 +346,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public FoodTarget findMatchingContainer(Checker c) {
+    public ContainerTarget findMatchingContainer(ContainerTarget.CheckFn c) {
         return TownContainers.findMatching(this, c);
     }
 
