@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.TownInventory;
 
 import java.util.*;
@@ -8,6 +9,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     private final SignalSource sigs;
     private final EmptyFactory<I> emptyFactory;
+    private boolean ate = false;
 
     public Collection<I> getItems() {
         return inventory;
@@ -15,6 +17,10 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     public void initializeStatus(Statuses statuses) {
         this.status = statuses;
+    }
+
+    public boolean hasAnyFood() {
+        return inventory.stream().anyMatch(Item::isFood);
     }
 
     public interface ItemFilter {
@@ -109,6 +115,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         }
         switch (sigs.getSignal()) {
             case MORNING -> {
+                this.ate = false;
                 if (
                         status == Statuses.NO_FOOD ||
                                 status == Statuses.NO_SPACE ||
@@ -121,6 +128,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                     return;
                 }
                 if (this.inventoryHasFood()) {
+                    Questown.LOGGER.debug("Inventory has: {}", this.getItems());
                     this.changeStatus(Statuses.GATHERING);
                     return;
                 }
@@ -169,6 +177,10 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                     return;
                 }
                 // TODO: Random failure
+                if (!ate) {
+                    this.removeFood();
+                    this.addLoot(loot.getLoot());
+                }
                 this.changeStatus(Statuses.RETURNED_SUCCESS);
             }
             case NIGHT -> {
@@ -191,10 +203,13 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     private boolean removeFood() {
         Optional<I> foodSlot = inventory.stream().filter(Item::isFood).findFirst();
-        foodSlot.ifPresent(food -> {
+        boolean hadFood = foodSlot.isPresent();
+        foodSlot.ifPresentOrElse(food -> {
             inventory.set(inventory.lastIndexOf(food), emptyFactory.makeEmptyItem());
-        });
-        return foodSlot.isPresent();
+            Questown.LOGGER.debug("Gatherer ate: {}", food);
+        }, () -> Questown.LOGGER.error("Gather was somehow out with no food!"));
+        this.ate = hadFood;
+        return hadFood;
     }
 
     private void addLoot(Collection<I> loot) {

@@ -25,4 +25,11 @@ public class MCTownItem implements GathererJournal.Item {
     public Item get() {
         return item;
     }
+
+    @Override
+    public String toString() {
+        return "MCTownItem{" +
+                "item=" + item +
+                '}';
+    }
 }

@@ -39,7 +39,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     };
 
     private final @Nullable ServerLevel level;
-    private FoodTarget foodTarget;
+    FoodTarget foodTarget;
 
     public VisitorMobJob(@Nullable ServerLevel level) {
         this.level = level;
@@ -51,7 +51,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     ) {
         processSignal(level, this);
         // TODO: Go to a chest and get food instead
-        simulateFoodAcquisition(level);
+//        simulateFoodAcquisition(level);
         simulateLootDeposit(level, entityPos);
     }
 
@@ -141,7 +141,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 .map(MCTownItem::new)
                 .toList();
 
-        Questown.LOGGER.debug("Adding items to gatherer: {}", list);
+        Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
 
         return list;
     }
@@ -199,12 +199,49 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                         journal.getStatus() == GathererJournal.Statuses.RETURNING ||
                         journal.getStatus() == GathererJournal.Statuses.CAPTURED
         ) {
-            double d = getEnterExitPos(town).distToCenterSqr(
-                    entityPos.getX(), entityPos.getY(), entityPos.getZ()
-            );
-            Questown.LOGGER.trace("Distance to join pos {}", d);
-            return d < 5;
+            return isCloseTo(entityPos, getEnterExitPos(town));
         }
         return false;
+    }
+
+    private boolean isCloseTo(
+            @NotNull BlockPos entityPos,
+            @NotNull BlockPos targetPos
+    ) {
+        double d = targetPos.distToCenterSqr(
+                entityPos.getX(), entityPos.getY(), entityPos.getZ()
+        );
+        return d < 5;
+    }
+
+    public boolean isCloseToFood(
+            @NotNull BlockPos entityPos
+    ) {
+        if (foodTarget == null) {
+            return false;
+        }
+        if (!foodTarget.hasItem(MCTownItem::isFood)) {
+            return false;
+        }
+        return isCloseTo(entityPos, foodTarget.getPosition());
+    }
+
+    public void tryTakeFood(BlockPos entityPos) {
+        if (journal.hasAnyFood()) {
+            return;
+        }
+        if (!isCloseToFood(entityPos)) {
+            return;
+        }
+        for (int i = 0; i < foodTarget.container.getContainerSize(); i++) {
+            ItemStack iItem = foodTarget.container.getItem(i);
+            MCTownItem mcTownItem = new MCTownItem(iItem.getItem());
+            if (mcTownItem.isFood()) {
+                Questown.LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
+                journal.addItem(mcTownItem);
+                foodTarget.container.removeItem(i, 1);
+                break;
+            }
+        }
     }
 }

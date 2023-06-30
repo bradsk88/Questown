@@ -93,7 +93,7 @@ public class VisitorMobEntity extends PathfinderMob {
             SensorType.NEAREST_BED
     );
 
-    private final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
+    final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
 
     private TownInterface town;
     boolean sitting = true;
@@ -126,6 +126,8 @@ public class VisitorMobEntity extends PathfinderMob {
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, blockPosition());
             this.entityData.set(visible, vis);
+
+            job.tryTakeFood(blockPosition());
         }
     }
 

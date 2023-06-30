@@ -24,7 +24,7 @@ public class TownContainers {
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())
                 .filter(v -> v.getValue() instanceof ChestBlock)
                 .map(v -> new FoodTarget(v.getKey(), ChestBlock.getContainer(
-                        (ChestBlock) v,
+                        (ChestBlock) v.getValue(),
                         level.getBlockState(v.getKey()),
                         level,
                         v.getKey(),

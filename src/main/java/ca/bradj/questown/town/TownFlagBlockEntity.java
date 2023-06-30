@@ -114,8 +114,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         super.load(tag);
         // TODO: Store active rooms?
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
-            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES);
-            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
+//            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES); TODO: Bring back
+//            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
 //            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {

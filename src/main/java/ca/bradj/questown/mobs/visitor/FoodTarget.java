@@ -39,4 +39,12 @@ public class FoodTarget {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "FoodTarget{" +
+                "position=" + position +
+                ", container=" + container +
+                '}';
+    }
 }
