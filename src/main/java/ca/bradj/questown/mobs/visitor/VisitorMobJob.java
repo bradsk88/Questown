@@ -2,13 +2,13 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.GathererInventoryMenu;
-import ca.bradj.questown.integration.minecraft.VisitorMobEntityContainer;
 import ca.bradj.questown.integration.minecraft.GathererStatuses;
 import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
@@ -16,6 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.ContainerListener;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -32,9 +33,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
-public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem> {
+public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCTownItem> {
 
     private GathererJournal.Signals signal;
 
@@ -52,9 +54,15 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     private final @Nullable ServerLevel level;
     ContainerTarget foodTarget;
     ContainerTarget successTarget;
+    private final Container inventory;
+    private boolean dropping;
 
     public VisitorMobJob(@Nullable ServerLevel level) {
         this.level = level;
+        SimpleContainer sc = new SimpleContainer(journal.getCapacity());
+        this.inventory = sc;
+        sc.addListener(this);
+        journal.setItemsListener(this);
     }
 
     public void tick(
@@ -270,13 +278,19 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tryDropLoot(BlockPos entityPos) {
+        if (this.dropping) {
+            Questown.LOGGER.debug("Trying to drop too quickly");
+        }
+        this.dropping = true;
         if (!journal.hasAnyNonFood()) {
+            this.dropping = false;
             return;
         }
         if (!isCloseToChest(entityPos)) {
+            this.dropping = false;
             return;
         }
-        for (MCTownItem mct : journal.getItems()) {
+        for (MCTownItem mct : Lists.reverse(journal.getItems())) {
             if (mct.isEmpty()) {
                 continue;
             }
@@ -297,6 +311,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 Questown.LOGGER.debug("Nope. No space for {}", mct);
             }
         }
+        this.dropping = false;
     }
 
     public boolean openScreen(ServerPlayer sp, VisitorMobEntity e) {
@@ -312,7 +327,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new GathererInventoryMenu(windowId, e.inventory, p.getInventory(), e);
+                return new GathererInventoryMenu(windowId, e.getInventory(), p.getInventory(), e);
             }
         }, data -> {
             data.writeInt(journal.getCapacity());
@@ -327,14 +342,41 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return true; // Different jobs might have screens or not
     }
 
-    public Container newInventory() {
-        return new SimpleContainer(journal.getCapacity());
+    @Override
+    public void containerChanged(Container p_18983_) {
+        if (unchanged(p_18983_, journal.getItems())) {
+            return;
+        }
+
+        for (int i = 0; i < p_18983_.getContainerSize(); i++) {
+            journal.setItemNoUpdateNoCheck(i, new MCTownItem(p_18983_.getItem(i).getItem()));
+        }
     }
 
-    public void updateInventory(Container inventory) {
-        ImmutableList<MCTownItem> items = journal.getItems();
+    @Override
+    public void itemsChanged(ImmutableList<MCTownItem> items) {
+        if (unchanged(inventory, items)) {
+            return;
+        }
+
         for (int i = 0; i < items.size(); i++) {
             inventory.setItem(i, new ItemStack(items.get(i).get(), 1));
         }
+    }
+
+    private boolean unchanged(
+            Container container,
+            ImmutableList<MCTownItem> items
+    ) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (!container.getItem(i).is(items.get(i).get())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public Container getInventory() {
+        return inventory;
     }
 }

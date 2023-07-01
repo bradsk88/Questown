@@ -92,7 +92,6 @@ public class VisitorMobEntity extends PathfinderMob {
     );
 
     final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
-    public final Container inventory;
 
     private TownInterface town;
     boolean sitting = true;
@@ -110,7 +109,6 @@ public class VisitorMobEntity extends PathfinderMob {
             initBrain();
         }
         job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT
-        this.inventory = job.newInventory(); // TODO: Read/write NBT
     }
 
     @Override
@@ -126,9 +124,6 @@ public class VisitorMobEntity extends PathfinderMob {
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, blockPosition());
             this.entityData.set(visible, vis);
-
-            // TODO: Use listener pattern instead of updating every tick?
-            job.updateInventory(this.inventory);
 
             job.tryDropLoot(blockPosition());
             job.tryTakeFood(blockPosition());
@@ -441,5 +436,9 @@ public class VisitorMobEntity extends PathfinderMob {
             data.writeInt(ctx.finishedQuests);
             data.writeInt(ctx.unfinishedQuests);
         });
+    }
+
+    public Container getInventory() {
+        return job.getInventory();
     }
 }

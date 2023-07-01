@@ -14,6 +14,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     private final SignalSource sigs;
     private final EmptyFactory<I> emptyFactory;
     private boolean ate = false;
+    private ItemsListener<I> listener;
 
     public ImmutableList<I> getItems() {
         return ImmutableList.copyOf(inventory);
@@ -38,13 +39,23 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     public void removeItem(I mct) {
         int index = inventory.lastIndexOf(mct);
         inventory.set(index, emptyFactory.makeEmptyItem());
+        updateItemListeners();
         if (!hasAnyNonFood()) { // TODO: Test
             changeStatus(Statuses.IDLE);
         }
     }
+
+    private void updateItemListeners() {
+        if (this.listener == null) {
+            return;
+        }
+        this.listener.itemsChanged(ImmutableList.copyOf(inventory));
+    }
+
     public I removeItem(int index) {
         I item = inventory.get(index);
         inventory.set(index, emptyFactory.makeEmptyItem());
+        updateItemListeners();
         if (!hasAnyNonFood()) { // TODO: Test
             changeStatus(Statuses.IDLE);
         }
@@ -55,12 +66,30 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
             int index,
             I mcTownItem
     ) {
-        if (!inventory.get(index).isEmpty()) {
+        I curItem = inventory.get(index);
+        if (!curItem.isEmpty()) {
             throw new IllegalArgumentException(
-                    String.format("Slot %d is not empty. Cannot set to %s", index, mcTownItem)
+                    String.format("Cannot set to %s. Slot %d is not empty. [has: %s]", mcTownItem, index, curItem)
             );
         }
+        setItemNoUpdateNoCheck(index, mcTownItem);
+        updateItemListeners();
+    }
+
+    public void setItemNoUpdateNoCheck(
+            int index,
+            I mcTownItem
+    ) {
         inventory.set(index, mcTownItem);
+    }
+
+    public interface ItemsListener<I> {
+        void itemsChanged(ImmutableList<I> items);
+    }
+
+    public void setItemsListener(ItemsListener<I> l) {
+        // TODO: Support multiple?
+        this.listener = l;
     }
 
     public interface Item {
@@ -90,6 +119,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         }
         Item emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
+        updateItemListeners();
         if (status == Statuses.NO_FOOD && item.isFood()) { // TODO: Test
             changeStatus(Statuses.IDLE);
         }
@@ -107,6 +137,8 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         NIGHT
     }
 
+    // TODO: Add state for LEAVING and add signal for "left town"
+    //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
     public enum Statuses {
         UNSET,
         IDLE,
@@ -131,6 +163,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         for (int i = 0; i < getCapacity(); i++) {
             this.inventory.add(ef.makeEmptyItem());
         }
+        updateItemListeners();
     }
 
     public void tick(
@@ -242,6 +275,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         boolean hadFood = foodSlot.isPresent();
         foodSlot.ifPresentOrElse(food -> {
             inventory.set(inventory.lastIndexOf(food), emptyFactory.makeEmptyItem());
+            updateItemListeners();
             Questown.LOGGER.debug("Gatherer ate: {}", food);
         }, () -> Questown.LOGGER.error("Gather was somehow out with no food!"));
         this.ate = hadFood;
@@ -259,6 +293,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 inventory.set(i, iterator.next());
             }
         }
+        updateItemListeners();
     }
 
     private boolean inventoryHasFood() {
