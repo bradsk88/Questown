@@ -42,6 +42,26 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
             changeStatus(Statuses.IDLE);
         }
     }
+    public I removeItem(int index) {
+        I item = inventory.get(index);
+        inventory.set(index, emptyFactory.makeEmptyItem());
+        if (!hasAnyNonFood()) { // TODO: Test
+            changeStatus(Statuses.IDLE);
+        }
+        return item;
+    }
+
+    public void setItem(
+            int index,
+            I mcTownItem
+    ) {
+        if (!inventory.get(index).isEmpty()) {
+            throw new IllegalArgumentException(
+                    String.format("Slot %d is not empty. Cannot set to %s", index, mcTownItem)
+            );
+        }
+        inventory.set(index, mcTownItem);
+    }
 
     public interface Item {
         boolean isEmpty();

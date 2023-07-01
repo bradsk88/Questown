@@ -1,7 +1,8 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.gui.GathererInventoryContainer;
+import ca.bradj.questown.gui.GathererInventoryMenu;
+import ca.bradj.questown.integration.minecraft.VisitorMobEntityContainer;
 import ca.bradj.questown.integration.minecraft.GathererStatuses;
 import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -14,7 +15,9 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -296,7 +299,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
     }
 
-    public boolean openScreen(ServerPlayer sp) {
+    public boolean openScreen(ServerPlayer sp, VisitorMobEntity e) {
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -309,7 +312,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new GathererInventoryContainer(windowId, p.getInventory(), journal.getItems());
+                return new GathererInventoryMenu(windowId, e.inventory, p.getInventory(), e);
             }
         }, data -> {
             data.writeInt(journal.getCapacity());
@@ -322,5 +325,16 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             });
         });
         return true; // Different jobs might have screens or not
+    }
+
+    public Container newInventory() {
+        return new SimpleContainer(journal.getCapacity());
+    }
+
+    public void updateInventory(Container inventory) {
+        ImmutableList<MCTownItem> items = journal.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            inventory.setItem(i, new ItemStack(items.get(i).get(), 1));
+        }
     }
 }

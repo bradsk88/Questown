@@ -32,9 +32,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.MenuProvider;
+import net.minecraft.world.*;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -94,6 +92,7 @@ public class VisitorMobEntity extends PathfinderMob {
     );
 
     final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
+    public final Container inventory;
 
     private TownInterface town;
     boolean sitting = true;
@@ -110,7 +109,8 @@ public class VisitorMobEntity extends PathfinderMob {
         if (town != null) {
             initBrain();
         }
-        job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT?
+        job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT
+        this.inventory = job.newInventory(); // TODO: Read/write NBT
     }
 
     @Override
@@ -126,6 +126,9 @@ public class VisitorMobEntity extends PathfinderMob {
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, blockPosition());
             this.entityData.set(visible, vis);
+
+            // TODO: Use listener pattern instead of updating every tick?
+            job.updateInventory(this.inventory);
 
             job.tryDropLoot(blockPosition());
             job.tryTakeFood(blockPosition());
@@ -394,7 +397,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
-        if (!job.openScreen(sp)) {
+        if (!job.openScreen(sp, this)) {
             openDialogScreen(sp, quests, ctx);
         }
 

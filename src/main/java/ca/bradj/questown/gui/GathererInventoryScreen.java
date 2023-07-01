@@ -14,7 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class GathererInventoryScreen extends AbstractContainerScreen<GathererInventoryContainer> {
+public class GathererInventoryScreen extends AbstractContainerScreen<GathererInventoryMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -22,7 +22,7 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic slot;
 
-    public GathererInventoryScreen(GathererInventoryContainer gathererInv, Inventory playerInv, Component title) {
+    public GathererInventoryScreen(GathererInventoryMenu gathererInv, Inventory playerInv, Component title) {
         super(gathererInv, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
@@ -36,10 +36,6 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
         super.renderTooltip(stack, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        for (ResourceLocation rl : this.menu.gathererInventory) {
-            Item i = ForgeRegistries.ITEMS.getValue(rl);
-            this.itemRenderer.renderAndDecorateItem(new ItemStack(i, 1), x += 10, y);
-        }
     }
 
     @Override
