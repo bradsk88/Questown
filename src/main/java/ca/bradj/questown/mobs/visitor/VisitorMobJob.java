@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.GathererInventoryContainer;
 import ca.bradj.questown.integration.minecraft.GathererStatuses;
 import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -8,14 +9,22 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -285,5 +294,33 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 Questown.LOGGER.debug("Nope. No space for {}", mct);
             }
         }
+    }
+
+    public boolean openScreen(ServerPlayer sp) {
+        NetworkHooks.openGui(sp, new MenuProvider() {
+            @Override
+            public @NotNull Component getDisplayName() {
+                return TextComponent.EMPTY;
+            }
+
+            @Override
+            public @NotNull AbstractContainerMenu createMenu(
+                    int windowId,
+                    @NotNull Inventory inv,
+                    @NotNull Player p
+            ) {
+                return new GathererInventoryContainer(windowId, p.getInventory(), journal.getItems());
+            }
+        }, data -> {
+            data.writeInt(journal.getCapacity());
+            data.writeCollection(journal.getItems(), (buf, item) -> {
+                ResourceLocation id = Items.AIR.getRegistryName();
+                if (item != null) {
+                    id = item.get().getRegistryName();
+                }
+                buf.writeResourceLocation(id);
+            });
+        });
+        return true; // Different jobs might have screens or not
     }
 }

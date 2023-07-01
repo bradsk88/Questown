@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.GathererInventoryContainer;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import net.minecraft.world.inventory.MenuType;
@@ -21,6 +22,9 @@ public class MenuTypesInit {
     );
     public static RegistryObject<MenuType<VisitorQuestsContainer>> VISITOR_QUESTS = MENUS.register(
             "visitor_quests", () -> IForgeMenuType.create(VisitorQuestsContainer::new)
+    );
+    public static RegistryObject<MenuType<GathererInventoryContainer>> GATHERER_INVENTORY = MENUS.register(
+            "gatherer_inventory", () -> IForgeMenuType.create(GathererInventoryContainer::new)
     );
 
     public static void register(IEventBus eventBus) {

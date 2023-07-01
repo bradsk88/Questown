@@ -394,6 +394,18 @@ public class VisitorMobEntity extends PathfinderMob {
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
+        if (!job.openScreen(sp)) {
+            openDialogScreen(sp, quests, ctx);
+        }
+
+        return InteractionResult.sidedSuccess(isClientSide);
+    }
+
+    private static void openDialogScreen(
+            ServerPlayer sp,
+            Collection<UIQuest> quests,
+            VisitorQuestsContainer.VisitorContext ctx
+    ) {
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -426,7 +438,5 @@ public class VisitorMobEntity extends PathfinderMob {
             data.writeInt(ctx.finishedQuests);
             data.writeInt(ctx.unfinishedQuests);
         });
-
-        return InteractionResult.sidedSuccess(isClientSide);
     }
 }

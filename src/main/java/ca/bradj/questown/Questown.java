@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.gui.GathererInventoryScreen;
 import ca.bradj.questown.gui.QuestsScreen;
 import ca.bradj.questown.gui.VisitorDialogScreen;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
@@ -63,6 +64,7 @@ public class Questown {
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
+        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), GathererInventoryScreen::new);
         Questown.LOGGER.info("Registered screens");
         event.enqueueWork(() -> {
             EntityRenderers.register(
