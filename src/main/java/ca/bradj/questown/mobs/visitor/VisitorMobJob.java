@@ -302,8 +302,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 }
                 // TODO: Allow stacking?
                 if (successTarget.container.getItem(i).isEmpty()) {
-                    journal.removeItem(mct);
-                    successTarget.container.setItem(i, new ItemStack(mct.get(), 1));
+                    if (journal.removeItem(mct)) {
+                        successTarget.container.setItem(i, new ItemStack(mct.get(), 1));
+                    }
                     added = true;
                 }
             }

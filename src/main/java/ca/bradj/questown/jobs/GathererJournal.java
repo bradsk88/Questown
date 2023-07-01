@@ -36,13 +36,19 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         return !inventory.stream().allMatch(Item::isEmpty);
     }
 
-    public void removeItem(I mct) {
+    public boolean removeItem(I mct) {
         int index = inventory.lastIndexOf(mct);
+        if (index < 0) {
+            // Item must have already been removed by a different thread.
+            return false;
+        }
+
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
         if (!hasAnyNonFood()) { // TODO: Test
             changeStatus(Statuses.IDLE);
         }
+        return true;
     }
 
     private void updateItemListeners() {
