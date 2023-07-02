@@ -331,6 +331,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             }
         }, data -> {
             data.writeInt(journal.getCapacity());
+            data.writeInt(e.getId());
             data.writeCollection(journal.getItems(), (buf, item) -> {
                 ResourceLocation id = Items.AIR.getRegistryName();
                 if (item != null) {
@@ -378,5 +379,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     public Container getInventory() {
         return inventory;
+    }
+
+    public GathererJournal.Statuses getStatus() {
+        return journal.getStatus();
     }
 }

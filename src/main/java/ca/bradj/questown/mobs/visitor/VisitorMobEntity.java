@@ -6,8 +6,6 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.GathererStatuses;
-import ca.bradj.questown.integration.minecraft.MCTownInventory;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -32,7 +30,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.*;
+import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -56,7 +57,6 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -70,31 +70,30 @@ import java.util.stream.Collectors;
 
 public class VisitorMobEntity extends PathfinderMob {
 
-    private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
-            VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
-    );
-
-    private static final String NBT_TOWN_X = "town_x";
-    private static final String NBT_TOWN_Y = "town_y";
-    private static final String NBT_TOWN_Z = "town_z";
-
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())
             .changeActivityAt(10, Activity.IDLE)
             .changeActivityAt(12000, Activity.REST)
             .build();
-
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
     );
+    private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
+    );
+    private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
+    private static final String NBT_TOWN_X = "town_x";
+    private static final String NBT_TOWN_Y = "town_y";
+    private static final String NBT_TOWN_Z = "town_z";
     private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSOR_TYPES = ImmutableList.of(
             SensorType.NEAREST_BED
     );
 
     final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
-
-    private TownInterface town;
     boolean sitting = true;
+    private TownInterface town;
     private BlockPos wanderTarget;
 
     public VisitorMobEntity(
@@ -109,72 +108,6 @@ public class VisitorMobEntity extends PathfinderMob {
             initBrain();
         }
         job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT
-    }
-
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(visible, true);
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        job.tick(level, blockPosition());
-        if (!level.isClientSide()) {
-            boolean vis = !job.shouldDisappear(town, blockPosition());
-            this.entityData.set(visible, vis);
-
-            job.tryDropLoot(blockPosition());
-            job.tryTakeFood(blockPosition());
-        }
-    }
-
-    private void initBrain() {
-        this.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
-        this.getBrain().setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
-        this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
-        this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
-        this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
-    }
-
-    @Override
-    public boolean shouldRender(
-            double p_20296_,
-            double p_20297_,
-            double p_20298_
-    ) {
-        Boolean isVisible = this.entityData.get(visible);
-        if (!isVisible) {
-            return false;
-        }
-        return super.shouldRender(p_20296_, p_20297_, p_20298_);
-    }
-
-    @Override
-    public boolean save(CompoundTag p_20224_) {
-        BlockPos bp = this.town.getTownFlagBasePos();
-        p_20224_.putInt(NBT_TOWN_X, bp.getX());
-        p_20224_.putInt(NBT_TOWN_Y, bp.getY());
-        p_20224_.putInt(NBT_TOWN_Z, bp.getZ());
-        return super.save(p_20224_);
-    }
-
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
-            BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
-            if (this.level instanceof ServerLevel sl) {
-                BlockEntity entity = sl.getBlockEntity(bp);
-                if (!(entity instanceof TownFlagBlockEntity flag)) {
-                    Questown.LOGGER.error("Entity at {} was not a TownFlag", bp);
-                    return;
-                }
-                this.town = flag;
-                this.initBrain();
-            }
-        }
     }
 
     public static AttributeSupplier setAttributes() {
@@ -230,6 +163,113 @@ public class VisitorMobEntity extends PathfinderMob {
         b.add(Pair.of(10, new TownWalk(0.40f)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
         return b.build();
+    }
+
+    private static void openDialogScreen(
+            ServerPlayer sp,
+            Collection<UIQuest> quests,
+            VisitorQuestsContainer.VisitorContext ctx
+    ) {
+        NetworkHooks.openGui(sp, new MenuProvider() {
+            @Override
+            public @NotNull Component getDisplayName() {
+                return TextComponent.EMPTY;
+            }
+
+            @Override
+            public @NotNull AbstractContainerMenu createMenu(
+                    int windowId,
+                    @NotNull Inventory inv,
+                    @NotNull Player p
+            ) {
+                return new VisitorQuestsContainer(windowId, quests, ctx);
+            }
+        }, data -> {
+            UIQuest.Serializer ser = new UIQuest.Serializer();
+            data.writeInt(quests.size());
+            data.writeCollection(quests, (buf, recipe) -> {
+                ResourceLocation id;
+                if (recipe == null) {
+                    id = SpecialQuests.BROKEN;
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE);
+                } else {
+                    id = recipe.getRecipeId();
+                }
+                buf.writeResourceLocation(id);
+                ser.toNetwork(buf, recipe);
+            });
+            data.writeBoolean(ctx.isFirstVillager);
+            data.writeInt(ctx.finishedQuests);
+            data.writeInt(ctx.unfinishedQuests);
+        });
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(visible, true);
+        this.entityData.define(status, GathererJournal.Statuses.IDLE.name());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        job.tick(level, blockPosition());
+        if (!level.isClientSide()) {
+            boolean vis = !job.shouldDisappear(town, blockPosition());
+            this.entityData.set(visible, vis);
+
+            job.tryDropLoot(blockPosition());
+            job.tryTakeFood(blockPosition());
+            entityData.set(status, job.getStatus().name());
+        }
+    }
+
+    private void initBrain() {
+        this.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
+        this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
+    }
+
+    @Override
+    public boolean shouldRender(
+            double p_20296_,
+            double p_20297_,
+            double p_20298_
+    ) {
+        Boolean isVisible = this.entityData.get(visible);
+        if (!isVisible) {
+            return false;
+        }
+        return super.shouldRender(p_20296_, p_20297_, p_20298_);
+    }
+
+    @Override
+    public boolean save(CompoundTag p_20224_) {
+        BlockPos bp = this.town.getTownFlagBasePos();
+        p_20224_.putInt(NBT_TOWN_X, bp.getX());
+        p_20224_.putInt(NBT_TOWN_Y, bp.getY());
+        p_20224_.putInt(NBT_TOWN_Z, bp.getZ());
+        return super.save(p_20224_);
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
+            BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
+            if (this.level instanceof ServerLevel sl) {
+                BlockEntity entity = sl.getBlockEntity(bp);
+                if (!(entity instanceof TownFlagBlockEntity flag)) {
+                    Questown.LOGGER.error("Entity at {} was not a TownFlag", bp);
+                    return;
+                }
+                this.town = flag;
+                this.initBrain();
+            }
+        }
     }
 
     @Override
@@ -339,7 +379,6 @@ public class VisitorMobEntity extends PathfinderMob {
         return this.getWanderTarget();
     }
 
-
     public void releasePoi(MemoryModuleType<GlobalPos> p_35429_) {
         if (this.level instanceof ServerLevel) {
             MinecraftServer minecraftserver = ((ServerLevel) this.level).getServer();
@@ -399,46 +438,11 @@ public class VisitorMobEntity extends PathfinderMob {
         return InteractionResult.sidedSuccess(isClientSide);
     }
 
-    private static void openDialogScreen(
-            ServerPlayer sp,
-            Collection<UIQuest> quests,
-            VisitorQuestsContainer.VisitorContext ctx
-    ) {
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
-
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new VisitorQuestsContainer(windowId, quests, ctx);
-            }
-        }, data -> {
-            UIQuest.Serializer ser = new UIQuest.Serializer();
-            data.writeInt(quests.size());
-            data.writeCollection(quests, (buf, recipe) -> {
-                ResourceLocation id;
-                if (recipe == null) {
-                    id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE);
-                } else {
-                    id = recipe.getRecipeId();
-                }
-                buf.writeResourceLocation(id);
-                ser.toNetwork(buf, recipe);
-            });
-            data.writeBoolean(ctx.isFirstVillager);
-            data.writeInt(ctx.finishedQuests);
-            data.writeInt(ctx.unfinishedQuests);
-        });
-    }
-
     public Container getInventory() {
         return job.getInventory();
+    }
+
+    public GathererJournal.Statuses getStatus() {
+        return GathererJournal.Statuses.from(entityData.get(status));
     }
 }

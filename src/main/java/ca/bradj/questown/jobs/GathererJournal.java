@@ -153,6 +153,21 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         RETURNED_FAILURE,
         RETURNING,
         CAPTURED;
+
+        public static Statuses from(String s) {
+            return switch (s) {
+                case "IDLE" -> IDLE;
+                case "NO_SPACE" -> NO_SPACE;
+                case "NO_FOOD" -> NO_FOOD;
+                case "STAYING" -> STAYING;
+                case "GATHERING" -> GATHERING;
+                case "RETURNED_SUCCESS" -> RETURNED_SUCCESS;
+                case "RETURNED_FAILURE" -> RETURNED_FAILURE;
+                case "RETURNING" -> RETURNING;
+                case "CAPTURED" -> CAPTURED;
+                default -> UNSET;
+            };
+        }
     }
 
     public GathererJournal(

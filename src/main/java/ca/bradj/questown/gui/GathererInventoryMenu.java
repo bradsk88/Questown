@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -22,6 +23,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
     private static final int inventoryLeftX = 8;
     private static final int boxHeight = 18, boxWidth = 18;
     private static final int margin = 4;
+    private final VisitorMobEntity entity;
 
     public static GathererInventoryMenu ForClientSide(
             int windowId,
@@ -47,6 +49,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new InvWrapper(gathererInv);
+        this.entity = gatherer;
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
@@ -223,5 +226,9 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
         }
 
         return flag;
+    }
+
+    public GathererJournal.Statuses getStatus() {
+        return entity.getStatus();
     }
 }
