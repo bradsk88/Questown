@@ -131,7 +131,7 @@ class GathererJournalTest {
     }
 
     @Test
-    void testMorningSignalWithFoodAndLootAvailable() {
+    void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
         TestSignals sigs = new TestSignals();
         GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem("")
@@ -146,7 +146,6 @@ class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
 
-        // Assert that the status is set to "hungry"
         Assertions.assertEquals(GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus());
     }
 

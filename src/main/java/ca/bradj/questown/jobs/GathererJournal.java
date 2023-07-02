@@ -45,9 +45,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
-        if (!hasAnyNonFood()) { // TODO: Test
-            changeStatus(Statuses.IDLE);
-        }
+        changeStatus(Statuses.IDLE);
         return true;
     }
 
@@ -62,9 +60,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         I item = inventory.get(index);
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
-        if (!hasAnyNonFood()) { // TODO: Test
-            changeStatus(Statuses.IDLE);
-        }
+        changeStatus(Statuses.IDLE);
         return item;
     }
 
@@ -87,6 +83,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
             I mcTownItem
     ) {
         inventory.set(index, mcTownItem);
+        changeStatus(Statuses.IDLE);
     }
 
     public interface ItemsListener<I> {
