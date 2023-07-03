@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.GathererJournal;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
@@ -14,6 +15,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
 
 public class GathererInventoryScreen extends AbstractContainerScreen<GathererInventoryMenu> {
 
@@ -127,9 +130,12 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 TranslatableComponent component = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status." + this.status.name()
+                        "tooltips.villagers.job.gatherer.status_1." + this.status.name()
                 );
-                super.renderTooltip(stack, component, mouseX, mouseY);
+                TranslatableComponent component2 = new TranslatableComponent(
+                        "tooltips.villagers.job.gatherer.status_2." + this.status.name()
+                );
+                super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
                 return;
             }
         }
