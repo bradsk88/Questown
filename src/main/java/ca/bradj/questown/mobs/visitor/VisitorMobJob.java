@@ -59,7 +59,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     public VisitorMobJob(@Nullable ServerLevel level) {
         this.level = level;
-        SimpleContainer sc = new SimpleContainer(journal.getCapacity());
+        SimpleContainer sc = new SimpleContainer(journal.getCapacity()) {
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        };
         this.inventory = sc;
         sc.addListener(this);
         journal.setItemsListener(this);

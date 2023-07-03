@@ -16,6 +16,8 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
 
+import java.util.ArrayList;
+
 public class GathererInventoryMenu extends AbstractContainerMenu implements GathererJournal.StatusListener {
 
     public final IItemHandler gathererInventory;
@@ -146,7 +148,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
         if (index < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
             // This is a vanilla container slot so merge the stack into the tile inventory
             int lowerBound = TE_INVENTORY_FIRST_SLOT_INDEX;
-            if (!moveItemStackTo(new ItemStack(sourceStack.getItem(), 1), lowerBound, upperBound, false)) {
+            if (!moveItemStackTo(sourceStack, lowerBound, upperBound, false)) {
                 return ItemStack.EMPTY;
             }
         } else if (index < upperBound) {
@@ -182,53 +184,57 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
         return copyOfSourceStack;
     }
 
-    @Override
-    protected boolean moveItemStackTo(ItemStack stack, int lowerBound, int upperBound, boolean reverse) {
-        boolean isGathererLB = lowerBound == TE_INVENTORY_FIRST_SLOT_INDEX;
-        boolean isGathererUB = upperBound == TE_INVENTORY_FIRST_SLOT_INDEX + gathererInventory.getSlots();
-        boolean isMovingToGatherer = isGathererLB && isGathererUB;
-
-        if (!isMovingToGatherer) {
-            return super.moveItemStackTo(stack, lowerBound, upperBound, reverse);
+    protected boolean moveItemStackTo(ItemStack p_38904_, int p_38905_, int p_38906_, boolean p_38907_) {
+        boolean flag = false;
+        int i = p_38905_;
+        if (p_38907_) {
+            i = p_38906_ - 1;
         }
 
-        boolean flag = false;
-        int i = lowerBound;
+        ArrayList<Slot> updated = new ArrayList<>();
 
-        if (!stack.isEmpty()) {
-            if (reverse) {
-                i = upperBound - 1;
+        if (!p_38904_.isEmpty()) {
+            if (p_38907_) {
+                i = p_38906_ - 1;
+            } else {
+                i = p_38905_;
             }
 
             while(true) {
-                if (reverse) {
-                    if (i < lowerBound) {
+                if (p_38907_) {
+                    if (i < p_38905_) {
                         break;
                     }
-                } else if (i >= upperBound) {
+                } else if (i >= p_38906_) {
                     break;
                 }
 
                 Slot slot1 = this.slots.get(i);
                 ItemStack itemstack1 = slot1.getItem();
-                if (itemstack1.isEmpty() && slot1.mayPlace(stack)) {
-                    if (stack.getCount() > slot1.getMaxStackSize()) {
-                        slot1.set(stack.split(slot1.getMaxStackSize()));
+                if (itemstack1.isEmpty() && slot1.mayPlace(p_38904_)) {
+                    if (p_38904_.getCount() > slot1.getMaxStackSize()) {
+                        slot1.set(p_38904_.split(slot1.getMaxStackSize()));
                     } else {
-                        slot1.set(stack.split(stack.getCount()));
+                        slot1.set(p_38904_.split(p_38904_.getCount()));
                     }
-
-                    slot1.setChanged();
+                    updated.add(slot1);
                     flag = true;
-                    break;
+
+                    if (p_38904_.isEmpty()) {
+                        break;
+                    }
                 }
 
-                if (reverse) {
+                if (p_38907_) {
                     --i;
                 } else {
                     ++i;
                 }
             }
+        }
+
+        for (Slot s : updated) {
+            s.setChanged();
         }
 
         return flag;
