@@ -15,6 +15,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     private final EmptyFactory<I> emptyFactory;
     private boolean ate = false;
     private ItemsListener<I> listener;
+    private StatusListener statusListener;
 
     public ImmutableList<I> getItems() {
         return ImmutableList.copyOf(inventory);
@@ -84,6 +85,13 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     ) {
         inventory.set(index, mcTownItem);
         changeStatus(Statuses.IDLE);
+    }
+
+    public interface StatusListener {
+        void statusChanged(GathererJournal.Statuses newStatus);
+    }
+    public void setStatusListener(StatusListener l) {
+        this.statusListener = l;
     }
 
     public interface ItemsListener<I> {
@@ -256,6 +264,11 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                     return;
                 }
 
+                if (status == Statuses.RETURNED_SUCCESS && !hasAnyItems()) {
+                    changeStatus(Statuses.IDLE);
+                    return;
+                }
+
                 if (
                         this.status == Statuses.STAYING ||
                                 status == Statuses.RETURNED_FAILURE ||
@@ -286,6 +299,9 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     protected void changeStatus(Statuses s) {
         this.status = s;
+        if (this.statusListener != null) {
+            this.statusListener.statusChanged(this.status);
+        }
     }
 
     private boolean removeFood() {

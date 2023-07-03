@@ -445,4 +445,8 @@ public class VisitorMobEntity extends PathfinderMob {
     public GathererJournal.Statuses getStatus() {
         return GathererJournal.Statuses.from(entityData.get(status));
     }
+
+    public void setStatusListener(GathererJournal.StatusListener l) {
+        job.setStatusListener(l);
+    }
 }

@@ -9,13 +9,14 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
 
-public class GathererInventoryMenu extends AbstractContainerMenu {
+public class GathererInventoryMenu extends AbstractContainerMenu implements GathererJournal.StatusListener {
 
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
@@ -24,6 +25,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
     private static final int boxHeight = 18, boxWidth = 18;
     private static final int margin = 4;
     private final VisitorMobEntity entity;
+    private final DataSlot statusSlot;
 
     public static GathererInventoryMenu ForClientSide(
             int windowId,
@@ -53,6 +55,10 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
+        this.addDataSlot(this.statusSlot = DataSlot.standalone());
+        this.statusSlot.set(gatherer.getStatus().ordinal());
+
+        gatherer.setStatusListener(this);
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -229,6 +235,11 @@ public class GathererInventoryMenu extends AbstractContainerMenu {
     }
 
     public GathererJournal.Statuses getStatus() {
-        return entity.getStatus();
+        return GathererJournal.Statuses.values()[this.statusSlot.get()];
+    }
+
+    @Override
+    public void statusChanged(GathererJournal.Statuses newStatus) {
+        this.statusSlot.set(newStatus.ordinal());
     }
 }

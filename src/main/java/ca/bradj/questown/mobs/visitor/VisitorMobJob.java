@@ -384,4 +384,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     public GathererJournal.Statuses getStatus() {
         return journal.getStatus();
     }
+
+    public void setStatusListener(GathererJournal.StatusListener l) {
+        journal.setStatusListener(l);
+    }
 }

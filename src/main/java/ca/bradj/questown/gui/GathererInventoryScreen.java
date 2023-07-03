@@ -25,16 +25,12 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
 
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic slot;
-    private final ResourceLocation textureLocation;
-    private final GathererJournal.Statuses status;
 
     public GathererInventoryScreen(GathererInventoryMenu gathererInv, Inventory playerInv, Component title) {
         super(gathererInv, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
-        this.status = gathererInv.getStatus();
-        this.textureLocation = getStatusTexture(this.status);
     }
 
     @NotNull
@@ -103,7 +99,7 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, textureLocation);
+        RenderSystem.setShaderTexture(0, getStatusTexture(menu.getStatus()));
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;
@@ -130,10 +126,10 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 TranslatableComponent component = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_1." + this.status.name()
+                        "tooltips.villagers.job.gatherer.status_1." + menu.getStatus().name()
                 );
                 TranslatableComponent component2 = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_2." + this.status.name()
+                        "tooltips.villagers.job.gatherer.status_2." + menu.getStatus().name()
                 );
                 super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
                 return;
