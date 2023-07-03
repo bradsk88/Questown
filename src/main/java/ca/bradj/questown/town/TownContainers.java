@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -20,13 +21,16 @@ public class TownContainers {
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())
                 .filter(v -> v.getValue() instanceof ChestBlock)
-                .map(v -> new ContainerTarget(v.getKey(), ChestBlock.getContainer(
-                        (ChestBlock) v.getValue(),
-                        level.getBlockState(v.getKey()),
-                        level,
-                        v.getKey(),
-                        true
-                )))
+                .map(v -> {
+                    BlockState blockState = level.getBlockState(v.getKey());
+                    return new ContainerTarget(v.getKey(), ChestBlock.getContainer(
+                            (ChestBlock) v.getValue(),
+                            blockState,
+                            level,
+                            v.getKey(),
+                            true
+                    ), () -> level.getBlockState(v.getKey()) == blockState);
+                })
                 .filter(v -> v.hasItem(c))
                 .findFirst();
         return found.orElse(null);

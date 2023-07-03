@@ -8,15 +8,22 @@ import net.minecraft.world.item.Item;
 
 public class ContainerTarget {
 
+    private final ValidCheck check;
     BlockPos position;
     Container container;
 
+    public interface ValidCheck {
+        boolean IsStillValid();
+    }
+
     public ContainerTarget(
             BlockPos position,
-            Container container
+            Container container,
+            ValidCheck check
     ) {
         this.position = position;
         this.container = container;
+        this.check = check;
     }
 
     public BlockPos getPosition() {
@@ -38,6 +45,10 @@ public class ContainerTarget {
             }
         }
         return false;
+    }
+
+    public boolean isStillValid() {
+        return check.IsStillValid();
     }
 
     @Override

@@ -90,6 +90,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
     public interface StatusListener {
         void statusChanged(GathererJournal.Statuses newStatus);
     }
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
     }
@@ -250,10 +251,12 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                     changeStatus(Statuses.STAYING);
                     return;
                 }
+                if (status == Statuses.GATHERING) {
+                    this.removeFood();
+                    this.addLoot(loot.getLoot());
+                }
                 changeStatus(Statuses.RETURNING);
                 // TODO: What if the gatherer is out but doesn't have food (somehow)
-                this.removeFood();
-                this.addLoot(loot.getLoot());
             }
             case EVENING -> {
                 if (
@@ -272,7 +275,8 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 if (
                         this.status == Statuses.STAYING ||
                                 status == Statuses.RETURNED_FAILURE ||
-                                status == Statuses.RETURNED_SUCCESS
+                                status == Statuses.RETURNED_SUCCESS ||
+                                status == Statuses.IDLE
                 ) {
                     return;
                 }

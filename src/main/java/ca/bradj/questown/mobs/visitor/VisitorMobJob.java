@@ -70,6 +70,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             BlockPos entityPos
     ) {
         processSignal(level, this);
+        if (successTarget != null && !successTarget.isStillValid()) {
+            successTarget = null;
+        }
+        if (foodTarget != null && !foodTarget.isStillValid()) {
+            foodTarget = null;
+        }
     }
 
     private static void processSignal(
@@ -122,7 +128,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
         List<ItemStack> rItems = lootTable.getRandomItems(lc);
         Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), journal.getCapacity() - 1);
+        int subLen = Math.min(rItems.size(), journal.getCapacity());
         List<MCTownItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(ItemStack::getItem)
@@ -363,6 +369,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
 
         for (int i = 0; i < items.size(); i++) {
+            if (items.get(i).get().equals(inventory.getItem(i).getItem())) {
+                continue;
+            }
             inventory.setItem(i, new ItemStack(items.get(i).get(), 1));
         }
     }
