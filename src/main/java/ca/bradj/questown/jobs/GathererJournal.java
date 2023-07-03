@@ -13,6 +13,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     private final SignalSource sigs;
     private final EmptyFactory<I> emptyFactory;
+    private final ContainerCheck storageCheck;
     private boolean ate = false;
     private ItemsListener<I> listener;
     private StatusListener statusListener;
@@ -158,10 +159,11 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         NO_FOOD,
         STAYING,
         GATHERING,
+        RETURNING,
         RETURNED_SUCCESS,
         RETURNED_FAILURE,
-        RETURNING,
-        CAPTURED;
+        CAPTURED,
+        RELAXING;
 
         public static Statuses from(String s) {
             return switch (s) {
@@ -174,18 +176,25 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 case "RETURNED_FAILURE" -> RETURNED_FAILURE;
                 case "RETURNING" -> RETURNING;
                 case "CAPTURED" -> CAPTURED;
+                case "RELAXING" -> RELAXING;
                 default -> UNSET;
             };
         }
     }
 
+    public interface ContainerCheck {
+        boolean IsTownStorageAvailable();
+    }
+
     public GathererJournal(
             SignalSource sigs,
-            EmptyFactory<I> ef
+            EmptyFactory<I> ef,
+            ContainerCheck cont
     ) {
         super();
         this.sigs = sigs;
         this.emptyFactory = ef;
+        this.storageCheck = cont;
         this.inventory = new ArrayList<>();
         for (int i = 0; i < getCapacity(); i++) {
             this.inventory.add(ef.makeEmptyItem());
@@ -211,6 +220,10 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 }
 
                 if (this.hasAnyNonFood()) {
+                    if (status != Statuses.NO_SPACE && !storageCheck.IsTownStorageAvailable()) {
+                        changeStatus(Statuses.NO_SPACE);
+                        return;
+                    }
                     if (status == Statuses.RETURNED_SUCCESS) {
                         return;
                     }
@@ -239,7 +252,8 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 }
                 if (
                         status == Statuses.RETURNED_SUCCESS ||
-                                status == Statuses.RETURNED_FAILURE
+                                status == Statuses.RETURNED_FAILURE ||
+                                status == Statuses.RELAXING
                 ) {
                     changeStatus(Statuses.NO_FOOD);
                     return;
@@ -251,7 +265,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                     changeStatus(Statuses.STAYING);
                     return;
                 }
-                if (status == Statuses.GATHERING) {
+                if (status == Statuses.GATHERING || status == Statuses.IDLE) {
                     this.removeFood();
                     this.addLoot(loot.getLoot());
                 }
@@ -259,16 +273,25 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                 // TODO: What if the gatherer is out but doesn't have food (somehow)
             }
             case EVENING -> {
-                if (
-                        status == Statuses.NO_FOOD ||
-                                status == Statuses.NO_SPACE
-                ) {
+                if (status == Statuses.STAYING) {
+                    return;
+                }
+                if (status == Statuses.NO_FOOD) {
                     changeStatus(Statuses.STAYING);
                     return;
                 }
 
-                if (status == Statuses.RETURNED_SUCCESS && !hasAnyItems()) {
-                    changeStatus(Statuses.IDLE);
+                if (!hasAnyItems()) {
+                    if (status != Statuses.RELAXING) {
+                        changeStatus(Statuses.RELAXING);
+                    }
+                    return;
+                }
+
+                if (!storageCheck.IsTownStorageAvailable()) {
+                    if (status != Statuses.NO_SPACE) {
+                        changeStatus(Statuses.NO_SPACE);
+                    }
                     return;
                 }
 
@@ -276,7 +299,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
                         this.status == Statuses.STAYING ||
                                 status == Statuses.RETURNED_FAILURE ||
                                 status == Statuses.RETURNED_SUCCESS ||
-                                status == Statuses.IDLE
+                                status == Statuses.RELAXING
                 ) {
                     return;
                 }

@@ -14,7 +14,8 @@ public enum GathererStatuses implements StringRepresentable {
     RETURNING("returning"),
     RETURNED_SUCCESS("returned_success"),
     RETURNED_FAILURE("returned_failure"),
-    CAPTURED("captured");
+    CAPTURED("captured"),
+    RELAXING("relaxing");
 
     private final String name;
 
@@ -48,6 +49,9 @@ public enum GathererStatuses implements StringRepresentable {
             case ("captured") -> {
                 return CAPTURED;
             }
+            case ("relaxing") -> {
+                return RELAXING;
+            }
         }
         return INVALID;
     }
@@ -71,6 +75,7 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_SUCCESS -> RETURNED_SUCCESS;
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
+            case RELAXING -> RELAXING;
         };
     }
 
@@ -88,6 +93,7 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_SUCCESS -> GathererJournal.Statuses.RETURNED_SUCCESS;
             case RETURNED_FAILURE -> GathererJournal.Statuses.RETURNED_FAILURE;
             case CAPTURED -> GathererJournal.Statuses.CAPTURED;
+            case RELAXING -> GathererJournal.Statuses.RELAXING;
         };
     }
 }

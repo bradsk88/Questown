@@ -1,10 +1,8 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.GathererDummyBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.materials.WallType;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -17,8 +15,5 @@ public class BlocksInit {
 
 	public static final RegistryObject<Block> COBBLESTONE_TOWN_FLAG = BLOCKS.register(
 			TownFlagBlock.itemId(WallType.COBBLESTONE), TownFlagBlock::new
-	);
-	public static final RegistryObject<Block> GATHERER_DUMMY = BLOCKS.register(
-			GathererDummyBlock.ITEM_ID, GathererDummyBlock::new
 	);
 }

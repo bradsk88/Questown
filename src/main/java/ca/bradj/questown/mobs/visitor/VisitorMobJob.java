@@ -38,11 +38,13 @@ import java.util.List;
 
 public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCTownItem> {
 
-    private GathererJournal.Signals signal;
-
+    private final @Nullable ServerLevel level;
+    private final Container inventory;
+    ContainerTarget foodTarget;
+    ContainerTarget successTarget;
     // TODO: Logic for changing jobs
     private final GathererJournal<MCTownInventory, MCTownItem> journal = new GathererJournal<>(
-            this, () -> new MCTownItem(Items.AIR)
+            this, () -> new MCTownItem(Items.AIR), () -> successTarget != null && successTarget.isStillValid()
     ) {
         @Override
         protected void changeStatus(Statuses s) {
@@ -50,11 +52,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Questown.LOGGER.debug("Changed status to {}", s);
         }
     };
-
-    private final @Nullable ServerLevel level;
-    ContainerTarget foodTarget;
-    ContainerTarget successTarget;
-    private final Container inventory;
+    private GathererJournal.Signals signal;
     private boolean dropping;
 
     public VisitorMobJob(@Nullable ServerLevel level) {
@@ -68,19 +66,6 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         this.inventory = sc;
         sc.addListener(this);
         journal.setItemsListener(this);
-    }
-
-    public void tick(
-            Level level,
-            BlockPos entityPos
-    ) {
-        processSignal(level, this);
-        if (successTarget != null && !successTarget.isStillValid()) {
-            successTarget = null;
-        }
-        if (foodTarget != null && !foodTarget.isStillValid()) {
-            foodTarget = null;
-        }
     }
 
     private static void processSignal(
@@ -109,6 +94,24 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             e.signal = GathererJournal.Signals.NIGHT;
         }
         e.journal.tick(e);
+    }
+
+    @NotNull
+    private static BlockPos getEnterExitPos(TownInterface town) {
+        return town.getTownFlagBasePos().offset(10, 0, 0);
+    }
+
+    public void tick(
+            Level level,
+            BlockPos entityPos
+    ) {
+        processSignal(level, this);
+        if (successTarget != null && !successTarget.isStillValid()) {
+            successTarget = null;
+        }
+        if (foodTarget != null && !foodTarget.isStillValid()) {
+            foodTarget = null;
+        }
     }
 
     public GathererJournal.Signals getSignal() {
@@ -158,14 +161,14 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             case NO_FOOD -> {
                 return handleNoFoodStatus(town);
             }
-            case UNSET, IDLE, NO_SPACE, STAYING -> {
+            case UNSET, IDLE, STAYING -> {
                 return null;
             }
             case GATHERING, RETURNING, CAPTURED -> {
                 return enterExitPos;
             }
-            case RETURNED_SUCCESS -> {
-                return handleSuccessStatus(town);
+            case RETURNED_SUCCESS, NO_SPACE -> {
+                return setupForDropLoot(town);
             }
             case RETURNED_FAILURE -> {
                 return new BlockPos(town.getVisitorJoinPos());
@@ -176,7 +179,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     private BlockPos handleNoFoodStatus(TownInterface town) {
         if (journal.hasAnyNonFood()) {
-            return handleSuccessStatus(town);
+            return setupForDropLoot(town);
         }
 
         Questown.LOGGER.debug("Visitor is searching for food");
@@ -196,7 +199,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
     }
 
-    private BlockPos handleSuccessStatus(TownInterface town) {
+    private BlockPos setupForDropLoot(TownInterface town) {
         Questown.LOGGER.debug("Visitor is searching for chest space");
         if (this.successTarget != null) {
             if (!this.successTarget.hasItem(MCTownItem::isEmpty)) {
@@ -212,11 +215,6 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Questown.LOGGER.debug("No chests exist in town");
             return town.getRandomWanderTarget();
         }
-    }
-
-    @NotNull
-    private static BlockPos getEnterExitPos(TownInterface town) {
-        return town.getTownFlagBasePos().offset(10, 0, 0);
     }
 
     public boolean shouldDisappear(

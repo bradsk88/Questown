@@ -70,6 +70,10 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
                 // TODO: Icon for this
                 return new ResourceLocation("questown", "textures/error.png");
             }
+            case RELAXING -> {
+                // TODO: Icon for this
+                return new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
+            }
         }
         return new ResourceLocation("questown", "textures/error.png");
     }
