@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCTownItem> {
@@ -109,7 +110,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         LootTable lootTable = level.getServer().getLootTables().get(
                 // TODO: Own loot table
-                new ResourceLocation("minecraft", "chests/spawn_bonus_chest")
+                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla")
         );
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
@@ -119,14 +120,15 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 //                .withParameter(LootContextParams.ORIGIN, getBlockPos())
 //                .create(LootContextParamSets.ADVANCEMENT_REWARD);
 
-        // TODO: Do we need to grab random items from this list (for inter-mod support)?
         List<ItemStack> rItems = lootTable.getRandomItems(lc);
+        Collections.shuffle(rItems);
         int subLen = Math.min(rItems.size(), journal.getCapacity() - 1);
-        List<MCTownItem> list = rItems.subList(0, subLen)
-                .stream()
+        List<MCTownItem> list = rItems.stream()
+                .filter(v -> !v.isEmpty())
                 .map(ItemStack::getItem)
                 .map(MCTownItem::new)
-                .toList();
+                .toList()
+                .subList(0, subLen);
 
         Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
 

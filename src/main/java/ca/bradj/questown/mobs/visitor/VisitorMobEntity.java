@@ -73,7 +73,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())
             .changeActivityAt(10, Activity.IDLE)
-            .changeActivityAt(12000, Activity.REST)
+            .changeActivityAt(12500, Activity.REST)
             .build();
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
