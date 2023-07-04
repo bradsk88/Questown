@@ -13,6 +13,10 @@ public class MCTownItem implements GathererJournal.Item {
 
     Item item;
 
+    public static MCTownItem fromMCItemStack(ItemStack i) {
+        return new MCTownItem(i.getItem());
+    }
+
     public MCTownItem(Item item) {
         this.item = item;
     }
