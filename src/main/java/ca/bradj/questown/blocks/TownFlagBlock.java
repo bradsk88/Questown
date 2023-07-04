@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -116,6 +118,11 @@ public class TownFlagBlock extends BaseEntityBlock {
     ) {
         if (level.isClientSide()) {
             return InteractionResult.sidedSuccess(true);
+        }
+
+        if (player.getItemInHand(hand).getItem().equals(Items.OAK_DOOR)) { // TODO: Use tag
+            player.setItemInHand(hand, ItemsInit.CLAIMED_DOOR_BLOCK.get().getDefaultInstance());
+            return InteractionResult.sidedSuccess(false);
         }
 
         Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(pos, TilesInit.TOWN_FLAG.get());

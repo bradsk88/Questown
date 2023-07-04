@@ -20,6 +20,13 @@ public class ItemsInit {
 					TownFlagBlock.ITEM_PROPS
 			)
 	);
+	public static final RegistryObject<Item> CLAIMED_DOOR_BLOCK = ITEMS.register(
+			"claimed_door",
+			() -> new BlockItem(
+					BlocksInit.CLAIMED_DOOR.get(),
+					TownFlagBlock.ITEM_PROPS
+			)
+	);
 
 	public static void register(IEventBus bus) {
 		ITEMS.register(bus);
