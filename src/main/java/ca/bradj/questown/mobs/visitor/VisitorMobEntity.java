@@ -5,7 +5,7 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
-import ca.bradj.questown.integration.minecraft.GathererStatuses;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -20,6 +20,8 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.game.DebugPackets;
@@ -57,6 +59,8 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -84,6 +88,7 @@ public class VisitorMobEntity extends PathfinderMob {
     private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
+
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
     private static final String NBT_TOWN_Z = "town_z";
@@ -95,6 +100,7 @@ public class VisitorMobEntity extends PathfinderMob {
     boolean sitting = true;
     private TownInterface town;
     private BlockPos wanderTarget;
+    private boolean initializedItems;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -102,12 +108,10 @@ public class VisitorMobEntity extends PathfinderMob {
             TownInterface town
     ) {
         super(ownType, level);
-        // TODO: Store town UUID on NBT
         this.town = town;
         if (town != null) {
             initBrain();
         }
-        job.initializeStatus(GathererStatuses.IDLE); // TODO: Read from NBT
     }
 
     public static AttributeSupplier setAttributes() {
@@ -214,15 +218,38 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
+        if (job.getStatus() == GathererJournal.Statuses.UNSET) {
+            job.initializeStatus(getStatus());
+        }
         job.tick(level, blockPosition());
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, blockPosition());
             this.entityData.set(visible, vis);
-
             job.tryDropLoot(blockPosition());
             job.tryTakeFood(blockPosition());
             entityData.set(status, job.getStatus().name());
         }
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag p_21484_) {
+        super.addAdditionalSaveData(p_21484_);
+        ListTag items = new ListTag();
+        job.getItems().forEach(v -> items.add(v.serializeNBT()));
+        p_21484_.put("items", items);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag p_21450_) {
+        super.readAdditionalSaveData(p_21450_);
+        ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
+        List<MCTownItem> itemz = items
+                .stream()
+                .map(v -> ItemStack.of((CompoundTag) v))
+                .map(MCTownItem::fromMCItemStack)
+                .toList();
+        job.initializeItems(itemz);
+        entityData.set(status, p_21450_.getString("status"));
     }
 
     private void initBrain() {

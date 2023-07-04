@@ -11,7 +11,11 @@ public class MCTownItem implements GathererJournal.Item {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
 
-    Item item;
+    Item item; // FIXME: ItemStack so NBT is preserved
+
+    public static MCTownItem fromMCItemStack(ItemStack i) {
+        return new MCTownItem(i.getItem());
+    }
 
     public MCTownItem(Item item) {
         this.item = item;

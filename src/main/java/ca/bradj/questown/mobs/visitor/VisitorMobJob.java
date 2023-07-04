@@ -2,7 +2,6 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.GathererInventoryMenu;
-import ca.bradj.questown.integration.minecraft.GathererStatuses;
 import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
@@ -149,10 +148,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return list;
     }
 
-    public void initializeStatus(GathererStatuses status) {
-        GathererJournal.Statuses value = status.toQT();
-        Questown.LOGGER.debug("Initialized journal to state {}", value);
-        this.journal.initializeStatus(value);
+    public void initializeStatus(GathererJournal.Statuses status) {
+        Questown.LOGGER.debug("Initialized journal to state {}", status);
+        this.journal.initializeStatus(status);
     }
 
     public BlockPos getTarget(TownInterface town) {
@@ -288,6 +286,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tryDropLoot(BlockPos entityPos) {
+        // TODO: move to journal?
         if (this.dropping) {
             Questown.LOGGER.debug("Trying to drop too quickly");
         }
@@ -401,5 +400,21 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     public void setStatusListener(GathererJournal.StatusListener l) {
         journal.setStatusListener(l);
+    }
+
+    public void initializeItems(Iterable<MCTownItem> mcTownItemStream) {
+        int i = 0;
+        for (MCTownItem item : mcTownItemStream) {
+            journal.setItem(i, item);
+            i++;
+        }
+    }
+
+    public ImmutableList<ItemStack> getItems() {
+        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            b.add(inventory.getItem(i));
+        }
+        return b.build();
     }
 }

@@ -119,7 +119,7 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         Collection<I> getLoot();
     }
 
-    private final ArrayList<I> inventory;
+    private final ArrayList<I> inventory; // TODO: Change to generic container and add adapter for MC Container
     private Statuses status = Statuses.UNSET;
 
     public int getCapacity() {
