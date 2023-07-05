@@ -219,7 +219,11 @@ public class VisitorMobEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (job.getStatus() == GathererJournal.Statuses.UNSET) {
-            job.initializeStatus(getStatus());
+            GathererJournal.Statuses s = getStatus();
+            if (s == GathererJournal.Statuses.UNSET) {
+                s = GathererJournal.Statuses.IDLE;
+            }
+            job.initializeStatus(s);
         }
         job.tick(level, blockPosition());
         if (!level.isClientSide()) {
