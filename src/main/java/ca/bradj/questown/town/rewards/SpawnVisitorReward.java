@@ -3,6 +3,7 @@ package ca.bradj.questown.town.rewards;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
@@ -58,11 +59,13 @@ public class SpawnVisitorReward extends MCReward {
             return;
         }
 
-        VisitorMobEntity vEntity = new VisitorMobEntity(EntitiesInit.VISITOR.get(), sl, entity);
-        vEntity.setPos(entity.getVisitorJoinPos());
-        if (visitorUUID != null) {
-            vEntity.setUUID(visitorUUID);
+        VisitorMobEntity vEntity = new VisitorMobEntity(sl, entity);
+        @Nullable UUID initUUID = visitorUUID;
+        if (initUUID == null) {
+            initUUID = vEntity.getUUID();
         }
+        vEntity.initialize(initUUID, new BlockPos(entity.getVisitorJoinPos()), GathererJournal.Snapshot.EMPTY);
+        entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
         Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
     }

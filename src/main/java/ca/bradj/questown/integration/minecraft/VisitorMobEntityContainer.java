@@ -7,10 +7,10 @@ import net.minecraft.world.item.ItemStack;
 
 public class VisitorMobEntityContainer implements Container {
 
-    private final GathererJournal<MCTownInventory, MCTownItem> journal;
+    private final GathererJournal<MCTownItem> journal;
 
     public VisitorMobEntityContainer(
-            GathererJournal<MCTownInventory, MCTownItem> journal
+            GathererJournal<MCTownItem> journal
     ) {
         this.journal = journal;
     }

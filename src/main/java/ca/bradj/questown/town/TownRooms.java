@@ -107,7 +107,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     @Override
     public boolean IsDoor(Position dp) {
         BlockState bs = entity.getServerLevel().getBlockState(Positions.ToBlock(dp, getY()));
-        return DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
+        return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 
     public void update(ImmutableMap<Position, Optional<Room>> rooms) {

@@ -81,7 +81,7 @@ class GathererJournalTest {
     @Test
     void testDefaultStatusBeforeSignals() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -93,7 +93,7 @@ class GathererJournalTest {
     void testMorningSignalWithNoSpaceInInventory() {
         TestSignals sigs = new TestSignals();
         GathererJournal.ContainerCheck noSpace = () -> false;
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), noSpace
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -113,7 +113,7 @@ class GathererJournalTest {
     @Test
     void testMorningSignalWithNoBreadAvailable() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -131,7 +131,7 @@ class GathererJournalTest {
     @Test
     void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -150,7 +150,7 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalSetsStatusToReturning() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -167,7 +167,7 @@ class GathererJournalTest {
     void testMorningSignalWithBreadAvailable() {
         TestInventory inv = new TestInventory();
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -189,7 +189,7 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalRemovesFoodAddsRandomLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -229,7 +229,7 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalRemovesFoodEvenWhenLootIsEmpty() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -248,7 +248,7 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalRemovesOnlyOneFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -281,7 +281,7 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalTransitionsFromNoFoodToStayedHome() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -301,7 +301,7 @@ class GathererJournalTest {
     @Test
     void testEveningSignalSetsReturnedSuccessfulStatus() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -323,7 +323,7 @@ class GathererJournalTest {
     void testEveningSignalSetsNoSpaceStatus_WhenNoSpaceInTown() {
         TestSignals sigs = new TestSignals();
         GathererJournal.ContainerCheck noSpaceInTown = () -> false;
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), noSpaceInTown
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -355,7 +355,7 @@ class GathererJournalTest {
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasNoSpace() {
         TestSignals sigs = new TestSignals();
         GathererJournal.ContainerCheck noSpace = () -> false;
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), noSpace
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -392,7 +392,7 @@ class GathererJournalTest {
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasSpace() {
         TestSignals sigs = new TestSignals();
         GathererJournal.ContainerCheck hasSpace = () -> true;
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), hasSpace
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -429,7 +429,7 @@ class GathererJournalTest {
     @Test
     void testSkipFromMorningToEveningNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -456,7 +456,7 @@ class GathererJournalTest {
     @Test
     void testSkipFromMorningToEveningWithFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
@@ -487,7 +487,7 @@ class GathererJournalTest {
     @Test
     void testSkipFromEveningToNoonShouldSetStatusToNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestInventory, TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(
                 sigs, () -> new TestItem(""), () -> true
         );
         gatherer.initializeStatus(GathererJournal.Statuses.IDLE);

@@ -3,6 +3,7 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -11,6 +12,7 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.quests.QuestBatches;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -60,7 +62,6 @@ import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -101,6 +102,8 @@ public class VisitorMobEntity extends PathfinderMob {
     private TownInterface town;
     private BlockPos wanderTarget;
     private boolean initializedItems;
+    private List<ChangeListener> changeListeners = new ArrayList<>();
+    private boolean initialized;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -112,6 +115,13 @@ public class VisitorMobEntity extends PathfinderMob {
         if (town != null) {
             initBrain();
         }
+    }
+
+    public VisitorMobEntity(
+            ServerLevel level,
+            TownInterface town
+    ) {
+        this(EntitiesInit.VISITOR.get(), level, town);
     }
 
     public static AttributeSupplier setAttributes() {
@@ -479,5 +489,32 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public void setStatusListener(GathererJournal.StatusListener l) {
         job.setStatusListener(l);
+    }
+
+    public GathererJournal.Snapshot<MCTownItem> getJobJournalSnapshot() {
+        return job.getJournalSnapshot();
+    }
+
+    public void initialize(
+            UUID uuid,
+            BlockPos blockPos,
+            GathererJournal.Snapshot<MCTownItem> journal
+    ) {
+        job.initialize(journal);
+        this.setPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        this.setUUID(uuid);
+        this.initialized = true;
+    }
+
+    public boolean isInitialized() {
+        return this.initialized;
+    }
+
+    public interface ChangeListener {
+        void Changed();
+    }
+
+    public void addChangeListener(ChangeListener cl) {
+        this.changeListeners.add(cl);
     }
 }

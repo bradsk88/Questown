@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -35,4 +36,6 @@ public interface TownInterface {
     Set<UUID> getVillagers();
 
     ContainerTarget findMatchingContainer(ContainerTarget.CheckFn c);
+
+    void registerEntity(VisitorMobEntity vEntity);
 }

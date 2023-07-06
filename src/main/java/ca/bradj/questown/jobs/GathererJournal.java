@@ -1,22 +1,45 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.town.TownInventory;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Optional;
+import java.util.*;
 
-public class GathererJournal<Inventory extends TownInventory<?, I>, I extends GathererJournal.Item> {
-
+public class GathererJournal<I extends GathererJournal.Item> {
     private final SignalSource sigs;
     private final EmptyFactory<I> emptyFactory;
     private final ContainerCheck storageCheck;
+    private List<I> inventory; // TODO: Change to generic container and add adapter for MC Container
     private boolean ate = false;
     private ItemsListener<I> listener;
     private StatusListener statusListener;
+    private Statuses status = Statuses.UNSET;
+
+    public GathererJournal(
+            SignalSource sigs,
+            EmptyFactory<I> ef,
+            ContainerCheck cont
+    ) {
+        super();
+        this.sigs = sigs;
+        this.emptyFactory = ef;
+        this.storageCheck = cont;
+        this.inventory = new ArrayList<>();
+        for (int i = 0; i < getCapacity(); i++) {
+            this.inventory.add(ef.makeEmptyItem());
+        }
+        updateItemListeners();
+    }
+
+    @Override
+    public String toString() {
+        return "GathererJournal{" +
+                "ate=" + ate +
+                ", inventory=" + inventory +
+                ", status=" + status +
+                '}';
+    }
 
     public ImmutableList<I> getItems() {
         return ImmutableList.copyOf(inventory);
@@ -88,39 +111,14 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         changeStatus(Statuses.IDLE);
     }
 
-    public interface StatusListener {
-        void statusChanged(GathererJournal.Statuses newStatus);
-    }
-
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
-    }
-
-    public interface ItemsListener<I> {
-        void itemsChanged(ImmutableList<I> items);
     }
 
     public void setItemsListener(ItemsListener<I> l) {
         // TODO: Support multiple?
         this.listener = l;
     }
-
-    public interface Item {
-        boolean isEmpty();
-
-        boolean isFood();
-    }
-
-    public interface SignalSource {
-        Signals getSignal();
-    }
-
-    public interface LootProvider<I extends GathererJournal.Item> {
-        Collection<I> getLoot();
-    }
-
-    private final ArrayList<I> inventory; // TODO: Change to generic container and add adapter for MC Container
-    private Statuses status = Statuses.UNSET;
 
     public int getCapacity() {
         return 6;
@@ -136,70 +134,6 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
         if (status == Statuses.NO_FOOD && item.isFood()) { // TODO: Test
             changeStatus(Statuses.IDLE);
         }
-    }
-
-    public interface EmptyFactory<I extends Item> {
-        I makeEmptyItem();
-    }
-
-    public enum Signals {
-        UNDEFINED,
-        MORNING,
-        NOON,
-        EVENING,
-        NIGHT
-    }
-
-    // TODO: Add state for LEAVING and add signal for "left town"
-    //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
-    public enum Statuses {
-        UNSET,
-        IDLE,
-        NO_SPACE,
-        NO_FOOD,
-        STAYING,
-        GATHERING,
-        RETURNING,
-        RETURNED_SUCCESS,
-        RETURNED_FAILURE,
-        CAPTURED,
-        RELAXING;
-
-        public static Statuses from(String s) {
-            return switch (s) {
-                case "IDLE" -> IDLE;
-                case "NO_SPACE" -> NO_SPACE;
-                case "NO_FOOD" -> NO_FOOD;
-                case "STAYING" -> STAYING;
-                case "GATHERING" -> GATHERING;
-                case "RETURNED_SUCCESS" -> RETURNED_SUCCESS;
-                case "RETURNED_FAILURE" -> RETURNED_FAILURE;
-                case "RETURNING" -> RETURNING;
-                case "CAPTURED" -> CAPTURED;
-                case "RELAXING" -> RELAXING;
-                default -> UNSET;
-            };
-        }
-    }
-
-    public interface ContainerCheck {
-        boolean IsTownStorageAvailable();
-    }
-
-    public GathererJournal(
-            SignalSource sigs,
-            EmptyFactory<I> ef,
-            ContainerCheck cont
-    ) {
-        super();
-        this.sigs = sigs;
-        this.emptyFactory = ef;
-        this.storageCheck = cont;
-        this.inventory = new ArrayList<>();
-        for (int i = 0; i < getCapacity(); i++) {
-            this.inventory.add(ef.makeEmptyItem());
-        }
-        updateItemListeners();
     }
 
     public void tick(
@@ -367,5 +301,98 @@ public class GathererJournal<Inventory extends TownInventory<?, I>, I extends Ga
 
     public Statuses getStatus() {
         return status;
+    }
+
+    // TODO: Create read-only class
+    public Snapshot<I> getSnapshot(EmptyFactory<I> ef) {
+        return new Snapshot<>(status, ate, ImmutableList.copyOf(inventory));
+    }
+
+    public void initialize(Snapshot<I> journal) {
+        this.ate = journal.ate();
+        this.initializeItems(journal.items());
+        this.initializeStatus(journal.status());
+    }
+
+    public void initializeItems(Iterable<I> mcTownItemStream) {
+        int i = 0;
+        for (I item : mcTownItemStream) {
+            setItem(i, item);
+            i++;
+        }
+    }
+
+    public enum Signals {
+        UNDEFINED,
+        MORNING,
+        NOON,
+        EVENING,
+        NIGHT
+    }
+
+    // TODO: Add state for LEAVING and add signal for "left town"
+    //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
+    public enum Statuses {
+        UNSET,
+        IDLE,
+        NO_SPACE,
+        NO_FOOD,
+        STAYING,
+        GATHERING,
+        RETURNING,
+        RETURNED_SUCCESS,
+        RETURNED_FAILURE,
+        CAPTURED,
+        RELAXING;
+
+        public static Statuses from(String s) {
+            return switch (s) {
+                case "IDLE" -> IDLE;
+                case "NO_SPACE" -> NO_SPACE;
+                case "NO_FOOD" -> NO_FOOD;
+                case "STAYING" -> STAYING;
+                case "GATHERING" -> GATHERING;
+                case "RETURNED_SUCCESS" -> RETURNED_SUCCESS;
+                case "RETURNED_FAILURE" -> RETURNED_FAILURE;
+                case "RETURNING" -> RETURNING;
+                case "CAPTURED" -> CAPTURED;
+                case "RELAXING" -> RELAXING;
+                default -> UNSET;
+            };
+        }
+    }
+
+    public interface StatusListener {
+        void statusChanged(GathererJournal.Statuses newStatus);
+    }
+
+    public interface ItemsListener<I> {
+        void itemsChanged(ImmutableList<I> items);
+    }
+
+    public interface Item {
+        boolean isEmpty();
+
+        boolean isFood();
+    }
+
+    public interface SignalSource {
+        Signals getSignal();
+    }
+
+    public interface LootProvider<I extends GathererJournal.Item> {
+        Collection<I> getLoot();
+    }
+
+    public interface EmptyFactory<I extends Item> {
+        I makeEmptyItem();
+    }
+
+    public interface ContainerCheck {
+        boolean IsTownStorageAvailable();
+    }
+
+    public record Snapshot<I extends Item>(Statuses status, boolean ate, ImmutableList<I> items) {
+        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Statuses.IDLE, false, ImmutableList.of());
     }
 }

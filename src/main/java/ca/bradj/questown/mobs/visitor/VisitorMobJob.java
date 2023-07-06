@@ -2,7 +2,6 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.GathererInventoryMenu;
-import ca.bradj.questown.integration.minecraft.MCTownInventory;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -42,8 +41,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     ContainerTarget foodTarget;
     ContainerTarget successTarget;
     // TODO: Logic for changing jobs
-    private final GathererJournal<MCTownInventory, MCTownItem> journal = new GathererJournal<>(
-            this, () -> new MCTownItem(Items.AIR), () -> successTarget != null && successTarget.isStillValid()
+    private final GathererJournal<MCTownItem> journal = new GathererJournal<>(
+            this, MCTownItem::Air, () -> successTarget != null && successTarget.isStillValid()
     ) {
         @Override
         protected void changeStatus(Statuses s) {
@@ -403,11 +402,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void initializeItems(Iterable<MCTownItem> mcTownItemStream) {
-        int i = 0;
-        for (MCTownItem item : mcTownItemStream) {
-            journal.setItem(i, item);
-            i++;
-        }
+        journal.initializeItems(mcTownItemStream);
     }
 
     public ImmutableList<ItemStack> getItems() {
@@ -416,5 +411,13 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             b.add(inventory.getItem(i));
         }
         return b.build();
+    }
+
+    public GathererJournal.Snapshot<MCTownItem> getJournalSnapshot() {
+        return journal.getSnapshot(MCTownItem::Air);
+    }
+
+    public void initialize(GathererJournal.Snapshot<MCTownItem> journal) {
+        this.journal.initialize(journal);
     }
 }

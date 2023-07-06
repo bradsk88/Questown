@@ -4,8 +4,11 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -15,7 +18,9 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
@@ -27,6 +32,9 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -37,8 +45,13 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<RoomRecipeMatch>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
 
@@ -48,6 +61,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
+    private static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -56,7 +70,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
-
+    private List<LivingEntity> entities = new ArrayList<>();
+    private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
+    private boolean hasPlayerEverBeenNear;
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -75,6 +91,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
+        // Since the town block manages its own state as well as the state of
+        // its villagers, we mark "changed" on every time. Those entities are
+        // likely changing constantly (e.g. their position)
+        e.setChanged();
+
+        Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 64.0, null);
+        if (nearestPlayer != null) {
+            e.hasPlayerEverBeenNear = true;
+            recoverMobs(level, e, sl);
+        }
+
         e.quests.tick(sl);
 
         long gameTime = level.getGameTime();
@@ -88,6 +115,46 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.asapRewards.tick();
 
         e.pois.tick(sl, blockPos);
+    }
+
+    private static void recoverMobs(
+            Level level,
+            TownFlagBlockEntity e,
+            ServerLevel sl
+    ) {
+        ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.entities);
+        for (LivingEntity entity : entitiesSnapshot) {
+            if (!(entity instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            if (entity.isRemoved()) {
+                e.entities.remove(entity);
+                entity.remove(Entity.RemovalReason.DISCARDED);
+                VisitorMobEntity mob = new VisitorMobEntity(sl, e);
+                mob.initialize(entity.getUUID(), entity.blockPosition(), vme.getJobJournalSnapshot());
+                level.addFreshEntity(mob);
+                e.registerEntity(mob);
+                Questown.LOGGER.debug("Revived entity {}", mob.getUUID());
+            }
+        }
+
+        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+            TownState<MCTownItem> storedState = TownStateSerializer.INSTANCE.load(
+                    e.getTileData().getCompound(NBT_TOWN_STATE),
+                    sl
+            );
+            Set<UUID> uuids = entitiesSnapshot.stream().map(Entity::getUUID).collect(Collectors.toSet());
+            for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
+                if (uuids.contains(v.uuid)) {
+                    continue;
+                }
+                VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
+                recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
+                level.addFreshEntity(recovered);
+                e.registerEntity(recovered);
+            }
+            Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
+        }
     }
 
 
@@ -105,6 +172,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
         this.writeTownData(tag);
+        if (!level.isClientSide() && hasPlayerEverBeenNear) {
+            TownState<MCTownItem> state = captureState();
+            if (state == null) {
+                return;
+            }
+            Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
+            tag.put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
+            getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
+        }
     }
 
     @Override
@@ -130,6 +206,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
             l.forEach(this.asapRandomAwdForVisitor::push);
         }
+        if (tag.contains(NBT_TOWN_STATE)) {
+            CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
+            this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
+        }
+
     }
 
     private void writeTownData(CompoundTag tag) {
@@ -139,7 +220,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));
-        // TODO: Serialization for ASAPs
+        // TODO: Serialization for ASAPss
     }
 
     @Override
@@ -153,6 +234,55 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        if (level == null) {
+            throw new IllegalStateException("level is null");
+        }
+        if (level.isClientSide()) {
+            return;
+        }
+
+        this.hasPlayerEverBeenNear = false;
+
+        TownState<MCTownItem> ts = captureState();
+        Questown.LOGGER.debug("TownState on chunk unload: {}", ts);
+
+        if (ts != null) {
+            getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(ts));
+        }
+    }
+
+    @NotNull
+    private @Nullable TownState<MCTownItem> captureState() {
+        ImmutableList.Builder<TownState.VillagerData<MCTownItem>> vB = ImmutableList.builder();
+        for (LivingEntity entity : entities) {
+            if (entity instanceof VisitorMobEntity) {
+                if (!((VisitorMobEntity) entity).isInitialized()) {
+                    return null;
+                }
+                vB.add(new TownState.VillagerData<>(
+                        Positions.FromBlockPos(entity.blockPosition()),
+                        entity.blockPosition().getY(),
+                        ((VisitorMobEntity) entity).getJobJournalSnapshot(),
+                        entity.getUUID()
+                ));
+            }
+        }
+
+        TownState<MCTownItem> ts = new TownState<>(
+                vB.build(),
+                TownContainers.findAllMatching(this, item -> true).toList(),
+                level.getDayTime()
+        );
+        return ts;
+    }
+
+    public static boolean debuggerReleaseControl() {
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        return true;
     }
 
     @Override
@@ -241,11 +371,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             RoomRecipeMatch recipeId
     ) {
         broadcastMessage(new TranslatableComponent(
-                "messages.building.room_created",
-                new TranslatableComponent("room." + recipeId.getRecipeID().getPath()),
+                "messages.building.recipe_created",
                 roomDoorPos.getUIString()
         ));
-        // TODO: get room
+        // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markQuestAsComplete(recipeId.getRecipeID());
     }
@@ -348,6 +477,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public ContainerTarget findMatchingContainer(ContainerTarget.CheckFn c) {
         return TownContainers.findMatching(this, c);
+    }
+
+    @Override
+    public void registerEntity(VisitorMobEntity vEntity) {
+        this.entities.add(vEntity);
+        vEntity.addChangeListener(() -> this.setChanged());
+        this.setChanged();
     }
 
     private @Nullable Position getWanderTargetPosition() {

@@ -35,7 +35,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     }
 
     private void updateActiveRooms(
-            Level level,
+            ServerLevel level,
             BlockPos blockPos,
             int scanLevel
     ) {

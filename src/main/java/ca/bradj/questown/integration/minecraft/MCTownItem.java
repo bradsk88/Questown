@@ -2,6 +2,8 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.GathererJournal;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -11,7 +13,7 @@ public class MCTownItem implements GathererJournal.Item {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
 
-    Item item; // FIXME: ItemStack so NBT is preserved
+    Item item; // FIXME: ItemStack so NBT, quantity is preserved
 
     public static MCTownItem fromMCItemStack(ItemStack i) {
         return new MCTownItem(i.getItem());
@@ -19,6 +21,10 @@ public class MCTownItem implements GathererJournal.Item {
 
     public MCTownItem(Item item) {
         this.item = item;
+    }
+
+    public static MCTownItem of(CompoundTag tag) {
+        return new MCTownItem(ItemStack.of(tag).getItem());
     }
 
     @Override
@@ -40,5 +46,15 @@ public class MCTownItem implements GathererJournal.Item {
         return "MCTownItem{" +
                 "item=" + item +
                 '}';
+    }
+
+    public static MCTownItem Air() {
+        return new MCTownItem(Items.AIR);
+    }
+
+    public Tag serializeNBT() {
+        CompoundTag tag = new CompoundTag();
+        tag.put("item", new ItemStack(item, 1).serializeNBT()); // TODO: Quantity
+        return tag;
     }
 }
