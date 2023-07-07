@@ -12,13 +12,13 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
-import ca.bradj.questown.town.quests.QuestBatches;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
@@ -67,11 +67,15 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
 public class VisitorMobEntity extends PathfinderMob {
 
@@ -115,6 +119,9 @@ public class VisitorMobEntity extends PathfinderMob {
         if (town != null) {
             initBrain();
         }
+        // Technically this also gets us item updates because item changes cause status to go back to IDLE
+        // But this is admittedly a bit fragile.
+        this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
     }
 
     public VisitorMobEntity(
@@ -308,6 +315,7 @@ public class VisitorMobEntity extends PathfinderMob {
                     return;
                 }
                 this.town = flag;
+                flag.loadEntity(this, sl);
                 this.initBrain();
             }
         }
@@ -494,7 +502,7 @@ public class VisitorMobEntity extends PathfinderMob {
 //    }
 
     public void setStatusListener(GathererJournal.StatusListener l) {
-        job.setStatusListener(l);
+        job.addStatusListener(l);
     }
 
     public GathererJournal.Snapshot<MCTownItem> getJobJournalSnapshot() {
@@ -510,6 +518,11 @@ public class VisitorMobEntity extends PathfinderMob {
         this.setPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         this.setUUID(uuid);
         this.initialized = true;
+    }
+
+    public static boolean debuggerReleaseControl() {
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        return true;
     }
 
     public boolean isInitialized() {

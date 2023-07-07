@@ -358,9 +358,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             return;
         }
 
+        ImmutableList.Builder<MCTownItem> b = ImmutableList.builder();
+
         for (int i = 0; i < p_18983_.getContainerSize(); i++) {
-            journal.setItemNoUpdateNoCheck(i, new MCTownItem(p_18983_.getItem(i).getItem()));
+            b.add(new MCTownItem(p_18983_.getItem(i).getItem()));
         }
+        journal.setItemsNoUpdateNoCheck(b.build());
     }
 
     @Override
@@ -397,8 +400,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return journal.getStatus();
     }
 
-    public void setStatusListener(GathererJournal.StatusListener l) {
-        journal.setStatusListener(l);
+    public void addStatusListener(GathererJournal.StatusListener l) {
+        journal.addStatusListener(l);
     }
 
     public void initializeItems(Iterable<MCTownItem> mcTownItemStream) {

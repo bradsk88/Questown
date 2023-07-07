@@ -26,7 +26,7 @@ public class MCTownItem implements GathererJournal.Item {
     }
 
     public static MCTownItem of(CompoundTag tag) {
-        return new MCTownItem(ItemStack.of(tag).getItem());
+        return new MCTownItem(ItemStack.of(tag.getCompound("item")).getItem());
     }
 
     @Override

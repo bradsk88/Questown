@@ -88,14 +88,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState state,
             TownFlagBlockEntity e
     ) {
+        // TODO: Maybe record last tick time. If some N time has passed since then, consider recovering mobs (and simulating activity)
+
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
 
         Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 64.0, null);
         if (nearestPlayer != null) {
+            boolean recover = !e.hasPlayerEverBeenNear;
             e.hasPlayerEverBeenNear = true;
-            recoverMobs(level, e, sl);
+            if (recover) {
+                recoverMobs(level, e, sl);
+            }
         }
 
         e.quests.tick(sl);
@@ -180,33 +185,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     private void putStateOnTile(TownState<MCTownItem> state) {
-        // TODO: Temporary
-        // TODO: Temporary
-        if (getTileData().contains(NBT_TOWN_STATE)) {
-            TownState<MCTownItem> s = TownStateSerializer.INSTANCE.load(
-                    getTileData().getCompound(NBT_TOWN_STATE),
-                    (ServerLevel) level
-            );
-            if (s.villagers.size() == 0 || state.villagers.size() == 0) {
-                return;
-            }
-            ImmutableList<MCTownItem> tileItems = s.villagers.get(0).journal.items();
-            ImmutableList<MCTownItem> newItems = state.villagers.get(0).journal.items();
-            boolean tileHasNoItems = tileItems
-                    .stream()
-                    .filter(Predicate.not(MCTownItem::isEmpty))
-                    .count() > 0;
-            boolean memHasNoItems = newItems
-                    .stream()
-                    .filter(Predicate.not(MCTownItem::isEmpty))
-                    .count() == 0;
-            if (tileHasNoItems && memHasNoItems) {
-                Questown.LOGGER.debug("Clearing state. BAD!");
-            }
-        }
-
         Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
-        getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
+        CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
+        getTileData().put(NBT_TOWN_STATE, cereal);
     }
 
     @Override
@@ -271,16 +252,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        setChanged();
-
         this.hasPlayerEverBeenNear = false;
 
-        TownState<MCTownItem> ts = captureState();
-        Questown.LOGGER.debug("TownState on chunk unload: {}", ts);
-
-        if (ts != null) {
-            putStateOnTile(ts);
-        }
     }
 
     @NotNull
@@ -291,12 +264,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
                 }
-                vB.add(new TownState.VillagerData<>(
+                TownState.VillagerData<MCTownItem> data = new TownState.VillagerData<>(
                         Positions.FromBlockPos(entity.blockPosition()),
                         entity.blockPosition().getY(),
                         ((VisitorMobEntity) entity).getJobJournalSnapshot(),
                         entity.getUUID()
-                ));
+                );
+                vB.add(data);
             }
         }
 
@@ -532,5 +506,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public Collection<RoomRecipeMatch> getMatches() {
         return this.roomsMap.getAllMatches();
+    }
+
+    public void loadEntity(VisitorMobEntity visitorMobEntity,
+                           ServerLevel sl
+    ) {
+        if (!getTileData().contains(NBT_TOWN_STATE)) {
+            Questown.LOGGER.error("Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
+            return;
+        }
+        TownState<MCTownItem> state = TownStateSerializer.INSTANCE.load(getTileData().getCompound(NBT_TOWN_STATE), sl);
+        Optional<TownState.VillagerData<MCTownItem>> match = state.villagers.stream()
+                .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
+                .findFirst();
+        if (match.isEmpty()) {
+            Questown.LOGGER.error("Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
+            return;
+        }
+        registerEntity(visitorMobEntity);
+        visitorMobEntity.initialize(
+                match.get().uuid,
+                Positions.ToBlock(match.get().position, match.get().yPosition),
+                match.get().journal
+        );
     }
 }

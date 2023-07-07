@@ -3,8 +3,13 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
 public class GathererJournal<I extends GathererJournal.Item> {
     private final SignalSource sigs;
@@ -13,7 +18,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
     private List<I> inventory; // TODO: Change to generic container and add adapter for MC Container
     private boolean ate = false;
     private ItemsListener<I> listener;
-    private StatusListener statusListener;
+    private List<StatusListener> statusListeners = new ArrayList<>();
     private Statuses status = Statuses.UNSET;
 
     public GathererJournal(
@@ -30,6 +35,11 @@ public class GathererJournal<I extends GathererJournal.Item> {
             this.inventory.add(ef.makeEmptyItem());
         }
         updateItemListeners();
+    }
+
+    public static boolean debuggerReleaseControl() {
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        return true;
     }
 
     @Override
@@ -111,8 +121,8 @@ public class GathererJournal<I extends GathererJournal.Item> {
         changeStatus(Statuses.IDLE);
     }
 
-    public void setStatusListener(StatusListener l) {
-        this.statusListener = l;
+    public void addStatusListener(StatusListener l) {
+        this.statusListeners.add(l);
     }
 
     public void setItemsListener(ItemsListener<I> l) {
@@ -199,11 +209,11 @@ public class GathererJournal<I extends GathererJournal.Item> {
                     changeStatus(Statuses.STAYING);
                     return;
                 }
-                if (status == Statuses.GATHERING || status == Statuses.IDLE) {
+                if (status == Statuses.GATHERING) {
                     this.removeFood();
                     this.addLoot(loot.getLoot());
+                    changeStatus(Statuses.RETURNING);
                 }
-                changeStatus(Statuses.RETURNING);
                 // TODO: What if the gatherer is out but doesn't have food (somehow)
             }
             case EVENING -> {
@@ -260,9 +270,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
     protected void changeStatus(Statuses s) {
         this.status = s;
-        if (this.statusListener != null) {
-            this.statusListener.statusChanged(this.status);
-        }
+        this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
     private boolean removeFood() {
@@ -315,11 +323,18 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     public void initializeItems(Iterable<I> mcTownItemStream) {
-        int i = 0;
-        for (I item : mcTownItemStream) {
-            setItem(i, item);
-            i++;
-        }
+        ImmutableList.Builder<I> b = ImmutableList.builder();
+        mcTownItemStream.forEach(b::add);
+        inventory.clear();
+        ImmutableList<I> initItems = b.build();
+        inventory.addAll(initItems);
+        listener.itemsChanged(initItems);
+    }
+
+    public void setItemsNoUpdateNoCheck(ImmutableList<I> build) {
+        inventory.clear();
+        inventory.addAll(build);
+        changeStatus(Statuses.IDLE);
     }
 
     public enum Signals {
