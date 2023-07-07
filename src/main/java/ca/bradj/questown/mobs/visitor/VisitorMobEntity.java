@@ -487,6 +487,12 @@ public class VisitorMobEntity extends PathfinderMob {
         return GathererJournal.Statuses.from(entityData.get(status));
     }
 
+//    // If all else fails, we can use this
+//    @Override
+//    public boolean removeWhenFarAway(double p_21542_) {
+//        return false;
+//    }
+
     public void setStatusListener(GathererJournal.StatusListener l) {
         job.setStatusListener(l);
     }

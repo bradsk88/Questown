@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
@@ -177,10 +178,36 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             if (state == null) {
                 return;
             }
-            Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
+
+            putStateOnTile(state);
             tag.put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
-            getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
         }
+    }
+
+    private void putStateOnTile(TownState<MCTownItem> state) {
+        // TODO: Temporary
+        // TODO: Temporary
+        if (getTileData().contains(NBT_TOWN_STATE)) {
+            TownState<MCTownItem> s = TownStateSerializer.INSTANCE.load(
+                    getTileData().getCompound(NBT_TOWN_STATE),
+                    (ServerLevel) level
+            );
+            if (
+                    s.villagers.get(0).journal.items()
+                            .stream()
+                            .filter(Predicate.not(MCTownItem::isEmpty))
+                            .count() > 0 &&
+                            state.villagers.get(0).journal.items()
+                                    .stream()
+                                    .filter(Predicate.not(MCTownItem::isEmpty))
+                                    .count() == 0
+            ) {
+                Questown.LOGGER.debug("Clearing state. BAD!");
+            }
+        }
+
+        Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
+        getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
     }
 
     @Override
@@ -251,7 +278,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         Questown.LOGGER.debug("TownState on chunk unload: {}", ts);
 
         if (ts != null) {
-            getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(ts));
+            putStateOnTile(ts);
         }
     }
 
