@@ -92,11 +92,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        // Since the town block manages its own state as well as the state of
-        // its villagers, we mark "changed" on every time. Those entities are
-        // likely changing constantly (e.g. their position)
-        e.setChanged();
-
         Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 64.0, null);
         if (nearestPlayer != null) {
             e.hasPlayerEverBeenNear = true;
@@ -192,16 +187,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     getTileData().getCompound(NBT_TOWN_STATE),
                     (ServerLevel) level
             );
-            if (
-                    s.villagers.get(0).journal.items()
-                            .stream()
-                            .filter(Predicate.not(MCTownItem::isEmpty))
-                            .count() > 0 &&
-                            state.villagers.get(0).journal.items()
-                                    .stream()
-                                    .filter(Predicate.not(MCTownItem::isEmpty))
-                                    .count() == 0
-            ) {
+            if (s.villagers.size() == 0 || state.villagers.size() == 0) {
+                return;
+            }
+            ImmutableList<MCTownItem> tileItems = s.villagers.get(0).journal.items();
+            ImmutableList<MCTownItem> newItems = state.villagers.get(0).journal.items();
+            boolean tileHasNoItems = tileItems
+                    .stream()
+                    .filter(Predicate.not(MCTownItem::isEmpty))
+                    .count() > 0;
+            boolean memHasNoItems = newItems
+                    .stream()
+                    .filter(Predicate.not(MCTownItem::isEmpty))
+                    .count() == 0;
+            if (tileHasNoItems && memHasNoItems) {
                 Questown.LOGGER.debug("Clearing state. BAD!");
             }
         }
@@ -271,6 +270,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (level.isClientSide()) {
             return;
         }
+
+        setChanged();
 
         this.hasPlayerEverBeenNear = false;
 

@@ -9,6 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.Objects;
+
 public class MCTownItem implements GathererJournal.Item {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
@@ -46,6 +48,19 @@ public class MCTownItem implements GathererJournal.Item {
         return "MCTownItem{" +
                 "item=" + item +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MCTownItem that = (MCTownItem) o;
+        return Objects.equals(item, that.item);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(item);
     }
 
     public static MCTownItem Air() {

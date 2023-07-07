@@ -103,13 +103,6 @@ public class TownStateSerializer {
         ListTag containers = tag.getList("containers", Tag.TAG_COMPOUND);
         for (Tag cTag : containers) {
             CompoundTag ccTag = (CompoundTag) cTag;
-            int x = ccTag.getInt("x");
-            int y = ccTag.getInt("y");
-            int z = ccTag.getInt("z");
-            BlockPos pos = new BlockPos(x, y, z);
-            BlockState bs = level.getBlockState(pos);
-            ContainerTarget ct = TownContainers.fromChestBlock(pos, (ChestBlock) bs.getBlock(), level);
-            cB.add(ct);
 
             ImmutableList.Builder<MCTownItem> cItems = ImmutableList.builder();
             ListTag items = ccTag.getList("items", Tag.TAG_COMPOUND);
@@ -118,6 +111,21 @@ public class TownStateSerializer {
                 ItemStack stack = ItemStack.of(icTag);
                 cItems.add(MCTownItem.fromMCItemStack(stack));
             }
+
+            int x = ccTag.getInt("x");
+            int y = ccTag.getInt("y");
+            int z = ccTag.getInt("z");
+            BlockPos pos = new BlockPos(x, y, z);
+            BlockState bs = level.getBlockState(pos);
+            if (!(bs.getBlock() instanceof ChestBlock)) {
+                Questown.LOGGER.error(
+                        "There used to be a chest at {}, but now there isn't. " +
+                                "This is a bug and will cause items to be lost.", pos
+                );
+                continue;
+            }
+            ContainerTarget ct = TownContainers.fromChestBlock(pos, (ChestBlock) bs.getBlock(), level);
+            cB.add(ct);
             ImmutableList<MCTownItem> stateItems = cItems.build();
             checkItems(ct, stateItems);
         }
