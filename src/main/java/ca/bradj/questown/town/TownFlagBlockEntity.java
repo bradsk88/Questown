@@ -100,17 +100,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             e.changed = false;
         }
 
-        // TODO: Use this for recovering mobs
-        long lastTick = e.getTileData().getLong(NBT_LAST_TICK);
-        long timeSinceWake = level.getGameTime() - lastTick;
-        boolean waking = timeSinceWake > 10;
-        e.getTileData().putLong(NBT_LAST_TICK, level.getGameTime());
-
-        if (waking) {
-            Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
-            TownFlagState.recoverMobs(level, e, sl);
-        }
-
+        e.state.tick(e.getTileData(), sl);
         e.quests.tick(sl);
 
         long gameTime = level.getGameTime();

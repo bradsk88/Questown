@@ -58,7 +58,6 @@ public class TownFlagState {
     }
 
     static void recoverMobs(
-            Level level,
             TownFlagBlockEntity e,
             ServerLevel sl
     ) {
@@ -77,7 +76,7 @@ public class TownFlagState {
             for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
-                level.addFreshEntity(recovered);
+                sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }
             Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
@@ -92,5 +91,18 @@ public class TownFlagState {
             CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
             this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
         }
+    }
+
+    public void tick(CompoundTag flagTag, ServerLevel level) {
+        long lastTick = flagTag.getLong(NBT_LAST_TICK);
+        long timeSinceWake = level.getGameTime() - lastTick;
+        boolean waking = timeSinceWake > 10;
+        flagTag.putLong(NBT_LAST_TICK, level.getGameTime());
+
+        if (waking) {
+            Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
+            TownFlagState.recoverMobs(parent, level);
+        }
+
     }
 }
