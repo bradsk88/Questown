@@ -96,7 +96,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         if (e.changed) {
-            e.putStateOnTile();
+            e.state.putStateOnTile(e.getTileData(), e.uuid);
             e.changed = false;
         }
 
@@ -137,17 +137,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             tag.put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
         }
-    }
-
-    private void putStateOnTile() {
-        @Nullable TownState<MCTownItem> state = this.state.captureState();
-        if (state == null) {
-            Questown.LOGGER.warn("TownState was null. Will not store.");
-            return;
-        }
-        Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
-        CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
-        getTileData().put(NBT_TOWN_STATE, cereal);
     }
 
     @Override

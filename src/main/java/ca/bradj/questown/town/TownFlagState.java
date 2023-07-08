@@ -105,4 +105,16 @@ public class TownFlagState {
         }
 
     }
+
+
+    void putStateOnTile(CompoundTag flagTag, UUID uuid) {
+        @Nullable TownState<MCTownItem> state = captureState();
+        if (state == null) {
+            Questown.LOGGER.warn("TownState was null. Will not store.");
+            return;
+        }
+        Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
+        CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
+        flagTag.put(NBT_TOWN_STATE, cereal);
+    }
 }
