@@ -51,6 +51,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
@@ -63,7 +64,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
     public static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
-    private static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -72,7 +72,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
-    private List<LivingEntity> entities = new ArrayList<>();
+    List<LivingEntity> entities = new ArrayList<>();
     private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
     private boolean hasPlayerEverBeenNear;
     private long lastTick = -1;
@@ -114,7 +114,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         if (waking) {
             Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
-            recoverMobs(level, e, sl);
+            TownFlagState.recoverMobs(level, e, sl);
         }
 
         e.quests.tick(sl);
@@ -131,34 +131,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.pois.tick(sl, blockPos);
     }
-
-    private static void recoverMobs(
-            Level level,
-            TownFlagBlockEntity e,
-            ServerLevel sl
-    ) {
-        ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.entities);
-        for (LivingEntity entity : entitiesSnapshot) {
-            e.entities.remove(entity);
-            entity.remove(Entity.RemovalReason.DISCARDED);
-        }
-
-        if (e.getTileData().contains(NBT_TOWN_STATE)) {
-            TownState<MCTownItem> storedState = TownStateSerializer.INSTANCE.load(
-                    e.getTileData().getCompound(NBT_TOWN_STATE),
-                    sl
-            );
-            Set<UUID> uuids = entitiesSnapshot.stream().map(Entity::getUUID).collect(Collectors.toSet());
-            for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
-                VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
-                recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
-                level.addFreshEntity(recovered);
-                e.registerEntity(recovered);
-            }
-            Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
-        }
-    }
-
 
     @Override
     public CompoundTag serializeNBT() {
