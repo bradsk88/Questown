@@ -46,7 +46,6 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
-import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
@@ -68,7 +67,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     List<LivingEntity> entities = new ArrayList<>();
-    private boolean hasPlayerEverBeenNear;
     private boolean changed = false;
     private final TownFlagState state = new TownFlagState(this);
 
@@ -187,19 +185,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
-    public void onChunkUnloaded() {
-        if (level == null) {
-            throw new IllegalStateException("level is null");
-        }
-        if (level.isClientSide()) {
-            return;
-        }
-
-        this.hasPlayerEverBeenNear = false;
-
     }
 
     public static boolean debuggerReleaseControl() {
@@ -431,11 +416,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         return this.roomsMap.getAllMatches();
     }
 
-    public void loadEntity(VisitorMobEntity visitorMobEntity,
-                           ServerLevel sl
+    public void assumeStateFromTown(
+            VisitorMobEntity visitorMobEntity,
+            ServerLevel sl
     ) {
         if (!getTileData().contains(NBT_TOWN_STATE)) {
-            Questown.LOGGER.error("Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
+            Questown.LOGGER.error(
+                    "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
         TownState<MCTownItem> state = TownStateSerializer.INSTANCE.load(getTileData().getCompound(NBT_TOWN_STATE), sl);
@@ -443,7 +430,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
                 .findFirst();
         if (match.isEmpty()) {
-            Questown.LOGGER.error("Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
+            Questown.LOGGER.error(
+                    "Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
             return;
         }
         registerEntity(visitorMobEntity);

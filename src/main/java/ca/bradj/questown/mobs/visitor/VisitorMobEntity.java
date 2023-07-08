@@ -322,7 +322,7 @@ public class VisitorMobEntity extends PathfinderMob {
                     return;
                 }
                 this.town = flag;
-                flag.loadEntity(this, sl);
+                flag.assumeStateFromTown(this, sl);
                 this.initBrain();
             }
         }
