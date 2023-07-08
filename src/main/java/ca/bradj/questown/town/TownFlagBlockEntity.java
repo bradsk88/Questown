@@ -62,6 +62,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
+    public static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
     private static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
@@ -74,6 +75,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private List<LivingEntity> entities = new ArrayList<>();
     private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
     private boolean hasPlayerEverBeenNear;
+    private long lastTick = -1;
+    private boolean changed = false;
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -82,25 +85,36 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         super(TilesInit.TOWN_FLAG.get(), p_155229_, p_155230_);
     }
 
+    public void setChanged() {
+        super.setChanged();
+        this.changed = true;
+    }
+
     public static void tick(
             Level level,
             BlockPos blockPos,
             BlockState state,
             TownFlagBlockEntity e
     ) {
-        // TODO: Maybe record last tick time. If some N time has passed since then, consider recovering mobs (and simulating activity)
 
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
 
-        Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), 64.0, null);
-        if (nearestPlayer != null) {
-            boolean recover = !e.hasPlayerEverBeenNear;
-            e.hasPlayerEverBeenNear = true;
-            if (recover) {
-                recoverMobs(level, e, sl);
-            }
+        if (e.changed) {
+            e.putStateOnTile();
+            e.changed = false;
+        }
+
+        // TODO: Use this for recovering mobs
+        long lastTick = e.getTileData().getLong(NBT_LAST_TICK);
+        long timeSinceWake = level.getGameTime() - lastTick;
+        boolean waking = timeSinceWake > 10;
+        e.getTileData().putLong(NBT_LAST_TICK, level.getGameTime());
+
+        if (waking) {
+            Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
+            recoverMobs(level, e, sl);
         }
 
         e.quests.tick(sl);
@@ -125,18 +139,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.entities);
         for (LivingEntity entity : entitiesSnapshot) {
-            if (!(entity instanceof VisitorMobEntity vme)) {
-                continue;
-            }
-            if (entity.isRemoved()) {
-                e.entities.remove(entity);
-                entity.remove(Entity.RemovalReason.DISCARDED);
-                VisitorMobEntity mob = new VisitorMobEntity(sl, e);
-                mob.initialize(entity.getUUID(), entity.blockPosition(), vme.getJobJournalSnapshot());
-                level.addFreshEntity(mob);
-                e.registerEntity(mob);
-                Questown.LOGGER.debug("Revived entity {}", mob.getUUID());
-            }
+            e.entities.remove(entity);
+            entity.remove(Entity.RemovalReason.DISCARDED);
         }
 
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
@@ -146,9 +150,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             );
             Set<UUID> uuids = entitiesSnapshot.stream().map(Entity::getUUID).collect(Collectors.toSet());
             for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
-                if (uuids.contains(v.uuid)) {
-                    continue;
-                }
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
                 level.addFreshEntity(recovered);
@@ -173,18 +174,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
         this.writeTownData(tag);
-        if (!level.isClientSide() && hasPlayerEverBeenNear) {
+        if (!level.isClientSide()) {
             TownState<MCTownItem> state = captureState();
             if (state == null) {
                 return;
             }
-
-            putStateOnTile(state);
             tag.put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(state));
         }
     }
 
-    private void putStateOnTile(TownState<MCTownItem> state) {
+    private void putStateOnTile() {
+        @Nullable TownState<MCTownItem> state = captureState();
+        if (state == null) {
+            Questown.LOGGER.warn("TownState was null. Will not store.");
+            return;
+        }
         Questown.LOGGER.debug("Storing state on {}: {}", uuid, state);
         CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
         getTileData().put(NBT_TOWN_STATE, cereal);
@@ -212,6 +216,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             CompoundTag data = tag.getCompound(NBT_ASAP_QUESTS);
             Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
             l.forEach(this.asapRandomAwdForVisitor::push);
+        }
+        if (tag.contains(NBT_LAST_TICK)) {
+            this.lastTick = tag.getLong(NBT_LAST_TICK);
         }
         if (tag.contains(NBT_TOWN_STATE)) {
             CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
@@ -256,7 +263,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     }
 
-    @NotNull
     private @Nullable TownState<MCTownItem> captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCTownItem>> vB = ImmutableList.builder();
         for (LivingEntity entity : entities) {
@@ -484,7 +490,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void registerEntity(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
-        vEntity.addChangeListener(() -> this.setChanged());
+        vEntity.addChangeListener(() -> {
+            Questown.LOGGER.debug("Setting changed");
+            this.setChanged();
+        });
         this.setChanged();
     }
 

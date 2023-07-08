@@ -233,8 +233,15 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
+    public boolean removeWhenFarAway(double p_21542_) {
+        // See keepAlive
+        return false;
+    }
+
+    @Override
     public void tick() {
         super.tick();
+
         if (job.getStatus() == GathererJournal.Statuses.UNSET) {
             GathererJournal.Statuses s = getStatus();
             if (s == GathererJournal.Statuses.UNSET) {
