@@ -77,6 +77,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean hasPlayerEverBeenNear;
     private long lastTick = -1;
     private boolean changed = false;
+    private final TownFlagState state = new TownFlagState(this);
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -147,7 +148,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         super.saveAdditional(tag);
         this.writeTownData(tag);
         if (!level.isClientSide()) {
-            TownState<MCTownItem> state = captureState();
+            TownState<MCTownItem> state = this.state.captureState();
             if (state == null) {
                 return;
             }
@@ -156,7 +157,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     private void putStateOnTile() {
-        @Nullable TownState<MCTownItem> state = captureState();
+        @Nullable TownState<MCTownItem> state = this.state.captureState();
         if (state == null) {
             Questown.LOGGER.warn("TownState was null. Will not store.");
             return;
@@ -233,31 +234,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         this.hasPlayerEverBeenNear = false;
 
-    }
-
-    private @Nullable TownState<MCTownItem> captureState() {
-        ImmutableList.Builder<TownState.VillagerData<MCTownItem>> vB = ImmutableList.builder();
-        for (LivingEntity entity : entities) {
-            if (entity instanceof VisitorMobEntity) {
-                if (!((VisitorMobEntity) entity).isInitialized()) {
-                    return null;
-                }
-                TownState.VillagerData<MCTownItem> data = new TownState.VillagerData<>(
-                        Positions.FromBlockPos(entity.blockPosition()),
-                        entity.blockPosition().getY(),
-                        ((VisitorMobEntity) entity).getJobJournalSnapshot(),
-                        entity.getUUID()
-                );
-                vB.add(data);
-            }
-        }
-
-        TownState<MCTownItem> ts = new TownState<>(
-                vB.build(),
-                TownContainers.findAllMatching(this, item -> true).toList(),
-                level.getDayTime()
-        );
-        return ts;
     }
 
     public static boolean debuggerReleaseControl() {
