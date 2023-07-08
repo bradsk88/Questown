@@ -18,7 +18,6 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -32,9 +31,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -48,9 +45,8 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
+import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
@@ -63,7 +59,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
-    public static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -73,9 +68,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     List<LivingEntity> entities = new ArrayList<>();
-    private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
     private boolean hasPlayerEverBeenNear;
-    private long lastTick = -1;
     private boolean changed = false;
     private final TownFlagState state = new TownFlagState(this);
 
@@ -190,13 +183,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
             l.forEach(this.asapRandomAwdForVisitor::push);
         }
-        if (tag.contains(NBT_LAST_TICK)) {
-            this.lastTick = tag.getLong(NBT_LAST_TICK);
-        }
-        if (tag.contains(NBT_TOWN_STATE)) {
-            CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
-            this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
-        }
+        state.load(tag);
 
     }
 

@@ -5,8 +5,10 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.roomrecipes.adapter.Positions;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,12 +16,16 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class TownFlagState {
+    static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
+    private long lastTick = -1;
+    private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
         this.parent = parent;
@@ -75,6 +81,16 @@ public class TownFlagState {
                 e.registerEntity(recovered);
             }
             Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
+        }
+    }
+
+    public void load(CompoundTag tag) {
+        if (tag.contains(NBT_LAST_TICK)) {
+            this.lastTick = tag.getLong(NBT_LAST_TICK);
+        }
+        if (tag.contains(NBT_TOWN_STATE)) {
+            CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
+            this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
         }
     }
 }
