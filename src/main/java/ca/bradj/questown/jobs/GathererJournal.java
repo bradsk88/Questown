@@ -153,6 +153,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
             throw new IllegalStateException("Must initialize status");
         }
         switch (sigs.getSignal()) {
+            // TODO: Extract static "get status from signal" function and use it in timeWarp
             case MORNING -> {
                 this.ate = false;
                 if (
