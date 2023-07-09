@@ -53,7 +53,6 @@ public class TownStateSerializer {
                 journalItems.add(item.serializeNBT());
             }
             vTag.put("journal_items", journalItems);
-            vTag.putBoolean("ate", e.journal.ate());
             vTag.putUUID("uuid", e.uuid);
             villagers.add(vTag);
         }
@@ -78,7 +77,7 @@ public class TownStateSerializer {
             int x = vcTag.getInt("x");
             int y = vcTag.getInt("y");
             int z = vcTag.getInt("z");
-            GathererJournal.Statuses status = GathererJournal.Statuses.from(vcTag.getString("journal_status"));
+            GathererJournal.Status status = GathererJournal.Status.from(vcTag.getString("journal_status"));
             ListTag items = vcTag.getList("journal_items", Tag.TAG_COMPOUND);
             ImmutableList.Builder<MCTownItem> iB = ImmutableList.builder();
             for (Tag itemTag : items) {
@@ -87,7 +86,7 @@ public class TownStateSerializer {
             }
             b.add(new TownState.VillagerData<>(
                     new Position(x, z), y,
-                    new GathererJournal.Snapshot<>(status, vcTag.getBoolean("ate"), iB.build()),
+                    new GathererJournal.Snapshot<>(status, iB.build()),
                     vcTag.getUUID("uuid")
             ));
         }

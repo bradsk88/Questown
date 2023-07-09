@@ -34,7 +34,7 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
     }
 
     @NotNull
-    private static ResourceLocation getStatusTexture(GathererJournal.Statuses status) {
+    private static ResourceLocation getStatusTexture(GathererJournal.Status status) {
         switch(status) {
             case UNSET -> {
                 return new ResourceLocation("questown", "textures/error.png");

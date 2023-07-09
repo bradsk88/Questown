@@ -11,7 +11,10 @@ public enum GathererStatuses implements StringRepresentable {
     NO_FOOD("no_food"),
     STAYING("staying"),
     GATHERING("gathering"),
+    GATHERING_HUNGRY("gathering_hungry"),
+    GATHERING_EATING("gathering_eating"),
     RETURNING("returning"),
+    RETURNING_AT_NIGHT("returning_at_night"),
     RETURNED_SUCCESS("returned_success"),
     RETURNED_FAILURE("returned_failure"),
     CAPTURED("captured"),
@@ -61,7 +64,7 @@ public enum GathererStatuses implements StringRepresentable {
         return this.name;
     }
 
-    public static GathererStatuses fromQT(GathererJournal.Statuses status) {
+    public static GathererStatuses fromQT(GathererJournal.Status status) {
         return switch (status) {
             case UNSET -> throw new IllegalArgumentException(
                     "UNSET is a metavalue, and should never be provided"
@@ -71,7 +74,10 @@ public enum GathererStatuses implements StringRepresentable {
             case NO_FOOD -> NO_FOOD;
             case STAYING -> STAYING;
             case GATHERING -> GATHERING;
+            case GATHERING_HUNGRY -> GATHERING_HUNGRY;
+            case GATHERING_EATING -> GATHERING_EATING;
             case RETURNING -> RETURNING;
+            case RETURNING_AT_NIGHT -> RETURNING_AT_NIGHT;
             case RETURNED_SUCCESS -> RETURNED_SUCCESS;
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
@@ -79,21 +85,24 @@ public enum GathererStatuses implements StringRepresentable {
         };
     }
 
-    public GathererJournal.Statuses toQT() {
+    public GathererJournal.Status toQT() {
         return switch (this) {
             case INVALID -> throw new IllegalArgumentException(
                     "INVALID is a metavalue, and should never be provided"
             );
-            case IDLE -> GathererJournal.Statuses.IDLE;
-            case NO_SPACE -> GathererJournal.Statuses.NO_SPACE;
-            case NO_FOOD -> GathererJournal.Statuses.NO_FOOD;
-            case STAYING -> GathererJournal.Statuses.STAYING;
-            case GATHERING -> GathererJournal.Statuses.GATHERING;
-            case RETURNING -> GathererJournal.Statuses.RETURNING;
-            case RETURNED_SUCCESS -> GathererJournal.Statuses.RETURNED_SUCCESS;
-            case RETURNED_FAILURE -> GathererJournal.Statuses.RETURNED_FAILURE;
-            case CAPTURED -> GathererJournal.Statuses.CAPTURED;
-            case RELAXING -> GathererJournal.Statuses.RELAXING;
+            case IDLE -> GathererJournal.Status.IDLE;
+            case NO_SPACE -> GathererJournal.Status.NO_SPACE;
+            case NO_FOOD -> GathererJournal.Status.NO_FOOD;
+            case STAYING -> GathererJournal.Status.STAYING;
+            case GATHERING -> GathererJournal.Status.GATHERING;
+            case GATHERING_HUNGRY -> GathererJournal.Status.GATHERING_HUNGRY;
+            case GATHERING_EATING -> GathererJournal.Status.GATHERING_EATING;
+            case RETURNING -> GathererJournal.Status.RETURNING;
+            case RETURNING_AT_NIGHT -> GathererJournal.Status.RETURNING_AT_NIGHT;
+            case RETURNED_SUCCESS -> GathererJournal.Status.RETURNED_SUCCESS;
+            case RETURNED_FAILURE -> GathererJournal.Status.RETURNED_FAILURE;
+            case CAPTURED -> GathererJournal.Status.CAPTURED;
+            case RELAXING -> GathererJournal.Status.RELAXING;
         };
     }
 }

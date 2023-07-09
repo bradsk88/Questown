@@ -240,12 +240,12 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
         return flag;
     }
 
-    public GathererJournal.Statuses getStatus() {
-        return GathererJournal.Statuses.values()[this.statusSlot.get()];
+    public GathererJournal.Status getStatus() {
+        return GathererJournal.Status.values()[this.statusSlot.get()];
     }
 
     @Override
-    public void statusChanged(GathererJournal.Statuses newStatus) {
+    public void statusChanged(GathererJournal.Status newStatus) {
         this.statusSlot.set(newStatus.ordinal());
     }
 }

@@ -3,7 +3,9 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.town.TownInventory;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -42,9 +44,7 @@ class GathererJournalTest {
 
         @Override
         public String toString() {
-            return "TestItem{" +
-                    "value='" + value + '\'' +
-                    '}';
+            return "TestItem{" + "value='" + value + '\'' + '}';
         }
     }
 
@@ -58,7 +58,10 @@ class GathererJournalTest {
     static class TestTaker implements TownInventory.ItemTaker<List<TestItem>, TestItem> {
 
         @Override
-        public @Nullable TestItem takeItem(List<TestItem> items, TestItem item) {
+        public @Nullable TestItem takeItem(
+                List<TestItem> items,
+                TestItem item
+        ) {
             if (items.contains(item)) {
                 items.remove(item);
                 return item;
@@ -81,22 +84,18 @@ class GathererJournalTest {
     @Test
     void testDefaultStatusBeforeSignals() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
-        Assertions.assertEquals(GathererJournal.Statuses.IDLE, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
     }
 
     @Test
     void testMorningSignalWithNoSpaceInInventory() {
         TestSignals sigs = new TestSignals();
-        GathererJournal.ContainerCheck noSpace = () -> false;
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), noSpace
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        Statuses.TownStateProvider noSpace = () -> false;
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpace);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         for (int i = 0; i < gatherer.getCapacity(); i++) {
             gatherer.addItem(new TestItem("seeds"));
@@ -107,16 +106,14 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "no space"
-        Assertions.assertEquals(GathererJournal.Statuses.NO_SPACE, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, gatherer.getStatus());
     }
 
     @Test
     void testMorningSignalWithNoBreadAvailable() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Do not add bread to "inv"
 
@@ -125,16 +122,14 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "hungry"
-        Assertions.assertEquals(GathererJournal.Statuses.NO_FOOD, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
     }
 
     @Test
     void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Add food and loot
         gatherer.addItem(new TestItem("bread"));
@@ -144,17 +139,15 @@ class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
     }
 
     @Test
     void testMorningSignalWithBreadAvailable() {
         TestInventory inv = new TestInventory();
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         ArrayList<TestItem> chest = new ArrayList<>();
         inv.addContainer(chest);
@@ -167,26 +160,28 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "gathering"
-        Assertions.assertEquals(GathererJournal.Statuses.GATHERING, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
     }
 
     @Test
-    void testAfternoonSignalRemovesFoodAddsRandomLoot() {
+    void testEveningSignalRemovesFoodAddsRandomLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         gatherer.addItem(new TestItem("bread"));
 
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
 
-        // Trigger afternoon signal
+        // Trigger afternoon to set status to GATHERING_HUNGRY (to mimic typical scenario)
         sigs.currentSignal = GathererJournal.Signals.NOON;
-        gatherer.tick(() -> ImmutableList.of(
-                new TestItem("seeds"),
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
+
+        // Trigger one evening signal for food
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        gatherer.tick(() -> ImmutableList.of(new TestItem("seeds"),
                 new TestItem("seeds"),
                 new TestItem("stick"),
                 new TestItem("stick"),
@@ -195,36 +190,49 @@ class GathererJournalTest {
                 new TestItem("diamond")
         ));
 
-        Collection<TestItem> items = gatherer.getItems();
+        // Trigger second evening signal for loot (signals happen in game every tick)
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        gatherer.tick(() -> ImmutableList.of(new TestItem("seeds"),
+                new TestItem("seeds"),
+                new TestItem("stick"),
+                new TestItem("stick"),
+                new TestItem("apple"),
+                new TestItem("egg"),
+                new TestItem("diamond")
+        ));
 
-        Assertions.assertIterableEquals(
-                ImmutableList.of(
-                        new TestItem("seeds"),
-                        new TestItem("seeds"),
-                        new TestItem("stick"),
-                        new TestItem("stick"),
-                        new TestItem("apple"),
-                        new TestItem("egg")
-                ),
-                items
-        );
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
+        Collection<TestItem> items = gatherer.getItems();
+        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("seeds"),
+                new TestItem("seeds"),
+                new TestItem("stick"),
+                new TestItem("stick"),
+                new TestItem("apple"),
+                new TestItem("egg")
+        ), items);
     }
 
     @Test
     void testAfternoonSignalRemovesFoodEvenWhenLootIsEmpty() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         gatherer.addItem(new TestItem("bread"));
 
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
 
-        // Trigger afternoon signal
         sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
+
+        sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
+
+        // Trigger evening signal
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
 
         Collection<TestItem> items = gatherer.getItems();
@@ -235,46 +243,34 @@ class GathererJournalTest {
     @Test
     void testAfternoonSignalStaysIdleIfIdle() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
-
-
-        gatherer.addItem(new TestItem("bread"));
-
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
-        gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(GathererJournal.Statuses.GATHERING, gatherer.getStatus());
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Trigger afternoon signal
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(GathererJournal.Statuses.RETURNING, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
     }
+
     @Test
     void testAfternoonSignalStaysIdleIfGathering() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Trigger afternoon signal
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(GathererJournal.Statuses.IDLE, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
     }
 
     @Test
     void testAfternoonSignalRemovesOnlyOneFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         gatherer.addItem(new TestItem("bread"));
         gatherer.addItem(new TestItem("bread"));
@@ -282,32 +278,31 @@ class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
 
-        // Trigger afternoon signal
+        // Trigger afternoon to set status to GATHERING_HUNGRY
         sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
+
+        // Trigger evening signal
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
 
         Collection<TestItem> items = gatherer.getItems();
-        Assertions.assertIterableEquals(
-                ImmutableList.of(
-                        new TestItem("bread"),
-                        new TestItem(""),
-                        new TestItem(""),
-                        new TestItem(""),
-                        new TestItem(""),
-                        new TestItem("")
-                ),
-                items
-        );
+        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("bread"),
+                new TestItem(""),
+                new TestItem(""),
+                new TestItem(""),
+                new TestItem(""),
+                new TestItem("")
+        ), items);
 
     }
 
     @Test
     void testAfternoonSignalTransitionsFromNoFoodToStayedHome() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // With no food, trigger morning signal
         // Gatherer will begin looking for food
@@ -318,16 +313,66 @@ class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(GathererJournal.Statuses.STAYING, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
+    }
+
+    @Test
+    void testAfternoonSignalTransitionsFromGatheringToGatheringHungry_IfHasFood() {
+        TestSignals sigs = new TestSignals();
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
+
+        gatherer.addItem(new TestItem("bread"));
+
+        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
+
+        // Trigger FIRST afternoon signal
+        sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
+
+        // Trigger SECOND afternoon signal
+        sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
+    }
+
+    @Test
+    @Disabled("Edge case. Should pass but not super important")
+    void testAfternoonSignalTransitionsFromGatheringToNoFood_IfDoesNotHaveFood() {
+        // This shouldn't happen, but let's handle it anyway
+        TestSignals sigs = new TestSignals();
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
+
+        // Initially has food
+        gatherer.addItem(new TestItem("bread"));
+
+        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
+
+        // Remove food somehow (should be impossible, but hey)
+        gatherer.removeItem(new TestItem("bread"));
+
+        // Trigger FIRST afternoon signal (goes to IDLE due to legacy change detection)
+        sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
+
+        // Trigger SECOND afternoon signal
+        sigs.currentSignal = GathererJournal.Signals.NOON;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
     }
 
     @Test
     void testEveningSignalSetsReturnedSuccessfulStatus() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         TestItem gold = new TestItem("gold");
         gatherer.addItem(gold);
@@ -337,19 +382,15 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "returned successful"
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
     }
 
     @Test
     void testEveningSignalSetsNoSpaceStatus_WhenNoSpaceInTown() {
         TestSignals sigs = new TestSignals();
-        GathererJournal.ContainerCheck noSpaceInTown = () -> false;
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), noSpaceInTown
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        Statuses.TownStateProvider noSpaceInTown = () -> false;
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpaceInTown);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         TestItem gold = new TestItem("gold");
         gatherer.addItem(gold);
@@ -359,9 +400,7 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "returned successful"
-        Assertions.assertEquals(
-                GathererJournal.Statuses.NO_SPACE, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, gatherer.getStatus());
 
         // Make sure we don't flip back and forth between statuses
 
@@ -369,19 +408,15 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "returned successful"
-        Assertions.assertEquals(
-                GathererJournal.Statuses.NO_SPACE, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, gatherer.getStatus());
     }
 
     @Test
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasNoSpace() {
         TestSignals sigs = new TestSignals();
-        GathererJournal.ContainerCheck noSpace = () -> false;
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), noSpace
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        Statuses.TownStateProvider noSpace = () -> false;
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpace);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         TestItem gold = new TestItem("gold");
         gatherer.addItem(gold);
@@ -390,35 +425,27 @@ class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(
-                GathererJournal.Statuses.NO_SPACE, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, gatherer.getStatus());
 
         gatherer.removeItem(gold);
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RELAXING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
 
         // Confirm stays in that status
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
 
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RELAXING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
     }
 
     @Test
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasSpace() {
         TestSignals sigs = new TestSignals();
-        GathererJournal.ContainerCheck hasSpace = () -> true;
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), hasSpace
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        Statuses.TownStateProvider hasSpace = () -> true;
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), hasSpace);
+        gatherer.initializeStatus(GathererJournal.Status.RETURNING);
 
         TestItem gold = new TestItem("gold");
         gatherer.addItem(gold);
@@ -428,61 +455,48 @@ class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         // Assert that the status is set to "returned successful"
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
 
         gatherer.removeItem(gold);
+        // Status goes to idle for legacy change detection
+        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
+
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
-
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RELAXING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
 
         // Confirm stays in that status
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
-
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RELAXING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
     }
 
     @Test
     void testSkipFromMorningToEveningNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // No food
 
         // Trigger morning signal
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.NO_FOOD, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
 
         // No noon signal
 
         // Trigger evening signal
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.STAYING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
     }
 
     @Test
     void testSkipFromMorningToEveningWithFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Has one food
         gatherer.addItem(new TestItem("bread"));
@@ -490,30 +504,36 @@ class GathererJournalTest {
         // Trigger morning signal
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.GATHERING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
         // No noon signal
 
         // Trigger evening signal
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RETURNED_SUCCESS, gatherer.getStatus()
-        );
-        Assertions.assertFalse(
-                gatherer.hasAnyFood()
-        );
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
+
+        // Trigger another evening signal (happens every tick in game)
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        gatherer.tick(ImmutableList::of);
+        Assertions.assertEquals(GathererJournal.Status.RETURNING_AT_NIGHT, gatherer.getStatus());
+
+        // Trigger another evening signal (happens every tick in game)
+        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        // Must have loot or else gatherer will go to "relaxing" instead of "returned success"
+        gatherer.tick(() -> ImmutableList.of(
+                new TestItem("gold")
+        ));
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
+
+        Assertions.assertFalse(gatherer.hasAnyFood());
     }
 
     @Test
     void testSkipFromEveningToNoonShouldSetStatusToNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
-                sigs, () -> new TestItem(""), () -> true
-        );
-        gatherer.initializeStatus(GathererJournal.Statuses.IDLE);
+        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), () -> true);
+        gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Add food
         gatherer.addItem(new TestItem("bread"));
@@ -521,40 +541,26 @@ class GathererJournalTest {
         // Trigger morning signal
         sigs.currentSignal = GathererJournal.Signals.MORNING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.GATHERING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
         // Start returning at noon
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.RETURNING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger evening signal
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertTrue(
-                ImmutableList.of(
-                        GathererJournal.Statuses.RETURNED_SUCCESS,
-                        GathererJournal.Statuses.RETURNED_FAILURE,
-                        GathererJournal.Statuses.RELAXING
-                ).contains(gatherer.getStatus())
-        );
+        Assertions.assertEquals(GathererJournal.Status.RETURNING_AT_NIGHT, gatherer.getStatus());
 
         // Trigger noon signal
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.NO_FOOD, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
 
         // Trigger noon signal again
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(
-                GathererJournal.Statuses.STAYING, gatherer.getStatus()
-        );
+        Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
     }
 }

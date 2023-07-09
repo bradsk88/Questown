@@ -229,7 +229,7 @@ public class VisitorMobEntity extends PathfinderMob {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(visible, true);
-        this.entityData.define(status, GathererJournal.Statuses.IDLE.name());
+        this.entityData.define(status, GathererJournal.Status.IDLE.name());
     }
 
     @Override
@@ -242,10 +242,10 @@ public class VisitorMobEntity extends PathfinderMob {
     public void tick() {
         super.tick();
 
-        if (job.getStatus() == GathererJournal.Statuses.UNSET) {
-            GathererJournal.Statuses s = getStatus();
-            if (s == GathererJournal.Statuses.UNSET) {
-                s = GathererJournal.Statuses.IDLE;
+        if (job.getStatus() == GathererJournal.Status.UNSET) {
+            GathererJournal.Status s = getStatus();
+            if (s == GathererJournal.Status.UNSET) {
+                s = GathererJournal.Status.IDLE;
             }
             job.initializeStatus(s);
         }
@@ -498,8 +498,8 @@ public class VisitorMobEntity extends PathfinderMob {
         return job.getInventory();
     }
 
-    public GathererJournal.Statuses getStatus() {
-        return GathererJournal.Statuses.from(entityData.get(status));
+    public GathererJournal.Status getStatus() {
+        return GathererJournal.Status.from(entityData.get(status));
     }
 
 //    // If all else fails, we can use this

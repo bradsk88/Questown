@@ -4,9 +4,11 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
@@ -14,17 +16,20 @@ import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 public class GathererJournal<I extends GathererJournal.Item> {
     private final SignalSource sigs;
     private final EmptyFactory<I> emptyFactory;
-    private final ContainerCheck storageCheck;
+    private final Statuses.TownStateProvider storageCheck;
     private List<I> inventory; // TODO: Change to generic container and add adapter for MC Container
     private boolean ate = false;
-    private ItemsListener<I> listener;
+    private List<ItemsListener<I>> listeners = new ArrayList<>();
     private List<StatusListener> statusListeners = new ArrayList<>();
-    private Statuses status = Statuses.UNSET;
+    private Status status = Status.UNSET;
+    private DefaultInventoryStateProvider<I> invState = new DefaultInventoryStateProvider<>(
+            () -> ImmutableList.copyOf(this.inventory)
+    );
 
     public GathererJournal(
             SignalSource sigs,
             EmptyFactory<I> ef,
-            ContainerCheck cont
+            Statuses.TownStateProvider cont
     ) {
         super();
         this.sigs = sigs;
@@ -55,7 +60,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
         return ImmutableList.copyOf(inventory);
     }
 
-    public void initializeStatus(Statuses statuses) {
+    public void initializeStatus(Status statuses) {
         this.status = statuses;
     }
 
@@ -80,22 +85,24 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
-        changeStatus(Statuses.IDLE);
+        if (status == Status.GATHERING_EATING) {
+            changeStatus(Status.GATHERING);
+        }
+        // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
+        changeStatus(Status.IDLE);
         return true;
     }
 
     private void updateItemListeners() {
-        if (this.listener == null) {
-            return;
-        }
-        this.listener.itemsChanged(ImmutableList.copyOf(inventory));
+        ImmutableList<I> copyForListeners = ImmutableList.copyOf(inventory);
+        this.listeners.forEach(l -> l.itemsChanged(copyForListeners));
     }
 
     public I removeItem(int index) {
         I item = inventory.get(index);
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
-        changeStatus(Statuses.IDLE);
+        changeStatus(Status.IDLE);
         return item;
     }
 
@@ -118,16 +125,15 @@ public class GathererJournal<I extends GathererJournal.Item> {
             I mcTownItem
     ) {
         inventory.set(index, mcTownItem);
-        changeStatus(Statuses.IDLE);
+        changeStatus(Status.IDLE);
     }
 
     public void addStatusListener(StatusListener l) {
         this.statusListeners.add(l);
     }
 
-    public void setItemsListener(ItemsListener<I> l) {
-        // TODO: Support multiple?
-        this.listener = l;
+    public void addItemsListener(ItemsListener<I> l) {
+        this.listeners.add(l);
     }
 
     public int getCapacity() {
@@ -135,141 +141,42 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     public void addItem(I item) {
-        if (this.inventoryIsFull()) {
+        if (this.invState.inventoryIsFull()) {
             throw new IllegalStateException("Inventory is full");
         }
         Item emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
-        if (status == Statuses.NO_FOOD && item.isFood()) { // TODO: Test
-            changeStatus(Statuses.IDLE);
+        if (status == Status.NO_FOOD && item.isFood()) { // TODO: Test
+            changeStatus(Status.IDLE);
         }
     }
 
     public void tick(
             LootProvider<I> loot
     ) {
-        if (status == Statuses.UNSET) {
+        if (status == Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
         }
-        switch (sigs.getSignal()) {
-            // TODO: Extract static "get status from signal" function and use it in timeWarp
-            case MORNING -> {
-                this.ate = false;
-                if (
-                        status == Statuses.NO_FOOD ||
-                                status == Statuses.NO_SPACE ||
-                                status == Statuses.GATHERING
-                ) {
-                    return;
-                }
 
-                if (this.hasAnyNonFood()) {
-                    if (status != Statuses.NO_SPACE && !storageCheck.IsTownStorageAvailable()) {
-                        changeStatus(Statuses.NO_SPACE);
-                        return;
-                    }
-                    if (status == Statuses.RETURNED_SUCCESS) {
-                        return;
-                    }
-                    this.changeStatus(Statuses.RETURNED_SUCCESS);
-                    return;
-                }
-
-
-                if (this.inventoryIsFull()) {
-                    this.changeStatus(Statuses.NO_SPACE);
-                    return;
-                }
-                if (this.inventoryHasFood()) {
-                    Questown.LOGGER.debug("Inventory has: {}", this.getItems());
-                    this.changeStatus(Statuses.GATHERING);
-                    return;
-                }
-                this.changeStatus(Statuses.NO_FOOD);
-            }
-            case NOON -> {
-                if (
-                        this.status == Statuses.STAYING ||
-                                status == Statuses.RETURNING
-                ) {
-                    return;
-                }
-                if (
-                        status == Statuses.RETURNED_SUCCESS ||
-                                status == Statuses.RETURNED_FAILURE ||
-                                status == Statuses.RELAXING
-                ) {
-                    changeStatus(Statuses.NO_FOOD);
-                    return;
-                }
-                if (
-                        this.status == Statuses.NO_FOOD ||
-                                this.status == Statuses.NO_SPACE
-                ) {
-                    changeStatus(Statuses.STAYING);
-                    return;
-                }
-                if (status == Statuses.GATHERING) {
-                    this.removeFood();
-                    this.addLoot(loot.getLoot());
-                    changeStatus(Statuses.RETURNING);
-                }
-                // TODO: What if the gatherer is out but doesn't have food (somehow)
-            }
-            case EVENING -> {
-                if (status == Statuses.STAYING) {
-                    return;
-                }
-                if (status == Statuses.NO_FOOD) {
-                    changeStatus(Statuses.STAYING);
-                    return;
-                }
-
-                if (!hasAnyItems()) {
-                    if (status != Statuses.RELAXING) {
-                        changeStatus(Statuses.RELAXING);
-                    }
-                    return;
-                }
-
-                if (!storageCheck.IsTownStorageAvailable()) {
-                    if (status != Statuses.NO_SPACE) {
-                        changeStatus(Statuses.NO_SPACE);
-                    }
-                    return;
-                }
-
-                if (
-                        this.status == Statuses.STAYING ||
-                                status == Statuses.RETURNED_FAILURE ||
-                                status == Statuses.RETURNED_SUCCESS ||
-                                status == Statuses.RELAXING
-                ) {
-                    return;
-                }
-                // TODO: Random failure
-                if (!ate) {
-                    this.removeFood();
-                    this.addLoot(loot.getLoot());
-                }
-                this.changeStatus(Statuses.RETURNED_SUCCESS);
-            }
-            case NIGHT -> {
-                if (
-                        this.status == Statuses.STAYING ||
-                                this.status == Statuses.RETURNED_FAILURE ||
-                                this.status == Statuses.RETURNED_SUCCESS
-                ) {
-                    return;
-                }
-                // TODO: Late return?
-                // TODO: Gatherers can get captured and must be rescued by knight?
-            }
+        Signals sig = sigs.getSignal();
+        @Nullable GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                status, sig, this.invState, storageCheck
+        );
+        if (newStatus == Status.GATHERING_EATING) {
+            Snapshot<I> ss = getSnapshot(emptyFactory).withStatus(newStatus).eatFoodFromInventory(emptyFactory, sig);
+            this.setItems(ss.items());
+            newStatus = ss.status();
+        }
+        if (newStatus == Status.RETURNED_SUCCESS && status != Status.RETURNED_SUCCESS && status != Status.IDLE) {
+            this.addLoot(loot.getLoot());
+        }
+        if (newStatus != null) {
+            changeStatus(newStatus);
         }
     }
 
-    protected void changeStatus(Statuses s) {
+    protected void changeStatus(Status s) {
         this.status = s;
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
@@ -300,42 +207,33 @@ public class GathererJournal<I extends GathererJournal.Item> {
         updateItemListeners();
     }
 
-    private boolean inventoryHasFood() {
-        return this.inventory.stream().anyMatch(Item::isFood);
-    }
-
-    public boolean inventoryIsFull() {
-        return this.inventory.stream().noneMatch(Item::isEmpty);
-    }
-
-    public Statuses getStatus() {
+    public Status getStatus() {
         return status;
     }
 
     // TODO: Create read-only class
     public Snapshot<I> getSnapshot(EmptyFactory<I> ef) {
-        return new Snapshot<>(status, ate, ImmutableList.copyOf(inventory));
+        return new Snapshot<>(status, ImmutableList.copyOf(inventory));
     }
 
     public void initialize(Snapshot<I> journal) {
-        this.ate = journal.ate();
-        this.initializeItems(journal.items());
+        this.setItems(journal.items());
         this.initializeStatus(journal.status());
     }
 
-    public void initializeItems(Iterable<I> mcTownItemStream) {
+    public void setItems(Iterable<I> mcTownItemStream) {
         ImmutableList.Builder<I> b = ImmutableList.builder();
         mcTownItemStream.forEach(b::add);
         inventory.clear();
         ImmutableList<I> initItems = b.build();
         inventory.addAll(initItems);
-        listener.itemsChanged(initItems);
+        updateItemListeners();
     }
 
     public void setItemsNoUpdateNoCheck(ImmutableList<I> build) {
         inventory.clear();
         inventory.addAll(build);
-        changeStatus(Statuses.IDLE);
+        changeStatus(Status.IDLE);
     }
 
     public enum Signals {
@@ -343,34 +241,53 @@ public class GathererJournal<I extends GathererJournal.Item> {
         MORNING,
         NOON,
         EVENING,
-        NIGHT
+        NIGHT;
+
+        public static Signals fromGameTime(long gameTime) {
+            long dayTime = gameTime % 24000;
+            if (dayTime < 6000) {
+                return GathererJournal.Signals.MORNING;
+            } else if (dayTime < 11500) {
+                return GathererJournal.Signals.NOON;
+            } else if (dayTime < 22000) {
+                return GathererJournal.Signals.EVENING;
+            } else {
+                return GathererJournal.Signals.NIGHT;
+            }
+        }
     }
 
     // TODO: Add state for LEAVING and add signal for "left town"
     //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
-    public enum Statuses {
+    public enum Status {
         UNSET,
         IDLE,
         NO_SPACE,
         NO_FOOD,
         STAYING,
         GATHERING,
+        GATHERING_HUNGRY,
+        GATHERING_EATING,
         RETURNING,
+        RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS,
         RETURNED_FAILURE,
         CAPTURED,
         RELAXING;
 
-        public static Statuses from(String s) {
+        public static Status from(String s) {
             return switch (s) {
                 case "IDLE" -> IDLE;
                 case "NO_SPACE" -> NO_SPACE;
                 case "NO_FOOD" -> NO_FOOD;
                 case "STAYING" -> STAYING;
                 case "GATHERING" -> GATHERING;
+                case "GATHERING_HUNGRY" -> GATHERING_HUNGRY;
+                case "GATHERING_EATING" -> GATHERING_EATING;
                 case "RETURNED_SUCCESS" -> RETURNED_SUCCESS;
                 case "RETURNED_FAILURE" -> RETURNED_FAILURE;
                 case "RETURNING" -> RETURNING;
+                case "RETURNING_AT_NIGHT" -> RETURNING_AT_NIGHT;
                 case "CAPTURED" -> CAPTURED;
                 case "RELAXING" -> RELAXING;
                 default -> UNSET;
@@ -379,7 +296,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     public interface StatusListener {
-        void statusChanged(GathererJournal.Statuses newStatus);
+        void statusChanged(Status newStatus);
     }
 
     public interface ItemsListener<I> {
@@ -404,11 +321,45 @@ public class GathererJournal<I extends GathererJournal.Item> {
         I makeEmptyItem();
     }
 
-    public interface ContainerCheck {
-        boolean IsTownStorageAvailable();
-    }
+    // TODO: Can "ate" go away?
+    public record Snapshot<I extends Item>(Status status, ImmutableList<I> items) {
+        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Status.IDLE, ImmutableList.of());
 
-    public record Snapshot<I extends Item>(Statuses status, boolean ate, ImmutableList<I> items) {
-        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Statuses.IDLE, false, ImmutableList.of());
+        public Snapshot<I> eatFoodFromInventory(EmptyFactory<I> ef, Signals signal) {
+            Status nextStatus = null;
+            if (status == Status.GATHERING_EATING) {
+                nextStatus = Status.RETURNING;
+                if (signal == Signals.EVENING || signal == Signals.NIGHT) {
+                    nextStatus = Status.RETURNING_AT_NIGHT;
+                }
+            } else if (status == Status.RETURNED_SUCCESS) {
+                nextStatus = status;
+            } else {
+                throw new IllegalStateException(String.format(
+                        "Eating is only supported when the status is %s or %s [Was: %s]",
+                        Status.GATHERING_EATING, Status.RETURNED_SUCCESS, status
+                ));
+            }
+
+            ArrayList<I> itemsCopy = new ArrayList<>(items);
+
+            OptionalInt lastIndex = IntStream.range(0, itemsCopy.size())
+                    .filter(i -> itemsCopy.get(i).isFood())
+                    .reduce((a, b) -> b);
+
+            if (lastIndex.isEmpty()) {
+                throw new IllegalStateException("Cannot eat food when none in inventory");
+            }
+
+            itemsCopy.set(lastIndex.getAsInt(), ef.makeEmptyItem());
+
+            return new Snapshot<>(
+                    nextStatus, ImmutableList.copyOf(itemsCopy)
+            );
+        }
+
+        public Snapshot<I> withStatus(@Nullable GathererJournal.Status newStatus) {
+            return new Snapshot<>(newStatus, items);
+        }
     }
 }

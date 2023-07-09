@@ -45,7 +45,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             this, MCTownItem::Air, () -> successTarget != null && successTarget.isStillValid()
     ) {
         @Override
-        protected void changeStatus(Statuses s) {
+        protected void changeStatus(Status s) {
             super.changeStatus(s);
             Questown.LOGGER.debug("Changed status to {}", s);
         }
@@ -63,7 +63,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         };
         this.inventory = sc;
         sc.addListener(this);
-        journal.setItemsListener(this);
+        journal.addItemsListener(this);
     }
 
     private static void processSignal(
@@ -81,16 +81,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
          * Evening: 11500
          */
 
-        long dayTime = level.getDayTime() % 24000;
-        if (dayTime < 6000) {
-            e.signal = GathererJournal.Signals.MORNING;
-        } else if (dayTime < 11500) {
-            e.signal = GathererJournal.Signals.NOON;
-        } else if (dayTime < 22000) {
-            e.signal = GathererJournal.Signals.EVENING;
-        } else {
-            e.signal = GathererJournal.Signals.NIGHT;
-        }
+        e.signal = GathererJournal.Signals.fromGameTime(level.getDayTime());
         e.journal.tick(e);
     }
 
@@ -147,7 +138,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return list;
     }
 
-    public void initializeStatus(GathererJournal.Statuses status) {
+    public void initializeStatus(GathererJournal.Status status) {
         Questown.LOGGER.debug("Initialized journal to state {}", status);
         this.journal.initializeStatus(status);
     }
@@ -219,9 +210,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             BlockPos entityPos
     ) {
         if (
-                journal.getStatus() == GathererJournal.Statuses.GATHERING ||
-                        journal.getStatus() == GathererJournal.Statuses.RETURNING ||
-                        journal.getStatus() == GathererJournal.Statuses.CAPTURED
+                journal.getStatus() == GathererJournal.Status.GATHERING ||
+                        journal.getStatus() == GathererJournal.Status.RETURNING ||
+                        journal.getStatus() == GathererJournal.Status.CAPTURED
         ) {
             return isCloseTo(entityPos, getEnterExitPos(town));
         }
@@ -263,7 +254,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tryTakeFood(BlockPos entityPos) {
-        if (journal.getStatus() != GathererJournal.Statuses.NO_FOOD) {
+        if (journal.getStatus() != GathererJournal.Status.NO_FOOD) {
             return;
         }
         if (journal.hasAnyFood()) {
@@ -396,7 +387,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return inventory;
     }
 
-    public GathererJournal.Statuses getStatus() {
+    public GathererJournal.Status getStatus() {
         return journal.getStatus();
     }
 
@@ -405,7 +396,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void initializeItems(Iterable<MCTownItem> mcTownItemStream) {
-        journal.initializeItems(mcTownItemStream);
+        journal.setItems(mcTownItemStream);
     }
 
     public ImmutableList<ItemStack> getItems() {
