@@ -44,4 +44,9 @@ public class MutableInventoryStateProvider<I extends GathererJournal.Item> imple
     public boolean hasAnyItems() {
         return delegate.hasAnyItems();
     }
+
+    @Override
+    public boolean isValid() {
+        return delegate.isValid();
+    }
 }

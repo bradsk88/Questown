@@ -271,6 +271,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
         RETURNING,
         RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS,
+        DROPPING_LOOT,
         RETURNED_FAILURE,
         CAPTURED,
         RELAXING;
@@ -286,6 +287,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
                 case "GATHERING_EATING" -> GATHERING_EATING;
                 case "RETURNED_SUCCESS" -> RETURNED_SUCCESS;
                 case "RETURNED_FAILURE" -> RETURNED_FAILURE;
+                case "DROPPING_LOOT" -> DROPPING_LOOT;
                 case "RETURNING" -> RETURNING;
                 case "RETURNING_AT_NIGHT" -> RETURNING_AT_NIGHT;
                 case "CAPTURED" -> CAPTURED;

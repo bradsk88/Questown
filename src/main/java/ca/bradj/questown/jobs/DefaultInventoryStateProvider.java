@@ -21,7 +21,7 @@ public class DefaultInventoryStateProvider<I extends GathererJournal.Item> imple
 
     @Override
     public boolean hasAnyLoot() {
-        if (this.itemsSource.GetCurrentItems().size() != 6) {
+        if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.and(
@@ -33,7 +33,7 @@ public class DefaultInventoryStateProvider<I extends GathererJournal.Item> imple
 
     @Override
     public boolean inventoryIsFull() {
-        if (this.itemsSource.GetCurrentItems().size() != 6) {
+        if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().noneMatch(GathererJournal.Item::isEmpty);
@@ -42,7 +42,7 @@ public class DefaultInventoryStateProvider<I extends GathererJournal.Item> imple
 
     @Override
     public boolean inventoryHasFood() {
-        if (this.itemsSource.GetCurrentItems().size() != 6) {
+        if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().anyMatch(GathererJournal.Item::isFood);
@@ -51,9 +51,14 @@ public class DefaultInventoryStateProvider<I extends GathererJournal.Item> imple
 
     @Override
     public boolean hasAnyItems() {
-        if (this.itemsSource.GetCurrentItems().size() != 6) {
+        if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.not(GathererJournal.Item::isEmpty));
+    }
+
+    @Override
+    public boolean isValid() {
+        return itemsSource.GetCurrentItems().size() == 6;
     }
 }

@@ -16,6 +16,9 @@ public class Statuses {
             InventoryStateProvider<?> inventory,
             TownStateProvider town
     ) {
+        if (!inventory.isValid()) {
+            throw new IllegalStateException("Inventory state is invalid");
+        }
         switch (signal) {
 //            GathererJournal.Status status = null;
             case MORNING -> {
@@ -113,8 +116,15 @@ public class Statuses {
             return GathererJournal.Status.STAYING;
         }
 
+        if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
+            if (town.IsStorageAvailable()) {
+                return GathererJournal.Status.DROPPING_LOOT;
+            }
+        }
+
         if (ImmutableList.of(
                 GathererJournal.Status.RETURNED_SUCCESS,
+                GathererJournal.Status.DROPPING_LOOT,
                 GathererJournal.Status.IDLE
         ).contains(currentStatus) && !inventory.hasAnyLoot()) {
             return GathererJournal.Status.RELAXING;

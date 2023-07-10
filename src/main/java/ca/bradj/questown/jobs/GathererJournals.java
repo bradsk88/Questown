@@ -21,8 +21,10 @@ public class GathererJournals {
         @NotNull Iterable<I> giveLoot();
     }
 
-    public interface Town extends Statuses.TownStateProvider {
+    public interface Town<I extends GathererJournal.Item> extends Statuses.TownStateProvider {
 
+        // Returns any items that were NOT deposited
+        ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
     }
 
     public static <I extends GathererJournal.Item> GathererJournal.Snapshot<I> timeWarp(
@@ -31,7 +33,7 @@ public class GathererJournals {
             // TODO: Make TimeWarper class and use the params below as fields
             FoodRemover<I> remover,
             LootGiver<I> lootGiver,
-            Town town,
+            Town<I> town,
             GathererJournal.EmptyFactory<I> emptyFactory
     ) {
         GathererJournal.Snapshot<I> output = input;
@@ -49,7 +51,6 @@ public class GathererJournals {
             if (newStatus == null) {
                 continue;
             }
-            boolean ate = false;
             List<I> outItems = new ArrayList<>(output.items());
             if (newStatus == GathererJournal.Status.NO_FOOD) {
                 I food = remover.removeFood();
@@ -73,6 +74,10 @@ public class GathererJournals {
                             return v;
                         }
                 ).toList();
+            }
+            if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
+                ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(outItems);
+                outItems = town.depositItems(itemsToDeposit);
             }
             ImmutableList<I> outImItems = ImmutableList.copyOf(outItems);
             stateGetter.updateItems(outImItems);

@@ -8,4 +8,6 @@ public interface InventoryStateProvider<I extends GathererJournal.Item> {
     boolean inventoryHasFood();
 
     boolean hasAnyItems();
+
+    boolean isValid();
 }
