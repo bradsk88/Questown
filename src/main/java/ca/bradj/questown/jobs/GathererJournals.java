@@ -107,6 +107,12 @@ public class GathererJournals {
         if (currentGameTime == upTo) {
             return currentGameTime + 1;
         }
+        int daysPassed = currentGameTime / 24000;
+        int i = (24000 * daysPassed) + getNextSingleDatSegment(currentGameTime);
+        return i;
+    }
+
+    private static int getNextSingleDatSegment(int currentGameTime) {
         int timeOfDay = currentGameTime % 24000;
         // Allow ten ticks per period for multi-step status transitions
         if (timeOfDay < 10) {
