@@ -27,12 +27,12 @@ class GathererJournalsTest {
             GathererJournals.Town<GathererJournalTest.TestItem>,
             GathererJournals.FoodRemover<GathererJournalTest.TestItem> {
 
-        private final List<GathererJournalTest.TestItem> infiniteContainer = new ArrayList<>();
+        final List<GathererJournalTest.TestItem> container = new ArrayList<>();
 
         @Override
         public ImmutableList<GathererJournalTest.TestItem> depositItems(ImmutableList<GathererJournalTest.TestItem> itemsToDeposit) {
             itemsToDeposit.stream().filter(Predicates.not(GathererJournalTest.TestItem::isEmpty)).forEach(
-                    infiniteContainer::add
+                    container::add
             );
             return ImmutableList.of(
                     new GathererJournalTest.TestItem(""),
@@ -53,7 +53,7 @@ class GathererJournalsTest {
         @Override
         public GathererJournalTest.TestItem removeFood() {
             GathererJournalTest.TestItem bread = new GathererJournalTest.TestItem("bread");
-            if (infiniteContainer.remove(bread)) {
+            if (container.remove(bread)) {
                 return bread;
             }
             return null;
@@ -129,7 +129,7 @@ class GathererJournalsTest {
                 result.status()
         ); // Debatable. Idle (or sleeping?) could also be good
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container);
     }
 
     @Test
@@ -179,7 +179,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem(""),
                 new GathererJournalTest.TestItem("")
         ), result.items());
-        Assertions.assertTrue(infiniteStorage.infiniteContainer.isEmpty());
+        Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
 
     @Test
@@ -224,7 +224,7 @@ class GathererJournalsTest {
         Assertions.assertTrue(result.items()
                 .stream()
                 .allMatch(GathererJournalTest.TestItem::isEmpty)); // Loot is not given until evening
-        Assertions.assertTrue(infiniteStorage.infiniteContainer.isEmpty());
+        Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
 
     @Test
@@ -268,7 +268,7 @@ class GathererJournalsTest {
         Assertions.assertTrue(result.items()
                 .stream()
                 .allMatch(GathererJournalTest.TestItem::isEmpty)); // Loot is not given until evening
-        Assertions.assertTrue(infiniteStorage.infiniteContainer.isEmpty());
+        Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
 
     @Test
@@ -310,7 +310,7 @@ class GathererJournalsTest {
         );
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
         Assertions.assertEquals(specificLoot.giveLoot(), result.items());
-        Assertions.assertTrue(infiniteStorage.infiniteContainer.isEmpty());
+        Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
 
     @Test
@@ -354,7 +354,7 @@ class GathererJournalsTest {
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container);
     }
 
     @Test
@@ -405,7 +405,93 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(expectedTownLoot, infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
+    }
+
+
+    @Test
+    public void test_11501_WithBreadInLimitedContainers_ShouldBeDroppingLoot_AndSomeItemsShouldBeMovedToTown() {
+        int ticksPassed = 11501;
+
+        FakeTownWithInfiniteStorage sizeSixStorage = new FakeTownWithInfiniteStorage() {
+            @Override
+            public ImmutableList<GathererJournalTest.TestItem> depositItems(ImmutableList<GathererJournalTest.TestItem> itemsToDeposit) {
+                ImmutableList.Builder<GathererJournalTest.TestItem> itemsToReturn = ImmutableList.builder();
+
+                for (GathererJournalTest.TestItem i : itemsToDeposit) {
+                    if (container.size() < 6) {
+                        container.add(i);
+                    } else {
+                        itemsToReturn.add(i);
+                    }
+                }
+
+                return itemsToReturn.build();
+            }
+
+            @Override
+            public boolean IsStorageAvailable() {
+                return container.size() < 6;
+            }
+        };
+
+        sizeSixStorage.depositItems(ImmutableList.of(
+                new GathererJournalTest.TestItem("bread"),
+                new GathererJournalTest.TestItem("wheat"),
+                new GathererJournalTest.TestItem("seeds")
+        ));
+
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
+                ImmutableList.of(
+                        new GathererJournalTest.TestItem(""),
+                        new GathererJournalTest.TestItem(""),
+                        new GathererJournalTest.TestItem(""),
+                        new GathererJournalTest.TestItem(""),
+                        new GathererJournalTest.TestItem(""),
+                        new GathererJournalTest.TestItem("")
+                )
+        );
+
+        GathererJournals.LootGiver<GathererJournalTest.TestItem> specificLoot = () -> ImmutableList.of(
+                new GathererJournalTest.TestItem("flint"),
+                new GathererJournalTest.TestItem("wood"),
+                new GathererJournalTest.TestItem("stone"),
+                new GathererJournalTest.TestItem("iron"),
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("diamond")
+        );
+
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = GathererJournals.timeWarp(
+                initial,
+                ticksPassed,
+                sizeSixStorage,
+                specificLoot,
+                sizeSixStorage,
+                () -> new GathererJournalTest.TestItem("")
+        );
+
+        ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = ImmutableList.of(
+                new GathererJournalTest.TestItem("wheat"),
+                new GathererJournalTest.TestItem("seeds"),
+                new GathererJournalTest.TestItem("flint"),
+                new GathererJournalTest.TestItem("wood"),
+                new GathererJournalTest.TestItem("stone"),
+                new GathererJournalTest.TestItem("iron")
+        );
+
+        ImmutableList<GathererJournalTest.TestItem> expectedKeptLoot = ImmutableList.of(
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("diamond"),
+                new GathererJournalTest.TestItem(""),
+                new GathererJournalTest.TestItem(""),
+                new GathererJournalTest.TestItem(""),
+                new GathererJournalTest.TestItem("")
+        );
+
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(expectedKeptLoot, result.items());
+        Assertions.assertEquals(expectedTownLoot, sizeSixStorage.container);
     }
 
     @Test
@@ -449,7 +535,7 @@ class GathererJournalsTest {
         );
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -493,7 +579,7 @@ class GathererJournalsTest {
         );
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -545,7 +631,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem(""),
                 new GathererJournalTest.TestItem("")
         ), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -590,7 +676,7 @@ class GathererJournalsTest {
         );
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
         Assertions.assertEquals(specificLoot.giveLoot(), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(specificLoot.giveLoot(), infiniteStorage.container);
     }
 
     @Test
@@ -651,7 +737,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
-        Assertions.assertEquals(expectedTownLoot, infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }
 
     @Test
@@ -704,7 +790,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
-        Assertions.assertEquals(expectedTownLoot, infiniteStorage.infiniteContainer);
+        Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }
 
 }

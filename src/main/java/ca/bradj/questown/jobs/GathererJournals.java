@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.UnmodifiableIterator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public class GathererJournals {
 
@@ -59,7 +61,8 @@ public class GathererJournals {
                 }
             }
             if (newStatus == GathererJournal.Status.GATHERING_EATING) {
-                output = output.withStatus(newStatus).eatFoodFromInventory(emptyFactory, GathererJournal.Signals.fromGameTime(i));
+                output = output.withStatus(newStatus)
+                        .eatFoodFromInventory(emptyFactory, GathererJournal.Signals.fromGameTime(i));
                 outItems = output.items();
                 newStatus = output.status();
             }
@@ -77,7 +80,18 @@ public class GathererJournals {
             }
             if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
                 ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(outItems);
-                outItems = town.depositItems(itemsToDeposit);
+                Iterator<I> undeposited = town.depositItems(itemsToDeposit)
+                        .stream()
+                        .filter(Predicate.not(GathererJournal.Item::isEmpty))
+                        .iterator();
+                outItems = outItems.stream().map(
+                        v -> {
+                            if (undeposited.hasNext()) {
+                                return undeposited.next();
+                            }
+                            return emptyFactory.makeEmptyItem();
+                        }
+                ).toList();
             }
             ImmutableList<I> outImItems = ImmutableList.copyOf(outItems);
             stateGetter.updateItems(outImItems);
@@ -103,7 +117,10 @@ public class GathererJournals {
         }
     }
 
-    public static int getNextDaySegment(int currentGameTime, long upTo) {
+    public static int getNextDaySegment(
+            int currentGameTime,
+            long upTo
+    ) {
         if (currentGameTime == upTo) {
             return currentGameTime + 1;
         }
