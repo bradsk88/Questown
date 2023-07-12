@@ -108,6 +108,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public Collection<MCTownItem> getLoot() {
+        return getLootFromLevel(level, journal.getCapacity());
+    }
+
+    public static Collection<MCTownItem> getLootFromLevel(
+            ServerLevel level, int maxItems
+    ) {
         if (level == null) {
             return ImmutableList.of();
         }
@@ -125,7 +131,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
         List<ItemStack> rItems = lootTable.getRandomItems(lc);
         Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), journal.getCapacity());
+        int subLen = Math.min(rItems.size(), maxItems);
         List<MCTownItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(ItemStack::getItem)

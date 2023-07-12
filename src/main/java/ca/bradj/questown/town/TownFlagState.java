@@ -3,7 +3,9 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
+import ca.bradj.questown.jobs.GathererJournals;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.mobs.visitor.VisitorMobJob;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -12,6 +14,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,6 +58,34 @@ public class TownFlagState {
                 parent.getServerLevel().getDayTime()
         );
         return ts;
+    }
+
+    static void advanceTime(
+            TownFlagBlockEntity e,
+            ServerLevel sl
+    ) {
+        TownState<MCTownItem> storedState;
+        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+            storedState = TownStateSerializer.INSTANCE.load(
+                    e.getTileData().getCompound(NBT_TOWN_STATE),
+                    sl
+            );
+            Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
+        } else {
+            storedState = new TownState<>(ImmutableList.of(), ImmutableList.of(), 0);
+            Questown.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
+        }
+
+
+        long ticksPassed = sl.getDayTime() - storedState.worldTimeAtSleep;
+        for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
+            VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
+            GathererJournals.<MCTownItem>timeWarp(v.journal, ticksPassed, storedState, () -> VisitorMobJob.getLootFromLevel(sl, v.getCapacity()), storedState, () -> new MCTownItem(Items.AIR));
+            recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
+            sl.addFreshEntity(recovered);
+            e.registerEntity(recovered);
+        }
+
     }
 
     static void recoverMobs(
