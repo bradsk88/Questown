@@ -2,9 +2,11 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.GathererInventoryMenu;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
@@ -38,8 +40,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     private final @Nullable ServerLevel level;
     private final Container inventory;
-    ContainerTarget foodTarget;
-    ContainerTarget successTarget;
+    ContainerTarget<MCContainer, MCTownItem> foodTarget;
+    ContainerTarget<MCContainer, MCTownItem> successTarget;
     // TODO: Logic for changing jobs
     private final GathererJournal<MCTownItem> journal = new GathererJournal<>(
             this, MCTownItem::Air, () -> successTarget != null && successTarget.isStillValid()
@@ -186,7 +188,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         if (this.foodTarget != null) {
             Questown.LOGGER.debug("Located food at {}", this.foodTarget.getPosition());
-            return this.foodTarget.getPosition();
+            return Positions.ToBlock(this.foodTarget.getPosition(), this.foodTarget.getyPosition());
         } else {
             Questown.LOGGER.debug("No food exists in town");
             return town.getRandomWanderTarget();
@@ -204,7 +206,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         if (this.successTarget != null) {
             Questown.LOGGER.debug("Located chest at {}", this.successTarget.getPosition());
-            return this.successTarget.getPosition();
+            return Positions.ToBlock(this.successTarget.getPosition(), this.successTarget.getyPosition());
         } else {
             Questown.LOGGER.debug("No chests exist in town");
             return town.getRandomWanderTarget();
@@ -244,7 +246,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         if (!foodTarget.hasItem(MCTownItem::isFood)) {
             return false;
         }
-        return isCloseTo(entityPos, foodTarget.getPosition());
+        return isCloseTo(entityPos, Positions.ToBlock(foodTarget.getPosition(), foodTarget.yPosition));
     }
 
     public boolean isCloseToChest(
@@ -256,7 +258,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         if (!successTarget.hasItem(MCTownItem::isEmpty)) {
             return false;
         }
-        return isCloseTo(entityPos, successTarget.getPosition());
+        return isCloseTo(entityPos, Positions.ToBlock(successTarget.getPosition(), successTarget.yPosition));
     }
 
     public void tryTakeFood(BlockPos entityPos) {
@@ -269,9 +271,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         if (!isCloseToFood(entityPos)) {
             return;
         }
-        for (int i = 0; i < foodTarget.container.getContainerSize(); i++) {
-            ItemStack iItem = foodTarget.container.getItem(i);
-            MCTownItem mcTownItem = new MCTownItem(iItem.getItem());
+        for (int i = 0; i < foodTarget.container.size(); i++) {
+            MCTownItem mcTownItem = foodTarget.container.getItem(i);
             if (mcTownItem.isFood()) {
                 Questown.LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
                 journal.addItem(mcTownItem);
@@ -301,14 +302,14 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             }
             Questown.LOGGER.debug("Gatherer is putting {} in {}", mct, successTarget);
             boolean added = false;
-            for (int i = 0; i < successTarget.container.getContainerSize(); i++) {
+            for (int i = 0; i < successTarget.container.size(); i++) {
                 if (added) {
                     break;
                 }
                 // TODO: Allow stacking?
                 if (successTarget.container.getItem(i).isEmpty()) {
                     if (journal.removeItem(mct)) {
-                        successTarget.container.setItem(i, new ItemStack(mct.get(), 1));
+                        successTarget.container.setItem(i, mct);
                     }
                     added = true;
                 }

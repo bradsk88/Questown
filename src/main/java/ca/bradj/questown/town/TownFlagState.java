@@ -1,8 +1,10 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
+import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererJournals;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobJob;
@@ -18,6 +20,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
@@ -28,14 +31,14 @@ public class TownFlagState {
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
     private long lastTick = -1;
-    private final Stack<Function<ServerLevel, TownState<MCTownItem>>> townInit = new Stack<>();
+    private final Stack<Function<ServerLevel, TownState<MCContainer, MCTownItem>>> townInit = new Stack<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
         this.parent = parent;
     }
 
 
-    @Nullable TownState<MCTownItem> captureState() {
+    @Nullable TownState<MCContainer, MCTownItem> captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCTownItem>> vB = ImmutableList.builder();
         for (LivingEntity entity : parent.entities) {
             if (entity instanceof VisitorMobEntity) {
@@ -52,7 +55,7 @@ public class TownFlagState {
             }
         }
 
-        TownState<MCTownItem> ts = new TownState<>(
+        TownState<MCContainer, MCTownItem> ts = new TownState<>(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
                 parent.getServerLevel().getDayTime()
@@ -64,7 +67,7 @@ public class TownFlagState {
             TownFlagBlockEntity e,
             ServerLevel sl
     ) {
-        TownState<MCTownItem> storedState;
+        TownState<MCContainer, MCTownItem> storedState;
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
             storedState = TownStateSerializer.INSTANCE.load(
                     e.getTileData().getCompound(NBT_TOWN_STATE),
@@ -76,16 +79,29 @@ public class TownFlagState {
             Questown.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
+        ArrayList<TownState.VillagerData<MCTownItem>> villagers = new ArrayList<>(storedState.villagers);
 
-        long ticksPassed = sl.getDayTime() - storedState.worldTimeAtSleep;
-        for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
-            VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
-            GathererJournals.<MCTownItem>timeWarp(v.journal, ticksPassed, storedState, () -> VisitorMobJob.getLootFromLevel(sl, v.getCapacity()), storedState, () -> new MCTownItem(Items.AIR));
-            recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
-            sl.addFreshEntity(recovered);
-            e.registerEntity(recovered);
+        long dayTime = sl.getDayTime();
+        long ticksPassed = dayTime - storedState.worldTimeAtSleep;
+        for (int i = 0; i < villagers.size(); i++) {
+            TownState.VillagerData<MCTownItem> v = villagers.get(i);
+            GathererJournal.Snapshot<MCTownItem> unwarped = v.journal;
+            GathererJournal.Snapshot<MCTownItem> warped = GathererJournals.timeWarp(
+                    unwarped,
+                    ticksPassed,
+                    storedState,
+                    () -> VisitorMobJob.getLootFromLevel(sl, v.getCapacity()),
+                    storedState,
+                    () -> new MCTownItem(Items.AIR)
+            );
+            villagers.set(i, new TownState.VillagerData<>(v.position, v.yPosition, warped, v.uuid));
         }
 
+        e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(
+                new TownState<>(villagers, storedState.containers, dayTime)
+        ));
+
+        // TODO: Maybe return town state?
     }
 
     static void recoverMobs(
@@ -99,7 +115,7 @@ public class TownFlagState {
         }
 
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
-            TownState<MCTownItem> storedState = TownStateSerializer.INSTANCE.load(
+            TownState<MCContainer, MCTownItem> storedState = TownStateSerializer.INSTANCE.load(
                     e.getTileData().getCompound(NBT_TOWN_STATE),
                     sl
             );
@@ -132,14 +148,16 @@ public class TownFlagState {
 
         if (waking) {
             Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
+            TownFlagState.advanceTime(parent, level);
             TownFlagState.recoverMobs(parent, level);
+            // TODO: Make sure chests get filled/empty
         }
 
     }
 
 
     void putStateOnTile(CompoundTag flagTag, UUID uuid) {
-        @Nullable TownState<MCTownItem> state = captureState();
+        @Nullable TownState<MCContainer, MCTownItem> state = captureState();
         if (state == null) {
             Questown.LOGGER.warn("TownState was null. Will not store.");
             return;

@@ -1,27 +1,68 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-// TODO: Decouple from minecraft
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.Container;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import java.util.List;
 
-public class ContainerTarget {
+public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> {
+
+    public int size() {
+        return container.size();
+    }
+
+    public I getItem(int index) {
+        return container.getItem(index);
+    }
+
+    public void setItem(int index, I item) {
+        container.setItem(index, item);
+    }
+
+    public boolean isFull() {
+        return container.isFull();
+    }
+
+    public interface Container<I extends GathererJournal.Item<I>> {
+
+        int size();
+
+        I getItem(int i);
+
+        boolean hasAnyOf(ImmutableSet<I> items);
+
+        void setItems(List<I> newItems);
+
+        void removeItem(
+                int index,
+                int amount
+        );
+
+        void setItem(
+                int i,
+                I item
+        );
+
+        boolean isFull();
+    }
 
     private final ValidCheck check;
-    BlockPos position;
-    Container container;
+    Position position;
+    int yPosition;
+    Container<I> container;
 
-    public ImmutableList<MCTownItem> getItems() {
-        ImmutableList.Builder<MCTownItem> b = ImmutableList.builder();
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            b.add(MCTownItem.fromMCItemStack(container.getItem(i)));
+    public ImmutableList<I> getItems() {
+        ImmutableList.Builder<I> b = ImmutableList.builder();
+        for (int i = 0; i < container.size(); i++) {
+            b.add(container.getItem(i));
         }
         return b.build();
+    }
+
+    public void setItems(List<I> newItems) {
+        container.setItems(newItems);
     }
 
     public interface ValidCheck {
@@ -29,30 +70,36 @@ public class ContainerTarget {
     }
 
     public ContainerTarget(
-            BlockPos position,
-            Container container,
+            Position position,
+            int yPosition,
+            Container<I> container,
             ValidCheck check
     ) {
         this.position = position;
+        this.yPosition = yPosition;
         this.container = container;
         this.check = check;
     }
 
-    public BlockPos getPosition() {
+    public Position getPosition() {
         return position;
     }
 
-    public boolean hasAnyOf(ImmutableSet<Item> items) {
+    public int getyPosition() {
+        return yPosition;
+    }
+
+    public boolean hasAnyOf(ImmutableSet<I> items) {
         return container.hasAnyOf(items);
     }
 
-    public interface CheckFn {
-        boolean Matches(MCTownItem item);
+    public interface CheckFn<I extends GathererJournal.Item> {
+        boolean Matches(I item);
     }
 
-    public boolean hasItem(CheckFn c) {
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            if (c.Matches(new MCTownItem(container.getItem(i).getItem()))) {
+    public boolean hasItem(CheckFn<I> c) {
+        for (int i = 0; i < container.size(); i++) {
+            if (c.Matches(container.getItem(i))) {
                 return true;
             }
         }

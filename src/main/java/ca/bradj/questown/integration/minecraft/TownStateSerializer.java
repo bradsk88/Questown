@@ -21,15 +21,15 @@ public class TownStateSerializer {
 
     public static final TownStateSerializer INSTANCE = new TownStateSerializer();
 
-    public CompoundTag store(TownState<MCTownItem> state) {
+    public CompoundTag store(TownState<MCContainer, MCTownItem> state) {
         CompoundTag tag = new CompoundTag();
         tag.putLong("world_time_at_sleep", state.worldTimeAtSleep);
         ListTag containers = new ListTag();
-        for (ContainerTarget c : state.containers) {
+        for (ContainerTarget<MCContainer, MCTownItem> c : state.containers) {
             CompoundTag cTag = new CompoundTag();
-            cTag.putInt("x", c.getPosition().getX());
-            cTag.putInt("y", c.getPosition().getY());
-            cTag.putInt("z", c.getPosition().getZ());
+            cTag.putInt("x", c.getPosition().x);
+            cTag.putInt("y", c.getyPosition());
+            cTag.putInt("z", c.getPosition().z);
 
             ListTag items = new ListTag();
             for (MCTownItem i : c.getItems()) {
@@ -61,9 +61,9 @@ public class TownStateSerializer {
         return tag;
     }
 
-    public TownState<MCTownItem> load(CompoundTag tag, ServerLevel level) {
+    public TownState<MCContainer, MCTownItem> load(CompoundTag tag, ServerLevel level) {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
-        ImmutableList<ContainerTarget> containers = loadContainers(tag, level);
+        ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
         ImmutableList<TownState.VillagerData<MCTownItem>> villagers = loadVillagers(tag);
         return new TownState<>(villagers, containers, worldTimeAtSleep);
     }
@@ -94,11 +94,11 @@ public class TownStateSerializer {
         return b.build();
     }
 
-    private ImmutableList<ContainerTarget> loadContainers(
+    private ImmutableList<ContainerTarget<MCContainer, MCTownItem>> loadContainers(
             CompoundTag tag,
             ServerLevel level
     ) {
-        ImmutableList.Builder<ContainerTarget> cB = ImmutableList.builder();
+        ImmutableList.Builder<ContainerTarget<MCContainer, MCTownItem>> cB = ImmutableList.builder();
         ListTag containers = tag.getList("containers", Tag.TAG_COMPOUND);
         for (Tag cTag : containers) {
             CompoundTag ccTag = (CompoundTag) cTag;

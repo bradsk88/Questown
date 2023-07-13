@@ -11,7 +11,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Objects;
 
-public class MCTownItem implements GathererJournal.Item {
+public class MCTownItem implements GathererJournal.Item<MCTownItem> {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
 
@@ -71,5 +71,10 @@ public class MCTownItem implements GathererJournal.Item {
         CompoundTag tag = new CompoundTag();
         tag.put("item", new ItemStack(item, 1).serializeNBT()); // TODO: Quantity
         return tag;
+    }
+
+    public MCTownItem shrink() {
+        // TODO: Support quantity
+        return MCTownItem.Air();
     }
 }

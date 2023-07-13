@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
-class GathererJournalTest {
+public class GathererJournalTest {
 
-    static class TestItem implements GathererJournal.Item {
+    public static class TestItem implements GathererJournal.Item<TestItem> {
         private final String value;
 
         public TestItem(String value) {
@@ -27,6 +27,11 @@ class GathererJournalTest {
         @Override
         public boolean isFood() {
             return "bread".equals(value);
+        }
+
+        @Override
+        public TestItem shrink() {
+            return new TestItem("");
         }
 
         @Override

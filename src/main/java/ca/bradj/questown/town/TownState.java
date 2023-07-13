@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererJournals;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
@@ -9,17 +8,18 @@ import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class TownState<I extends GathererJournal.Item> implements GathererJournals.FoodRemover<MCTownItem>, GathererJournals.Town<MCTownItem> {
+public class TownState<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> implements GathererJournals.FoodRemover<I>, GathererJournals.Town<I> {
     public final @NotNull ImmutableList<VillagerData<I>> villagers;
-    public final @NotNull ImmutableList<ContainerTarget> containers;
+    public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final long worldTimeAtSleep;
 
     public TownState(
             @NotNull List<VillagerData<I>> villagers,
-            @NotNull List<ContainerTarget> containers,
+            @NotNull List<ContainerTarget<C, I>> containers,
             long worldTimeAtSleep
     ) {
         this.villagers = ImmutableList.copyOf(villagers);
@@ -36,23 +36,62 @@ public class TownState<I extends GathererJournal.Item> implements GathererJourna
                 '}';
     }
 
+    // TODO: TownState should be immutable. Should this be "withFoodRemoved"?
     @Override
-    public @Nullable MCTownItem removeFood() {
+    public @Nullable I removeFood() {
+        ImmutableList<ContainerTarget<C, I>> containerTargets = ImmutableList.copyOf(containers);
+        for (int i = 0; i < containerTargets.size(); i++) {
+            ImmutableList<I> items = containerTargets.get(i).getItems();
+            for (int j = 0; j < items.size(); j++) {
+                if (items.get(j).isFood()) {
+                    ArrayList<I> newItems = new ArrayList<>(items);
+                    newItems.set(j, items.get(j).shrink());
+                    containers.get(i).setItems(newItems);
+                }
+            }
+        }
         // TODO: Implement
         return null;
     }
 
+    // TODO: TownState should be immutable. Should this be "withItemsDeposited"?
     @Override
-    public ImmutableList<MCTownItem> depositItems(ImmutableList<MCTownItem> itemsToDeposit) {
-        // TODO: Implement
+    public ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit) {
+        ImmutableList.Builder<I> notDepositedItems = ImmutableList.builder();
+        for (I item : itemsToDeposit) {
+            boolean deposited = false;
+            for (int i = 0; i < containers.size(); i++) {
+                ContainerTarget<C, I> container = containers.get(i);
+                for (int j = 0; j < container.size(); j++) {
+                    I containerItem = container.getItem(j);
+                    if (containerItem.isEmpty()) {
+                        container.setItem(j, item);
+                        deposited = true;
+                        break;
+                    }
+                }
+                if (deposited) {
+                    break;
+                }
+            }
+            if (!deposited) {
+                notDepositedItems.add(item);
+            }
+        }
+        return notDepositedItems.build();
     }
 
     @Override
     public boolean IsStorageAvailable() {
-        // TODO: Implement
+        for (ContainerTarget<C, I> container : containers) {
+            if (container.isFull()) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    public static final class VillagerData<I extends GathererJournal.Item> {
+    public static final class VillagerData<I extends GathererJournal.Item<I>> {
         public final UUID uuid;
         public final Position position;
         public final int yPosition; // TODO: Add a 3D position to RoomRecipes?

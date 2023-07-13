@@ -1,45 +1,43 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.roomrecipes.adapter.Positions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class TownContainers {
-    public static @Nullable ContainerTarget findMatching(
+    public static @Nullable ContainerTarget<MCContainer, MCTownItem> findMatching(
             TownFlagBlockEntity townFlagBlockEntity,
-            ContainerTarget.CheckFn c
+            ContainerTarget.CheckFn<MCTownItem> c
     ) {
         ServerLevel level = townFlagBlockEntity.getServerLevel();
         if (level == null) {
             return null;
         }
-        Optional<ContainerTarget> found = findAllMatching(
+        Optional<ContainerTarget<MCContainer, MCTownItem>> found = findAllMatching(
                 townFlagBlockEntity, c
         ).findFirst();
         return found.orElse(null);
     }
 
-    public static Stream<ContainerTarget> findAllMatching(
+    public static Stream<ContainerTarget<MCContainer, MCTownItem>> findAllMatching(
             TownFlagBlockEntity townFlagBlockEntity,
-            ContainerTarget.CheckFn c
+            ContainerTarget.CheckFn<MCTownItem> c
     ) {
         ServerLevel level = townFlagBlockEntity.getServerLevel();
         if (level == null) {
             return Stream.empty();
         }
-        Stream<ContainerTarget> allContainers = townFlagBlockEntity
+        Stream<ContainerTarget<MCContainer, MCTownItem>> allContainers = townFlagBlockEntity
                 .getMatches()
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())
@@ -49,7 +47,7 @@ public class TownContainers {
     }
 
     @NotNull
-    public static ContainerTarget fromChestBlock(
+    public static ContainerTarget<MCContainer, MCTownItem> fromChestBlock(
             BlockPos p,
             ChestBlock block,
             ServerLevel level
@@ -61,12 +59,18 @@ public class TownContainers {
             ));
         }
 
-        return new ContainerTarget(p, ChestBlock.getContainer(
+        MCContainer mcContainer = new MCContainer(ChestBlock.getContainer(
                 block,
                 blockState,
                 level,
                 p,
                 true
-        ), () -> level.getBlockState(p) == blockState);
+        ));
+        return new ContainerTarget<>(
+                Positions.FromBlockPos(p),
+                p.getY(),
+                mcContainer,
+                () -> level.getBlockState(p) == blockState
+        );
     }
 }

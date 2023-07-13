@@ -305,10 +305,12 @@ public class GathererJournal<I extends GathererJournal.Item> {
         void itemsChanged(ImmutableList<I> items);
     }
 
-    public interface Item {
+    public interface Item<I extends Item<I>> {
         boolean isEmpty();
 
         boolean isFood();
+
+        I shrink();
     }
 
     public interface SignalSource {

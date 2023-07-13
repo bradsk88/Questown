@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.UnmodifiableIterator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,23 +12,23 @@ import java.util.function.Predicate;
 
 public class GathererJournals {
 
-    public interface FoodRemover<I extends GathererJournal.Item> {
+    public interface FoodRemover<I extends GathererJournal.Item<I>> {
         // Return null if there is no food
         @Nullable I removeFood();
     }
 
-    public interface LootGiver<I extends GathererJournal.Item> {
+    public interface LootGiver<I extends GathererJournal.Item<I>> {
         // Return null if there is no food
         @NotNull Iterable<I> giveLoot();
     }
 
-    public interface Town<I extends GathererJournal.Item> extends Statuses.TownStateProvider {
+    public interface Town<I extends GathererJournal.Item<I>> extends Statuses.TownStateProvider {
 
         // Returns any items that were NOT deposited
         ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
     }
 
-    public static <I extends GathererJournal.Item> GathererJournal.Snapshot<I> timeWarp(
+    public static <I extends GathererJournal.Item<I>> GathererJournal.Snapshot<I> timeWarp(
             GathererJournal.Snapshot<I> input,
             long ticksPassed,
             // TODO: Make TimeWarper class and use the params below as fields
@@ -100,7 +99,7 @@ public class GathererJournals {
         return output;
     }
 
-    private static <I extends GathererJournal.Item> void takeButDoNotEatFood(
+    private static <I extends GathererJournal.Item<I>> void takeButDoNotEatFood(
             List<I> outItems,
             I food
     ) {

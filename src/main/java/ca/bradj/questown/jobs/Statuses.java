@@ -31,7 +31,7 @@ public class Statuses {
                         return GathererJournal.Status.NO_SPACE;
                     }
                     if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-                        return null;
+                        return GathererJournal.Status.DROPPING_LOOT;
                     }
                     return GathererJournal.Status.RETURNED_SUCCESS;
                 }

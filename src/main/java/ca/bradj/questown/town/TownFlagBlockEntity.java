@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.jobs.GathererJournals;
@@ -130,7 +131,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         super.saveAdditional(tag);
         this.writeTownData(tag);
         if (!level.isClientSide()) {
-            TownState<MCTownItem> state = this.state.captureState();
+            TownState<MCContainer, MCTownItem> state = this.state.captureState();
             if (state == null) {
                 return;
             }
@@ -426,7 +427,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
-        TownState<MCTownItem> state = TownStateSerializer.INSTANCE.load(getTileData().getCompound(NBT_TOWN_STATE), sl);
+        TownState<MCContainer, MCTownItem> state = TownStateSerializer.INSTANCE.load(getTileData().getCompound(NBT_TOWN_STATE), sl);
         Optional<TownState.VillagerData<MCTownItem>> match = state.villagers.stream()
                 .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
                 .findFirst();
