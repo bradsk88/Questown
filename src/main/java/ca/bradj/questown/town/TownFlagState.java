@@ -17,7 +17,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -83,9 +82,14 @@ public class TownFlagState {
 
         long dayTime = sl.getDayTime();
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
+        if (ticksPassed == 0) {
+            Questown.LOGGER.debug("Time warp is not applicable");
+            return;
+        }
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCTownItem> v = villagers.get(i);
             GathererJournal.Snapshot<MCTownItem> unwarped = v.journal;
+            Questown.LOGGER.debug("[{}] Warping time, starting with journal: {}", v.uuid, storedState);
             GathererJournal.Snapshot<MCTownItem> warped = GathererJournals.timeWarp(
                     unwarped,
                     ticksPassed,
@@ -94,6 +98,7 @@ public class TownFlagState {
                     storedState,
                     () -> new MCTownItem(Items.AIR)
             );
+            Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
             villagers.set(i, new TownState.VillagerData<>(v.position, v.yPosition, warped, v.uuid));
         }
 
@@ -122,7 +127,9 @@ public class TownFlagState {
             Set<UUID> uuids = entitiesSnapshot.stream().map(Entity::getUUID).collect(Collectors.toSet());
             for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
-                recovered.initialize(v.uuid, new BlockPos(v.position.x, v.yPosition, v.position.z), v.journal);
+                BlockPos blockPos = new BlockPos(v.position.x + 0.5, v.yPosition, v.position.z + 0.5);
+
+                recovered.initialize(v.uuid, blockPos, v.journal);
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }

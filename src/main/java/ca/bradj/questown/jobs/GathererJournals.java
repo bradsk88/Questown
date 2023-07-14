@@ -37,6 +37,9 @@ public class GathererJournals {
             Town<I> town,
             GathererJournal.EmptyFactory<I> emptyFactory
     ) {
+        if (ticksPassed == 0) {
+            return input;
+        }
         GathererJournal.Snapshot<I> output = input;
         MutableInventoryStateProvider<I> stateGetter =
                 MutableInventoryStateProvider.withInitialItems(input.items());
@@ -112,7 +115,7 @@ public class GathererJournals {
             int idx = outItems.indexOf(foundEmpty.get());
             outItems.set(idx, food);
         } else {
-            throw new IllegalStateException("Got NO_FOOD with full inventory.");
+            throw new IllegalStateException(String.format("Got NO_FOOD with full inventory: %s", outItems));
         }
     }
 

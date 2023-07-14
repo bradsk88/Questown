@@ -40,6 +40,7 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
     @Override
     public @Nullable I removeFood() {
         ImmutableList<ContainerTarget<C, I>> containerTargets = ImmutableList.copyOf(containers);
+        I out = null;
         for (int i = 0; i < containerTargets.size(); i++) {
             ImmutableList<I> items = containerTargets.get(i).getItems();
             for (int j = 0; j < items.size(); j++) {
@@ -47,34 +48,39 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
                     ArrayList<I> newItems = new ArrayList<>(items);
                     newItems.set(j, items.get(j).shrink());
                     containers.get(i).setItems(newItems);
+                    out = items.get(j);
+                    break;
                 }
             }
         }
-        // TODO: Implement
-        return null;
+        return out;
     }
 
     // TODO: TownState should be immutable. Should this be "withItemsDeposited"?
     @Override
     public ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit) {
         ImmutableList.Builder<I> notDepositedItems = ImmutableList.builder();
+        boolean allFull = false;
         for (I item : itemsToDeposit) {
             boolean deposited = false;
-            for (int i = 0; i < containers.size(); i++) {
-                ContainerTarget<C, I> container = containers.get(i);
-                for (int j = 0; j < container.size(); j++) {
-                    I containerItem = container.getItem(j);
-                    if (containerItem.isEmpty()) {
-                        container.setItem(j, item);
-                        deposited = true;
+            if (!allFull) {
+                for (int i = 0; i < containers.size(); i++) {
+                    ContainerTarget<C, I> container = containers.get(i);
+                    for (int j = 0; j < container.size(); j++) {
+                        I containerItem = container.getItem(j);
+                        if (containerItem.isEmpty()) {
+                            container.setItem(j, item);
+                            deposited = true;
+                            break;
+                        }
+                    }
+                    if (deposited) {
                         break;
                     }
                 }
-                if (deposited) {
-                    break;
-                }
             }
             if (!deposited) {
+                allFull = true;
                 notDepositedItems.add(item);
             }
         }

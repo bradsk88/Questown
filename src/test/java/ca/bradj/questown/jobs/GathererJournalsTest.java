@@ -181,6 +181,54 @@ class GathererJournalsTest {
         ), result.items());
         Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
+    @Test
+    public void test_10_WithBreadInContainers_AndFullInventory_WithFood_ShouldBeNoSpace() {
+
+        FakeTownWithInfiniteStorage infiniteStorage = new FakeTownWithInfiniteStorage();
+
+        infiniteStorage.depositItems(ImmutableList.of(
+                new GathererJournalTest.TestItem("bread")
+        ));
+
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE,
+                ImmutableList.of(
+                        new GathererJournalTest.TestItem("gold"),
+                        new GathererJournalTest.TestItem("bread"),
+                        new GathererJournalTest.TestItem("gold"),
+                        new GathererJournalTest.TestItem("gold"),
+                        new GathererJournalTest.TestItem("gold"),
+                        new GathererJournalTest.TestItem("gold")
+                )
+        );
+
+        GathererJournals.LootGiver<GathererJournalTest.TestItem> specificLoot = () -> ImmutableList.of(
+                new GathererJournalTest.TestItem("flint"),
+                new GathererJournalTest.TestItem("wood"),
+                new GathererJournalTest.TestItem("stone"),
+                new GathererJournalTest.TestItem("iron"),
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("diamond")
+        );
+
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = GathererJournals.timeWarp(
+                initial,
+                6000,
+                infiniteStorage,
+                specificLoot,
+                infiniteStorage,
+                () -> new GathererJournalTest.TestItem("")
+        );
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, result.status());
+        Assertions.assertEquals(ImmutableList.of(
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("bread"),
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("gold"),
+                new GathererJournalTest.TestItem("gold")
+        ), result.items());
+    }
 
     @Test
     public void test_6010_WithBreadInContainers_ShouldBeReturningWithoutLoot() {

@@ -4,8 +4,9 @@ import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,5 +64,16 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
             }
         }
         return true;
+    }
+
+    @Override
+    public String toString() {
+        Collection<MCTownItem> items = new ArrayList<>();
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            items.add(getItem(i));
+        }
+        return "MCContainer{" +
+                "container.items=" + items +
+                '}';
     }
 }

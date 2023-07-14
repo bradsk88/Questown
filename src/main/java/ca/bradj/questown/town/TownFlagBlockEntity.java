@@ -69,8 +69,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final UUID uuid = UUID.randomUUID();
     private boolean isInitializedQuests = false;
     List<LivingEntity> entities = new ArrayList<>();
+    private boolean everScanned = false;
     private boolean changed = false;
     private final TownFlagState state = new TownFlagState(this);
+
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -95,12 +97,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        if (e.changed) {
+        e.state.tick(e.getTileData(), sl);
+
+        if (e.changed && e.everScanned) {
             e.state.putStateOnTile(e.getTileData(), e.uuid);
             e.changed = false;
         }
 
-        e.state.tick(e.getTileData(), sl);
         e.quests.tick(sl);
 
         long gameTime = level.getGameTime();
@@ -114,6 +117,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.asapRewards.tick();
 
         e.pois.tick(sl, blockPos);
+
+        e.everScanned = true;
     }
 
     @Override
@@ -130,7 +135,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
         this.writeTownData(tag);
-        if (!level.isClientSide()) {
+        if (!level.isClientSide() && everScanned) {
             TownState<MCContainer, MCTownItem> state = this.state.captureState();
             if (state == null) {
                 return;
@@ -162,7 +167,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
             l.forEach(this.asapRandomAwdForVisitor::push);
         }
-        state.load(tag);
+//        state.load(tag);
 
     }
 

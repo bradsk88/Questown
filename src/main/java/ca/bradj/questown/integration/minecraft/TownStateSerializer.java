@@ -144,7 +144,7 @@ public class TownStateSerializer {
             MCTownItem sItem = stateItems.get(i);
             if (!cItem.equals(sItem)) {
                 Questown.LOGGER.error(
-                        "In slot {}, expected {} but got {}. This is a bug and may cause items to be lost",
+                        "In slot {}, expected {} but state had {}. This is a bug and may cause items to be lost",
                         i, cItem, sItem
                 );
             }
