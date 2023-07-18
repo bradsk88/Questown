@@ -89,6 +89,10 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
         return yPosition;
     }
 
+    public Container<I> getContainer() {
+        return container;
+    }
+
     public boolean hasAnyOf(ImmutableSet<I> items) {
         return container.hasAnyOf(items);
     }

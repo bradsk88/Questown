@@ -107,7 +107,7 @@ public class TownStateSerializer {
             ListTag items = ccTag.getList("items", Tag.TAG_COMPOUND);
             for (Tag item : items) {
                 CompoundTag icTag = (CompoundTag) item;
-                ItemStack stack = ItemStack.of(icTag);
+                ItemStack stack = ItemStack.of(icTag.getCompound("item"));
                 cItems.add(MCTownItem.fromMCItemStack(stack));
             }
 
@@ -136,10 +136,12 @@ public class TownStateSerializer {
             ImmutableList<MCTownItem> stateItems
     ) {
         ImmutableList<MCTownItem> containerItems = ct.getItems();
-        if (containerItems.size() != stateItems.size()) {
-            Questown.LOGGER.error("Container items do not match stored state. This is a bug and may cause items to be lost");
+        int cSize = containerItems.size();
+        int sSize = stateItems.size();
+        if (cSize != sSize) {
+            Questown.LOGGER.error("Container items do not match stored state. This is a bug and may cause items to be lost [{}, {}]", cSize, sSize);
         }
-        for (int i = 0; i < containerItems.size(); i++) {
+        for (int i = 0; i < cSize; i++) {
             MCTownItem cItem = containerItems.get(i);
             MCTownItem sItem = stateItems.get(i);
             if (!cItem.equals(sItem)) {

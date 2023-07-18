@@ -7,7 +7,6 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
-import ca.bradj.questown.jobs.GathererJournals;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -67,6 +66,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final MCAsapRewards asapRewards = new MCAsapRewards();
     private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
+    public long advancedTimeOnTick = -1;
     private boolean isInitializedQuests = false;
     List<LivingEntity> entities = new ArrayList<>();
     private boolean everScanned = false;
@@ -97,9 +97,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        e.state.tick(e.getTileData(), sl);
+        boolean stateChanged = e.state.tick(e, e.getTileData(), sl);
 
-        if (e.changed && e.everScanned) {
+        if ((stateChanged || e.changed) && e.everScanned) {
             e.state.putStateOnTile(e.getTileData(), e.uuid);
             e.changed = false;
         }
@@ -447,5 +447,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 Positions.ToBlock(match.get().position, match.get().yPosition),
                 match.get().journal
         );
+    }
+
+    public UUID getUUID() {
+        return uuid;
     }
 }

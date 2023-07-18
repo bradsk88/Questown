@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererJournals;
+import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobJob;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -17,12 +18,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.Stack;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TownFlagState {
@@ -31,6 +34,8 @@ public class TownFlagState {
     private final TownFlagBlockEntity parent;
     private long lastTick = -1;
     private final Stack<Function<ServerLevel, TownState<MCContainer, MCTownItem>>> townInit = new Stack<>();
+
+    private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
         this.parent = parent;
@@ -54,10 +59,11 @@ public class TownFlagState {
             }
         }
 
+        long dayTime = parent.getServerLevel().getDayTime();
         TownState<MCContainer, MCTownItem> ts = new TownState<>(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
-                parent.getServerLevel().getDayTime()
+                dayTime
         );
         return ts;
     }
@@ -66,6 +72,14 @@ public class TownFlagState {
             TownFlagBlockEntity e,
             ServerLevel sl
     ) {
+        long dayTime = sl.getDayTime();
+        if (e.advancedTimeOnTick == dayTime) {
+            Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
+            return;
+        }
+
+        e.advancedTimeOnTick = dayTime;
+
         TownState<MCContainer, MCTownItem> storedState;
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
             storedState = TownStateSerializer.INSTANCE.load(
@@ -80,7 +94,6 @@ public class TownFlagState {
 
         ArrayList<TownState.VillagerData<MCTownItem>> villagers = new ArrayList<>(storedState.villagers);
 
-        long dayTime = sl.getDayTime();
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
         if (ticksPassed == 0) {
             Questown.LOGGER.debug("Time warp is not applicable");
@@ -89,7 +102,7 @@ public class TownFlagState {
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCTownItem> v = villagers.get(i);
             GathererJournal.Snapshot<MCTownItem> unwarped = v.journal;
-            Questown.LOGGER.debug("[{}] Warping time, starting with journal: {}", v.uuid, storedState);
+            Questown.LOGGER.debug("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
             GathererJournal.Snapshot<MCTownItem> warped = GathererJournals.timeWarp(
                     unwarped,
                     ticksPassed,
@@ -102,9 +115,9 @@ public class TownFlagState {
             villagers.set(i, new TownState.VillagerData<>(v.position, v.yPosition, warped, v.uuid));
         }
 
-        e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(
-                new TownState<>(villagers, storedState.containers, dayTime)
-        ));
+        TownState<MCContainer, MCTownItem> newState = new TownState<>(villagers, storedState.containers, dayTime);
+        Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
+        e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
 
         // TODO: Maybe return town state?
     }
@@ -147,19 +160,65 @@ public class TownFlagState {
         }
     }
 
-    public void tick(CompoundTag flagTag, ServerLevel level) {
+    // Returns true if changes detected
+    public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
         long lastTick = flagTag.getLong(NBT_LAST_TICK);
-        long timeSinceWake = level.getGameTime() - lastTick;
+        long gt = level.getDayTime();
+        long timeSinceWake = gt - lastTick;
         boolean waking = timeSinceWake > 10;
-        flagTag.putLong(NBT_LAST_TICK, level.getGameTime());
+        flagTag.putLong(NBT_LAST_TICK, gt);
 
         if (waking) {
-            Questown.LOGGER.debug("Recovering villagers due to player return (last near {} ticks ago)", timeSinceWake);
+            Questown.LOGGER.debug(
+                    "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
+                    timeSinceWake, gt, lastTick
+            );
             TownFlagState.advanceTime(parent, level);
             TownFlagState.recoverMobs(parent, level);
             // TODO: Make sure chests get filled/empty
         }
 
+        // TODO: Run less often?
+        Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllMatching(
+                e,
+                item -> true
+        ).iterator();
+
+        boolean containersChanged = false;
+
+        while (matchIter.hasNext()) {
+            ContainerTarget<MCContainer, MCTownItem> v = matchIter.next();
+            BlockPos bp = Positions.ToBlock(v.getPosition(), v.getyPosition());
+            BlockState bs = level.getBlockState(bp);
+            BlockEntity entity = level.getBlockEntity(bp);
+            LazyOptional<IItemHandler> cap = entity.getCapability(
+                    CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
+            if (cap != null && cap.isPresent()) {
+                int newValue = determineValue(cap.resolve().get());
+                if (listenedBlocks.containsKey(bp)) {
+                    Integer oldValue = listenedBlocks.get(bp);
+                    if (!oldValue.equals(newValue)) {
+                        Questown.LOGGER.debug("Chest tags changed");
+                        containersChanged = true;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    containersChanged = true;
+                }
+                listenedBlocks.put(bp, newValue);
+            }
+        }
+
+        return containersChanged;
+    }
+
+    private static int determineValue(IItemHandler cap) {
+        ArrayList<String> itemNames = new ArrayList<>(cap.getSlots());
+        for (int i = 0; i < cap.getSlots(); i++) {
+            itemNames.add(cap.getStackInSlot(i).toString());
+        }
+        return itemNames.hashCode();
     }
 
 

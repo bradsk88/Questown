@@ -224,8 +224,13 @@ public class GathererJournal<I extends GathererJournal.Item> {
     public void setItems(Iterable<I> mcTownItemStream) {
         ImmutableList.Builder<I> b = ImmutableList.builder();
         mcTownItemStream.forEach(b::add);
-        inventory.clear();
         ImmutableList<I> initItems = b.build();
+        if (initItems.size() != this.getCapacity()) {
+            throw new IllegalArgumentException(String.format(
+                    "Argument to setItems is wrong length. Should be %s", this.getCapacity()
+            ));
+        }
+        inventory.clear();
         inventory.addAll(initItems);
         updateItemListeners();
     }
@@ -327,7 +332,14 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
     // TODO: Can "ate" go away?
     public record Snapshot<I extends Item>(Status status, ImmutableList<I> items) {
-        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Status.IDLE, ImmutableList.of());
+        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Status.IDLE, ImmutableList.of(
+                MCTownItem.Air(),
+                MCTownItem.Air(),
+                MCTownItem.Air(),
+                MCTownItem.Air(),
+                MCTownItem.Air(),
+                MCTownItem.Air()
+        ));
 
         public Snapshot<I> eatFoodFromInventory(EmptyFactory<I> ef, Signals signal) {
             Status nextStatus = null;
