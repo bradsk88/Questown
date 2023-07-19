@@ -561,7 +561,7 @@ public class GathererJournalTest {
         // Trigger noon signal
         sigs.currentSignal = GathererJournal.Signals.NOON;
         gatherer.tick(ImmutableList::of);
-        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
+        Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
 
         // Trigger noon signal again
         sigs.currentSignal = GathererJournal.Signals.NOON;

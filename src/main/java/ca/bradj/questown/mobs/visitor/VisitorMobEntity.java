@@ -13,6 +13,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -103,7 +104,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
     boolean sitting = true;
-    private TownInterface town;
+    TownInterface town;
     private BlockPos wanderTarget;
     private boolean initializedItems;
     private List<ChangeListener> changeListeners = new ArrayList<>();
@@ -143,7 +144,9 @@ public class VisitorMobEntity extends PathfinderMob {
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTargetSink()),
-                Pair.of(10, new AcquirePoi(PoiType.HOME, MemoryModuleType.HOME, false, Optional.of((byte) 14)))
+                Pair.of(9, new ValidateBed()),
+                Pair.of(10, new FindOpenBed())
+//                Pair.of(10, new AcquirePoi(PoiType.HOME, MemoryModuleType.HOME, false, Optional.of((byte) 14)))
         );
     }
 
@@ -157,13 +160,14 @@ public class VisitorMobEntity extends PathfinderMob {
                         2,
                         walkTarget
                 ),
-                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
+//                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
                 Pair.of(3, new SleepInBed()),
                 Pair.of(
                         5,
                         new RunOne<>(
                                 ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
                                 ImmutableList.of(
+                                        Pair.of(new TownWalk(0.4f), 1),
                                         Pair.of(new SetClosestHomeAsWalkTarget(0.5f), 1),
                                         Pair.of(new InsideBrownianWalk(0.5f), 4),
                                         Pair.of(new DoNothing(20, 40), 2)
@@ -518,11 +522,13 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public void initialize(
             UUID uuid,
-            BlockPos blockPos,
+            double xPos,
+            double yPos,
+            double zPos,
             GathererJournal.Snapshot<MCTownItem> journal
     ) {
         job.initialize(journal);
-        this.setPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;
     }

@@ -10,6 +10,7 @@ import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobJob;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
@@ -48,9 +50,9 @@ public class TownFlagState {
                 if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
                 }
+                Vec3 pos = entity.position();
                 TownState.VillagerData<MCTownItem> data = new TownState.VillagerData<>(
-                        Positions.FromBlockPos(entity.blockPosition()),
-                        entity.blockPosition().getY(),
+                        pos.x, pos.y, pos.z,
                         ((VisitorMobEntity) entity).getJobJournalSnapshot(),
                         entity.getUUID()
                 );
@@ -116,7 +118,7 @@ public class TownFlagState {
                     v.getCapacity()
             );
             Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
-            villagers.set(i, new TownState.VillagerData<>(v.position, v.yPosition, warped, v.uuid));
+            villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
         }
 
         return new TownState<>(villagers, storedState.containers, dayTime);
@@ -137,12 +139,15 @@ public class TownFlagState {
                     e.getTileData().getCompound(NBT_TOWN_STATE),
                     sl
             );
-            Set<UUID> uuids = entitiesSnapshot.stream().map(Entity::getUUID).collect(Collectors.toSet());
             for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
-                BlockPos blockPos = new BlockPos(v.position.x + 0.5, v.yPosition, v.position.z + 0.5);
-
-                recovered.initialize(v.uuid, blockPos, v.journal);
+                recovered.initialize(
+                        v.uuid,
+                        v.xPosition,
+                        v.yPosition,
+                        v.zPosition,
+                        v.journal
+                );
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }

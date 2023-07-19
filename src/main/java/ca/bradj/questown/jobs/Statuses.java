@@ -166,6 +166,9 @@ public class Statuses {
             // Assume the entity or time warp logic handled the consumption of the food item
             return GathererJournal.Status.RETURNING_AT_NIGHT;
         }
+        if (currentStatus == GathererJournal.Status.DROPPING_LOOT) {
+            return null;
+        }
         // TODO: Randomly fail gathering
         return GathererJournal.Status.RETURNED_SUCCESS;
     }

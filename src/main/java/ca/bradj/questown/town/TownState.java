@@ -99,18 +99,19 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
 
     public static final class VillagerData<I extends GathererJournal.Item<I>> {
         public final UUID uuid;
-        public final Position position;
-        public final int yPosition; // TODO: Add a 3D position to RoomRecipes?
+        public final double xPosition, yPosition, zPosition;
         public final GathererJournal.Snapshot<I> journal; // TODO: Immutable journal
 
         public VillagerData(
-                Position position,
-                int yPosition,
+                double xPosition,
+                double yPosition,
+                double zPosition,
                 GathererJournal.Snapshot<I> journal,
                 UUID uuid
         ) {
-            this.position = position;
+            this.xPosition = xPosition;
             this.yPosition = yPosition;
+            this.zPosition = zPosition;
             this.journal = journal;
             this.uuid = uuid;
         }
@@ -118,8 +119,10 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
         @Override
         public String toString() {
             return "VillagerData{" +
-                    "position=" + position +
+                    "uuid=" + uuid +
+                    ", xPosition=" + xPosition +
                     ", yPosition=" + yPosition +
+                    ", zPosition=" + zPosition +
                     ", journal=" + journal +
                     '}';
         }

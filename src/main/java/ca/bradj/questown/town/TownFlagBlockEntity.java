@@ -36,6 +36,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -403,6 +404,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.setChanged();
     }
 
+    @Override
+    public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
+        ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
+        for (RoomRecipeMatch i : roomsMap.getAllMatches()) {
+            for (Map.Entry<BlockPos, Block> j : i.getContainedBlocks().entrySet()) {
+                if (mr.doesMatch(j.getValue())) {
+                    b.add(j.getKey());
+                }
+            }
+        }
+        return b.build();
+    }
+
     private @Nullable Position getWanderTargetPosition() {
         Collection<Room> all = roomsMap.getAllRooms();
         return pois.getWanderTarget(getServerLevel(), all);
@@ -442,10 +456,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
         registerEntity(visitorMobEntity);
+        TownState.VillagerData<MCTownItem> m = match.get();
         visitorMobEntity.initialize(
-                match.get().uuid,
-                Positions.ToBlock(match.get().position, match.get().yPosition),
-                match.get().journal
+                m.uuid,
+                m.xPosition, m.yPosition, m.zPosition,
+                m.journal
         );
     }
 

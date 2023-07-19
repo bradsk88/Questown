@@ -9,6 +9,8 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,4 +42,9 @@ public interface TownInterface {
     ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
 
     void registerEntity(VisitorMobEntity vEntity);
+
+    interface MatchRecipe {
+        boolean doesMatch(Block item);
+    }
+    Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
 }

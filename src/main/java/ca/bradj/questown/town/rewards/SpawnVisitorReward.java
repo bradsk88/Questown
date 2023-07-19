@@ -7,11 +7,14 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,7 +76,8 @@ public class SpawnVisitorReward extends MCReward {
         if (initUUID == null) {
             initUUID = vEntity.getUUID();
         }
-        vEntity.initialize(initUUID, new BlockPos(entity.getVisitorJoinPos()), EMPTY);
+        Vec3 vjp = entity.getVisitorJoinPos();
+        vEntity.initialize(initUUID, vjp.x, vjp.y, vjp.z, EMPTY);
         entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
         Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());

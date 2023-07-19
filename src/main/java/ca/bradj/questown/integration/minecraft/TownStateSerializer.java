@@ -44,9 +44,9 @@ public class TownStateSerializer {
         ListTag villagers = new ListTag();
         for (TownState.VillagerData<MCTownItem> e : state.villagers) {
             CompoundTag vTag = new CompoundTag();
-            vTag.putInt("x", e.position.x);
-            vTag.putInt("y", e.yPosition);
-            vTag.putInt("z", e.position.z);
+            vTag.putDouble("x", e.xPosition);
+            vTag.putDouble("y", e.yPosition);
+            vTag.putDouble("z", e.zPosition);
             vTag.putString("journal_status", e.journal.status().name());
             ListTag journalItems = new ListTag();
             for (MCTownItem item : e.journal.items()) {
@@ -85,7 +85,7 @@ public class TownStateSerializer {
                 iB.add(MCTownItem.of(itemCTag));
             }
             b.add(new TownState.VillagerData<>(
-                    new Position(x, z), y,
+                    x, y, z,
                     new GathererJournal.Snapshot<>(status, iB.build()),
                     vcTag.getUUID("uuid")
             ));
