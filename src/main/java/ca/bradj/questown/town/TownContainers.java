@@ -8,9 +8,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -42,7 +44,8 @@ public class TownContainers {
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())
                 .filter(v -> v.getValue() instanceof ChestBlock)
-                .map(v -> fromChestBlock(v.getKey(), (ChestBlock) v.getValue(), level));
+                .map(v -> fromChestBlockMaybe(v.getKey(), (ChestBlock) v.getValue(), level))
+                .filter(Objects::nonNull);
         return allContainers.filter(v -> v.hasItem(c));
     }
 
@@ -52,11 +55,33 @@ public class TownContainers {
             ChestBlock block,
             ServerLevel level
     ) {
+        ContainerTarget<MCContainer, MCTownItem> maybe = fromChestBlockMaybe(
+                p,
+                block,
+                level
+        );
+        if (maybe == null) {
+            throw new IllegalStateException("Null ContainerTarget is not allowed in this context");
+        }
+        return maybe;
+    }
+
+    @Nullable
+    private static ContainerTarget<MCContainer, MCTownItem> fromChestBlockMaybe(
+            BlockPos p,
+            ChestBlock block,
+            ServerLevel level
+    ) {
         BlockState blockState = level.getBlockState(p);
         if (!blockState.getBlock().equals(block)) {
             throw new IllegalArgumentException(String.format(
                     "Given block is not present at given position. Actual blockstate %s", blockState
             ));
+        }
+
+        ChestType typ = blockState.getOptionalValue(ChestBlock.TYPE).orElse(null);
+        if (!ChestType.LEFT.equals(typ) && !ChestType.SINGLE.equals(typ)) {
+            return null;
         }
 
         MCContainer mcContainer = new MCContainer(ChestBlock.getContainer(

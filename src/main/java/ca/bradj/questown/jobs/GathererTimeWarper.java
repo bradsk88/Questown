@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +11,24 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-public class GathererJournals {
+public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
+
+    private final FoodRemover<I> remover;
+    private final LootGiver<I> lootGiver;
+    private final Town<I> town;
+    private final GathererJournal.EmptyFactory<I> emptyFactory;
+
+    public GathererTimeWarper(
+            FoodRemover<I> remover,
+            LootGiver<I> lootGiver,
+            Town<I> town,
+            GathererJournal.EmptyFactory<I> emptyFactory
+    ) {
+        this.remover = remover;
+        this.lootGiver = lootGiver;
+        this.town = town;
+        this.emptyFactory = emptyFactory;
+    }
 
     public interface FoodRemover<I extends GathererJournal.Item<I>> {
         // Return null if there is no food
@@ -19,7 +37,7 @@ public class GathererJournals {
 
     public interface LootGiver<I extends GathererJournal.Item<I>> {
         // Return null if there is no food
-        @NotNull Iterable<I> giveLoot();
+        @NotNull Iterable<I> giveLoot(int max);
     }
 
     public interface Town<I extends GathererJournal.Item<I>> extends Statuses.TownStateProvider {
@@ -28,14 +46,11 @@ public class GathererJournals {
         ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
     }
 
-    public static <I extends GathererJournal.Item<I>> GathererJournal.Snapshot<I> timeWarp(
+    public GathererJournal.Snapshot<I> timeWarp(
             GathererJournal.Snapshot<I> input,
+            long currentTick,
             long ticksPassed,
-            // TODO: Make TimeWarper class and use the params below as fields
-            FoodRemover<I> remover,
-            LootGiver<I> lootGiver,
-            Town<I> town,
-            GathererJournal.EmptyFactory<I> emptyFactory
+            int lootPerDay
     ) {
         if (ticksPassed == 0) {
             return input;
@@ -44,13 +59,15 @@ public class GathererJournals {
         MutableInventoryStateProvider<I> stateGetter =
                 MutableInventoryStateProvider.withInitialItems(input.items());
 
-        // FIXME: timeWarp should take "last game time" on/with the snapshot,
-        //  otherwise this is relative to time 0, which is not correct.
-        for (int i = 0; i <= ticksPassed; i = getNextDaySegment(i, ticksPassed)) {
+        long start = currentTick;
+        long max = currentTick + ticksPassed;
+
+        for (long i = start; i <= max; i = getNextDaySegment(i, max)) {
+            GathererJournal.Signals signal = GathererJournal.Signals.fromGameTime(
+                    i
+            );
             GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
-                    output.status(), GathererJournal.Signals.fromGameTime(
-                            i
-                    ), stateGetter, town
+                    output.status(), signal, stateGetter, town
             );
             if (newStatus == null) {
                 continue;
@@ -59,17 +76,17 @@ public class GathererJournals {
             if (newStatus == GathererJournal.Status.NO_FOOD) {
                 I food = remover.removeFood();
                 if (food != null) {
-                    takeButDoNotEatFood(outItems, food);
+                    takeButDoNotEatFood(outItems, food, signal);
                 }
             }
             if (newStatus == GathererJournal.Status.GATHERING_EATING) {
                 output = output.withStatus(newStatus)
-                        .eatFoodFromInventory(emptyFactory, GathererJournal.Signals.fromGameTime(i));
+                        .eatFoodFromInventory(emptyFactory, signal);
                 outItems = output.items();
                 newStatus = output.status();
             }
             if (newStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-                @NotNull Iterable<I> loot = lootGiver.giveLoot();
+                @NotNull Iterable<I> loot = lootGiver.giveLoot(lootPerDay);
                 Iterator<I> iterator = loot.iterator();
                 outItems = outItems.stream().map(
                         v -> {
@@ -104,7 +121,8 @@ public class GathererJournals {
 
     private static <I extends GathererJournal.Item<I>> void takeButDoNotEatFood(
             List<I> outItems,
-            I food
+            I food,
+            GathererJournal.Signals signal
     ) {
         // TODO: More efficient way to do this?
         Optional<I> foundEmpty = outItems.stream()
@@ -115,24 +133,24 @@ public class GathererJournals {
             int idx = outItems.indexOf(foundEmpty.get());
             outItems.set(idx, food);
         } else {
-            throw new IllegalStateException(String.format("Got NO_FOOD with full inventory: %s", outItems));
+            throw new IllegalStateException(String.format("Got NO_FOOD with full inventory on signal %s: %s", signal, outItems));
         }
     }
 
-    public static int getNextDaySegment(
-            int currentGameTime,
+    public static long getNextDaySegment(
+            long currentGameTime,
             long upTo
     ) {
         if (currentGameTime == upTo) {
             return currentGameTime + 1;
         }
-        int daysPassed = currentGameTime / 24000;
-        int i = (24000 * daysPassed) + getNextSingleDatSegment(currentGameTime);
+        long daysPassed = currentGameTime / 24000;
+        long i = (24000 * daysPassed) + getNextSingleDatSegment(currentGameTime);
         return i;
     }
 
-    private static int getNextSingleDatSegment(int currentGameTime) {
-        int timeOfDay = currentGameTime % 24000;
+    private static long getNextSingleDatSegment(long currentGameTime) {
+        long timeOfDay = currentGameTime % 24000;
         // Allow ten ticks per period for multi-step status transitions
         if (timeOfDay < 10) {
             return timeOfDay + 1;

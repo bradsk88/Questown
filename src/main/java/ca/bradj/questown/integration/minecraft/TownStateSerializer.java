@@ -123,7 +123,9 @@ public class TownStateSerializer {
                 );
                 continue;
             }
-            ContainerTarget ct = TownContainers.fromChestBlock(pos, (ChestBlock) bs.getBlock(), level);
+            ContainerTarget<MCContainer, MCTownItem> ct = TownContainers.fromChestBlock(
+                    pos, (ChestBlock) bs.getBlock(), level
+            );
             cB.add(ct);
             ImmutableList<MCTownItem> stateItems = cItems.build();
             checkItems(ct, stateItems);

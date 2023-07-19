@@ -22,31 +22,7 @@ public class Statuses {
         switch (signal) {
 //            GathererJournal.Status status = null;
             case MORNING -> {
-                if (currentStatus == GathererJournal.Status.GATHERING) {
-                    return null;
-                }
-
-                if (inventory.hasAnyLoot()) {
-                    if (currentStatus != GathererJournal.Status.NO_SPACE && !town.IsStorageAvailable()) {
-                        return GathererJournal.Status.NO_SPACE;
-                    }
-                    if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-                        return GathererJournal.Status.DROPPING_LOOT;
-                    }
-                    return GathererJournal.Status.RETURNED_SUCCESS;
-                }
-
-
-                if (inventory.inventoryIsFull()) {
-                    return GathererJournal.Status.NO_SPACE;
-                }
-                if (inventory.inventoryHasFood()) {
-                    return GathererJournal.Status.GATHERING;
-                }
-                if (currentStatus != GathererJournal.Status.NO_FOOD) {
-                    return GathererJournal.Status.NO_FOOD;
-                }
-                return null;
+                return handleMorning(currentStatus, inventory, town);
             }
             case NOON -> {
                 return handleNoon(currentStatus, inventory);
@@ -66,6 +42,42 @@ public class Statuses {
         }
     }
 
+    @Nullable
+    private static GathererJournal.Status handleMorning(
+            GathererJournal.Status currentStatus,
+            InventoryStateProvider<?> inventory,
+            TownStateProvider town
+    ) {
+        if (currentStatus == GathererJournal.Status.GATHERING) {
+            return null;
+        }
+
+        if (inventory.hasAnyLoot()) {
+            if (currentStatus != GathererJournal.Status.NO_SPACE && !town.IsStorageAvailable()) {
+                return GathererJournal.Status.NO_SPACE;
+            }
+            if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
+                return GathererJournal.Status.DROPPING_LOOT;
+            }
+            if (currentStatus == GathererJournal.Status.DROPPING_LOOT) {
+                return null;
+            }
+            return GathererJournal.Status.RETURNED_SUCCESS;
+        }
+
+
+        if (inventory.inventoryIsFull()) {
+            return GathererJournal.Status.NO_SPACE;
+        }
+        if (inventory.inventoryHasFood()) {
+            return GathererJournal.Status.GATHERING;
+        }
+        if (currentStatus != GathererJournal.Status.NO_FOOD) {
+            return GathererJournal.Status.NO_FOOD;
+        }
+        return null;
+    }
+
     private static GathererJournal.@Nullable Status handleNoon(
             GathererJournal.Status currentStatus,
             InventoryStateProvider<?> inventory
@@ -79,7 +91,7 @@ public class Statuses {
                 GathererJournal.Status.RETURNED_FAILURE,
                 GathererJournal.Status.RELAXING
         ).contains(currentStatus)) {
-            return GathererJournal.Status.NO_FOOD;
+            return GathererJournal.Status.RETURNING;
         }
         if (currentStatus == GathererJournal.Status.NO_FOOD || currentStatus == GathererJournal.Status.NO_SPACE) {
             return GathererJournal.Status.STAYING;

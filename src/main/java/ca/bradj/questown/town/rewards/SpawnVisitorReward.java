@@ -1,12 +1,13 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -14,10 +15,18 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Random;
 import java.util.UUID;
 
 public class SpawnVisitorReward extends MCReward {
+
+    public static final GathererJournal.Snapshot<MCTownItem> EMPTY = new GathererJournal.Snapshot<>(GathererJournal.Status.IDLE, ImmutableList.of(
+            MCTownItem.Air(),
+            MCTownItem.Air(),
+            MCTownItem.Air(),
+            MCTownItem.Air(),
+            MCTownItem.Air(),
+            MCTownItem.Air()
+    ));
 
     public static final String ID = "spawn_visitor_reward";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
@@ -64,7 +73,7 @@ public class SpawnVisitorReward extends MCReward {
         if (initUUID == null) {
             initUUID = vEntity.getUUID();
         }
-        vEntity.initialize(initUUID, new BlockPos(entity.getVisitorJoinPos()), GathererJournal.Snapshot.EMPTY);
+        vEntity.initialize(initUUID, new BlockPos(entity.getVisitorJoinPos()), EMPTY);
         entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
         Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());

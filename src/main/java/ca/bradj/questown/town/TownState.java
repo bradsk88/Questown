@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererJournals;
+import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class TownState<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> implements GathererJournals.FoodRemover<I>, GathererJournals.Town<I> {
+public class TownState<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
     public final @NotNull ImmutableList<VillagerData<I>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final long worldTimeAtSleep;

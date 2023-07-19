@@ -178,9 +178,9 @@ public class VisitorMobEntity extends PathfinderMob {
             VisitorMobEntity entity
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
-        b.add(Pair.of(2, new DoNothing(30, 60)));
+//        b.add(Pair.of(2, new DoNothing(30, 60)));
         b.add(Pair.of(4, new Admire(200)));
-        b.add(Pair.of(3, new TownWalk(0.25f)));
+        b.add(Pair.of(3, new TownWalk(0.3f)));
         b.add(Pair.of(10, new TownWalk(0.40f)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
         return b.build();

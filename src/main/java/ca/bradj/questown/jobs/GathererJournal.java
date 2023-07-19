@@ -332,14 +332,6 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
     // TODO: Can "ate" go away?
     public record Snapshot<I extends Item>(Status status, ImmutableList<I> items) {
-        public static final Snapshot<MCTownItem> EMPTY = new Snapshot<>(Status.IDLE, ImmutableList.of(
-                MCTownItem.Air(),
-                MCTownItem.Air(),
-                MCTownItem.Air(),
-                MCTownItem.Air(),
-                MCTownItem.Air(),
-                MCTownItem.Air()
-        ));
 
         public Snapshot<I> eatFoodFromInventory(EmptyFactory<I> ef, Signals signal) {
             Status nextStatus = null;

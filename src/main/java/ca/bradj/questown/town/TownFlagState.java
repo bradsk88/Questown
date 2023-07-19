@@ -5,7 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererJournals;
+import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobJob;
@@ -19,7 +19,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
@@ -32,7 +31,7 @@ public class TownFlagState {
     static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
-    private long lastTick = -1;
+    private boolean initialized = false;
     private final Stack<Function<ServerLevel, TownState<MCContainer, MCTownItem>>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
@@ -68,14 +67,14 @@ public class TownFlagState {
         return ts;
     }
 
-    static void advanceTime(
+    static TownState<MCContainer, MCTownItem> advanceTime(
             TownFlagBlockEntity e,
             ServerLevel sl
     ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) {
             Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
-            return;
+            return null;
         }
 
         e.advancedTimeOnTick = dayTime;
@@ -97,29 +96,30 @@ public class TownFlagState {
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
         if (ticksPassed == 0) {
             Questown.LOGGER.debug("Time warp is not applicable");
-            return;
+            return storedState;
         }
+        GathererTimeWarper<MCTownItem> warper = new GathererTimeWarper<MCTownItem>(
+                storedState,
+                (max) -> VisitorMobJob.getLootFromLevel(sl, max),
+                storedState,
+                () -> new MCTownItem(Items.AIR)
+        );
+
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCTownItem> v = villagers.get(i);
             GathererJournal.Snapshot<MCTownItem> unwarped = v.journal;
             Questown.LOGGER.debug("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
-            GathererJournal.Snapshot<MCTownItem> warped = GathererJournals.timeWarp(
+            GathererJournal.Snapshot<MCTownItem> warped = warper.timeWarp(
                     unwarped,
+                    dayTime,
                     ticksPassed,
-                    storedState,
-                    () -> VisitorMobJob.getLootFromLevel(sl, v.getCapacity()),
-                    storedState,
-                    () -> new MCTownItem(Items.AIR)
+                    v.getCapacity()
             );
             Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
             villagers.set(i, new TownState.VillagerData<>(v.position, v.yPosition, warped, v.uuid));
         }
 
-        TownState<MCContainer, MCTownItem> newState = new TownState<>(villagers, storedState.containers, dayTime);
-        Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
-        e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
-
-        // TODO: Maybe return town state?
+        return new TownState<>(villagers, storedState.containers, dayTime);
     }
 
     static void recoverMobs(
@@ -151,9 +151,6 @@ public class TownFlagState {
     }
 
     public void load(CompoundTag tag) {
-        if (tag.contains(NBT_LAST_TICK)) {
-            this.lastTick = tag.getLong(NBT_LAST_TICK);
-        }
         if (tag.contains(NBT_TOWN_STATE)) {
             CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
             this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
@@ -165,7 +162,8 @@ public class TownFlagState {
         long lastTick = flagTag.getLong(NBT_LAST_TICK);
         long gt = level.getDayTime();
         long timeSinceWake = gt - lastTick;
-        boolean waking = timeSinceWake > 10;
+        boolean waking = timeSinceWake > 10 || !initialized;
+        this.initialized = true;
         flagTag.putLong(NBT_LAST_TICK, gt);
 
         if (waking) {
@@ -173,8 +171,10 @@ public class TownFlagState {
                     "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
                     timeSinceWake, gt, lastTick
             );
-            TownFlagState.advanceTime(parent, level);
+            TownState<MCContainer, MCTownItem> newState = TownFlagState.advanceTime(parent, level);
             TownFlagState.recoverMobs(parent, level);
+            Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
+            e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             // TODO: Make sure chests get filled/empty
         }
 
@@ -184,12 +184,18 @@ public class TownFlagState {
                 item -> true
         ).iterator();
 
+        return checkForContainerChanges(level, matchIter);
+    }
+
+    private boolean checkForContainerChanges(
+            ServerLevel level,
+            Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter
+    ) {
         boolean containersChanged = false;
 
         while (matchIter.hasNext()) {
             ContainerTarget<MCContainer, MCTownItem> v = matchIter.next();
             BlockPos bp = Positions.ToBlock(v.getPosition(), v.getyPosition());
-            BlockState bs = level.getBlockState(bp);
             BlockEntity entity = level.getBlockEntity(bp);
             LazyOptional<IItemHandler> cap = entity.getCapability(
                     CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
@@ -209,7 +215,6 @@ public class TownFlagState {
                 listenedBlocks.put(bp, newValue);
             }
         }
-
         return containersChanged;
     }
 
