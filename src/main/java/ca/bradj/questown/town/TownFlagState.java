@@ -10,7 +10,6 @@ import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobJob;
 import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -27,7 +26,6 @@ import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class TownFlagState {
     static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
@@ -200,7 +198,7 @@ public class TownFlagState {
 
         while (matchIter.hasNext()) {
             ContainerTarget<MCContainer, MCTownItem> v = matchIter.next();
-            BlockPos bp = Positions.ToBlock(v.getPosition(), v.getyPosition());
+            BlockPos bp = Positions.ToBlock(v.getPosition(), v.getYPosition());
             BlockEntity entity = level.getBlockEntity(bp);
             LazyOptional<IItemHandler> cap = entity.getCapability(
                     CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);

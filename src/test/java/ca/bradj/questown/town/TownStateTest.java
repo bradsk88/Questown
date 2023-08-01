@@ -83,7 +83,7 @@ class TownStateTest {
     void depositItems_shouldDepositItemsIntoContainers() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Container(false), () -> true
+                        new Position(0, 0), 0, new Position(0, 0), new Container(false), () -> true
                 )
         );
 
@@ -122,7 +122,7 @@ class TownStateTest {
     void depositItems_shouldReturnAllInputITemsWhenNoStorageAvailable() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Container(true), () -> true
+                        new Position(0, 0), 0, new Position(0, 0), new Container(true), () -> true
                 )
         );
 

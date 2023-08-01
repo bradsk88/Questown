@@ -4,10 +4,14 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -84,16 +88,31 @@ public class TownContainers {
             return null;
         }
 
-        MCContainer mcContainer = new MCContainer(ChestBlock.getContainer(
+        Container container = ChestBlock.getContainer(
                 block,
                 blockState,
                 level,
                 p,
                 true
-        ));
+        );
+        if (container == null) {
+            throw new IllegalStateException("Container is null at " + p);
+        }
+        MCContainer mcContainer = new MCContainer(container);
+
+
+        Position position = Positions.FromBlockPos(p);
+        Position interactPos = position;
+
+        Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
+        if (facing.isPresent()) {
+            interactPos = Positions.FromBlockPos(p.relative(facing.get()));
+        }
+
         return new ContainerTarget<>(
-                Positions.FromBlockPos(p),
+                position,
                 p.getY(),
+                interactPos,
                 mcContainer,
                 () -> level.getBlockState(p) == blockState
         );

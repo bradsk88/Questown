@@ -4,6 +4,7 @@ import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,7 +15,7 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
     private final Container container;
 
-    public MCContainer(Container container) {
+    public MCContainer(@NotNull Container container) {
         this.container = container;
     }
 

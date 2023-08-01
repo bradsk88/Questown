@@ -5,7 +5,6 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -28,7 +27,7 @@ public class TownStateSerializer {
         for (ContainerTarget<MCContainer, MCTownItem> c : state.containers) {
             CompoundTag cTag = new CompoundTag();
             cTag.putInt("x", c.getPosition().x);
-            cTag.putInt("y", c.getyPosition());
+            cTag.putInt("y", c.getYPosition());
             cTag.putInt("z", c.getPosition().z);
 
             ListTag items = new ListTag();

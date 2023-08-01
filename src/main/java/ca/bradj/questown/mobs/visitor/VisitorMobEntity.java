@@ -257,7 +257,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, blockPosition());
             this.entityData.set(visible, vis);
-            job.tryDropLoot(blockPosition());
+            job.tryDropLoot(uuid, blockPosition());
             job.tryTakeFood(blockPosition());
             entityData.set(status, job.getStatus().name());
         }

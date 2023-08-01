@@ -4,10 +4,13 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> {
+
+    private final Position interactPosition;
 
     public int size() {
         return container.size();
@@ -72,11 +75,13 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
     public ContainerTarget(
             Position position,
             int yPosition,
-            Container<I> container,
+            Position interactionPosition,
+            @NotNull Container<I> container,
             ValidCheck check
     ) {
         this.position = position;
         this.yPosition = yPosition;
+        this.interactPosition = interactionPosition;
         this.container = container;
         this.check = check;
     }
@@ -85,7 +90,11 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
         return position;
     }
 
-    public int getyPosition() {
+    public Position getInteractPosition() {
+        return interactPosition;
+    }
+
+    public int getYPosition() {
         return yPosition;
     }
 

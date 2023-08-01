@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCTownItem> {
 
@@ -157,20 +158,20 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             case NO_FOOD -> {
                 return handleNoFoodStatus(town);
             }
-            case UNSET, IDLE, STAYING -> {
+            case UNSET, IDLE, STAYING, RELAXING -> {
                 return null;
             }
-            case GATHERING, RETURNING, CAPTURED -> {
+            case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> {
                 return enterExitPos;
             }
-            case RETURNED_SUCCESS, NO_SPACE -> {
+            case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> {
                 return setupForDropLoot(town);
             }
             case RETURNED_FAILURE -> {
                 return new BlockPos(town.getVisitorJoinPos());
             }
         }
-        return null;
+        throw new IllegalStateException("Unhandled status: " + journal.getStatus().name());
     }
 
     private BlockPos handleNoFoodStatus(TownInterface town) {
@@ -188,7 +189,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         if (this.foodTarget != null) {
             Questown.LOGGER.debug("Located food at {}", this.foodTarget.getPosition());
-            return Positions.ToBlock(this.foodTarget.getPosition(), this.foodTarget.getyPosition());
+            return Positions.ToBlock(this.foodTarget.getInteractPosition(), this.foodTarget.getYPosition());
         } else {
             Questown.LOGGER.debug("No food exists in town");
             return town.getRandomWanderTarget();
@@ -206,7 +207,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         if (this.successTarget != null) {
             Questown.LOGGER.debug("Located chest at {}", this.successTarget.getPosition());
-            return Positions.ToBlock(this.successTarget.getPosition(), this.successTarget.getyPosition());
+            return Positions.ToBlock(this.successTarget.getInteractPosition(), this.successTarget.getYPosition());
         } else {
             Questown.LOGGER.debug("No chests exist in town");
             return town.getRandomWanderTarget();
@@ -282,17 +283,22 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
     }
 
-    public void tryDropLoot(BlockPos entityPos) {
+    public void tryDropLoot(UUID uuid, BlockPos entityPos) {
         // TODO: move to journal?
+        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
+            return;
+        }
         if (this.dropping) {
             Questown.LOGGER.debug("Trying to drop too quickly");
         }
         this.dropping = true;
         if (!journal.hasAnyNonFood()) {
+            Questown.LOGGER.trace("{} is not dropping because they only have food", uuid);
             this.dropping = false;
             return;
         }
         if (!isCloseToChest(entityPos)) {
+            Questown.LOGGER.trace("{} is not dropping because they are not close to an empty chest", uuid);
             this.dropping = false;
             return;
         }

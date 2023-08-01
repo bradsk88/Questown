@@ -157,4 +157,50 @@ class StatusesTest {
         Assertions.assertNull(newStatus);
     }
 
+    @Test
+    public void test_should_stay_in_nospace_if_currently_nospace_and_inventory_full_and_no_space_and_signal_is_morning() {
+        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.NO_SPACE,
+                GathererJournal.Signals.MORNING,
+                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                    @Override
+                    public boolean hasAnyLoot() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return false;
+                    }
+
+                    @Override
+                    public ImmutableList depositItems(ImmutableList itemsToDeposit) {
+                        return itemsToDeposit;
+                    }
+                }
+        );
+        Assertions.assertNull(newStatus);
+    }
+
 }

@@ -53,11 +53,14 @@ public class Statuses {
         }
 
         if (inventory.hasAnyLoot()) {
-            if (currentStatus != GathererJournal.Status.NO_SPACE && !town.IsStorageAvailable()) {
-                return GathererJournal.Status.NO_SPACE;
-            }
             if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
                 return GathererJournal.Status.DROPPING_LOOT;
+            }
+            if (!town.IsStorageAvailable()) {
+                if (currentStatus == GathererJournal.Status.NO_SPACE) {
+                    return null;
+                }
+                return GathererJournal.Status.NO_SPACE;
             }
             if (currentStatus == GathererJournal.Status.DROPPING_LOOT) {
                 return null;
