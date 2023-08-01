@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -30,6 +31,8 @@ public class Questown {
 
     // Directly reference a log4j logger.
     public static final Logger LOGGER = LogManager.getLogger();
+    public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties().
+            tab(ModItemGroup.QUESTOWN_GROUP);
 
     public Questown() {
         Questown.LOGGER.info("Main load");

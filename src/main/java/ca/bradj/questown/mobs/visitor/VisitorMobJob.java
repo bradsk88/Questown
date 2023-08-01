@@ -90,7 +90,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     @NotNull
     private static BlockPos getEnterExitPos(TownInterface town) {
-        return town.getTownFlagBasePos().offset(10, 0, 0);
+        return town.getEnterExitPos();
     }
 
     public void tick(

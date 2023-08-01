@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -22,6 +23,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
@@ -73,6 +75,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean everScanned = false;
     private boolean changed = false;
     private final TownFlagState state = new TownFlagState(this);
+    private List<BlockPos> welcomeMats = new ArrayList<>();
 
 
     public TownFlagBlockEntity(
@@ -405,6 +408,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public BlockPos getEnterExitPos() {
+        while (welcomeMats.size() > 0) {
+            ImmutableList<BlockPos> copy = ImmutableList.copyOf(welcomeMats);
+            int index = level.random.nextInt(copy.size());
+            BlockPos mat = copy.get(index);
+            if (!level.getBlockState(mat).is(BlocksInit.WELCOME_MAT_BLOCK.get())) {
+                welcomeMats.remove(index);
+                continue;
+            }
+            return mat;
+        }
+        BlockPos fallback = getTownFlagBasePos().relative(
+                Direction.Plane.HORIZONTAL.getRandomDirection(level.random),
+                10
+        );
+        Questown.LOGGER.debug("No welcome mats found, falling back to {}", fallback);
+        return fallback;
+    }
+
+    @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch i : roomsMap.getAllMatches()) {
@@ -466,5 +489,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public UUID getUUID() {
         return uuid;
+    }
+
+    public void registerWelcomeMat(BlockPos welcomeMatBlock) {
+        this.welcomeMats.add(welcomeMatBlock);
+        Questown.LOGGER.debug("Welcome mat was registered with town flag at {}", welcomeMatBlock);
     }
 }

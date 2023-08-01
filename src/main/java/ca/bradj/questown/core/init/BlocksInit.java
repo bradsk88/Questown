@@ -2,6 +2,7 @@ package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.materials.WallType;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.DeferredRegister;
@@ -15,5 +16,9 @@ public class BlocksInit {
 
 	public static final RegistryObject<Block> COBBLESTONE_TOWN_FLAG = BLOCKS.register(
 			TownFlagBlock.itemId(WallType.COBBLESTONE), TownFlagBlock::new
+	);
+
+	public static final RegistryObject<Block> WELCOME_MAT_BLOCK = BLOCKS.register(
+			"welcome_mat_block", WelcomeMatBlock::new
 	);
 }

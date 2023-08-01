@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=south": {
+      "y": 0,
+      "model": "questown:block/welcome_mat_block"
+    },
+    "facing=west": {
+      "y": 90,
+      "model": "questown:block/welcome_mat_block"
+    },
+    "facing=north": {
+      "y": 180,
+      "model": "questown:block/welcome_mat_block"
+    },
+    "facing=east": {
+      "y": 270,
+      "model": "questown:block/welcome_mat_block"
+    }
+  }
+}

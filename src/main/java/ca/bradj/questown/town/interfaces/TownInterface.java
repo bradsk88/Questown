@@ -43,6 +43,8 @@ public interface TownInterface {
 
     void registerEntity(VisitorMobEntity vEntity);
 
+    BlockPos getEnterExitPos();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }
