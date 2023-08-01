@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -38,7 +39,7 @@ public class FindOpenBed extends Behavior<VisitorMobEntity> {
                 if (occupied.isPresent()) {
                     if (!occupied.get()) {
                         entity.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(p_22540_.dimension(), bp));
-                        entity.setWanderTarget(bp);
+                        Questown.LOGGER.debug("{} has set HOME to {}", entity.getUUID(), bp);
                     }
                 }
             }
