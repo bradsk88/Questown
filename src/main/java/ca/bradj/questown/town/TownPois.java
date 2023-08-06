@@ -1,19 +1,28 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.logic.TownCycle;
-import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class TownPois {
+
+    private List<BlockPos> welcomeMats = new ArrayList<>();
 
     public void setListener(Listener listener) {
         this.listener = listener;
@@ -52,8 +61,28 @@ public class TownPois {
         return null;
     }
 
+    public @Nullable BlockPos getWelcomeMatPos(@NotNull ServerLevel level) {
+        while (welcomeMats.size() > 0) {
+            ImmutableList<BlockPos> copy = ImmutableList.copyOf(welcomeMats);
+            int index = level.random.nextInt(copy.size());
+            BlockPos mat = copy.get(index);
+            if (!level.getBlockState(mat).is(BlocksInit.WELCOME_MAT_BLOCK.get())) {
+                welcomeMats.remove(index);
+                continue;
+            }
+            return mat;
+        }
+        return null;
+    }
+
+    public void registerWelcomeMat(BlockPos welcomeMatBlock) {
+        this.welcomeMats.add(welcomeMatBlock);
+        Questown.LOGGER.debug("Welcome mat was registered with town flag at {}", welcomeMatBlock);
+    }
+
     public interface Listener {
         void campfireFound();
+        void townGateFound();
     }
 
     private Listener listener;
@@ -64,10 +93,21 @@ public class TownPois {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = TownCycle.findCampfire(flagPos, level);
-        if (visitorSpot == null) {
-            fire.ifPresent((bp) -> listener.campfireFound());
+        fire.ifPresent((bp) -> listener.campfireFound());
+
+        BlockPos welcomePos = getWelcomeMatPos(level);
+        if (welcomePos == null) {
+            visitorSpot = fire.orElse(visitorSpot);
+            return;
         }
-        visitorSpot = fire.orElse(null);
+
+        BlockPos gate = TownCycle.findTownGate(welcomePos, level,
+                position -> WallDetection.IsWall(level, position, welcomePos.getY())
+        );
+        if (gate != null) {
+            listener.townGateFound();
+            visitorSpot = gate;
+        }
     }
 
     // TODO: Add town gate, etc (in future)

@@ -61,53 +61,17 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     @Override
     public boolean IsEmpty(Position dp) {
-        BlockPos bp = Positions.ToBlock(dp, getY());
-        BlockPos abp = bp.above();
-        boolean empty = entity.getServerLevel().isEmptyBlock(bp);
-        boolean emptyAbove = entity.getServerLevel().isEmptyBlock(abp);
-        return empty || emptyAbove;
+        return WallDetection.IsEmpty(entity.getServerLevel(), dp, getY());
     }
 
     @Override
     public boolean IsWall(Position dp) {
-        BlockPos bp = Positions.ToBlock(dp, getY());
-        BlockPos abp = bp.above();
-        if (this.IsEmpty(dp)) {
-            return false;
-        }
-        Level level = entity.getServerLevel();
-        BlockState blockState = level.getBlockState(bp);
-        BlockState aboveBlockState = level.getBlockState(abp);
-        if (isSolid(bp, level, blockState)) {
-            if (isSolid(abp, level, aboveBlockState)) {
-                return true;
-            }
-        }
-
-        if (IsDoor(dp)) {
-            return true;
-        }
-
-        // TODO: Windows
-
-        return false;
-    }
-
-    private static boolean isSolid(
-            BlockPos bp,
-            Level level,
-            BlockState blockState
-    ) {
-        return blockState.getShape(level, bp).bounds().getSize() >= 1 && !blockState.propagatesSkylightDown(
-                level,
-                bp
-        ) && !blockState.getCollisionShape(level, bp).isEmpty();
+        return WallDetection.IsWall(entity.getServerLevel(), dp, getY());
     }
 
     @Override
     public boolean IsDoor(Position dp) {
-        BlockState bs = entity.getServerLevel().getBlockState(Positions.ToBlock(dp, getY()));
-        return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
+        return WallDetection.IsDoor(entity.getServerLevel(), dp, getY());
     }
 
     public void update(ImmutableMap<Position, Optional<Room>> rooms) {
