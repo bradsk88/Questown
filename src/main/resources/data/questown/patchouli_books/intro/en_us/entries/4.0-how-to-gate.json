@@ -1,0 +1,27 @@
+{
+  "name": "Entry 4: Gatherers",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_visitor",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "In my experience, villagers will want to help out.$(br2)Gatherers will leave camp every day to find supplies.$(br2)However, you must build a town gate so they can find their way back!"
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "C": "questown:welcome_mat_block[facing=north]",
+          "T": "minecraft:wall_torch[facing=north]",
+          "Y": "minecraft:wall_torch[facing=south]"
+        },
+        "pattern": [
+          ["TWY", "   ", "TWY"],
+          [" W ", "0C ", " W "]
+        ]
+      },
+      "text": "Hint: Right-click on the base of the town flag with a piece of carpet in hand to craft a Welcome Mat."
+    }
+  ]
+}
