@@ -1,20 +1,27 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
+import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public class TownStateSerializer {
 
@@ -60,11 +67,39 @@ public class TownStateSerializer {
         return tag;
     }
 
-    public TownState<MCContainer, MCTownItem> load(CompoundTag tag, ServerLevel level) {
+    public interface GatesGetter {
+        boolean isGateValid(BlockPos bp);
+    }
+
+    public TownState<MCContainer, MCTownItem> load(
+            CompoundTag tag, ServerLevel level, GatesGetter gg
+    ) {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
         ImmutableList<TownState.VillagerData<MCTownItem>> villagers = loadVillagers(tag);
-        return new TownState<>(villagers, containers, worldTimeAtSleep);
+        List<BlockPos> gates = loadGates(tag, gg);
+        return new TownState<>(villagers, containers, gates, worldTimeAtSleep);
+    }
+
+    private ImmutableList<BlockPos> loadGates(
+            CompoundTag tag,
+            GatesGetter gg
+    ) {
+        ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
+        ListTag positions = tag.getList("gate_positions", Tag.TAG_COMPOUND);
+        for (Tag pTag : positions) {
+            CompoundTag pcTag = (CompoundTag) pTag;
+            int x = pcTag.getInt("x");
+            int y = pcTag.getInt("y");
+            int z = pcTag.getInt("z");
+            BlockPos bp = new BlockPos(x, y, z);
+            if (!gg.isGateValid(bp)) {
+                Questown.LOGGER.error("Gate was in town state, but not found in world. This is a bug. {}", bp);
+                continue;
+            }
+            b.add(bp);
+        }
+        return b.build();
     }
 
     @NotNull

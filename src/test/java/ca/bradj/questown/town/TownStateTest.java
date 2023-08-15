@@ -90,7 +90,7 @@ class TownStateTest {
         // Add villagers and containers to the TownState
         // ...
 
-        townState = new TownState<>(new ArrayList<>(), containers, 1234567890L);
+        townState = new TownState<>(new ArrayList<>(), containers, new ArrayList<>(), 1234567890L);
 
         // Create a list of items to deposit
         itemsToDeposit = ImmutableList.of(
@@ -129,7 +129,7 @@ class TownStateTest {
         // Add villagers and containers to the TownState
         // ...
 
-        townState = new TownState<>(new ArrayList<>(), containers, 1234567890L);
+        townState = new TownState<>(new ArrayList<>(), containers, new ArrayList<>(), 1234567890L);
 
         // Create a list of items to deposit
         itemsToDeposit = ImmutableList.of(

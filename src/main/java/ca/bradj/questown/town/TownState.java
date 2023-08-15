@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,15 +16,18 @@ import java.util.UUID;
 public class TownState<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
     public final @NotNull ImmutableList<VillagerData<I>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
+    public final @NotNull ImmutableList<BlockPos> gates;
     public final long worldTimeAtSleep;
 
     public TownState(
             @NotNull List<VillagerData<I>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
+            @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
     ) {
         this.villagers = ImmutableList.copyOf(villagers);
         this.containers = ImmutableList.copyOf(containers);
+        this.gates = ImmutableList.copyOf(gates);
         this.worldTimeAtSleep = worldTimeAtSleep;
     }
 
@@ -95,6 +99,11 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
             }
         }
         return true;
+    }
+
+    @Override
+    public boolean HasGate() {
+        return !gates.isEmpty();
     }
 
     public static final class VillagerData<I extends GathererJournal.Item<I>> {

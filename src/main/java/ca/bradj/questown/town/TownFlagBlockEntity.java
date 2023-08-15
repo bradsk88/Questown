@@ -467,7 +467,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
-        TownState<MCContainer, MCTownItem> state = TownStateSerializer.INSTANCE.load(getTileData().getCompound(NBT_TOWN_STATE), sl);
+        TownState<MCContainer, MCTownItem> state = TownStateSerializer.INSTANCE.load(
+                getTileData().getCompound(NBT_TOWN_STATE),
+                sl, bp -> this.pois.getWelcomeMats().contains(bp)
+        );
         Optional<TownState.VillagerData<MCTownItem>> match = state.villagers.stream()
                 .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
                 .findFirst();
@@ -491,5 +494,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
+    }
+
+    public List<BlockPos> getWelcomeMats() {
+        return pois.getWelcomeMats();
     }
 }

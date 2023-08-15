@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.TownStateSerializer;
@@ -32,7 +33,7 @@ public class TownFlagState {
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
     private boolean initialized = false;
-    private final Stack<Function<ServerLevel, TownState<MCContainer, MCTownItem>>> townInit = new Stack<>();
+    private final Stack<Function<TownFlagBlockEntity, TownState<MCContainer, MCTownItem>>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
 
@@ -62,6 +63,7 @@ public class TownFlagState {
         TownState<MCContainer, MCTownItem> ts = new TownState<>(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
+                parent.getWelcomeMats(),
                 dayTime
         );
         return ts;
@@ -83,11 +85,11 @@ public class TownFlagState {
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
             storedState = TownStateSerializer.INSTANCE.load(
                     e.getTileData().getCompound(NBT_TOWN_STATE),
-                    sl
+                    sl, bp -> e.getWelcomeMats().contains(bp)
             );
             Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
         } else {
-            storedState = new TownState<>(ImmutableList.of(), ImmutableList.of(), 0);
+            storedState = new TownState<>(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
             Questown.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
@@ -119,7 +121,7 @@ public class TownFlagState {
             villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
         }
 
-        return new TownState<>(villagers, storedState.containers, dayTime);
+        return new TownState<>(villagers, storedState.containers, storedState.gates, dayTime);
     }
 
     static void recoverMobs(
@@ -135,7 +137,7 @@ public class TownFlagState {
         if (e.getTileData().contains(NBT_TOWN_STATE)) {
             TownState<MCContainer, MCTownItem> storedState = TownStateSerializer.INSTANCE.load(
                     e.getTileData().getCompound(NBT_TOWN_STATE),
-                    sl
+                    sl, bp -> e.getWelcomeMats().contains(bp)
             );
             for (TownState.VillagerData<MCTownItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
@@ -156,7 +158,9 @@ public class TownFlagState {
     public void load(CompoundTag tag) {
         if (tag.contains(NBT_TOWN_STATE)) {
             CompoundTag stateTag = tag.getCompound(NBT_TOWN_STATE);
-            this.townInit.push((level) -> TownStateSerializer.INSTANCE.load(stateTag, level));
+            this.townInit.push((e) -> TownStateSerializer.INSTANCE.load(
+                    stateTag, e.getServerLevel(), bp -> e.getWelcomeMats().contains(bp)
+            ));
         }
     }
 

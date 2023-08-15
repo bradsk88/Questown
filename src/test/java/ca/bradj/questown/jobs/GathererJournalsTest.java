@@ -47,6 +47,11 @@ class GathererJournalsTest {
             return true;
         }
 
+        @Override
+        public boolean HasGate() {
+            return true;
+        }
+
         @Nullable
         @Override
         public GathererJournalTest.TestItem removeFood() {

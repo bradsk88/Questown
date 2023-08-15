@@ -80,6 +80,10 @@ public class TownPois {
         Questown.LOGGER.debug("Welcome mat was registered with town flag at {}", welcomeMatBlock);
     }
 
+    public ImmutableList<BlockPos> getWelcomeMats() {
+        return ImmutableList.copyOf(this.welcomeMats);
+    }
+
     public interface Listener {
         void campfireFound();
         void townGateFound();

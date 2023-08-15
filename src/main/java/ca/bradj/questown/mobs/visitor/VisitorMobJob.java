@@ -5,6 +5,7 @@ import ca.bradj.questown.gui.GathererInventoryMenu;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.Statuses;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
@@ -45,7 +46,17 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     ContainerTarget<MCContainer, MCTownItem> successTarget;
     // TODO: Logic for changing jobs
     private final GathererJournal<MCTownItem> journal = new GathererJournal<>(
-            this, MCTownItem::Air, () -> successTarget != null && successTarget.isStillValid()
+            this, MCTownItem::Air, new Statuses.TownStateProvider() {
+        @Override
+        public boolean IsStorageAvailable() {
+            return successTarget != null && successTarget.isStillValid();
+        }
+
+        @Override
+        public boolean HasGate() {
+            return false;
+        }
+    }
     ) {
         @Override
         protected void changeStatus(Status s) {
@@ -158,7 +169,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             case NO_FOOD -> {
                 return handleNoFoodStatus(town);
             }
-            case UNSET, IDLE, STAYING, RELAXING -> {
+            case UNSET, IDLE, STAYING, RELAXING, NO_GATE -> {
                 return null;
             }
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> {
@@ -212,6 +223,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Questown.LOGGER.debug("No chests exist in town");
             return town.getRandomWanderTarget();
         }
+    }
+
+    private BlockPos setupForLeaveTown(TownInterface town) {
+        Questown.LOGGER.debug("Visitor is searching for a town gate");
+        // TODO: Get the CLOSEST gate?
+        return town.getEnterExitPos();
     }
 
     public boolean shouldDisappear(

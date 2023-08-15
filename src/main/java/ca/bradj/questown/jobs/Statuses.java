@@ -8,6 +8,7 @@ public class Statuses {
     public interface TownStateProvider {
 
         boolean IsStorageAvailable();
+        boolean HasGate();
     }
 
     public static @Nullable GathererJournal.Status getNewStatusFromSignal(
@@ -73,6 +74,12 @@ public class Statuses {
             return GathererJournal.Status.NO_SPACE;
         }
         if (inventory.inventoryHasFood()) {
+            if (!town.HasGate()) {
+                if (currentStatus != GathererJournal.Status.NO_GATE) {
+                    return GathererJournal.Status.NO_GATE;
+                }
+                return null;
+            }
             return GathererJournal.Status.GATHERING;
         }
         if (currentStatus != GathererJournal.Status.NO_FOOD) {

@@ -279,13 +279,14 @@ public class GathererJournal<I extends GathererJournal.Item> {
         DROPPING_LOOT,
         RETURNED_FAILURE,
         CAPTURED,
-        RELAXING;
+        RELAXING, NO_GATE;
 
         public static Status from(String s) {
             return switch (s) {
                 case "IDLE" -> IDLE;
                 case "NO_SPACE" -> NO_SPACE;
                 case "NO_FOOD" -> NO_FOOD;
+                case "NO_GATE" -> NO_GATE;
                 case "STAYING" -> STAYING;
                 case "GATHERING" -> GATHERING;
                 case "GATHERING_HUNGRY" -> GATHERING_HUNGRY;

@@ -9,6 +9,7 @@ public enum GathererStatuses implements StringRepresentable {
     IDLE("idle"),
     NO_SPACE("no_space"),
     NO_FOOD("no_food"),
+    NO_GATE("no_gate"),
     STAYING("staying"),
     GATHERING("gathering"),
     GATHERING_HUNGRY("gathering_hungry"),
@@ -34,6 +35,9 @@ public enum GathererStatuses implements StringRepresentable {
             }
             case ("no_food") -> {
                 return NO_FOOD;
+            }
+            case ("no_gate") -> {
+                return NO_GATE;
             }
             case ("staying") -> {
                 return STAYING;
@@ -73,6 +77,7 @@ public enum GathererStatuses implements StringRepresentable {
             case IDLE -> IDLE;
             case NO_SPACE -> NO_SPACE;
             case NO_FOOD -> NO_FOOD;
+            case NO_GATE -> NO_GATE;
             case STAYING -> STAYING;
             case GATHERING -> GATHERING;
             case GATHERING_HUNGRY -> GATHERING_HUNGRY;
@@ -95,6 +100,7 @@ public enum GathererStatuses implements StringRepresentable {
             case IDLE -> GathererJournal.Status.IDLE;
             case NO_SPACE -> GathererJournal.Status.NO_SPACE;
             case NO_FOOD -> GathererJournal.Status.NO_FOOD;
+            case NO_GATE -> GathererJournal.Status.NO_GATE;
             case STAYING -> GathererJournal.Status.STAYING;
             case GATHERING -> GathererJournal.Status.GATHERING;
             case GATHERING_HUNGRY -> GathererJournal.Status.GATHERING_HUNGRY;
