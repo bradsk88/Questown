@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -56,7 +57,11 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
     ) {
         this.nextUpdate = lvl.getGameTime() + (long) lvl.getRandom().nextInt(REPEAT_BUFFER);
         BlockPos bp = this.target;
-        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, 1));
+        int dist = 1;
+        if (e.getStatus() == GathererJournal.Status.GATHERING) {
+            dist = 0;
+        }
+        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, dist));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
         Questown.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
     }

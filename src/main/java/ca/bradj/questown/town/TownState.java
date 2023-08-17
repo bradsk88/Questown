@@ -102,7 +102,7 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
     }
 
     @Override
-    public boolean HasGate() {
+    public boolean hasGate() {
         return !gates.isEmpty();
     }
 

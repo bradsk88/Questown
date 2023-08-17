@@ -420,6 +420,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public @Nullable BlockPos getClosestWelcomeMatPos(BlockPos reference) {
+        List<BlockPos> welcomeMats = getWelcomeMats();
+        if (welcomeMats.isEmpty()) {
+            return null;
+        }
+        // TODO: Find closest
+        return welcomeMats.get(0);
+    }
+
+    @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch i : roomsMap.getAllMatches()) {

@@ -8,7 +8,7 @@ public class Statuses {
     public interface TownStateProvider {
 
         boolean IsStorageAvailable();
-        boolean HasGate();
+        boolean hasGate();
     }
 
     public static @Nullable GathererJournal.Status getNewStatusFromSignal(
@@ -26,7 +26,7 @@ public class Statuses {
                 return handleMorning(currentStatus, inventory, town);
             }
             case NOON -> {
-                return handleNoon(currentStatus, inventory);
+                return handleNoon(currentStatus, inventory, town);
             }
             case EVENING -> {
                 return handleEvening(currentStatus, inventory, town);
@@ -74,7 +74,7 @@ public class Statuses {
             return GathererJournal.Status.NO_SPACE;
         }
         if (inventory.inventoryHasFood()) {
-            if (!town.HasGate()) {
+            if (!town.hasGate()) {
                 if (currentStatus != GathererJournal.Status.NO_GATE) {
                     return GathererJournal.Status.NO_GATE;
                 }
@@ -90,7 +90,8 @@ public class Statuses {
 
     private static GathererJournal.@Nullable Status handleNoon(
             GathererJournal.Status currentStatus,
-            InventoryStateProvider<?> inventory
+            InventoryStateProvider<?> inventory,
+            TownStateProvider town
     ) {
         if (currentStatus == GathererJournal.Status.STAYING || currentStatus == GathererJournal.Status.RETURNING) {
             return null;
@@ -103,7 +104,11 @@ public class Statuses {
         ).contains(currentStatus)) {
             return GathererJournal.Status.RETURNING;
         }
-        if (currentStatus == GathererJournal.Status.NO_FOOD || currentStatus == GathererJournal.Status.NO_SPACE) {
+        if (
+                currentStatus == GathererJournal.Status.NO_FOOD ||
+                currentStatus == GathererJournal.Status.NO_SPACE ||
+                        currentStatus == GathererJournal.Status.NO_GATE
+        ) {
             return GathererJournal.Status.STAYING;
         }
         if (currentStatus == GathererJournal.Status.GATHERING) {
@@ -120,9 +125,13 @@ public class Statuses {
             return GathererJournal.Status.RETURNING;
         }
 
+        if (!town.hasGate()) {
+            return GathererJournal.Status.STAYING;
+        }
+
         // TODO: What if the gatherer is out but doesn't have food (somehow)
         //  Maybe they return unsuccessfully (and early?)
-        return null;
+        throw new IllegalStateException("Unhandled status branch");
     }
 
     @Nullable

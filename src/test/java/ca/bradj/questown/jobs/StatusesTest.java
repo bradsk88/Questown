@@ -49,8 +49,8 @@ class StatusesTest {
                     }
 
                     @Override
-                    public boolean HasGate() {
-                        return true;
+                    public boolean hasGate() {
+                        return false;
                     }
                 }
         );
@@ -106,8 +106,8 @@ class StatusesTest {
                     }
 
                     @Override
-                    public boolean HasGate() {
-                        return true;
+                    public boolean hasGate() {
+                        return false;
                     }
                 }
         );
@@ -164,8 +164,8 @@ class StatusesTest {
                     }
 
                     @Override
-                    public boolean HasGate() {
-                        return true;
+                    public boolean hasGate() {
+                        return false;
                     }
                 }
         );
@@ -215,8 +215,8 @@ class StatusesTest {
                     }
 
                     @Override
-                    public boolean HasGate() {
-                        return true;
+                    public boolean hasGate() {
+                        return false;
                     }
                 }
         );
@@ -268,12 +268,118 @@ class StatusesTest {
                     }
 
                     @Override
-                    public boolean HasGate() {
+                    public boolean hasGate() {
                         return false;
                     }
                 }
         );
         Assertions.assertEquals(GathererJournal.Status.NO_GATE, newStatus);
+    }
+
+    @Test
+    public void test_return_gathering_when_status_is_no_gate_and_signal_is_morning() {
+        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.NO_GATE,
+                GathererJournal.Signals.MORNING,
+                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                    @Override
+                    public boolean hasAnyLoot() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return true;
+                    }
+
+                    @Override
+                    public ImmutableList depositItems(ImmutableList itemsToDeposit) {
+                        return ImmutableList.copyOf(
+                                itemsToDeposit.stream().map(v -> new GathererJournalTest.TestItem("")).toList()
+                        );
+                    }
+
+                    @Override
+                    public boolean hasGate() {
+                        return true;
+                    }
+                }
+        );
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, newStatus);
+    }
+
+    @Test
+    public void test_change_to_stating_when_no_gate_and_signal_is_noon() {
+        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.UNSET,
+                GathererJournal.Signals.NOON,
+                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                    @Override
+                    public boolean hasAnyLoot() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return true;
+                    }
+
+                    @Override
+                    public ImmutableList depositItems(ImmutableList itemsToDeposit) {
+                        return ImmutableList.copyOf(
+                                itemsToDeposit.stream().map(v -> new GathererJournalTest.TestItem("")).toList()
+                        );
+                    }
+
+                    @Override
+                    public boolean hasGate() {
+                        return false;
+                    }
+                }
+        );
+        Assertions.assertEquals(GathererJournal.Status.STAYING, newStatus);
     }
 
 }

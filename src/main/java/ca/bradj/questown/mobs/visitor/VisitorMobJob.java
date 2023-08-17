@@ -29,6 +29,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,8 +43,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     private final @Nullable ServerLevel level;
     private final Container inventory;
-    ContainerTarget<MCContainer, MCTownItem> foodTarget;
-    ContainerTarget<MCContainer, MCTownItem> successTarget;
+    @Nullable ContainerTarget<MCContainer, MCTownItem> foodTarget;
+    @Nullable ContainerTarget<MCContainer, MCTownItem> successTarget;
+    @Nullable BlockPos gateTarget;
     // TODO: Logic for changing jobs
     private final GathererJournal<MCTownItem> journal = new GathererJournal<>(
             this, MCTownItem::Air, new Statuses.TownStateProvider() {
@@ -53,8 +55,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
 
         @Override
-        public boolean HasGate() {
-            return false;
+        public boolean hasGate() {
+            return gateTarget != null;
         }
     }
     ) {
@@ -105,15 +107,23 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public void tick(
-            Level level,
+            TownInterface town,
             BlockPos entityPos
     ) {
-        processSignal(level, this);
+        if (town == null || town.getServerLevel() == null) {
+            return;
+        }
+        processSignal(town.getServerLevel(), this);
         if (successTarget != null && !successTarget.isStillValid()) {
             successTarget = null;
         }
         if (foodTarget != null && !foodTarget.isStillValid()) {
             foodTarget = null;
+        }
+        if (gateTarget != null) {
+            if (town.getClosestWelcomeMatPos(entityPos) == null) {
+                gateTarget = null;
+            }
         }
     }
 
@@ -126,7 +136,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public static Collection<MCTownItem> getLootFromLevel(
-            ServerLevel level, int maxItems
+            ServerLevel level,
+            int maxItems
     ) {
         if (level == null) {
             return ImmutableList.of();
@@ -163,26 +174,43 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         this.journal.initializeStatus(status);
     }
 
-    public BlockPos getTarget(TownInterface town) {
+    public BlockPos getTarget(
+            BlockPos entityPos,
+            TownInterface town
+    ) {
         BlockPos enterExitPos = getEnterExitPos(town); // TODO: Smarter logic? Town gate?
-        switch (journal.getStatus()) {
-            case NO_FOOD -> {
-                return handleNoFoodStatus(town);
-            }
-            case UNSET, IDLE, STAYING, RELAXING, NO_GATE -> {
-                return null;
-            }
-            case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> {
-                return enterExitPos;
-            }
-            case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> {
-                return setupForDropLoot(town);
-            }
-            case RETURNED_FAILURE -> {
-                return new BlockPos(town.getVisitorJoinPos());
-            }
+        return switch (journal.getStatus()) {
+            case NO_FOOD -> handleNoFoodStatus(town);
+            case NO_GATE -> handleNoGateStatus(entityPos, town);
+            case UNSET, IDLE, STAYING, RELAXING -> null;
+            case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
+            case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(town);
+            case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
+        };
+    }
+
+    private BlockPos handleNoGateStatus(
+            BlockPos entityPos,
+            TownInterface town
+    ) {
+        if (journal.hasAnyNonFood()) {
+            return setupForDropLoot(town);
         }
-        throw new IllegalStateException("Unhandled status: " + journal.getStatus().name());
+
+        Questown.LOGGER.debug("Visitor is searching for gate");
+        if (this.gateTarget != null) {
+            Questown.LOGGER.debug("Located gate at {}", this.gateTarget);
+            return this.gateTarget;
+        } else {
+            this.gateTarget = town.getClosestWelcomeMatPos(entityPos);
+        }
+        if (this.gateTarget != null) {
+            Questown.LOGGER.debug("Located gate at {}", this.gateTarget);
+            return this.gateTarget;
+        } else {
+            Questown.LOGGER.debug("No gate exists in town");
+            return town.getRandomWanderTarget();
+        }
     }
 
     private BlockPos handleNoFoodStatus(TownInterface town) {
@@ -233,14 +261,14 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     public boolean shouldDisappear(
             TownInterface town,
-            BlockPos entityPos
+            Vec3 entityPos
     ) {
         if (
                 journal.getStatus() == GathererJournal.Status.GATHERING ||
                         journal.getStatus() == GathererJournal.Status.RETURNING ||
                         journal.getStatus() == GathererJournal.Status.CAPTURED
         ) {
-            return isCloseTo(entityPos, getEnterExitPos(town));
+            return isVeryCloseTo(entityPos, getEnterExitPos(town));
         }
         return false;
     }
@@ -253,6 +281,16 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 entityPos.getX(), entityPos.getY(), entityPos.getZ()
         );
         return d < 5;
+    }
+
+    private boolean isVeryCloseTo(
+            Vec3 entityPos,
+            @NotNull BlockPos targetPos
+    ) {
+        double d = targetPos.distToCenterSqr(
+                entityPos.x, entityPos.y, entityPos.z
+        );
+        return d < 0.5;
     }
 
     public boolean isCloseToFood(
@@ -300,7 +338,10 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
     }
 
-    public void tryDropLoot(UUID uuid, BlockPos entityPos) {
+    public void tryDropLoot(
+            UUID uuid,
+            BlockPos entityPos
+    ) {
         // TODO: move to journal?
         if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
             return;
@@ -344,7 +385,10 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         this.dropping = false;
     }
 
-    public boolean openScreen(ServerPlayer sp, VisitorMobEntity e) {
+    public boolean openScreen(
+            ServerPlayer sp,
+            VisitorMobEntity e
+    ) {
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {

@@ -35,47 +35,40 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
 
     @NotNull
     private static ResourceLocation getStatusTexture(GathererJournal.Status status) {
-        switch(status) {
-            case UNSET -> {
-                return new ResourceLocation("questown", "textures/error.png");
-            }
-            case IDLE -> {
-                return new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            }
-            case NO_SPACE -> {
-                return new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
-            }
-            case NO_FOOD -> {
-                return new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
-            }
-            case STAYING -> {
+        return switch(status) {
+            case UNSET ->
+                new ResourceLocation("questown", "textures/error.png");
+            case IDLE ->
+                new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
+            case NO_SPACE ->
+                new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
+            case NO_FOOD ->
+                new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
+            case NO_GATE ->
+                new ResourceLocation("questown", "textures/menu/gatherer/no_gate.png");
+            case STAYING ->
                 // TODO: Icon for this
-                return new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            }
-            case GATHERING -> {
-                return new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
-            }
-            case RETURNED_SUCCESS -> {
-                return new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
-            }
-            case RETURNED_FAILURE -> {
+                new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
+            case GATHERING ->
+                new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
+            case RETURNED_SUCCESS ->
+                new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
+            case RETURNED_FAILURE ->
                 // TODO: Icon for this
-                return new ResourceLocation("questown", "textures/error.png");
-            }
-            case RETURNING -> {
+                new ResourceLocation("questown", "textures/error.png");
+            case RETURNING ->
                 // TODO: Icon for this
-                return new ResourceLocation("questown", "textures/error.png");
-            }
-            case CAPTURED -> {
+                new ResourceLocation("questown", "textures/error.png");
+            case CAPTURED ->
                 // TODO: Icon for this
-                return new ResourceLocation("questown", "textures/error.png");
-            }
-            case RELAXING -> {
+                new ResourceLocation("questown", "textures/error.png");
+            case RELAXING ->
                 // TODO: Icon for this
-                return new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
-            }
-        }
-        return new ResourceLocation("questown", "textures/error.png");
+                new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
+            case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
+                // TODO: Icon for this
+                new ResourceLocation("questown", "textures/error.png");
+        };
     }
 
     @Override

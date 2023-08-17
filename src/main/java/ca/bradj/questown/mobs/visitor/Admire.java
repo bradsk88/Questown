@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -23,6 +24,21 @@ public class Admire extends Behavior<VisitorMobEntity> {
                 MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryStatus.VALUE_ABSENT
         ));
         this.maxAdmireTicks = maxAdmireTicks;
+    }
+
+    @Override
+    protected boolean checkExtraStartConditions(
+            ServerLevel p_22538_,
+            VisitorMobEntity p_22539_
+    ) {
+        if (!super.checkExtraStartConditions(p_22538_, p_22539_)) {
+            return false;
+        }
+        GathererJournal.Status s = p_22539_.getStatus();
+        return s != GathererJournal.Status.GATHERING &&
+                s != GathererJournal.Status.DROPPING_LOOT &&
+                s != GathererJournal.Status.NO_FOOD &&
+                s != GathererJournal.Status.NO_GATE;
     }
 
     @Override

@@ -13,7 +13,6 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -144,6 +143,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTargetSink()),
+                Pair.of(4, new Admire(200)),
+                Pair.of(5, new CoerceWalk()),
                 Pair.of(9, new ValidateBed()),
                 Pair.of(10, new FindOpenBed())
 //                Pair.of(10, new AcquirePoi(PoiType.HOME, MemoryModuleType.HOME, false, Optional.of((byte) 14)))
@@ -183,7 +184,6 @@ public class VisitorMobEntity extends PathfinderMob {
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
 //        b.add(Pair.of(2, new DoNothing(30, 60)));
-        b.add(Pair.of(4, new Admire(200)));
         b.add(Pair.of(3, new TownWalk(0.3f)));
         b.add(Pair.of(10, new TownWalk(0.40f)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
@@ -246,6 +246,12 @@ public class VisitorMobEntity extends PathfinderMob {
     public void tick() {
         super.tick();
 
+        if (isInWall()) {
+            Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
+            Questown.LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
+            moveTo(nudged);
+        }
+
         if (job.getStatus() == GathererJournal.Status.UNSET) {
             GathererJournal.Status s = getStatus();
             if (s == GathererJournal.Status.UNSET) {
@@ -253,9 +259,9 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-        job.tick(level, blockPosition());
+        job.tick(town, blockPosition());
         if (!level.isClientSide()) {
-            boolean vis = !job.shouldDisappear(town, blockPosition());
+            boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
             job.tryDropLoot(uuid, blockPosition());
             job.tryTakeFood(blockPosition());
@@ -430,7 +436,7 @@ public class VisitorMobEntity extends PathfinderMob {
             this.kill();
             return null;
         }
-        BlockPos target = job.getTarget(town);
+        BlockPos target = job.getTarget(blockPosition(), town);
         if (target != null) {
             this.setWanderTarget(target);
         } else {

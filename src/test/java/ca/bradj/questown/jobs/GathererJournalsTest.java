@@ -48,7 +48,7 @@ class GathererJournalsTest {
         }
 
         @Override
-        public boolean HasGate() {
+        public boolean hasGate() {
             return true;
         }
 

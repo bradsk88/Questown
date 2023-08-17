@@ -10,7 +10,6 @@ import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +43,8 @@ public interface TownInterface {
     void registerEntity(VisitorMobEntity vEntity);
 
     BlockPos getEnterExitPos();
+
+    @Nullable BlockPos getClosestWelcomeMatPos(BlockPos reference);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

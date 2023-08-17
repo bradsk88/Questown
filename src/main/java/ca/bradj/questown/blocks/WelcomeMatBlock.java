@@ -31,6 +31,7 @@ public class WelcomeMatBlock extends HorizontalDirectionalBlock {
                 BlockBehaviour.Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
                         .strength(1.0F, 10.0F)
+                        .noCollission()
         );
     }
 
