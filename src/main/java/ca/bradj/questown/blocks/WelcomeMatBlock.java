@@ -2,7 +2,9 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -15,10 +17,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 
 public class WelcomeMatBlock extends HorizontalDirectionalBlock {
@@ -42,6 +46,14 @@ public class WelcomeMatBlock extends HorizontalDirectionalBlock {
         itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_x", Questown.MODID), p.getX());
         itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_y", Questown.MODID), p.getY());
         itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_z", Questown.MODID), p.getZ());
+    }
+
+    @Override
+    public List<ItemStack> getDrops(
+            BlockState p_60537_,
+            LootContext.Builder p_60538_
+    ) {
+        return ImmutableList.of(ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance());
     }
 
     public static @Nullable BlockPos GetParentFromNBT(

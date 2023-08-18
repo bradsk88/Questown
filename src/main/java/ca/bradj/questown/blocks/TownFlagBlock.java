@@ -12,19 +12,23 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -128,6 +132,22 @@ public class TownFlagBlock extends BaseEntityBlock {
         TownFlagBlockEntity entity = oEntity.get();
 
         ItemStack itemInHand = player.getItemInHand(hand);
+        if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
+            ItemStack toDrop = null;
+            if (itemInHand.getCount() > 1) {
+                toDrop = itemInHand.copy();
+                toDrop.shrink(1);
+            }
+            itemInHand = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
+            player.setItemInHand(hand, itemInHand);
+            Questown.LOGGER.debug("Welcome mat created at {}", entity.getTownFlagBasePos());
+            player.giveExperiencePoints(100);
+            level.addParticle(ParticleTypes.ELDER_GUARDIAN, player.getX(), player.getY(), player.getZ(), 0.0D, 0.0D, 0.0D);
+            BlockPos flagPos = player.blockPosition();
+            if (toDrop != null) {
+                level.addFreshEntity(new ItemEntity(level, flagPos.getX(), flagPos.getY(), flagPos.getZ(), toDrop));
+            }
+        }
         if (itemInHand.is(ItemsInit.WELCOME_MAT_BLOCK.get())) {
             WelcomeMatBlock.StoreParentOnNBT(
                     itemInHand,

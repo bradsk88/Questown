@@ -15,10 +15,10 @@
       "item": "minecraft:crafting_table"
     },
     {
-      "item": "minecraft:chest"
+      "tag": "forge:chests"
     },
     {
-      "item": "minecraft:chest"
+      "tag": "forge:chests"
     }
   ]
 }

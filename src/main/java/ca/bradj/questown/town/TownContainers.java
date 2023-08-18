@@ -76,7 +76,22 @@ public class TownContainers {
             ChestBlock block,
             ServerLevel level
     ) {
+        Position position = Positions.FromBlockPos(p);
+        Position interactPos = position;
+
         BlockState blockState = level.getBlockState(p);
+        Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
+        if (facing.isPresent()) {
+            interactPos = Positions.FromBlockPos(p.relative(facing.get()));
+        }
+
+        if (blockState.isAir()) {
+            return new ContainerTarget<>(
+                    Positions.FromBlockPos(p), p.getY(), interactPos,
+                    new MCContainer(ContainerTarget.REMOVED), () -> false
+            );
+        }
+
         if (!blockState.getBlock().equals(block)) {
             throw new IllegalArgumentException(String.format(
                     "Given block is not present at given position. Actual blockstate %s", blockState
@@ -99,15 +114,6 @@ public class TownContainers {
             throw new IllegalStateException("Container is null at " + p);
         }
         MCContainer mcContainer = new MCContainer(container);
-
-
-        Position position = Positions.FromBlockPos(p);
-        Position interactPos = position;
-
-        Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
-        if (facing.isPresent()) {
-            interactPos = Positions.FromBlockPos(p.relative(facing.get()));
-        }
 
         return new ContainerTarget<>(
                 position,

@@ -24,6 +24,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -61,6 +63,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
+    public static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -169,6 +172,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Collection<PendingQuests> l = PendingQuestsSerializer.INSTANCE.deserializeNBT(this, data);
             l.forEach(this.asapRandomAwdForVisitor::push);
         }
+        if (tag.contains(NBT_WELCOME_MATS)) {
+            ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
+            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
+            l.forEach(this.pois::registerWelcomeMat);
+        }
 //        state.load(tag);
 
     }
@@ -180,6 +188,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));
+        tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(pois.getWelcomeMats()));
         // TODO: Serialization for ASAPss
     }
 
@@ -284,15 +293,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void roomRecipeCreated(
             Position roomDoorPos,
-            RoomRecipeMatch recipeId
+            RoomRecipeMatch match
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.recipe_created",
+                new TranslatableComponent(String.format("room.%s", match.getRecipeID().getPath())),
                 roomDoorPos.getUIString()
         ));
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markQuestAsComplete(recipeId.getRecipeID());
+        quests.markQuestAsComplete(match.getRecipeID());
     }
 
     @Override

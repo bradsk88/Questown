@@ -4,11 +4,64 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> {
+
+    public static net.minecraft.world.Container REMOVED = new net.minecraft.world.Container() {
+        @Override
+        public int getContainerSize() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public ItemStack getItem(int p_18941_) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack removeItem(
+                int p_18942_,
+                int p_18943_
+        ) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int p_18951_) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public void setItem(
+                int p_18944_,
+                ItemStack p_18945_
+        ) {
+        }
+
+        @Override
+        public void setChanged() {
+        }
+
+        @Override
+        public boolean stillValid(Player p_18946_) {
+            return false;
+        }
+
+        @Override
+        public void clearContent() {
+
+        }
+    };
 
     private final Position interactPosition;
 
