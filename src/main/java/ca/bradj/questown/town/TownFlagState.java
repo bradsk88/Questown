@@ -131,6 +131,7 @@ public class TownFlagState {
         ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.entities);
         for (LivingEntity entity : entitiesSnapshot) {
             e.entities.remove(entity);
+            entity.stopSleeping();
             entity.remove(Entity.RemovalReason.DISCARDED);
         }
 
@@ -179,9 +180,11 @@ public class TownFlagState {
                     timeSinceWake, gt, lastTick
             );
             TownState<MCContainer, MCTownItem> newState = TownFlagState.advanceTime(parent, level);
-            TownFlagState.recoverMobs(parent, level);
-            Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
-            e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+            if (newState != null) {
+                TownFlagState.recoverMobs(parent, level);
+                Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
+                e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+            }
             // TODO: Make sure chests get filled/empty
         }
 

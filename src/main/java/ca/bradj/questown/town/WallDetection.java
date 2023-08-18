@@ -21,6 +21,14 @@ public class WallDetection {
         }
         BlockState blockState = level.getBlockState(bp);
         BlockState aboveBlockState = level.getBlockState(abp);
+        if (blockState.isAir() || aboveBlockState.isAir()) {
+            return false;
+        }
+
+        if (blockState.getShape(level, bp).isEmpty() || aboveBlockState.getShape(level, abp).isEmpty()) {
+            return false;
+        }
+
         if (isSolid(bp, level, blockState)) {
             if (isSolid(abp, level, aboveBlockState)) {
                 return true;
