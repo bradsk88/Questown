@@ -12,11 +12,12 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
@@ -52,14 +53,9 @@ import java.util.Optional;
 
 public class TownFlagBlock extends BaseEntityBlock {
 
-    public static String itemId(WallType wallType) {
-        return String.format("%s_%s", wallType.asString(), ITEM_ID);
-    }
-
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
-
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -67,6 +63,114 @@ public class TownFlagBlock extends BaseEntityBlock {
                 BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
                         .strength(10.0F, 1200.0F)
         );
+    }
+
+    public static String itemId(WallType wallType) {
+        return String.format("%s_%s", wallType.asString(), ITEM_ID);
+    }
+
+    public static TownFlagBlockEntity GetParentFromNBT(
+            ServerLevel level,
+            ItemStack itemInHand
+    ) {
+            if (itemInHand.getTag() == null) {
+                return null;
+            }
+            int x, y, z;
+            String xTag = String.format("%s.parent_pos_x", Questown.MODID);
+            if (!itemInHand.getTag().contains(xTag)) {
+                return null;
+            }
+            String yTag = String.format("%s.parent_pos_y", Questown.MODID);
+            if (!itemInHand.getTag().contains(yTag)) {
+                return null;
+            }
+            String zTag = String.format("%s.parent_pos_z", Questown.MODID);
+            if (!itemInHand.getTag().contains(zTag)) {
+                return null;
+            }
+            x = itemInHand.getOrCreateTag().getInt(xTag);
+            y = itemInHand.getOrCreateTag().getInt(yTag);
+            z = itemInHand.getOrCreateTag().getInt(zTag);
+
+
+            BlockPos bp = new BlockPos(x, y, z);
+            Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(bp, TilesInit.TOWN_FLAG.get());
+            return oEntity.orElse(null);
+
+    }
+
+    @Nullable
+    private static InteractionResult convertItemInHand(
+            Level level,
+            Player player,
+            InteractionHand hand,
+            TownFlagBlockEntity entity
+    ) {
+        // TODO: Consider making a new recipe type so any item can be cnverted to
+        //  any other item and with the parent NBT stored on the new item.
+        ItemStack converted = null;
+        ItemStack itemInHand = player.getItemInHand(hand);
+
+        if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
+            converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
+            player.giveExperiencePoints(100);
+            // TODO: Advancement
+        }
+        if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
+            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
+            // TODO: Advancement
+        }
+
+        if (converted != null) {
+            StoreFlagInputOnOutputNBT(itemInHand, converted);
+            player.setItemInHand(hand, converted);
+            Questown.LOGGER.debug("{} created at {}", converted.getItem().getRegistryName(), entity.getTownFlagBasePos());
+            ItemStack toDrop = null;
+            if (itemInHand.getCount() > 1) {
+                toDrop = itemInHand.copy();
+                toDrop.shrink(1);
+            }
+            if (toDrop != null) {
+                BlockPos flagPos = player.blockPosition();
+                level.addFreshEntity(new ItemEntity(level, flagPos.getX(), flagPos.getY(), flagPos.getZ(), toDrop));
+            }
+            StoreParentOnNBT(converted, entity.getTownFlagBasePos());
+            Questown.LOGGER.debug(
+                    "{} has been paired with {} at {}",
+                    converted.getItem().getRegistryName(), entity.getUUID(), entity.getTownFlagBasePos()
+            );
+            return InteractionResult.sidedSuccess(false);
+        }
+        return null;
+    }
+
+    public static void StoreParentOnNBT(
+            ItemStack itemInHand,
+            BlockPos p
+    ) {
+        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_x", Questown.MODID), p.getX());
+        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_y", Questown.MODID), p.getY());
+        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_z", Questown.MODID), p.getZ());
+    }
+
+    public static void StoreFlagInputOnOutputNBT(
+            ItemStack input,
+            ItemStack output
+    ) {
+        String key = String.format("%s.flag_input_itemstack", Questown.MODID);
+        output.getOrCreateTag().put(key, input.serializeNBT());
+    }
+
+    public static @Nullable ItemStack GetFlagInputFromItemNBT(
+            ItemStack item
+    ) {
+        String key = String.format("%s.flag_input_itemstack", Questown.MODID);
+        CompoundTag serialized = item.getOrCreateTag().getCompound(key);
+        if (serialized.isEmpty()) {
+            return null;
+        }
+        return ItemStack.of(serialized);
     }
 
     @Override
@@ -131,30 +235,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         TownFlagBlockEntity entity = oEntity.get();
 
-        ItemStack itemInHand = player.getItemInHand(hand);
-        if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
-            ItemStack toDrop = null;
-            if (itemInHand.getCount() > 1) {
-                toDrop = itemInHand.copy();
-                toDrop.shrink(1);
-            }
-            itemInHand = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-            player.setItemInHand(hand, itemInHand);
-            Questown.LOGGER.debug("Welcome mat created at {}", entity.getTownFlagBasePos());
-            player.giveExperiencePoints(100);
-            level.addParticle(ParticleTypes.ELDER_GUARDIAN, player.getX(), player.getY(), player.getZ(), 0.0D, 0.0D, 0.0D);
-            BlockPos flagPos = player.blockPosition();
-            if (toDrop != null) {
-                level.addFreshEntity(new ItemEntity(level, flagPos.getX(), flagPos.getY(), flagPos.getZ(), toDrop));
-            }
-        }
-        if (itemInHand.is(ItemsInit.WELCOME_MAT_BLOCK.get())) {
-            WelcomeMatBlock.StoreParentOnNBT(
-                    itemInHand,
-                    entity.getTownFlagBasePos()
-            );
-            Questown.LOGGER.debug("Welcome mat has been paired with {} at {}", entity.getUUID(), entity.getTownFlagBasePos());
-            return InteractionResult.sidedSuccess(false);
+        InteractionResult sidedSuccess = convertItemInHand(level, player, hand, entity);
+        if (sidedSuccess != null) {
+            return sidedSuccess;
         }
 
         ImmutableList<Quest<ResourceLocation>> aQ = entity.getAllQuests();
@@ -191,5 +274,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         });
         return InteractionResult.sidedSuccess(false);
     }
+
 
 }

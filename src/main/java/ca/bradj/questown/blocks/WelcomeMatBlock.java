@@ -1,7 +1,5 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.Questown;
-import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
@@ -23,7 +21,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 
 public class WelcomeMatBlock extends HorizontalDirectionalBlock {
     public static final String ITEM_ID = "welcome_mat_block";
@@ -39,51 +36,12 @@ public class WelcomeMatBlock extends HorizontalDirectionalBlock {
         );
     }
 
-    public static void StoreParentOnNBT(
-            ItemStack itemInHand,
-            BlockPos p
-    ) {
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_x", Questown.MODID), p.getX());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_y", Questown.MODID), p.getY());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_z", Questown.MODID), p.getZ());
-    }
-
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
             LootContext.Builder p_60538_
     ) {
         return ImmutableList.of(ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance());
-    }
-
-    public static @Nullable BlockPos GetParentFromNBT(
-            ServerLevel level,
-            ItemStack itemInHand
-    ) {
-        if (itemInHand.getTag() == null) {
-            return null;
-        }
-        int x, y, z;
-        String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!itemInHand.getTag().contains(xTag)) {
-            return null;
-        }
-        String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!itemInHand.getTag().contains(yTag)) {
-            return null;
-        }
-        String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!itemInHand.getTag().contains(zTag)) {
-            return null;
-        }
-        x = itemInHand.getOrCreateTag().getInt(xTag);
-        y = itemInHand.getOrCreateTag().getInt(yTag);
-        z = itemInHand.getOrCreateTag().getInt(zTag);
-
-
-        BlockPos bp = new BlockPos(x, y, z);
-        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(bp, TilesInit.TOWN_FLAG.get());
-        return oEntity.map(TownFlagBlockEntity::getTownFlagBasePos).orElse(null);
     }
 
     @Override
@@ -102,19 +60,14 @@ public class WelcomeMatBlock extends HorizontalDirectionalBlock {
             return blockState;
         }
         ItemStack item = ctx.getItemInHand();
-        @Nullable BlockPos parent = GetParentFromNBT(sl, item);
+        @Nullable TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, item);
 
         if (parent == null) {
             throw new IllegalStateException("Welcome mat has no parent");
         }
 
-        Optional<TownFlagBlockEntity> oEntity = ctx.getLevel().getBlockEntity(parent, TilesInit.TOWN_FLAG.get());
         BlockPos matPos = ctx.getClickedPos();
-        if (oEntity.isEmpty()) {
-            Questown.LOGGER.error("Parent no longer exists. Welcome mat is not disconnected at {}", matPos);
-        } else {
-            oEntity.get().registerWelcomeMat(matPos);
-        }
+        parent.registerWelcomeMat(matPos);
         return blockState;
     }
 

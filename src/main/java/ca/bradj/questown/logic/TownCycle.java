@@ -8,6 +8,8 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
 import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -28,16 +30,22 @@ public class TownCycle {
 
     }
     public static ImmutableMap<Position, Optional<Room>> findRooms(
-            Position townBlockPosition,
-            BlockChecker checker
+            @Nullable Position scanAroundPosition,
+            BlockChecker checker,
+            Iterable<Position> registeredDoors
     ) {
-        Collection<Position> foundDoors = findDoors(checker, townBlockPosition);
+        ImmutableCollection<Position> foundDoors = ImmutableList.of();
+        if (scanAroundPosition != null) {
+            foundDoors = findDoors(checker, scanAroundPosition);
+        }
+        ImmutableList.Builder<Position> b = ImmutableList.builder();
+        ImmutableList<Position> allDoors = b.addAll(foundDoors).addAll(registeredDoors).build();
         return LevelRoomDetection.findRooms(
-                foundDoors, 20, checker::IsWall
+                allDoors, 20, checker::IsWall
         );
     }
 
-    private static Collection<Position> findDoors(
+    private static ImmutableCollection<Position> findDoors(
             BlockChecker blocks,
             Position townBlockPosition
     ) {
@@ -51,7 +59,7 @@ public class TownCycle {
                 },
                 Config.DOOR_SEARCH_RADIUS.get()
         );
-        return doors;
+        return ImmutableList.copyOf(doors);
     }
 
 

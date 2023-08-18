@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.items.TownDoorItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -28,6 +29,12 @@ public class ItemsInit {
 					BlocksInit.WELCOME_MAT_BLOCK.get(),
 					Questown.DEFAULT_ITEM_PROPS
 			)
+	);
+
+
+	public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
+			TownDoorItem.ITEM_ID,
+			TownDoorItem::new
 	);
 
 	public static void register(IEventBus bus) {

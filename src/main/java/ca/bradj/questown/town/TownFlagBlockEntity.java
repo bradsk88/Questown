@@ -21,6 +21,7 @@ import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -273,7 +274,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     void broadcastMessage(TranslatableComponent msg) {
-        level.getServer().getPlayerList().broadcastMessage(msg, ChatType.CHAT, null);
+        Questown.LOGGER.info(I18n.get(msg.getKey(), msg.getArgs()));
+        for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+            p.sendMessage(msg, ChatType.CHAT, p.getUUID());
+        }
     }
 
     public ImmutableList<Quest<ResourceLocation>> getAllQuests() {
@@ -518,5 +522,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public List<BlockPos> getWelcomeMats() {
         return pois.getWelcomeMats();
+    }
+
+    public void registerDoor(BlockPos clickedPos) {
+        roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - getTownFlagBasePos().getY());
     }
 }
