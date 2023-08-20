@@ -475,6 +475,10 @@ public class VisitorMobEntity extends PathfinderMob {
             return InteractionResult.sidedSuccess(isClientSide);
         }
 
+        if (!this.entityData.get(visible)) {
+            return InteractionResult.PASS;
+        }
+
         Collection<MCQuest> q4v = town.getQuestsForVillager(getUUID());
         Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 

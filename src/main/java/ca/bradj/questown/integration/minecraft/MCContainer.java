@@ -26,7 +26,8 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
     @Override
     public MCTownItem getItem(int i) {
-        return new MCTownItem(container.getItem(i).getItem());
+        ItemStack cItem = container.getItem(i);
+        return MCTownItem.fromMCItemStack(cItem);
     }
 
     @Override
@@ -37,7 +38,7 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
     @Override
     public void setItems(List<MCTownItem> newItems) {
         for (int i = 0; i < newItems.size(); i++) {
-            container.setItem(i, new ItemStack(newItems.get(i).get(), 1));
+            container.setItem(i, newItems.get(i).toItemStack());
         }
     }
 
@@ -46,7 +47,7 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
             int index,
             int amount
     ) {
-        container.removeItem(index, container.getItem(index).getCount()); // TODO: Respect count on MCTownItem
+        container.removeItem(index, amount);
     }
 
     @Override

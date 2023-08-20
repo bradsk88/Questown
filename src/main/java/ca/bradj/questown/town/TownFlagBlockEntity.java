@@ -54,6 +54,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
+import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
@@ -462,10 +463,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         return pois.getWanderTarget(getServerLevel(), all);
     }
 
-    void onMorning() {
+    void onMorning(long newTime) {
         for (MCReward r : this.morningRewards.getChildren()) {
             this.asapRewards.push(r);
         }
+        this.setChanged();
+        for (LivingEntity e : entities) {
+            e.stopSleeping();
+        }
+        getTileData().putLong(NBT_LAST_TICK, newTime);
     }
 
     @Override

@@ -301,6 +301,35 @@ public class GathererJournal<I extends GathererJournal.Item> {
                 default -> UNSET;
             };
         }
+
+        public boolean isReturning() {
+            return ImmutableList.of(
+                    RETURNING,
+                    RETURNING_AT_NIGHT
+            ).contains(this);
+        }
+
+        public boolean isGathering() {
+            return ImmutableList.of(
+                    GATHERING,
+                    GATHERING_HUNGRY,
+                    GATHERING_HUNGRY
+            ).contains(this);
+        }
+
+        public boolean isPreparing() {
+            return ImmutableList.of(
+                    NO_GATE,
+                    NO_FOOD
+            ).contains(this);
+        }
+
+        public boolean isFinishingUp() {
+            return ImmutableList.of(
+                    RETURNED_SUCCESS,
+                    DROPPING_LOOT
+            ).contains(this);
+        }
     }
 
     public interface StatusListener {

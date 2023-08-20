@@ -51,7 +51,7 @@ public class VisitorMobEntityContainer implements Container {
             int p_18944_,
             ItemStack p_18945_
     ) {
-        journal.setItem(p_18944_, new MCTownItem(p_18945_.getItem()));
+        journal.setItem(p_18944_, MCTownItem.fromMCItemStack(p_18945_));
     }
 
     @Override

@@ -15,18 +15,28 @@ public class MCTownItem implements GathererJournal.Item<MCTownItem> {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
 
-    Item item; // FIXME: ItemStack so NBT, quantity is preserved
+    private final int quantity;
+    private final Item item;
+    private final CompoundTag nbt;
 
     public static MCTownItem fromMCItemStack(ItemStack i) {
-        return new MCTownItem(i.getItem());
-    }
-
-    public MCTownItem(Item item) {
-        this.item = item;
+        return new MCTownItem(i.getItem(), i.getCount(), i.serializeNBT());
     }
 
     public static MCTownItem of(CompoundTag tag) {
-        return new MCTownItem(ItemStack.of(tag.getCompound("item")).getItem());
+        CompoundTag nbt = tag.getCompound("item");
+        ItemStack stack = ItemStack.of(nbt);
+        return new MCTownItem(stack.getItem(), stack.getCount(), nbt);
+    }
+
+    public MCTownItem(
+            Item item,
+            int quantity,
+            CompoundTag nbt
+    ) {
+        this.quantity = quantity;
+        this.item = item;
+        this.nbt = nbt;
     }
 
     @Override
@@ -46,7 +56,9 @@ public class MCTownItem implements GathererJournal.Item<MCTownItem> {
     @Override
     public String toString() {
         return "MCTownItem{" +
-                "item=" + item +
+                "quantity=" + quantity +
+                ", item=" + item +
+                ", nbt=" + nbt +
                 '}';
     }
 
@@ -55,26 +67,39 @@ public class MCTownItem implements GathererJournal.Item<MCTownItem> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MCTownItem that = (MCTownItem) o;
-        return Objects.equals(item, that.item);
+        if (this.isEmpty() && that.isEmpty()) {
+            return true;
+        }
+        return quantity == that.quantity && Objects.equals(item, that.item) && Objects.equals(
+                nbt,
+                that.nbt
+        );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(item);
+        return Objects.hash(quantity, item, nbt);
     }
 
     public static MCTownItem Air() {
-        return new MCTownItem(Items.AIR);
+        return new MCTownItem(Items.AIR, 1, new CompoundTag());
     }
 
     public Tag serializeNBT() {
         CompoundTag tag = new CompoundTag();
-        tag.put("item", new ItemStack(item, 1).serializeNBT()); // TODO: Quantity
+        tag.put("item", nbt);
         return tag;
     }
 
     public MCTownItem shrink() {
-        // TODO: Support quantity
-        return MCTownItem.Air();
+        if (quantity == 1) {
+            return MCTownItem.Air();
+        }
+        ItemStack stack = toItemStack();
+        return new MCTownItem(stack.getItem(), stack.getCount() - 1, stack.serializeNBT());
+    }
+
+    public ItemStack toItemStack() {
+        return ItemStack.of(nbt);
     }
 }

@@ -3,7 +3,6 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;

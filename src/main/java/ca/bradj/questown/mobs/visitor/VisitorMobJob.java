@@ -159,8 +159,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         int subLen = Math.min(rItems.size(), maxItems);
         List<MCTownItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
-                .map(ItemStack::getItem)
-                .map(MCTownItem::new)
+                .map(MCTownItem::fromMCItemStack)
                 .toList()
                 .subList(0, subLen);
 
@@ -264,13 +263,11 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Vec3 entityPos
     ) {
         if (
-                journal.getStatus() == GathererJournal.Status.GATHERING ||
-                        journal.getStatus() == GathererJournal.Status.RETURNING ||
-                        journal.getStatus() == GathererJournal.Status.CAPTURED
+                journal.getStatus() == GathererJournal.Status.GATHERING
         ) {
             return isVeryCloseTo(entityPos, getEnterExitPos(town));
         }
-        return false;
+        return journal.getStatus().isReturning();
     }
 
     private boolean isCloseTo(
@@ -360,11 +357,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             this.dropping = false;
             return;
         }
-        for (MCTownItem mct : Lists.reverse(journal.getItems())) {
+        List<MCTownItem> snapshot = Lists.reverse(ImmutableList.copyOf(journal.getItems()));
+        for (MCTownItem mct : snapshot) {
             if (mct.isEmpty()) {
                 continue;
             }
-            Questown.LOGGER.debug("Gatherer is putting {} in {}", mct, successTarget);
+            Questown.LOGGER.debug("Gatherer {} is putting {} in {}", uuid, mct, successTarget);
             boolean added = false;
             for (int i = 0; i < successTarget.container.size(); i++) {
                 if (added) {
@@ -426,7 +424,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         ImmutableList.Builder<MCTownItem> b = ImmutableList.builder();
 
         for (int i = 0; i < p_18983_.getContainerSize(); i++) {
-            b.add(new MCTownItem(p_18983_.getItem(i).getItem()));
+            ItemStack item = p_18983_.getItem(i);
+            b.add(MCTownItem.fromMCItemStack(item));
         }
         journal.setItemsNoUpdateNoCheck(b.build());
     }

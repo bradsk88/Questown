@@ -24,7 +24,7 @@ public class TownFlags {
     @SubscribeEvent
     public static void OnWake(SleepFinishedTimeEvent event) {
         for (TownFlagBlockEntity e : flags.values()) {
-            e.onMorning();
+            e.onMorning(event.getNewTime());
         }
     }
 

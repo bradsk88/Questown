@@ -104,7 +104,7 @@ public class TownFlagState {
                 storedState,
                 (max) -> VisitorMobJob.getLootFromLevel(sl, max),
                 storedState,
-                () -> new MCTownItem(Items.AIR)
+                MCTownItem::Air
         );
 
         for (int i = 0; i < villagers.size(); i++) {

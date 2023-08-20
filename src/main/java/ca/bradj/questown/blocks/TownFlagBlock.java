@@ -112,6 +112,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         ItemStack converted = null;
         ItemStack itemInHand = player.getItemInHand(hand);
 
+        if (itemInHand.getItem().equals(ItemsInit.WELCOME_MAT_BLOCK.get())) {
+            converted = itemInHand;
+        }
         if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
             player.giveExperiencePoints(100);

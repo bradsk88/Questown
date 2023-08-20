@@ -175,14 +175,14 @@ public class TownStateSerializer {
         int cSize = containerItems.size();
         int sSize = stateItems.size();
         if (cSize != sSize) {
-            Questown.LOGGER.error("Container items do not match stored state. This is a bug and may cause items to be lost [{}, {}]", cSize, sSize);
+            Questown.LOGGER.error("Container items do not match stored state. This is a bug and may cause items to be lost. [{}, {}]", cSize, sSize);
         }
         for (int i = 0; i < cSize; i++) {
             MCTownItem cItem = containerItems.get(i);
             MCTownItem sItem = stateItems.get(i);
             if (!cItem.equals(sItem)) {
                 Questown.LOGGER.error(
-                        "In slot {}, expected {} but state had {}. This is a bug and may cause items to be lost",
+                        "In slot {}, expected {} but state had {}. This is a bug and may cause items to be lost.",
                         i, cItem, sItem
                 );
             }

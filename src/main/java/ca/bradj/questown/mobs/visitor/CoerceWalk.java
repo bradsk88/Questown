@@ -26,10 +26,7 @@ public class CoerceWalk extends Behavior<VisitorMobEntity> {
             return false;
         }
         GathererJournal.Status s = p_22539_.getStatus();
-        return s == GathererJournal.Status.GATHERING ||
-                s == GathererJournal.Status.DROPPING_LOOT ||
-                s == GathererJournal.Status.NO_FOOD ||
-                s == GathererJournal.Status.NO_GATE;
+        return s.isPreparing() || s.isGathering() || s.isReturning() || s.isFinishingUp();
     }
 
     @Override
