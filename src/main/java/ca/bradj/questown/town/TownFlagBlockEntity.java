@@ -12,6 +12,8 @@ import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
+import ca.bradj.questown.town.rooms.TownRoomsMap;
+import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -61,10 +63,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String ID = "flag_base_block_entity";
     // TODO: Extract serialization
     public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
-    public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_ASAP_QUESTS = String.format("%s_asap_quests", Questown.MODID);
     public static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
+    public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -153,11 +155,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        // TODO: Store active rooms?
-        if (tag.contains(NBT_ACTIVE_RECIPES)) {
-//            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES); TODO: Bring back
-//            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
-//            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
+        // TODO: Store active rooms? (Cost to re-compute is low, I think)
+        if (tag.contains(NBT_ROOMS)) {
+            TownRoomsMapSerializer.INSTANCE.deserialize(tag.getCompound(NBT_ROOMS), this, roomsMap);
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
@@ -190,6 +190,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_ASAP_QUESTS, PendingQuestsSerializer.INSTANCE.serializeNBT(this.asapRandomAwdForVisitor));
         tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(pois.getWelcomeMats()));
+        tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(roomsMap));
         // TODO: Serialization for ASAPss
     }
 
@@ -518,6 +519,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
+        setChanged();
     }
 
     public List<BlockPos> getWelcomeMats() {
@@ -526,5 +528,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void registerDoor(BlockPos clickedPos) {
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - getTownFlagBasePos().getY());
+        setChanged();
     }
 }

@@ -1,13 +1,16 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.TownRooms;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -24,10 +27,15 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private int scanLevel = 0;
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
-    // FIXME: Store on NBT
-    private Set<BlockPos> registeredDoors = new HashSet<>();
 
-    TownRoomsMap(TownFlagBlockEntity entity) {
+    Set<BlockPos> getRegisteredDoors() {
+        return registeredDoors;
+    }
+
+    // FIXME: Store on NBT
+    private final Set<BlockPos> registeredDoors = new HashSet<>();
+
+    public TownRoomsMap(TownFlagBlockEntity entity) {
         changeListener = entity;
 //        getOrCreateRooms(0);
     }
@@ -117,15 +125,17 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void initialize(
             TownFlagBlockEntity owner,
-            Map<Integer, ActiveRecipes<RoomRecipeMatch>> ars
+            Map<Integer, ActiveRecipes<RoomRecipeMatch>> ars,
+            ImmutableList<BlockPos> registeredDoors
     ) {
-        if (this.activeRecipes.size() > 0) {
+        if (!this.activeRecipes.isEmpty()) {
             throw new IllegalStateException("Double initialization");
         }
         this.activeRecipes.putAll(ars);
         for (ActiveRecipes<RoomRecipeMatch> r : ars.values()) {
             r.addChangeListener(owner);
         }
+        this.registeredDoors.addAll(registeredDoors);
     }
 
     /**
