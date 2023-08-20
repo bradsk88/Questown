@@ -64,6 +64,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -267,6 +268,17 @@ public class VisitorMobEntity extends PathfinderMob {
             job.tryTakeFood(blockPosition());
             entityData.set(status, job.getStatus().name());
         }
+    }
+
+    @Override
+    public boolean isColliding(
+            BlockPos p_20040_,
+            BlockState p_20041_
+    ) {
+        if (!this.entityData.get(visible)) {
+            return false;
+        }
+        return super.isColliding(p_20040_, p_20041_);
     }
 
     @Override
