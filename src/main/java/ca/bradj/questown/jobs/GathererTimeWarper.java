@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,23 +10,26 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
+public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends HeldItem<H, I> & GathererJournal.Item<H>> {
 
     private final FoodRemover<I> remover;
     private final LootGiver<I> lootGiver;
     private final Town<I> town;
-    private final GathererJournal.EmptyFactory<I> emptyFactory;
+    private final GathererJournal.EmptyFactory<H> emptyFactory;
+    private final ItemTaker<I, H> converter;
 
     public GathererTimeWarper(
             FoodRemover<I> remover,
             LootGiver<I> lootGiver,
             Town<I> town,
-            GathererJournal.EmptyFactory<I> emptyFactory
+            GathererJournal.EmptyFactory<H> emptyFactory,
+            ItemTaker<I, H> converter
     ) {
         this.remover = remover;
         this.lootGiver = lootGiver;
         this.town = town;
         this.emptyFactory = emptyFactory;
+        this.converter = converter;
     }
 
     public interface FoodRemover<I extends GathererJournal.Item<I>> {
@@ -46,8 +48,8 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
         ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
     }
 
-    public GathererJournal.Snapshot<I> timeWarp(
-            GathererJournal.Snapshot<I> input,
+    public GathererJournal.Snapshot<H> timeWarp(
+            GathererJournal.Snapshot<H> input,
             long currentTick,
             long ticksPassed,
             int lootPerDay
@@ -55,8 +57,8 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
         if (ticksPassed == 0) {
             return input;
         }
-        GathererJournal.Snapshot<I> output = input;
-        MutableInventoryStateProvider<I> stateGetter =
+        GathererJournal.Snapshot<H> output = input;
+        MutableInventoryStateProvider<H> stateGetter =
                 MutableInventoryStateProvider.withInitialItems(input.items());
 
         long start = currentTick;
@@ -72,11 +74,11 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
             if (newStatus == null) {
                 continue;
             }
-            List<I> outItems = new ArrayList<>(output.items());
+            List<H> outItems = new ArrayList<>(output.items());
             if (newStatus == GathererJournal.Status.NO_FOOD) {
                 I food = remover.removeFood();
                 if (food != null) {
-                    takeButDoNotEatFood(outItems, food, signal);
+                    takeButDoNotEatFood(outItems, food, signal, this.converter);
                 }
             }
             if (newStatus == GathererJournal.Status.GATHERING_EATING) {
@@ -91,49 +93,73 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>> {
                 outItems = outItems.stream().map(
                         v -> {
                             if (v.isEmpty()) {
-                                return iterator.next();
+                                return converter.convert(iterator.next());
                             }
                             return v;
                         }
                 ).toList();
             }
             if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
-                ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(outItems);
+                ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(
+                        outItems.stream()
+                                .filter(v -> !v.isLocked())
+                                .map(HeldItem::get)
+                                .toList()
+                );
                 Iterator<I> undeposited = town.depositItems(itemsToDeposit)
                         .stream()
                         .filter(Predicate.not(GathererJournal.Item::isEmpty))
                         .iterator();
-                outItems = outItems.stream().map(
-                        v -> {
-                            if (undeposited.hasNext()) {
-                                return undeposited.next();
-                            }
-                            return emptyFactory.makeEmptyItem();
+                ImmutableList.Builder<H> b = ImmutableList.builder();
+                for (H item : outItems) {
+                    if (item.isLocked()) {
+                        b.add(item);
+                        continue;
+                    }
+                    if (item.isEmpty()) {
+                        if (undeposited.hasNext()) {
+                            b.add(converter.convert(undeposited.next()));
+                            continue;
+                        } else {
+                            b.add(emptyFactory.makeEmptyItem());
+                            continue;
                         }
-                ).toList();
+                    }
+                    b.add(item);
+                }
+                outItems = b.build();
             }
-            ImmutableList<I> outImItems = ImmutableList.copyOf(outItems);
+            ImmutableList<H> outImItems = ImmutableList.copyOf(outItems);
             stateGetter.updateItems(outImItems);
             output = new GathererJournal.Snapshot<>(newStatus, outImItems);
         }
         return output;
     }
 
-    private static <I extends GathererJournal.Item<I>> void takeButDoNotEatFood(
-            List<I> outItems,
+    public interface ItemTaker<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+        H convert(I item);
+    }
+
+    private static <I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
+            List<H> outItems,
             I food,
-            GathererJournal.Signals signal
+            GathererJournal.Signals signal,
+            ItemTaker<I, H> converter
     ) {
         // TODO: More efficient way to do this?
-        Optional<I> foundEmpty = outItems.stream()
+        Optional<H> foundEmpty = outItems.stream()
                 .filter(GathererJournal.Item::isEmpty)
                 .findFirst();
         if (foundEmpty.isPresent()) {
             // TODO: This is suspiciously similar to the logic in VisitorMobJob
             int idx = outItems.indexOf(foundEmpty.get());
-            outItems.set(idx, food);
+            outItems.set(idx, converter.convert(food));
         } else {
-            throw new IllegalStateException(String.format("Got NO_FOOD with full inventory on signal %s: %s", signal, outItems));
+            throw new IllegalStateException(String.format(
+                    "Got NO_FOOD with full inventory on signal %s: %s",
+                    signal,
+                    outItems
+            ));
         }
     }
 

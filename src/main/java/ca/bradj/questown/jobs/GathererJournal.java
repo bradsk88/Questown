@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -13,29 +12,53 @@ import java.util.stream.IntStream;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
-public class GathererJournal<I extends GathererJournal.Item> {
+public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I> & GathererJournal.Item<H>> {
     private final SignalSource sigs;
-    private final EmptyFactory<I> emptyFactory;
+    private final EmptyFactory<H> emptyFactory;
     private final Statuses.TownStateProvider storageCheck;
-    private List<I> inventory; // TODO: Change to generic container and add adapter for MC Container
+    private final int capacity;
+    private final Converter<I, H> converter;
+    private List<H> inventory;
     private boolean ate = false;
-    private List<ItemsListener<I>> listeners = new ArrayList<>();
+    private List<ItemsListener<H>> listeners = new ArrayList<>();
     private List<StatusListener> statusListeners = new ArrayList<>();
     private Status status = Status.UNSET;
-    private DefaultInventoryStateProvider<I> invState = new DefaultInventoryStateProvider<>(
+    private DefaultInventoryStateProvider<H> invState = new DefaultInventoryStateProvider<>(
             () -> ImmutableList.copyOf(this.inventory)
     );
 
+    public void lockSlot(int slot) {
+        this.inventory.set(slot, this.inventory.get(slot).locked());
+    }
+
+    public void unlockSlot(int slotIndex) {
+        this.inventory.set(slotIndex, this.inventory.get(slotIndex).unlocked());
+    }
+
+    public List<Boolean> getSlotLockStatuses() {
+        return this.inventory.stream()
+                .map(HeldItem::isLocked)
+                .toList();
+    }
+
+    public interface Converter<I extends Item<I>, H extends HeldItem<H, I>> {
+        H convert(I item);
+    }
+
     public GathererJournal(
             SignalSource sigs,
-            EmptyFactory<I> ef,
-            Statuses.TownStateProvider cont
+            EmptyFactory<H> ef,
+            Converter<I, H> converter,
+            Statuses.TownStateProvider cont,
+            int inventoryCapacity
     ) {
         super();
         this.sigs = sigs;
         this.emptyFactory = ef;
+        this.converter = converter;
         this.storageCheck = cont;
         this.inventory = new ArrayList<>();
+        this.capacity = inventoryCapacity;
         for (int i = 0; i < getCapacity(); i++) {
             this.inventory.add(ef.makeEmptyItem());
         }
@@ -56,7 +79,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
                 '}';
     }
 
-    public ImmutableList<I> getItems() {
+    public ImmutableList<H> getItems() {
         return ImmutableList.copyOf(inventory);
     }
 
@@ -76,7 +99,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
         return !inventory.stream().allMatch(Item::isEmpty);
     }
 
-    public boolean removeItem(I mct) {
+    public boolean removeItem(H mct) {
         int index = inventory.lastIndexOf(mct);
         if (index < 0) {
             // Item must have already been removed by a different thread.
@@ -94,12 +117,12 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     private void updateItemListeners() {
-        ImmutableList<I> copyForListeners = ImmutableList.copyOf(inventory);
+        ImmutableList<H> copyForListeners = ImmutableList.copyOf(inventory);
         this.listeners.forEach(l -> l.itemsChanged(copyForListeners));
     }
 
-    public I removeItem(int index) {
-        I item = inventory.get(index);
+    public H removeItem(int index) {
+        H item = inventory.get(index);
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
         changeStatus(Status.IDLE);
@@ -108,9 +131,9 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
     public void setItem(
             int index,
-            I mcTownItem
+            H mcTownItem
     ) {
-        I curItem = inventory.get(index);
+        H curItem = inventory.get(index);
         if (!curItem.isEmpty()) {
             throw new IllegalArgumentException(
                     String.format("Cannot set to %s. Slot %d is not empty. [has: %s]", mcTownItem, index, curItem)
@@ -122,9 +145,9 @@ public class GathererJournal<I extends GathererJournal.Item> {
 
     public void setItemNoUpdateNoCheck(
             int index,
-            I mcTownItem
+            H mcHeldItem
     ) {
-        inventory.set(index, mcTownItem);
+        inventory.set(index, mcHeldItem);
         changeStatus(Status.IDLE);
     }
 
@@ -132,19 +155,19 @@ public class GathererJournal<I extends GathererJournal.Item> {
         this.statusListeners.add(l);
     }
 
-    public void addItemsListener(ItemsListener<I> l) {
+    public void addItemsListener(ItemsListener<H> l) {
         this.listeners.add(l);
     }
 
     public int getCapacity() {
-        return 6;
+        return capacity;
     }
 
-    public void addItem(I item) {
+    public void addItem(H item) {
         if (this.invState.inventoryIsFull()) {
             throw new IllegalStateException("Inventory is full");
         }
-        Item emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
+        H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
         if (status == Status.NO_FOOD && item.isFood()) { // TODO: Test
@@ -164,7 +187,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
                 status, sig, this.invState, storageCheck
         );
         if (newStatus == Status.GATHERING_EATING) {
-            Snapshot<I> ss = getSnapshot(emptyFactory).withStatus(newStatus).eatFoodFromInventory(emptyFactory, sig);
+            Snapshot<H> ss = getSnapshot(emptyFactory).withStatus(newStatus).eatFoodFromInventory(emptyFactory, sig);
             this.setItems(ss.items());
             newStatus = ss.status();
         }
@@ -182,7 +205,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     private boolean removeFood() {
-        Optional<I> foodSlot = inventory.stream().filter(Item::isFood).findFirst();
+        Optional<H> foodSlot = inventory.stream().filter(Item::isFood).findFirst();
         boolean hadFood = foodSlot.isPresent();
         foodSlot.ifPresentOrElse(food -> {
             inventory.set(inventory.lastIndexOf(food), emptyFactory.makeEmptyItem());
@@ -201,7 +224,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
             }
             // TODO: On extended trips, replace non-food
             if (inventory.get(i).isEmpty()) {
-                inventory.set(i, iterator.next());
+                inventory.set(i, converter.convert(iterator.next()));
             }
         }
         updateItemListeners();
@@ -212,19 +235,19 @@ public class GathererJournal<I extends GathererJournal.Item> {
     }
 
     // TODO: Create read-only class
-    public Snapshot<I> getSnapshot(EmptyFactory<I> ef) {
+    public Snapshot<H> getSnapshot(EmptyFactory<H> ef) {
         return new Snapshot<>(status, ImmutableList.copyOf(inventory));
     }
 
-    public void initialize(Snapshot<I> journal) {
+    public void initialize(Snapshot<H> journal) {
         this.setItems(journal.items());
         this.initializeStatus(journal.status());
     }
 
-    public void setItems(Iterable<I> mcTownItemStream) {
-        ImmutableList.Builder<I> b = ImmutableList.builder();
+    public void setItems(Iterable<H> mcTownItemStream) {
+        ImmutableList.Builder<H> b = ImmutableList.builder();
         mcTownItemStream.forEach(b::add);
-        ImmutableList<I> initItems = b.build();
+        ImmutableList<H> initItems = b.build();
         if (initItems.size() != this.getCapacity()) {
             throw new IllegalArgumentException(String.format(
                     "Argument to setItems is wrong length. Should be %s", this.getCapacity()
@@ -235,7 +258,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
         updateItemListeners();
     }
 
-    public void setItemsNoUpdateNoCheck(ImmutableList<I> build) {
+    public void setItemsNoUpdateNoCheck(ImmutableList<H> build) {
         inventory.clear();
         inventory.addAll(build);
         changeStatus(Status.IDLE);
@@ -360,10 +383,12 @@ public class GathererJournal<I extends GathererJournal.Item> {
         I makeEmptyItem();
     }
 
-    // TODO: Can "ate" go away?
-    public record Snapshot<I extends Item>(Status status, ImmutableList<I> items) {
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status, ImmutableList<H> items) {
 
-        public Snapshot<I> eatFoodFromInventory(EmptyFactory<I> ef, Signals signal) {
+        public Snapshot<H> eatFoodFromInventory(
+                EmptyFactory<H> ef,
+                Signals signal
+        ) {
             Status nextStatus = null;
             if (status == Status.GATHERING_EATING) {
                 nextStatus = Status.RETURNING;
@@ -379,7 +404,7 @@ public class GathererJournal<I extends GathererJournal.Item> {
                 ));
             }
 
-            ArrayList<I> itemsCopy = new ArrayList<>(items);
+            ArrayList<H> itemsCopy = new ArrayList<>(items);
 
             OptionalInt lastIndex = IntStream.range(0, itemsCopy.size())
                     .filter(i -> itemsCopy.get(i).isFood())
@@ -396,8 +421,17 @@ public class GathererJournal<I extends GathererJournal.Item> {
             );
         }
 
-        public Snapshot<I> withStatus(@Nullable GathererJournal.Status newStatus) {
+        public Snapshot<H> withStatus(@Nullable GathererJournal.Status newStatus) {
             return new Snapshot<>(newStatus, items);
+        }
+
+        @Override
+        public String toString() {
+            String itemsStr = "[\n\t" + String.join("\n\t", items.stream().map(Object::toString).toList()) + "\n]";
+            return "Snapshot{" +
+                    "\n\tstatus=" + status +
+                    ",\n\titems=" + itemsStr +
+                    "\n}";
         }
     }
 }

@@ -10,7 +10,7 @@ public class MutableInventoryStateProvider<I extends GathererJournal.Item> imple
             () -> this.items
     );
 
-    public static <I extends GathererJournal.Item> MutableInventoryStateProvider<I> withInitialItems(
+    public static <I extends GathererJournal.Item<I>> MutableInventoryStateProvider<I> withInitialItems(
             ImmutableCollection<I> initialItems
     ) {
         MutableInventoryStateProvider<I> out = new MutableInventoryStateProvider<>();

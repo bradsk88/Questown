@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
+import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -12,14 +13,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class TownState<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
-    public final @NotNull ImmutableList<VillagerData<I>> villagers;
+public class TownState<
+        C extends ContainerTarget.Container<I>,
+        I extends GathererJournal.Item<I>,
+        H extends HeldItem<H, I> & GathererJournal.Item<H>
+        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
+    public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<BlockPos> gates;
     public final long worldTimeAtSleep;
 
     public TownState(
-            @NotNull List<VillagerData<I>> villagers,
+            @NotNull List<VillagerData<H>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
             @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
@@ -33,10 +38,10 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
     @Override
     public String toString() {
         return "TownState{" +
-                "villagers=" + villagers +
-                ", containers=" + containers +
-                ", worldTimeAtSleep=" + worldTimeAtSleep +
-                '}';
+                "\n\tvillagers=" + villagers +
+                ",\n\tcontainers=" + containers +
+                ",\n\tworldTimeAtSleep=" + worldTimeAtSleep +
+                "\n}";
     }
 
     // TODO: TownState should be immutable. Should this be "withFoodRemoved"?
@@ -105,10 +110,10 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
         return !gates.isEmpty();
     }
 
-    public static final class VillagerData<I extends GathererJournal.Item<I>> {
+    public static final class VillagerData<I extends HeldItem<I, ? extends GathererJournal.Item<?>>> {
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
-        public final GathererJournal.Snapshot<I> journal; // TODO: Immutable journal
+        public final GathererJournal.Snapshot<I> journal;
 
         public VillagerData(
                 double xPosition,
@@ -127,12 +132,12 @@ public class TownState<C extends ContainerTarget.Container<I>, I extends Gathere
         @Override
         public String toString() {
             return "VillagerData{" +
-                    "uuid=" + uuid +
-                    ", xPosition=" + xPosition +
-                    ", yPosition=" + yPosition +
-                    ", zPosition=" + zPosition +
-                    ", journal=" + journal +
-                    '}';
+                    "\n\tuuid=" + uuid +
+                    ",\n\txPosition=" + xPosition +
+                    ",\n\tyPosition=" + yPosition +
+                    ",\n\tzPosition=" + zPosition +
+                    ",\n\tjournal=" + journal +
+                    "\n}";
         }
 
         public int getCapacity() {

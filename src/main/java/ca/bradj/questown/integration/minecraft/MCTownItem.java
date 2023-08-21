@@ -85,7 +85,7 @@ public class MCTownItem implements GathererJournal.Item<MCTownItem> {
         return new MCTownItem(Items.AIR, 1, new CompoundTag());
     }
 
-    public Tag serializeNBT() {
+    public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
         tag.put("item", nbt);
         return tag;

@@ -4,9 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.integration.minecraft.MCContainer;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.integration.minecraft.TownStateSerializer;
+import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -145,7 +143,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         super.saveAdditional(tag);
         this.writeTownData(tag);
         if (!level.isClientSide() && everScanned) {
-            TownState<MCContainer, MCTownItem> state = this.state.captureState();
+            MCTownState state = this.state.captureState();
             if (state == null) {
                 return;
             }
@@ -498,11 +496,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
-        TownState<MCContainer, MCTownItem> state = TownStateSerializer.INSTANCE.load(
+        TownState<MCContainer, MCTownItem, MCHeldItem> state = TownStateSerializer.INSTANCE.load(
                 getTileData().getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats().contains(bp)
         );
-        Optional<TownState.VillagerData<MCTownItem>> match = state.villagers.stream()
+        Optional<TownState.VillagerData<MCHeldItem>> match = state.villagers.stream()
                 .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
                 .findFirst();
         if (match.isEmpty()) {
@@ -511,7 +509,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
         registerEntity(visitorMobEntity);
-        TownState.VillagerData<MCTownItem> m = match.get();
+        TownState.VillagerData<MCHeldItem> m = match.get();
         visitorMobEntity.initialize(
                 m.uuid,
                 m.xPosition, m.yPosition, m.zPosition,

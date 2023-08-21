@@ -2,15 +2,12 @@ package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.RewardsInit;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
-import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
@@ -22,14 +19,16 @@ import java.util.UUID;
 
 public class SpawnVisitorReward extends MCReward {
 
-    public static final GathererJournal.Snapshot<MCTownItem> EMPTY = new GathererJournal.Snapshot<>(GathererJournal.Status.IDLE, ImmutableList.of(
-            MCTownItem.Air(),
-            MCTownItem.Air(),
-            MCTownItem.Air(),
-            MCTownItem.Air(),
-            MCTownItem.Air(),
-            MCTownItem.Air()
-    ));
+    public static final GathererJournal.Snapshot<MCHeldItem> EMPTY = new GathererJournal.Snapshot<>(
+            GathererJournal.Status.IDLE,
+            ImmutableList.of(MCHeldItem.Air(),
+                    MCHeldItem.Air(),
+                    MCHeldItem.Air(),
+                    MCHeldItem.Air(),
+                    MCHeldItem.Air(),
+                    MCHeldItem.Air()
+            )
+    );
 
     public static final String ID = "spawn_visitor_reward";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";

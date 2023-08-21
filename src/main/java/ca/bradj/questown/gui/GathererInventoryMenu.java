@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -15,8 +16,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class GathererInventoryMenu extends AbstractContainerMenu implements GathererJournal.StatusListener {
 
@@ -28,6 +32,8 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
     private static final int margin = 4;
     private final VisitorMobEntity entity;
     private final DataSlot statusSlot;
+    final List<DataSlot> lockedSlots = new ArrayList<>(
+    );
 
     public static GathererInventoryMenu ForClientSide(
             int windowId,
@@ -36,29 +42,58 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
     ) {
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
-        return new GathererInventoryMenu(windowId, new SimpleContainer(size) {
-            @Override
-            public int getMaxStackSize() {
-                return 1;
-            }
-        }, inv, e);
+        return new GathererInventoryMenu(windowId,
+                // Minecraft will handle filling this container by syncing from server
+                new SimpleContainer(size) {
+                    @Override
+                    public int getMaxStackSize() {
+                        return 1;
+                    }
+                }, inv, e.getSlotLocks(), e
+        );
     }
 
     public GathererInventoryMenu(
             int windowId,
             Container gathererInv,
             Inventory inv,
-            VisitorMobEntity gatherer // For checking validity
+            Collection<Boolean> slotLocks,
+            VisitorMobEntity gatherer
+// For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
         this.playerInventory = new InvWrapper(inv);
-        this.gathererInventory = new InvWrapper(gathererInv);
+        this.gathererInventory = new InvWrapper(gathererInv) {
+            @NotNull
+            @Override
+            public ItemStack insertItem(
+                    int slot,
+                    @NotNull ItemStack stack,
+                    boolean simulate
+            ) {
+                ItemStack result = super.insertItem(slot, stack, simulate);
+                boolean transferredAny = !stack.equals(result);
+                if (transferredAny) {
+                    Questown.LOGGER.debug("Marking slot {} as locked", slot);
+                    lockedSlots.get(slot).set(1); // 1 - locked
+                }
+                return result;
+            }
+        };
         this.entity = gatherer;
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.statusSlot.set(gatherer.getStatus().ordinal());
+
+        int i = 0;
+        for (boolean locked : gatherer.getSlotLocks()) {
+            DataSlot lockedSlot = this.addDataSlot(DataSlot.standalone());
+            lockedSlot.set(locked ? 1 : 0);
+            this.lockedSlots.add(this.addDataSlot(entity.getLockSlot(i)));
+            i++;
+        }
 
         gatherer.setStatusListener(this);
     }
@@ -133,10 +168,13 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
     private static final int PLAYER_INVENTORY_SLOT_COUNT = PLAYER_INVENTORY_COLUMN_COUNT * PLAYER_INVENTORY_ROW_COUNT;
     private static final int VANILLA_SLOT_COUNT = HOTBAR_SLOT_COUNT + PLAYER_INVENTORY_SLOT_COUNT;
     private static final int VANILLA_FIRST_SLOT_INDEX = 0;
-    private static final int TE_INVENTORY_FIRST_SLOT_INDEX = VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT;
+    static final int TE_INVENTORY_FIRST_SLOT_INDEX = VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT;
 
     @Override
-    public ItemStack quickMoveStack(Player playerIn, int index) {
+    public ItemStack quickMoveStack(
+            Player playerIn,
+            int index
+    ) {
         Slot sourceSlot = slots.get(index);
         if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;  //EMPTY_ITEM
         ItemStack sourceStack = sourceSlot.getItem();
@@ -148,7 +186,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
         if (index < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
             // This is a vanilla container slot so merge the stack into the tile inventory
             int lowerBound = TE_INVENTORY_FIRST_SLOT_INDEX;
-            if (!moveItemStackTo(sourceStack, lowerBound, upperBound, false)) {
+            if (!moveItemStackTo(sourceStack, lowerBound, upperBound)) {
                 return ItemStack.EMPTY;
             }
         } else if (index < upperBound) {
@@ -156,17 +194,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
             if (!moveItemStackTo(
                     sourceStack,
                     VANILLA_FIRST_SLOT_INDEX,
-                    VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT,
-                    false
-            )) {
-                return ItemStack.EMPTY;
-            }
-        } else if (index < upperBound) {
-            if (!moveItemStackTo(
-                    sourceStack,
-                    VANILLA_FIRST_SLOT_INDEX,
-                    VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT,
-                    false
+                    VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT
             )) {
                 return ItemStack.EMPTY;
             }
@@ -174,7 +202,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
             System.out.println("Invalid slotIndex:" + index);
             return ItemStack.EMPTY;
         }
-        // If stack size == 0 (the entire stack was moved) set slot contents to null
+        // If stack size == 0 (the entire stack was moved) set slot contents to empty
         if (sourceStack.getCount() == 0) {
             sourceSlot.set(ItemStack.EMPTY);
         } else {
@@ -184,28 +212,31 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
         return copyOfSourceStack;
     }
 
-    protected boolean moveItemStackTo(ItemStack p_38904_, int p_38905_, int p_38906_, boolean p_38907_) {
+    @Override
+    protected boolean moveItemStackTo(
+            ItemStack p_38904_,
+            int p_38905_,
+            int p_38906_,
+            boolean p_38907_
+    ) {
+        return moveItemStackTo(p_38904_, p_38905_, p_38906_);
+    }
+
+    protected boolean moveItemStackTo(
+            ItemStack p_38904_,
+            int p_38905_,
+            int p_38906_
+    ) {
         boolean flag = false;
         int i = p_38905_;
-        if (p_38907_) {
-            i = p_38906_ - 1;
-        }
 
         ArrayList<Slot> updated = new ArrayList<>();
 
         if (!p_38904_.isEmpty()) {
-            if (p_38907_) {
-                i = p_38906_ - 1;
-            } else {
-                i = p_38905_;
-            }
+            i = p_38905_;
 
-            while(true) {
-                if (p_38907_) {
-                    if (i < p_38905_) {
-                        break;
-                    }
-                } else if (i >= p_38906_) {
+            while (true) {
+                if (i >= p_38906_) {
                     break;
                 }
 
@@ -224,12 +255,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
                         break;
                     }
                 }
-
-                if (p_38907_) {
-                    --i;
-                } else {
-                    ++i;
-                }
+                ++i;
             }
         }
 

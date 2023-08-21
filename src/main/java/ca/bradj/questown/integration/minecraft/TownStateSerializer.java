@@ -3,6 +3,7 @@ package ca.bradj.questown.integration.minecraft;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
@@ -27,7 +28,7 @@ public class TownStateSerializer {
 
     public static final TownStateSerializer INSTANCE = new TownStateSerializer();
 
-    public CompoundTag store(TownState<MCContainer, MCTownItem> state) {
+    public CompoundTag store(MCTownState state) {
         CompoundTag tag = new CompoundTag();
         tag.putLong("world_time_at_sleep", state.worldTimeAtSleep);
         ListTag containers = new ListTag();
@@ -48,14 +49,14 @@ public class TownStateSerializer {
         tag.put("containers", containers);
 
         ListTag villagers = new ListTag();
-        for (TownState.VillagerData<MCTownItem> e : state.villagers) {
+        for (TownState.VillagerData<MCHeldItem> e : state.villagers) {
             CompoundTag vTag = new CompoundTag();
             vTag.putDouble("x", e.xPosition);
             vTag.putDouble("y", e.yPosition);
             vTag.putDouble("z", e.zPosition);
             vTag.putString("journal_status", e.journal.status().name());
             ListTag journalItems = new ListTag();
-            for (MCTownItem item : e.journal.items()) {
+            for (MCHeldItem item : e.journal.items()) {
                 journalItems.add(item.serializeNBT());
             }
             vTag.put("journal_items", journalItems);
@@ -71,14 +72,14 @@ public class TownStateSerializer {
         boolean isGateValid(BlockPos bp);
     }
 
-    public TownState<MCContainer, MCTownItem> load(
+    public MCTownState load(
             CompoundTag tag, ServerLevel level, GatesGetter gg
     ) {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
-        ImmutableList<TownState.VillagerData<MCTownItem>> villagers = loadVillagers(tag);
+        ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = loadVillagers(tag);
         List<BlockPos> gates = loadGates(tag, gg);
-        return new TownState<>(villagers, containers, gates, worldTimeAtSleep);
+        return new MCTownState(villagers, containers, gates, worldTimeAtSleep);
     }
 
     private ImmutableList<BlockPos> loadGates(
@@ -103,8 +104,8 @@ public class TownStateSerializer {
     }
 
     @NotNull
-    private static ImmutableList<TownState.VillagerData<MCTownItem>> loadVillagers(CompoundTag tag) {
-        ImmutableList.Builder<TownState.VillagerData<MCTownItem>> b = ImmutableList.builder();
+    private static ImmutableList<TownState.VillagerData<MCHeldItem>> loadVillagers(CompoundTag tag) {
+        ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> b = ImmutableList.builder();
         ListTag villagers = tag.getList("villagers", Tag.TAG_COMPOUND);
         for (Tag vTag : villagers) {
             CompoundTag vcTag = (CompoundTag) vTag;
@@ -113,10 +114,10 @@ public class TownStateSerializer {
             int z = vcTag.getInt("z");
             GathererJournal.Status status = GathererJournal.Status.from(vcTag.getString("journal_status"));
             ListTag items = vcTag.getList("journal_items", Tag.TAG_COMPOUND);
-            ImmutableList.Builder<MCTownItem> iB = ImmutableList.builder();
+            ImmutableList.Builder<MCHeldItem> iB = ImmutableList.builder();
             for (Tag itemTag : items) {
                 CompoundTag itemCTag = (CompoundTag) itemTag;
-                iB.add(MCTownItem.of(itemCTag));
+                iB.add(MCHeldItem.fromTag(itemCTag));
             }
             b.add(new TownState.VillagerData<>(
                     x, y, z,

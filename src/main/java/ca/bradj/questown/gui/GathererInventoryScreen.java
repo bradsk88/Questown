@@ -13,10 +13,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
+
+import static ca.bradj.questown.gui.GathererInventoryMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
 
 public class GathererInventoryScreen extends AbstractContainerScreen<GathererInventoryMenu> {
 
@@ -25,12 +28,14 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
 
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic slot;
+    private final ResourceLocation lockTex;
 
     public GathererInventoryScreen(GathererInventoryMenu gathererInv, Inventory playerInv, Component title) {
         super(gathererInv, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
+        this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
     }
 
     @NotNull
@@ -86,9 +91,39 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
         renderStatus(stack);
-        for (Slot s : menu.slots) {
-            this.slot.draw(stack, x - 1 + s.x, y - 1 + s.y);
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot s = menu.slots.get(i);
+            int xCoord = x - 1 + s.x;
+            int yCoord = y - 1 + s.y;
+            this.slot.draw(stack, xCoord, yCoord);
+            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
+                // TODO: Compute or provide this value (6)
+                int statusI = i - TE_INVENTORY_FIRST_SLOT_INDEX;
+                renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
+            }
         }
+    }
+
+    private void renderSlotStatus(
+            PoseStack stack,
+            DataSlot dataSlot,
+            int x,
+            int y
+    ) {
+        if (dataSlot.get() == 0) {
+            return;
+        }
+        if (dataSlot.get() != 1) {
+            throw new IllegalStateException("Slot status should only be 0 or 1");
+        }
+        RenderSystem.setShaderTexture(0, lockTex);
+        int srcX = 0;
+        int srcY = 0;
+        int drawWidth = 16;
+        int drawHeight = 8;
+        int texWidth = 16;
+        int texHeight = 8;
+        blit(stack, x, y, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
     }
 
     private void renderStatus(

@@ -7,10 +7,10 @@ import net.minecraft.world.item.ItemStack;
 
 public class VisitorMobEntityContainer implements Container {
 
-    private final GathererJournal<MCTownItem> journal;
+    private final GathererJournal<MCTownItem, MCHeldItem> journal;
 
     public VisitorMobEntityContainer(
-            GathererJournal<MCTownItem> journal
+            GathererJournal<MCTownItem, MCHeldItem> journal
     ) {
         this.journal = journal;
     }
@@ -27,7 +27,7 @@ public class VisitorMobEntityContainer implements Container {
 
     @Override
     public ItemStack getItem(int p_18941_) {
-        return new ItemStack(journal.getItems().get(p_18941_).get(), 1);
+        return new ItemStack(journal.getItems().get(p_18941_).get().get(), 1);
     }
 
     @Override
@@ -38,7 +38,7 @@ public class VisitorMobEntityContainer implements Container {
         if (amount > 1) {
             throw new IllegalArgumentException("Gatherers do not support stacking");
         }
-        return new ItemStack(journal.removeItem(idx).get(), 1);
+        return new ItemStack(journal.removeItem(idx).get().get(), 1);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class VisitorMobEntityContainer implements Container {
             int p_18944_,
             ItemStack p_18945_
     ) {
-        journal.setItem(p_18944_, MCTownItem.fromMCItemStack(p_18945_));
+        journal.setItem(p_18944_, MCHeldItem.fromMCItemStack(p_18945_));
     }
 
     @Override

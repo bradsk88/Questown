@@ -3,6 +3,7 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.GathererInventoryMenu;
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.Statuses;
@@ -23,6 +24,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -34,12 +36,9 @@ import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCTownItem> {
+public class VisitorMobJob implements GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem> {
 
     private final @Nullable ServerLevel level;
     private final Container inventory;
@@ -47,31 +46,18 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     @Nullable ContainerTarget<MCContainer, MCTownItem> successTarget;
     @Nullable BlockPos gateTarget;
     // TODO: Logic for changing jobs
-    private final GathererJournal<MCTownItem> journal = new GathererJournal<>(
-            this, MCTownItem::Air, new Statuses.TownStateProvider() {
-        @Override
-        public boolean IsStorageAvailable() {
-            return successTarget != null && successTarget.isStillValid();
-        }
-
-        @Override
-        public boolean hasGate() {
-            return gateTarget != null;
-        }
-    }
-    ) {
-        @Override
-        protected void changeStatus(Status s) {
-            super.changeStatus(s);
-            Questown.LOGGER.debug("Changed status to {}", s);
-        }
-    };
+    private final GathererJournal<MCTownItem, MCHeldItem> journal;
     private GathererJournal.Signals signal;
     private boolean dropping;
 
-    public VisitorMobJob(@Nullable ServerLevel level) {
+    private List<LockSlot> locks = new ArrayList<>();
+
+    public VisitorMobJob(
+            @Nullable ServerLevel level,
+            int inventoryCapacity
+    ) {
         this.level = level;
-        SimpleContainer sc = new SimpleContainer(journal.getCapacity()) {
+        SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
             @Override
             public int getMaxStackSize() {
                 return 1;
@@ -79,6 +65,28 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         };
         this.inventory = sc;
         sc.addListener(this);
+
+        for (int i = 0; i < inventoryCapacity; i++) {
+            this.locks.add(new LockSlot(i, this));
+        }
+
+        journal = new GathererJournal<MCTownItem, MCHeldItem>(this, MCHeldItem::Air, MCHeldItem::new, new Statuses.TownStateProvider() {
+            @Override
+            public boolean IsStorageAvailable() {
+                return successTarget != null && successTarget.isStillValid();
+            }
+
+            @Override
+            public boolean hasGate() {
+                return gateTarget != null;
+            }
+        }, inventoryCapacity) {
+            @Override
+            protected void changeStatus(Status s) {
+                super.changeStatus(s);
+                Questown.LOGGER.debug("Changed status to {}", s);
+            }
+        };
         journal.addItemsListener(this);
     }
 
@@ -144,8 +152,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         }
         LootTable lootTable = level.getServer().getLootTables().get(
                 // TODO: Own loot table
-                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla")
-        );
+                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
         // TODO: Maybe add this once the entity is not a BlockEntity?
@@ -262,9 +269,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             TownInterface town,
             Vec3 entityPos
     ) {
-        if (
-                journal.getStatus() == GathererJournal.Status.GATHERING
-        ) {
+        if (journal.getStatus() == GathererJournal.Status.GATHERING) {
             return isVeryCloseTo(entityPos, getEnterExitPos(town));
         }
         return journal.getStatus().isReturning();
@@ -274,9 +279,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             @NotNull BlockPos entityPos,
             @NotNull BlockPos targetPos
     ) {
-        double d = targetPos.distToCenterSqr(
-                entityPos.getX(), entityPos.getY(), entityPos.getZ()
-        );
+        double d = targetPos.distToCenterSqr(entityPos.getX(), entityPos.getY(), entityPos.getZ());
         return d < 5;
     }
 
@@ -284,9 +287,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Vec3 entityPos,
             @NotNull BlockPos targetPos
     ) {
-        double d = targetPos.distToCenterSqr(
-                entityPos.x, entityPos.y, entityPos.z
-        );
+        double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
         return d < 0.5;
     }
 
@@ -328,7 +329,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             MCTownItem mcTownItem = foodTarget.container.getItem(i);
             if (mcTownItem.isFood()) {
                 Questown.LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
-                journal.addItem(mcTownItem);
+                journal.addItem(new MCHeldItem(mcTownItem));
                 foodTarget.container.removeItem(i, 1);
                 break;
             }
@@ -357,8 +358,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             this.dropping = false;
             return;
         }
-        List<MCTownItem> snapshot = Lists.reverse(ImmutableList.copyOf(journal.getItems()));
-        for (MCTownItem mct : snapshot) {
+        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(journal.getItems()));
+        for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
                 continue;
             }
@@ -368,10 +369,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 if (added) {
                     break;
                 }
-                // TODO: Allow stacking?
                 if (successTarget.container.getItem(i).isEmpty()) {
                     if (journal.removeItem(mct)) {
-                        successTarget.container.setItem(i, mct);
+                        successTarget.container.setItem(i, mct.toItem());
                     }
                     added = true;
                 }
@@ -399,7 +399,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new GathererInventoryMenu(windowId, e.getInventory(), p.getInventory(), e);
+                return new GathererInventoryMenu(windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e);
             }
         }, data -> {
             data.writeInt(journal.getCapacity());
@@ -407,9 +407,10 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             data.writeCollection(journal.getItems(), (buf, item) -> {
                 ResourceLocation id = Items.AIR.getRegistryName();
                 if (item != null) {
-                    id = item.get().getRegistryName();
+                    id = item.get().get().getRegistryName();
                 }
                 buf.writeResourceLocation(id);
+                buf.writeBoolean(item.isLocked());
             });
         });
         return true; // Different jobs might have screens or not
@@ -421,17 +422,17 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             return;
         }
 
-        ImmutableList.Builder<MCTownItem> b = ImmutableList.builder();
+        ImmutableList.Builder<MCHeldItem> b = ImmutableList.builder();
 
         for (int i = 0; i < p_18983_.getContainerSize(); i++) {
             ItemStack item = p_18983_.getItem(i);
-            b.add(MCTownItem.fromMCItemStack(item));
+            b.add(new MCHeldItem(MCTownItem.fromMCItemStack(item), locks.get(i).get() == 1));
         }
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
     @Override
-    public void itemsChanged(ImmutableList<MCTownItem> items) {
+    public void itemsChanged(ImmutableList<MCHeldItem> items) {
         if (unchanged(inventory, items)) {
             return;
         }
@@ -440,16 +441,16 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             if (items.get(i).get().equals(inventory.getItem(i).getItem())) {
                 continue;
             }
-            inventory.setItem(i, new ItemStack(items.get(i).get(), 1));
+            inventory.setItem(i, new ItemStack(items.get(i).get().get(), 1));
         }
     }
 
     private boolean unchanged(
             Container container,
-            ImmutableList<MCTownItem> items
+            ImmutableList<MCHeldItem> items
     ) {
         for (int i = 0; i < container.getContainerSize(); i++) {
-            if (!container.getItem(i).is(items.get(i).get())) {
+            if (!container.getItem(i).is(items.get(i).get().get())) {
                 return false;
             }
         }
@@ -468,7 +469,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         journal.addStatusListener(l);
     }
 
-    public void initializeItems(Iterable<MCTownItem> mcTownItemStream) {
+    public void initializeItems(Iterable<MCHeldItem> mcTownItemStream) {
         journal.setItems(mcTownItemStream);
     }
 
@@ -480,11 +481,57 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return b.build();
     }
 
-    public GathererJournal.Snapshot<MCTownItem> getJournalSnapshot() {
-        return journal.getSnapshot(MCTownItem::Air);
+    public GathererJournal.Snapshot<MCHeldItem> getJournalSnapshot() {
+        return journal.getSnapshot(MCHeldItem::Air);
     }
 
-    public void initialize(GathererJournal.Snapshot<MCTownItem> journal) {
+    public void initialize(GathererJournal.Snapshot<MCHeldItem> journal) {
         this.journal.initialize(journal);
+    }
+
+    public void lockSlot(int slot) {
+        this.journal.lockSlot(slot);
+    }
+
+    public void unlockSlot(int slotIndex) {
+        this.journal.unlockSlot(slotIndex);
+    }
+
+    public List<Boolean> getSlotLockStatuses() {
+        return this.journal.getSlotLockStatuses();
+    }
+
+    public DataSlot getLockSlot(int i) {
+        return this.locks.get(i);
+    }
+
+
+    public static class LockSlot extends DataSlot {
+
+        private final int slotIndex;
+
+        private final VisitorMobJob job;
+
+        public LockSlot(
+                int slotIndex,
+                VisitorMobJob job
+        ) {
+            this.slotIndex = slotIndex;
+            this.job = job;
+        }
+
+        @Override
+        public int get() {
+            return job.getSlotLockStatuses().get(slotIndex) ? 1 : 0;
+        }
+        @Override
+        public void set(int p_39402_) {
+            if (p_39402_ == 1) {
+                job.lockSlot(slotIndex);
+            } else {
+                job.unlockSlot(slotIndex);
+            }
+        }
+
     }
 }

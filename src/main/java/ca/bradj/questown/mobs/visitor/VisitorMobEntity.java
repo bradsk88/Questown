@@ -6,7 +6,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -22,6 +22,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -61,6 +62,7 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -102,7 +104,15 @@ public class VisitorMobEntity extends PathfinderMob {
             SensorType.NEAREST_BED
     );
 
-    final VisitorMobJob job = new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level);
+    final VisitorMobJob job = getJob();
+    private static final int inventoryCapacity = 6;
+
+    // TODO: Make this abstract or injectable
+    @NotNull
+    private VisitorMobJob getJob() {
+        return new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level, inventoryCapacity);
+    }
+
     boolean sitting = true;
     TownInterface town;
     private BlockPos wanderTarget;
@@ -237,6 +247,17 @@ public class VisitorMobEntity extends PathfinderMob {
         this.entityData.define(status, GathererJournal.Status.IDLE.name());
     }
 
+    @NotNull
+    private CompoundTag buildInitialSlotStatusesTag() {
+        CompoundTag tag = new CompoundTag();
+        ListTag statuses = new ListTag();
+        for (int i = 0; i < inventoryCapacity; i++) {
+            statuses.add(IntTag.valueOf(0));
+        }
+        tag.put("slots", statuses);
+        return tag;
+    }
+
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
         // See keepAlive
@@ -293,10 +314,10 @@ public class VisitorMobEntity extends PathfinderMob {
     public void readAdditionalSaveData(CompoundTag p_21450_) {
         super.readAdditionalSaveData(p_21450_);
         ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
-        List<MCTownItem> itemz = items
+        List<MCHeldItem> itemz = items
                 .stream()
                 .map(v -> ItemStack.of((CompoundTag) v))
-                .map(MCTownItem::fromMCItemStack)
+                .map(MCHeldItem::fromMCItemStack)
                 .toList();
         job.initializeItems(itemz);
         entityData.set(status, p_21450_.getString("status"));
@@ -538,7 +559,7 @@ public class VisitorMobEntity extends PathfinderMob {
         job.addStatusListener(l);
     }
 
-    public GathererJournal.Snapshot<MCTownItem> getJobJournalSnapshot() {
+    public GathererJournal.Snapshot<MCHeldItem> getJobJournalSnapshot() {
         return job.getJournalSnapshot();
     }
 
@@ -547,7 +568,7 @@ public class VisitorMobEntity extends PathfinderMob {
             double xPos,
             double yPos,
             double zPos,
-            GathererJournal.Snapshot<MCTownItem> journal
+            GathererJournal.Snapshot<MCHeldItem> journal
     ) {
         job.initialize(journal);
         this.setPos(xPos, yPos, zPos);
@@ -564,8 +585,17 @@ public class VisitorMobEntity extends PathfinderMob {
         return this.initialized;
     }
 
+    public List<Boolean> getSlotLocks() {
+        return this.job.getSlotLockStatuses();
+    }
+
+    public DataSlot getLockSlot(int i) {
+        return job.getLockSlot(i);
+    }
+
     public interface ChangeListener {
         void Changed();
+
     }
 
     public void addChangeListener(ChangeListener cl) {
