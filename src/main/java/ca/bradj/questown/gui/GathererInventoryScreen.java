@@ -86,7 +86,7 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
     }
 
     @Override
-    protected void renderBg(PoseStack stack, float p_230450_2_, int p_230450_3_, int p_230450_4_) {
+    protected void renderBg(PoseStack stack, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
@@ -167,6 +167,37 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
                 return;
             }
         }
+
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot s = menu.slots.get(i);
+            int xCoord = x - 1 + s.x;
+            int yCoord = y - 1 + s.y;
+            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
+                if (renderLocksTooltip(stack, xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
+                    return;
+                }
+            }
+        }
+
         super.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    private boolean renderLocksTooltip(
+            @NotNull PoseStack stack,
+            int leftX, int topY,
+            int mouseX, int mouseY
+    ) {
+        int rightX = leftX + 16;
+        int botY = topY + 8;
+        if (mouseX > leftX && mouseX < rightX) {
+            if (mouseY > topY && mouseY < botY) {
+                TranslatableComponent component = new TranslatableComponent(
+                        "tooltips.villagers.job.inventory.locked"
+                );
+                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                return true;
+            }
+        }
+        return false;
     }
 }

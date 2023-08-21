@@ -79,6 +79,20 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Gath
                 }
                 return result;
             }
+
+            @NotNull
+            @Override
+            public ItemStack extractItem(
+                    int slot,
+                    int amount,
+                    boolean simulate
+            ) {
+                ItemStack extracted = super.extractItem(slot, amount, simulate);
+                if (!extracted.isEmpty()) {
+                    lockedSlots.get(slot).set(0);
+                }
+                return extracted;
+            }
         };
         this.entity = gatherer;
 
