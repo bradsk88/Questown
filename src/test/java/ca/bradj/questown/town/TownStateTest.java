@@ -75,7 +75,7 @@ class TownStateTest {
         }
     }
 
-    private TownState<Container, TestItem> townState;
+    private TownState<Container, TestItem, TestItem> townState;
     private ImmutableList<TestItem> itemsToDeposit;
 
 

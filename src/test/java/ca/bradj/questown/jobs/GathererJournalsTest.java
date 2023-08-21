@@ -80,11 +80,14 @@ class GathererJournalsTest {
 
         GathererTimeWarper.FoodRemover<GathererJournalTest.TestItem> emptyContainers = () -> null;
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
                 emptyContainers,
                 defaultLootGiver,
                 new FakeTownWithInfiniteStorage(), // No items added
-                () -> new GathererJournalTest.TestItem("")
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -124,8 +127,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -171,8 +177,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -221,8 +231,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -266,8 +280,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -311,8 +329,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -355,8 +377,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -400,8 +426,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -472,8 +502,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                sizeSixStorage, specificLoot, sizeSixStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                sizeSixStorage, specificLoot, sizeSixStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -534,8 +568,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -578,8 +616,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -623,8 +665,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -675,8 +721,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -720,8 +770,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -781,8 +835,12 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        GathererTimeWarper<GathererJournalTest.TestItem> warper = new GathererTimeWarper<>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem("")
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem
+                >(
+                infiniteStorage, specificLoot, infiniteStorage,
+                () -> new GathererJournalTest.TestItem(""),
+                t -> t
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(

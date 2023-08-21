@@ -12,8 +12,8 @@ import java.util.*;
 
 public class GathererJournalTest {
 
-    public static class TestItem implements GathererJournal.Item<TestItem> {
-        private final String value;
+    public static class TestItem implements GathererJournal.Item<TestItem>, HeldItem<TestItem, TestItem> {
+        protected final String value;
 
         public TestItem(String value) {
             this.value = value;
@@ -50,6 +50,26 @@ public class GathererJournalTest {
         @Override
         public String toString() {
             return "TestItem{" + "value='" + value + '\'' + '}';
+        }
+
+        @Override
+        public boolean isLocked() {
+            return false;
+        }
+
+        @Override
+        public TestItem get() {
+            return this;
+        }
+
+        @Override
+        public TestItem locked() {
+            throw new IllegalCallerException("Locking is not expected here");
+        }
+
+        @Override
+        public TestItem unlocked() {
+            throw new IllegalCallerException("Locking is not expected here");
         }
     }
 
@@ -89,9 +109,10 @@ public class GathererJournalTest {
     @Test
     void testDefaultStatusBeforeSignals() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -102,7 +123,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -123,7 +145,13 @@ public class GathererJournalTest {
                 return true;
             }
         };
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpace);
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
+                sigs,
+                () -> new TestItem(""),
+                t -> t,
+                noSpace,
+                6
+        );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         for (int i = 0; i < gatherer.getCapacity(); i++) {
@@ -141,9 +169,10 @@ public class GathererJournalTest {
     @Test
     void testMorningSignalWithNoBreadAvailable() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -154,7 +183,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -171,9 +201,10 @@ public class GathererJournalTest {
     @Test
     void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -184,7 +215,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -203,9 +235,10 @@ public class GathererJournalTest {
     void testMorningSignalWithBreadAvailable() {
         TestInventory inv = new TestInventory();
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -216,7 +249,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -237,19 +271,21 @@ public class GathererJournalTest {
     @Test
     void testEveningSignalRemovesFoodAddsRandomLoot() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
-                () -> new TestItem(""), new Statuses.TownStateProvider() {
-            @Override
-            public boolean IsStorageAvailable() {
-                return true;
-            }
+                () -> new TestItem(""),
+                t -> t,
+                new Statuses.TownStateProvider() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return true;
+                    }
 
-            @Override
-            public boolean hasGate() {
-                return true;
-            }
-        }
+                    @Override
+                    public boolean hasGate() {
+                        return true;
+                    }
+                }, 6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -265,7 +301,8 @@ public class GathererJournalTest {
 
         // Trigger one evening signal for food
         sigs.currentSignal = GathererJournal.Signals.EVENING;
-        gatherer.tick(() -> ImmutableList.of(new TestItem("seeds"),
+        gatherer.tick(() -> ImmutableList.of(
+                new TestItem("seeds"),
                 new TestItem("seeds"),
                 new TestItem("stick"),
                 new TestItem("stick"),
@@ -276,7 +313,8 @@ public class GathererJournalTest {
 
         // Trigger second evening signal for loot (signals happen in game every tick)
         sigs.currentSignal = GathererJournal.Signals.EVENING;
-        gatherer.tick(() -> ImmutableList.of(new TestItem("seeds"),
+        gatherer.tick(() -> ImmutableList.of(
+                new TestItem("seeds"),
                 new TestItem("seeds"),
                 new TestItem("stick"),
                 new TestItem("stick"),
@@ -287,7 +325,8 @@ public class GathererJournalTest {
 
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
         Collection<TestItem> items = gatherer.getItems();
-        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("seeds"),
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new TestItem("seeds"),
                 new TestItem("seeds"),
                 new TestItem("stick"),
                 new TestItem("stick"),
@@ -299,9 +338,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalRemovesFoodEvenWhenLootIsEmpty() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -312,7 +352,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -341,9 +382,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalStaysIdleIfIdle() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -354,7 +396,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -368,9 +411,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalStaysIdleIfGathering() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -381,7 +425,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -395,9 +440,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalRemovesOnlyOneFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -408,7 +454,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -428,7 +475,8 @@ public class GathererJournalTest {
         gatherer.tick(ImmutableList::of);
 
         Collection<TestItem> items = gatherer.getItems();
-        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("bread"),
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new TestItem("bread"),
                 new TestItem(""),
                 new TestItem(""),
                 new TestItem(""),
@@ -441,9 +489,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalTransitionsFromNoFoodToStayedHome() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -454,7 +503,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -473,9 +523,10 @@ public class GathererJournalTest {
     @Test
     void testAfternoonSignalTransitionsFromGatheringToGatheringHungry_IfHasFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -486,7 +537,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -512,9 +564,10 @@ public class GathererJournalTest {
     void testAfternoonSignalTransitionsFromGatheringToNoFood_IfDoesNotHaveFood() {
         // This shouldn't happen, but let's handle it anyway
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -525,7 +578,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -553,9 +607,10 @@ public class GathererJournalTest {
     @Test
     void testEveningSignalSetsReturnedSuccessfulStatus() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -566,7 +621,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -595,7 +651,13 @@ public class GathererJournalTest {
                 return true;
             }
         };
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpaceInTown);
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
+                sigs,
+                () -> new TestItem(""),
+                t -> t,
+                noSpaceInTown,
+                6
+        );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         TestItem gold = new TestItem("gold");
@@ -631,7 +693,13 @@ public class GathererJournalTest {
                 return true;
             }
         };
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), noSpace);
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
+                sigs,
+                () -> new TestItem(""),
+                t -> t,
+                noSpace,
+                6
+        );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         TestItem gold = new TestItem("gold");
@@ -670,7 +738,13 @@ public class GathererJournalTest {
                 return true;
             }
         };
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(sigs, () -> new TestItem(""), hasSpace);
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
+                sigs,
+                () -> new TestItem(""),
+                t -> t,
+                hasSpace,
+                6
+        );
         gatherer.initializeStatus(GathererJournal.Status.RETURNING);
 
         TestItem gold = new TestItem("gold");
@@ -700,9 +774,10 @@ public class GathererJournalTest {
     @Test
     void testSkipFromMorningToEveningNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -713,7 +788,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -735,9 +811,10 @@ public class GathererJournalTest {
     @Test
     void testSkipFromMorningToEveningWithFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -748,7 +825,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -786,9 +864,10 @@ public class GathererJournalTest {
     @Test
     void testSkipFromEveningToNoonShouldSetStatusToNoFood() {
         TestSignals sigs = new TestSignals();
-        GathererJournal<TestItem> gatherer = new GathererJournal<>(
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
+                t -> t,
                 new Statuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -799,7 +878,8 @@ public class GathererJournalTest {
                     public boolean hasGate() {
                         return true;
                     }
-                }
+                },
+                6
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 

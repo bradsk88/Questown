@@ -16,14 +16,14 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     private final LootGiver<I> lootGiver;
     private final Town<I> town;
     private final GathererJournal.EmptyFactory<H> emptyFactory;
-    private final ItemTaker<I, H> converter;
+    private final ItemToEntityMover<I, H> converter;
 
     public GathererTimeWarper(
             FoodRemover<I> remover,
             LootGiver<I> lootGiver,
             Town<I> town,
             GathererJournal.EmptyFactory<H> emptyFactory,
-            ItemTaker<I, H> converter
+            ItemToEntityMover<I, H> converter
     ) {
         this.remover = remover;
         this.lootGiver = lootGiver;
@@ -100,34 +100,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
                 ).toList();
             }
             if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
-                ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(
-                        outItems.stream()
-                                .filter(v -> !v.isLocked())
-                                .map(HeldItem::get)
-                                .toList()
-                );
-                Iterator<I> undeposited = town.depositItems(itemsToDeposit)
-                        .stream()
-                        .filter(Predicate.not(GathererJournal.Item::isEmpty))
-                        .iterator();
-                ImmutableList.Builder<H> b = ImmutableList.builder();
-                for (H item : outItems) {
-                    if (item.isLocked()) {
-                        b.add(item);
-                        continue;
-                    }
-                    if (item.isEmpty()) {
-                        if (undeposited.hasNext()) {
-                            b.add(converter.convert(undeposited.next()));
-                            continue;
-                        } else {
-                            b.add(emptyFactory.makeEmptyItem());
-                            continue;
-                        }
-                    }
-                    b.add(item);
-                }
-                outItems = b.build();
+                outItems = dropLoot(outItems, town, converter, emptyFactory);
             }
             ImmutableList<H> outImItems = ImmutableList.copyOf(outItems);
             stateGetter.updateItems(outImItems);
@@ -136,7 +109,40 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         return output;
     }
 
-    public interface ItemTaker<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+    @NotNull
+    public static <I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> List<H> dropLoot(
+            List<H> outItems,
+            Town<I> town,
+            ItemToEntityMover<I, H> converter,
+            GathererJournal.EmptyFactory<H> emptyFactory
+    ) {
+        ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(
+                outItems.stream()
+                        .filter(v -> !v.isLocked())
+                        .map(HeldItem::get)
+                        .toList()
+        );
+        Iterator<I> undeposited = town.depositItems(itemsToDeposit)
+                .stream()
+                .filter(Predicate.not(GathererJournal.Item::isEmpty))
+                .iterator();
+        ImmutableList.Builder<H> b = ImmutableList.builder();
+        for (H item : outItems) {
+            if (item.isLocked()) {
+                b.add(item);
+                continue;
+            }
+            if (undeposited.hasNext()) {
+                b.add(converter.convert(undeposited.next()));
+                continue;
+            }
+            b.add(emptyFactory.makeEmptyItem());
+        }
+        outItems = b.build();
+        return outItems;
+    }
+
+    public interface ItemToEntityMover<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
         H convert(I item);
     }
 
@@ -144,7 +150,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
             List<H> outItems,
             I food,
             GathererJournal.Signals signal,
-            ItemTaker<I, H> converter
+            ItemToEntityMover<I, H> mover
     ) {
         // TODO: More efficient way to do this?
         Optional<H> foundEmpty = outItems.stream()
@@ -153,7 +159,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         if (foundEmpty.isPresent()) {
             // TODO: This is suspiciously similar to the logic in VisitorMobJob
             int idx = outItems.indexOf(foundEmpty.get());
-            outItems.set(idx, converter.convert(food));
+            outItems.set(idx, mover.convert(food));
         } else {
             throw new IllegalStateException(String.format(
                     "Got NO_FOOD with full inventory on signal %s: %s",

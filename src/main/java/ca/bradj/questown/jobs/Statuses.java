@@ -93,7 +93,11 @@ public class Statuses {
             InventoryStateProvider<?> inventory,
             TownStateProvider town
     ) {
-        if (currentStatus == GathererJournal.Status.STAYING || currentStatus == GathererJournal.Status.RETURNING) {
+        if (ImmutableList.of(
+                GathererJournal.Status.STAYING,
+                GathererJournal.Status.RETURNING,
+                GathererJournal.Status.IDLE
+        ).contains(currentStatus)) {
             return null;
         }
         if (ImmutableList.of(
