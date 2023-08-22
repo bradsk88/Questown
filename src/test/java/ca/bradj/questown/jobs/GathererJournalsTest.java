@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class GathererJournalsTest {
                 new FakeTownWithInfiniteStorage(), // No items added
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -97,6 +98,11 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(result.status(), initial.status());
         Assertions.assertEquals(result.items(), initial.items());
+    }
+
+    @NotNull
+    private static GathererJournal.ToolsChecker<GathererJournalTest.TestItem> noTools() {
+        return heldItems -> noToolz();
     }
 
     @Test
@@ -133,7 +139,7 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -145,7 +151,7 @@ class GathererJournalsTest {
                 result.status()
         ); // Debatable. Idle (or sleeping?) could also be good
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container);
     }
 
     @Test
@@ -185,7 +191,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -240,7 +246,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -290,7 +296,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -340,7 +346,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -348,8 +354,13 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), result.items());
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), result.items());
         Assertions.assertTrue(infiniteStorage.container.isEmpty());
+    }
+
+    @NotNull
+    private static GathererJournal.Tools noToolz() {
+        return new GathererJournal.Tools(false, false, false, false);
     }
 
     @Test
@@ -389,7 +400,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -398,7 +409,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container);
     }
 
     @Test
@@ -439,7 +450,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -448,7 +459,7 @@ class GathererJournalsTest {
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
         b.add(new GathererJournalTest.TestItem("bread"));
-        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
+        b.addAll(specificLoot.giveLoot(6, noToolz()));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
@@ -516,7 +527,7 @@ class GathererJournalsTest {
                 sizeSixStorage, specificLoot, sizeSixStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -583,7 +594,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -592,7 +603,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -632,7 +643,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -641,7 +652,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -682,7 +693,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -698,7 +709,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem(""),
                 new GathererJournalTest.TestItem("")
         ), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -739,7 +750,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -747,8 +758,8 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), result.items());
+        Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container);
     }
 
     @Test
@@ -789,7 +800,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -855,7 +866,7 @@ class GathererJournalsTest {
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -864,8 +875,8 @@ class GathererJournalsTest {
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
         b.add(new GathererJournalTest.TestItem("bread"));
-        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
-        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
+        b.addAll(specificLoot.giveLoot(6, noToolz()));
+        b.addAll(specificLoot.giveLoot(6, noToolz()));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());

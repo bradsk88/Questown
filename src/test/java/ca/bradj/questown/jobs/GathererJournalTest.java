@@ -2,13 +2,15 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.town.TownInventory;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 
 public class GathererJournalTest {
 
@@ -125,7 +127,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -349,7 +351,7 @@ public class GathererJournalTest {
                         return true;
                     }
                 }, 6,
-                heldItems -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -418,7 +420,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -444,6 +446,11 @@ public class GathererJournalTest {
         Assertions.assertTrue(items.stream().noneMatch(TestItem::isFood));
     }
 
+    @NotNull
+    private static GathererJournal.ToolsChecker<TestItem> noTools() {
+        return items -> new GathererJournal.Tools(false, false, false, false);
+    }
+
     @Test
     void testAfternoonSignalStaysIdleIfIdle() {
         TestSignals sigs = new TestSignals();
@@ -463,7 +470,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -493,7 +500,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -523,7 +530,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -573,7 +580,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -608,7 +615,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -650,7 +657,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -694,7 +701,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -729,7 +736,7 @@ public class GathererJournalTest {
                 t -> t,
                 noSpaceInTown,
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -772,7 +779,7 @@ public class GathererJournalTest {
                 t -> t,
                 noSpace,
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -818,7 +825,7 @@ public class GathererJournalTest {
                 t -> t,
                 hasSpace,
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.RETURNING);
 
@@ -829,21 +836,81 @@ public class GathererJournalTest {
         sigs.currentSignal = GathererJournal.Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
-        // Assert that the status is set to "returned successful"
-        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, gatherer.getStatus());
+        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.RETURNED_SUCCESS,
+                GathererJournal.Signals.EVENING,
+                new InventoryStateProvider<GathererJournal.Item>() {
+                    @Override
+                    public boolean hasAnyDroppableLoot() {
+                        return true;
+                    }
 
-        gatherer.removeItem(gold);
-        // Status goes to idle for legacy change detection
-        Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return false;
+                    }
 
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
-        gatherer.tick(heldItems -> ImmutableList.of());
-        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                infiniteStorageWithGate()
+        );
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, newStatus);
+
+        newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE, // Happens when you remove an item
+                GathererJournal.Signals.EVENING,
+                new InventoryStateProvider<GathererJournal.Item>() {
+                    @Override
+                    public boolean hasAnyDroppableLoot() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                infiniteStorageWithGate()
+        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, newStatus);
 
         // Confirm stays in that status
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
-        gatherer.tick(heldItems -> ImmutableList.of());
-        Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
+        newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.RETURNED_SUCCESS,
+                GathererJournal.Signals.EVENING,
+                emptyInventory(),
+                infiniteStorageWithGate()
+        );
+        Assertions.assertEquals(GathererJournal.Status.RELAXING, newStatus);
+
     }
 
     @Test
@@ -865,7 +932,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -903,7 +970,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
@@ -957,7 +1024,7 @@ public class GathererJournalTest {
                     }
                 },
                 6,
-                items -> new GathererJournal.Tools(false)
+                noTools()
         );
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 

@@ -12,6 +12,9 @@ public class TagsInit {
 
         public static final TagKey<Item> VILLAGER_FOOD = createTag("villager_food");
         public static final TagKey<Item> AXES = createTag("axes");
+        public static final TagKey<Item> PICKAXES = createTag("pickaxes");
+        public static final TagKey<Item> SHOVELS = createTag("shovels");
+        public static final TagKey<Item> FISHING_RODS = createTag("fishing_rods");
 
 
         private static TagKey<Item> createTag(String name) {

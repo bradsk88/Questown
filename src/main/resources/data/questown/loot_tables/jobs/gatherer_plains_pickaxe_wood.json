@@ -6,35 +6,35 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "minecraft:wheat_seeds"
+          "name": "minecraft:cobblestone"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:stick"
+          "name": "minecraft:cobblestone"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:apple"
+          "name": "minecraft:cobblestone"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:sugar_cane"
+          "name": "minecraft:coal"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:feather"
+          "name": "minecraft:iron_nugget"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:egg"
+          "name": "minecraft:iron_nugget"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:red_mushroom"
+          "name": "minecraft:iron_ore"
         },
         {
           "type": "minecraft:item",
-          "name": "minecraft:brown_mushroom"
+          "name": "minecraft:terracotta"
         }
       ],
       "weight": 1

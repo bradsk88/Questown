@@ -354,9 +354,21 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         Signals getSignal();
     }
 
-    public record Tools(boolean hasAxe) {
+    public record Tools(boolean hasAxe, boolean hasPick, boolean hasShovel, boolean hasRod) {
         public Tools withAxe() {
-            return new Tools(true);
+            return new Tools(true, hasPick, hasShovel, hasRod);
+        }
+
+        public Tools withPickaxe() {
+            return new Tools(hasAxe, true, hasShovel, hasRod);
+        }
+
+        public Tools withShovel() {
+            return new Tools(hasAxe, hasPick, true, hasRod);
+        }
+
+        public Tools withFishingRod() {
+            return new Tools(hasAxe, hasPick, hasShovel, true);
         }
     }
 

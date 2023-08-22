@@ -97,10 +97,19 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     public static GathererJournal.Tools checkTools(Iterable<MCHeldItem> journalItems) {
-        GathererJournal.Tools tool = new GathererJournal.Tools(false);
+        GathererJournal.Tools tool = new GathererJournal.Tools(false, false, false, false);
         for (MCHeldItem item : journalItems) {
             if (Ingredient.of(TagsInit.Items.AXES).test(item.get().toItemStack())) {
                 tool = tool.withAxe();
+            }
+            if (Ingredient.of(TagsInit.Items.PICKAXES).test(item.get().toItemStack())) {
+                tool = tool.withPickaxe();
+            }
+            if (Ingredient.of(TagsInit.Items.SHOVELS).test(item.get().toItemStack())) {
+                tool = tool.withShovel();
+            }
+            if (Ingredient.of(TagsInit.Items.FISHING_RODS).test(item.get().toItemStack())) {
+                tool = tool.withFishingRod();
             }
         }
         return tool;
@@ -174,6 +183,21 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
+        if (tools.hasPick()) {
+            List<MCTownItem> axed = computeWoodPickaxedItems(level, maxItems);
+            items.addAll(axed);
+            maxItems = maxItems - axed.size();
+        }
+        if (tools.hasShovel()) {
+            List<MCTownItem> axed = computeWoodShoveledItems(level, maxItems);
+            items.addAll(axed);
+            maxItems = maxItems - axed.size();
+        }
+        if (tools.hasRod()) {
+            List<MCTownItem> axed = computeFishedItems(level, maxItems);
+            items.addAll(axed);
+            maxItems = maxItems - axed.size();
+        }
         // TODO: Handle other tool types
         items.addAll(computeGatheredItems(level, maxItems));
 
@@ -189,21 +213,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             ServerLevel level,
             int maxItems
     ) {
-        LootTable lootTable = level.getServer().getLootTables().get(
-                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla")
-        );
-        LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
-        LootContext lc = lcb.create(LootContextParamSets.EMPTY);
-
-        List<ItemStack> rItems = lootTable.getRandomItems(lc);
-        Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), maxItems);
-        List<MCTownItem> list = rItems.stream()
-                .filter(v -> !v.isEmpty())
-                .map(MCTownItem::fromMCItemStack)
-                .toList()
-                .subList(0, subLen);
-        return list;
+        return getLoots(level, maxItems, new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
     }
 
     @NotNull
@@ -211,13 +221,52 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             ServerLevel level,
             int maxItems
     ) {
-        LootTable lootTable = level.getServer().getLootTables().get(
-                new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_axe")
-        );
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_axe");
+        return getLoots(level, maxItems, rl);
+    }
+
+    @NotNull
+    private static List<MCTownItem> computeWoodPickaxedItems(
+            ServerLevel level,
+            int maxItems
+    ) {
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_pickaxe_wood");
+        return getLoots(level, maxItems, rl);
+    }
+
+    @NotNull
+    private static List<MCTownItem> computeWoodShoveledItems(
+            ServerLevel level,
+            int maxItems
+    ) {
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_shovel_wood");
+        return getLoots(level, maxItems, rl);
+    }
+
+    @NotNull
+    private static List<MCTownItem> computeFishedItems(
+            ServerLevel level,
+            int maxItems
+    ) {
+        ResourceLocation rl = new ResourceLocation("minecraft", "gameplay/fishing");
+        return getLoots(level, maxItems, rl);
+    }
+
+    @NotNull
+    private static List<MCTownItem> getLoots(
+            ServerLevel level,
+            int maxItems,
+            ResourceLocation rl
+    ) {
+        LootTable lootTable = level.getServer().getLootTables().get(rl);
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
-        List<ItemStack> rItems = lootTable.getRandomItems(lc);
+        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+        for (int i = 0; i < level.random.nextInt(maxItems - 1) + 1; i++) {
+            b.addAll(lootTable.getRandomItems(lc));
+        }
+        ArrayList<ItemStack> rItems = new ArrayList<>(b.build());
         Collections.shuffle(rItems);
         int subLen = Math.min(rItems.size(), maxItems);
         List<MCTownItem> list = rItems.stream()
@@ -582,6 +631,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         public int get() {
             return job.getSlotLockStatuses().get(slotIndex) ? 1 : 0;
         }
+
         @Override
         public void set(int p_39402_) {
             if (p_39402_ == 1) {
