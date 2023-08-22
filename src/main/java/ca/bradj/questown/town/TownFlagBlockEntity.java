@@ -274,7 +274,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     void broadcastMessage(TranslatableComponent msg) {
-        Questown.LOGGER.info(I18n.get(msg.getKey(), msg.getArgs()));
+        Questown.LOGGER.info("Broadcasting message: {} {}", msg.getKey(), msg.getArgs());
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             p.sendMessage(msg, ChatType.CHAT, p.getUUID());
         }
