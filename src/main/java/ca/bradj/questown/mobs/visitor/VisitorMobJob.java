@@ -258,12 +258,18 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             int maxItems,
             ResourceLocation rl
     ) {
+        if (maxItems <= 0) {
+            return ImmutableList.of();
+        }
+
         LootTable lootTable = level.getServer().getLootTables().get(rl);
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
-        for (int i = 0; i < level.random.nextInt(maxItems - 1) + 1; i++) {
+        int bound = Math.max(0, maxItems - 1);
+        int max = level.random.nextInt(bound + 1);
+        for (int i = 0; i < max; i++) {
             b.addAll(lootTable.getRandomItems(lc));
         }
         ArrayList<ItemStack> rItems = new ArrayList<>(b.build());
