@@ -97,10 +97,11 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem> loot = (max) -> VisitorMobJob.getLootFromLevel(sl, max);
+        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> VisitorMobJob.getLootFromLevel(sl, max, tools);
         GathererTimeWarper<MCTownItem, MCHeldItem> warper = new GathererTimeWarper<MCTownItem, MCHeldItem>(
                 storedState, loot, storedState,
-                MCHeldItem::Air, MCHeldItem::new
+                MCHeldItem::Air, MCHeldItem::new,
+                VisitorMobJob::checkTools
         );
 
         for (int i = 0; i < villagers.size(); i++) {

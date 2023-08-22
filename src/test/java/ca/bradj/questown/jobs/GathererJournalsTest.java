@@ -11,7 +11,7 @@ import java.util.List;
 
 class GathererJournalsTest {
 
-    private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> defaultLootGiver = (max) -> ImmutableList.of(
+    private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> defaultLootGiver = (max, tools) -> ImmutableList.of(
             new GathererJournalTest.TestItem(
                     "gold"),
             new GathererJournalTest.TestItem("gold"),
@@ -87,7 +87,8 @@ class GathererJournalsTest {
                 defaultLootGiver,
                 new FakeTownWithInfiniteStorage(), // No items added
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -118,7 +119,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -131,7 +132,8 @@ class GathererJournalsTest {
                 GathererJournalTest.TestItem, GathererJournalTest.TestItem
                 >(
                 infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -143,7 +145,7 @@ class GathererJournalsTest {
                 result.status()
         ); // Debatable. Idle (or sleeping?) could also be good
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
     }
 
     @Test
@@ -168,7 +170,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -182,7 +184,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -222,7 +225,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -236,7 +239,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -271,7 +275,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -285,7 +289,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -320,7 +325,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -334,7 +339,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -342,7 +348,7 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
-        Assertions.assertEquals(specificLoot.giveLoot(6), result.items());
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), result.items());
         Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
 
@@ -368,7 +374,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -382,7 +388,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -391,7 +398,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
     }
 
     @Test
@@ -417,7 +424,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -431,7 +438,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -440,7 +448,7 @@ class GathererJournalsTest {
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
         b.add(new GathererJournalTest.TestItem("bread"));
-        b.addAll(specificLoot.giveLoot(6));
+        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
@@ -493,7 +501,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -507,7 +515,8 @@ class GathererJournalsTest {
                 >(
                 sizeSixStorage, specificLoot, sizeSixStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -559,7 +568,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -573,7 +582,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -582,7 +592,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -607,7 +617,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -621,7 +631,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -630,7 +641,7 @@ class GathererJournalsTest {
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -656,7 +667,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -670,7 +681,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -686,7 +698,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem(""),
                 new GathererJournalTest.TestItem("")
         ), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container); // From the first day
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container); // From the first day
     }
 
     @Test
@@ -712,7 +724,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -726,7 +738,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -734,8 +747,8 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
-        Assertions.assertEquals(specificLoot.giveLoot(6), result.items());
-        Assertions.assertEquals(specificLoot.giveLoot(6), infiniteStorage.container);
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), result.items());
+        Assertions.assertEquals(specificLoot.giveLoot(6, new GathererJournal.Tools(false)), infiniteStorage.container);
     }
 
     @Test
@@ -761,7 +774,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -775,7 +788,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -826,7 +840,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem> specificLoot = (max, tools) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -840,7 +854,8 @@ class GathererJournalsTest {
                 >(
                 infiniteStorage, specificLoot, infiniteStorage,
                 () -> new GathererJournalTest.TestItem(""),
-                t -> t
+                t -> t,
+                heldItems -> new GathererJournal.Tools(false)
         );
 
         GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
@@ -849,8 +864,8 @@ class GathererJournalsTest {
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
         b.add(new GathererJournalTest.TestItem("bread"));
-        b.addAll(specificLoot.giveLoot(6));
-        b.addAll(specificLoot.giveLoot(6));
+        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
+        b.addAll(specificLoot.giveLoot(6, new GathererJournal.Tools(false)));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());

@@ -3,9 +3,7 @@ package ca.bradj.questown.jobs;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableCollection;
 
-import java.util.Collection;
-
-public class DefaultInventoryStateProvider<I extends GathererJournal.Item> implements InventoryStateProvider<I> {
+public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements InventoryStateProvider<I> {
 
     private final CurrentItemsSource<I> itemsSource;
 
@@ -15,18 +13,19 @@ public class DefaultInventoryStateProvider<I extends GathererJournal.Item> imple
         this.itemsSource = itemsSource;
     }
 
-    public interface CurrentItemsSource<I extends GathererJournal.Item> {
+    public interface CurrentItemsSource<I extends HeldItem<I, ?>> {
         ImmutableCollection<I> GetCurrentItems();
     }
 
     @Override
-    public boolean hasAnyLoot() {
+    public boolean hasAnyDroppableLoot() {
         if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.and(
                 Predicates.not(GathererJournal.Item::isFood),
-                Predicates.not(GathererJournal.Item::isEmpty)
+                Predicates.not(GathererJournal.Item::isEmpty),
+                Predicates.not(HeldItem::isLocked)
         ));
     }
 

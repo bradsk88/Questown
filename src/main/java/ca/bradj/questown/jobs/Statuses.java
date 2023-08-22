@@ -53,7 +53,7 @@ public class Statuses {
             return null;
         }
 
-        if (inventory.hasAnyLoot()) {
+        if (inventory.hasAnyDroppableLoot()) {
             if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
                 return GathererJournal.Status.DROPPING_LOOT;
             }
@@ -151,8 +151,10 @@ public class Statuses {
             return GathererJournal.Status.STAYING;
         }
 
-        if (currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-            if (town.IsStorageAvailable()) {
+        boolean townStorageAvailable = town.IsStorageAvailable();
+        boolean hasDroppableLoot = inventory.hasAnyDroppableLoot();
+        if (hasDroppableLoot && townStorageAvailable) {
+            if (currentStatus != GathererJournal.Status.DROPPING_LOOT) {
                 return GathererJournal.Status.DROPPING_LOOT;
             }
         }
@@ -161,11 +163,11 @@ public class Statuses {
                 GathererJournal.Status.RETURNED_SUCCESS,
                 GathererJournal.Status.DROPPING_LOOT,
                 GathererJournal.Status.IDLE
-        ).contains(currentStatus) && !inventory.hasAnyLoot()) {
+        ).contains(currentStatus) && !hasDroppableLoot) {
             return GathererJournal.Status.RELAXING;
         }
 
-        if (!town.IsStorageAvailable() && inventory.hasAnyLoot()) {
+        if (!townStorageAvailable && hasDroppableLoot) {
             if (currentStatus != GathererJournal.Status.NO_SPACE) {
                 return GathererJournal.Status.NO_SPACE;
             }

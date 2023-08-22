@@ -23,9 +23,14 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     private List<ItemsListener<H>> listeners = new ArrayList<>();
     private List<StatusListener> statusListeners = new ArrayList<>();
     private Status status = Status.UNSET;
-    private DefaultInventoryStateProvider<H> invState = new DefaultInventoryStateProvider<>(
-            () -> ImmutableList.copyOf(this.inventory)
-    );
+    private DefaultInventoryStateProvider<H> invState = new DefaultInventoryStateProvider<>(() -> ImmutableList.copyOf(
+            this.inventory));
+
+    public interface ToolsChecker<H extends HeldItem<H, ?>> {
+        Tools computeTools(Iterable<H> items);
+    }
+
+    private ToolsChecker<H> tools;
 
     public void lockSlot(int slot) {
         this.inventory.set(slot, this.inventory.get(slot).locked());
@@ -36,9 +41,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     }
 
     public List<Boolean> getSlotLockStatuses() {
-        return this.inventory.stream()
-                .map(HeldItem::isLocked)
-                .toList();
+        return this.inventory.stream().map(HeldItem::isLocked).toList();
     }
 
     public interface Converter<I extends Item<I>, H extends HeldItem<H, I>> {
@@ -50,7 +53,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             EmptyFactory<H> ef,
             Converter<I, H> converter,
             Statuses.TownStateProvider cont,
-            int inventoryCapacity
+            int inventoryCapacity,
+            ToolsChecker<H> tools
     ) {
         super();
         this.sigs = sigs;
@@ -62,6 +66,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         for (int i = 0; i < getCapacity(); i++) {
             this.inventory.add(ef.makeEmptyItem());
         }
+        this.tools = tools;
         updateItemListeners();
     }
 
@@ -72,11 +77,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
     @Override
     public String toString() {
-        return "GathererJournal{" +
-                "ate=" + ate +
-                ", inventory=" + inventory +
-                ", status=" + status +
-                '}';
+        return "GathererJournal{" + "ate=" + ate + ", inventory=" + inventory + ", status=" + status + '}';
     }
 
     public ImmutableList<H> getItems() {
@@ -91,8 +92,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         return inventory.stream().anyMatch(Item::isFood);
     }
 
-    public boolean hasAnyNonFood() {
-        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isFood());
+    public boolean hasAnyLootToDrop() {
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isFood() && !v.isLocked());
     }
 
     public boolean hasAnyItems() {
@@ -135,9 +136,12 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     ) {
         H curItem = inventory.get(index);
         if (!curItem.isEmpty()) {
-            throw new IllegalArgumentException(
-                    String.format("Cannot set to %s. Slot %d is not empty. [has: %s]", mcTownItem, index, curItem)
-            );
+            throw new IllegalArgumentException(String.format(
+                    "Cannot set to %s. Slot %d is not empty. [has: %s]",
+                    mcTownItem,
+                    index,
+                    curItem
+            ));
         }
         setItemNoUpdateNoCheck(index, mcTownItem);
         updateItemListeners();
@@ -184,7 +188,10 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
         Signals sig = sigs.getSignal();
         @Nullable GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
-                status, sig, this.invState, storageCheck
+                status,
+                sig,
+                this.invState,
+                storageCheck
         );
         if (newStatus == Status.GATHERING_EATING) {
             Snapshot<H> ss = getSnapshot(emptyFactory).withStatus(newStatus).eatFoodFromInventory(emptyFactory, sig);
@@ -192,7 +199,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             newStatus = ss.status();
         }
         if (newStatus == Status.RETURNED_SUCCESS && status != Status.RETURNED_SUCCESS && status != Status.IDLE) {
-            this.addLoot(loot.getLoot());
+            Tools tools1 = this.tools.computeTools(inventory);
+            this.addLoot(loot.getLoot(tools1));
         }
         if (newStatus != null) {
             changeStatus(newStatus);
@@ -250,7 +258,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         ImmutableList<H> initItems = b.build();
         if (initItems.size() != this.getCapacity()) {
             throw new IllegalArgumentException(String.format(
-                    "Argument to setItems is wrong length. Should be %s", this.getCapacity()
+                    "Argument to setItems is wrong length. Should be %s",
+                    this.getCapacity()
             ));
         }
         inventory.clear();
@@ -265,11 +274,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     }
 
     public enum Signals {
-        UNDEFINED,
-        MORNING,
-        NOON,
-        EVENING,
-        NIGHT;
+        UNDEFINED, MORNING, NOON, EVENING, NIGHT;
 
         public static Signals fromGameTime(long gameTime) {
             long dayTime = gameTime % 24000;
@@ -288,21 +293,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     // TODO: Add state for LEAVING and add signal for "left town"
     //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
     public enum Status {
-        UNSET,
-        IDLE,
-        NO_SPACE,
-        NO_FOOD,
-        STAYING,
-        GATHERING,
-        GATHERING_HUNGRY,
-        GATHERING_EATING,
-        RETURNING,
-        RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
-        RETURNED_SUCCESS,
-        DROPPING_LOOT,
-        RETURNED_FAILURE,
-        CAPTURED,
-        RELAXING, NO_GATE;
+        UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
+        RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE;
 
         public static Status from(String s) {
             return switch (s) {
@@ -326,32 +318,19 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         public boolean isReturning() {
-            return ImmutableList.of(
-                    RETURNING,
-                    RETURNING_AT_NIGHT
-            ).contains(this);
+            return ImmutableList.of(RETURNING, RETURNING_AT_NIGHT).contains(this);
         }
 
         public boolean isGathering() {
-            return ImmutableList.of(
-                    GATHERING,
-                    GATHERING_HUNGRY,
-                    GATHERING_HUNGRY
-            ).contains(this);
+            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY).contains(this);
         }
 
         public boolean isPreparing() {
-            return ImmutableList.of(
-                    NO_GATE,
-                    NO_FOOD
-            ).contains(this);
+            return ImmutableList.of(NO_GATE, NO_FOOD).contains(this);
         }
 
         public boolean isFinishingUp() {
-            return ImmutableList.of(
-                    RETURNED_SUCCESS,
-                    DROPPING_LOOT
-            ).contains(this);
+            return ImmutableList.of(RETURNED_SUCCESS, DROPPING_LOOT).contains(this);
         }
     }
 
@@ -375,8 +354,14 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         Signals getSignal();
     }
 
+    public record Tools(boolean hasAxe) {
+        public Tools withAxe() {
+            return new Tools(true);
+        }
+    }
+
     public interface LootProvider<I extends GathererJournal.Item> {
-        Collection<I> getLoot();
+        Collection<I> getLoot(Tools tools);
     }
 
     public interface EmptyFactory<I extends Item> {
@@ -400,7 +385,9 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             } else {
                 throw new IllegalStateException(String.format(
                         "Eating is only supported when the status is %s or %s [Was: %s]",
-                        Status.GATHERING_EATING, Status.RETURNED_SUCCESS, status
+                        Status.GATHERING_EATING,
+                        Status.RETURNED_SUCCESS,
+                        status
                 ));
             }
 
@@ -416,9 +403,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
             itemsCopy.set(lastIndex.getAsInt(), ef.makeEmptyItem());
 
-            return new Snapshot<>(
-                    nextStatus, ImmutableList.copyOf(itemsCopy)
-            );
+            return new Snapshot<>(nextStatus, ImmutableList.copyOf(itemsCopy));
         }
 
         public Snapshot<H> withStatus(@Nullable GathererJournal.Status newStatus) {
@@ -428,10 +413,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         @Override
         public String toString() {
             String itemsStr = "[\n\t" + String.join("\n\t", items.stream().map(Object::toString).toList()) + "\n]";
-            return "Snapshot{" +
-                    "\n\tstatus=" + status +
-                    ",\n\titems=" + itemsStr +
-                    "\n}";
+            return "Snapshot{" + "\n\tstatus=" + status + ",\n\titems=" + itemsStr + "\n}";
         }
     }
 }

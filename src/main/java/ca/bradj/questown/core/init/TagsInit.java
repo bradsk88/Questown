@@ -11,6 +11,7 @@ public class TagsInit {
     public static class Items {
 
         public static final TagKey<Item> VILLAGER_FOOD = createTag("villager_food");
+        public static final TagKey<Item> AXES = createTag("axes");
 
 
         private static TagKey<Item> createTag(String name) {

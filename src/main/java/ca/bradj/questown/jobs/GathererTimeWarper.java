@@ -17,19 +17,22 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     private final Town<I> town;
     private final GathererJournal.EmptyFactory<H> emptyFactory;
     private final ItemToEntityMover<I, H> converter;
+    private final GathererJournal.ToolsChecker<H> toolChecker;
 
     public GathererTimeWarper(
             FoodRemover<I> remover,
             LootGiver<I> lootGiver,
             Town<I> town,
             GathererJournal.EmptyFactory<H> emptyFactory,
-            ItemToEntityMover<I, H> converter
+            ItemToEntityMover<I, H> converter,
+            GathererJournal.ToolsChecker<H> toolChecker
     ) {
         this.remover = remover;
         this.lootGiver = lootGiver;
         this.town = town;
         this.emptyFactory = emptyFactory;
         this.converter = converter;
+        this.toolChecker = toolChecker;
     }
 
     public interface FoodRemover<I extends GathererJournal.Item<I>> {
@@ -39,7 +42,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
 
     public interface LootGiver<I extends GathererJournal.Item<I>> {
         // Return null if there is no food
-        @NotNull Iterable<I> giveLoot(int max);
+        @NotNull Iterable<I> giveLoot(int max, GathererJournal.Tools tools);
     }
 
     public interface Town<I extends GathererJournal.Item<I>> extends Statuses.TownStateProvider {
@@ -88,7 +91,8 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
                 newStatus = output.status();
             }
             if (newStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-                @NotNull Iterable<I> loot = lootGiver.giveLoot(lootPerDay);
+                GathererJournal.Tools tools = this.toolChecker.computeTools(output.items());
+                @NotNull Iterable<I> loot = lootGiver.giveLoot(lootPerDay, tools);
                 Iterator<I> iterator = loot.iterator();
                 outItems = outItems.stream().map(
                         v -> {

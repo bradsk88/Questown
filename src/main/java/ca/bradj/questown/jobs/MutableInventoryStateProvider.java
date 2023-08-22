@@ -3,14 +3,14 @@ package ca.bradj.questown.jobs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 
-public class MutableInventoryStateProvider<I extends GathererJournal.Item> implements InventoryStateProvider<I> {
+public class MutableInventoryStateProvider<I extends HeldItem<I, ?>> implements InventoryStateProvider<I> {
 
     private ImmutableCollection<I> items = ImmutableList.of();
     private final DefaultInventoryStateProvider<I> delegate = new DefaultInventoryStateProvider<>(
             () -> this.items
     );
 
-    public static <I extends GathererJournal.Item<I>> MutableInventoryStateProvider<I> withInitialItems(
+    public static <I extends HeldItem<I, ?>> MutableInventoryStateProvider<I> withInitialItems(
             ImmutableCollection<I> initialItems
     ) {
         MutableInventoryStateProvider<I> out = new MutableInventoryStateProvider<>();
@@ -26,8 +26,8 @@ public class MutableInventoryStateProvider<I extends GathererJournal.Item> imple
     }
 
     @Override
-    public boolean hasAnyLoot() {
-        return delegate.hasAnyLoot();
+    public boolean hasAnyDroppableLoot() {
+        return delegate.hasAnyDroppableLoot();
     }
 
     @Override

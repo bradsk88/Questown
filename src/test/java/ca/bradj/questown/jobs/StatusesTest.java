@@ -13,7 +13,7 @@ class StatusesTest {
                 GathererJournal.Signals.NOON,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return true;
                     }
 
@@ -63,7 +63,7 @@ class StatusesTest {
                 GathererJournal.Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return true;
                     }
 
@@ -121,7 +121,7 @@ class StatusesTest {
                 GathererJournal.Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return true;
                     }
 
@@ -179,7 +179,7 @@ class StatusesTest {
                 GathererJournal.Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return true;
                     }
 
@@ -230,7 +230,7 @@ class StatusesTest {
                 GathererJournal.Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return false;
                     }
 
@@ -283,7 +283,7 @@ class StatusesTest {
                 GathererJournal.Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return false;
                     }
 
@@ -336,7 +336,7 @@ class StatusesTest {
                 GathererJournal.Signals.NOON,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
-                    public boolean hasAnyLoot() {
+                    public boolean hasAnyDroppableLoot() {
                         return false;
                     }
 
@@ -380,6 +380,59 @@ class StatusesTest {
                 }
         );
         Assertions.assertEquals(GathererJournal.Status.STAYING, newStatus);
+    }
+
+    @Test
+    public void test_change_to_dropping_when_no_space_status_but_town_has_space_and_signal_is_evening() {
+        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+                GathererJournal.Status.NO_SPACE,
+                GathererJournal.Signals.EVENING,
+                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                    @Override
+                    public boolean hasAnyDroppableLoot() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean inventoryIsFull() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean inventoryHasFood() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasAnyItems() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return true;
+                    }
+                },
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return true;
+                    }
+
+                    @Override
+                    public ImmutableList depositItems(ImmutableList itemsToDeposit) {
+                        return ImmutableList.copyOf(
+                                itemsToDeposit.stream().map(v -> new GathererJournalTest.TestItem("")).toList()
+                        );
+                    }
+
+                    @Override
+                    public boolean hasGate() {
+                        return true;
+                    }
+                }
+        );
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, newStatus);
     }
 
 }

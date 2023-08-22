@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.GathererInventoryMenu;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -27,6 +28,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -70,7 +72,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             this.locks.add(new LockSlot(i, this));
         }
 
-        journal = new GathererJournal<MCTownItem, MCHeldItem>(this, MCHeldItem::Air, MCHeldItem::new, new Statuses.TownStateProvider() {
+        Statuses.TownStateProvider town = new Statuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return successTarget != null && successTarget.isStillValid();
@@ -80,7 +82,11 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             public boolean hasGate() {
                 return gateTarget != null;
             }
-        }, inventoryCapacity) {
+        };
+        journal = new GathererJournal<MCTownItem, MCHeldItem>(
+                this, MCHeldItem::Air, MCHeldItem::new,
+                town, inventoryCapacity, VisitorMobJob::checkTools
+        ) {
             @Override
             protected void changeStatus(Status s) {
                 super.changeStatus(s);
@@ -88,6 +94,16 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             }
         };
         journal.addItemsListener(this);
+    }
+
+    public static GathererJournal.Tools checkTools(Iterable<MCHeldItem> journalItems) {
+        GathererJournal.Tools tool = new GathererJournal.Tools(false);
+        for (MCHeldItem item : journalItems) {
+            if (Ingredient.of(TagsInit.Items.AXES).test(item.get().toItemStack())) {
+                tool = tool.withAxe();
+            }
+        }
+        return tool;
     }
 
     private static void processSignal(
@@ -139,27 +155,45 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         return this.signal;
     }
 
-    public Collection<MCTownItem> getLoot() {
-        return getLootFromLevel(level, journal.getCapacity());
+    public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
+        return getLootFromLevel(level, journal.getCapacity(), tools);
     }
 
     public static Collection<MCTownItem> getLootFromLevel(
             ServerLevel level,
-            int maxItems
+            int maxItems,
+            GathererJournal.Tools tools
     ) {
         if (level == null) {
             return ImmutableList.of();
         }
+
+        ImmutableList.Builder<MCTownItem> items = ImmutableList.builder();
+        if (tools.hasAxe()) {
+            List<MCTownItem> axed = computeAxedItems(level, maxItems);
+            items.addAll(axed);
+            maxItems = maxItems - axed.size();
+        }
+        // TODO: Handle other tool types
+        items.addAll(computeGatheredItems(level, maxItems));
+
+        ImmutableList<MCTownItem> list = items.build();
+
+        Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
+
+        return list;
+    }
+
+    @NotNull
+    private static List<MCTownItem> computeGatheredItems(
+            ServerLevel level,
+            int maxItems
+    ) {
         LootTable lootTable = level.getServer().getLootTables().get(
-                // TODO: Own loot table
-                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
+                new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla")
+        );
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
-        // TODO: Maybe add this once the entity is not a BlockEntity?
-//        LootContext lc = lcb
-//                .withParameter(LootContextParams.THIS_ENTITY, this)
-//                .withParameter(LootContextParams.ORIGIN, getBlockPos())
-//                .create(LootContextParamSets.ADVANCEMENT_REWARD);
 
         List<ItemStack> rItems = lootTable.getRandomItems(lc);
         Collections.shuffle(rItems);
@@ -169,9 +203,28 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
                 .map(MCTownItem::fromMCItemStack)
                 .toList()
                 .subList(0, subLen);
+        return list;
+    }
 
-        Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
+    @NotNull
+    private static List<MCTownItem> computeAxedItems(
+            ServerLevel level,
+            int maxItems
+    ) {
+        LootTable lootTable = level.getServer().getLootTables().get(
+                new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_axe")
+        );
+        LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
+        LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
+        List<ItemStack> rItems = lootTable.getRandomItems(lc);
+        Collections.shuffle(rItems);
+        int subLen = Math.min(rItems.size(), maxItems);
+        List<MCTownItem> list = rItems.stream()
+                .filter(v -> !v.isEmpty())
+                .map(MCTownItem::fromMCItemStack)
+                .toList()
+                .subList(0, subLen);
         return list;
     }
 
@@ -199,7 +252,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             BlockPos entityPos,
             TownInterface town
     ) {
-        if (journal.hasAnyNonFood()) {
+        if (journal.hasAnyLootToDrop()) {
             return setupForDropLoot(town);
         }
 
@@ -220,7 +273,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     }
 
     private BlockPos handleNoFoodStatus(TownInterface town) {
-        if (journal.hasAnyNonFood()) {
+        if (journal.hasAnyLootToDrop()) {
             return setupForDropLoot(town);
         }
 
@@ -348,7 +401,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             Questown.LOGGER.debug("Trying to drop too quickly");
         }
         this.dropping = true;
-        if (!journal.hasAnyNonFood()) {
+        if (!journal.hasAnyLootToDrop()) {
             Questown.LOGGER.trace("{} is not dropping because they only have food", uuid);
             this.dropping = false;
             return;
@@ -361,6 +414,11 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(journal.getItems()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
+                continue;
+            }
+            // TODO: Unit tests of this logic!
+            if (mct.isLocked()) {
+                Questown.LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
                 continue;
             }
             Questown.LOGGER.debug("Gatherer {} is putting {} in {}", uuid, mct, successTarget);
