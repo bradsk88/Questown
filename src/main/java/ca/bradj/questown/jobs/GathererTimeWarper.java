@@ -96,7 +96,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
                 Iterator<I> iterator = loot.iterator();
                 outItems = outItems.stream().map(
                         v -> {
-                            if (v.isEmpty()) {
+                            if (v.isEmpty() && iterator.hasNext()) {
                                 return converter.convert(iterator.next());
                             }
                             return v;
