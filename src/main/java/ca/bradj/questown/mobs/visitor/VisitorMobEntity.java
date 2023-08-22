@@ -346,6 +346,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     @Override
     public boolean save(CompoundTag p_20224_) {
+        if (town == null) {
+            Questown.LOGGER.error("Town is null. This is a bug.");
+            return super.save(p_20224_);
+        }
         BlockPos bp = this.town.getTownFlagBasePos();
         p_20224_.putInt(NBT_TOWN_X, bp.getX());
         p_20224_.putInt(NBT_TOWN_Y, bp.getY());

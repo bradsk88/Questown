@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -94,6 +95,10 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
                     );
                 }
             } else {
+                if (p_24060_.town == null) {
+                    Questown.LOGGER.error("No town exists. Cannot start.");
+                    return;
+                }
                 p_24060_.setWanderTarget(p_24060_.town.getRandomWanderTarget());
             }
 

@@ -29,6 +29,10 @@ public class FindOpenBed extends Behavior<VisitorMobEntity> {
             long p_22542_
     ) {
         super.start(p_22540_, entity, p_22542_);
+        if (entity.town == null) {
+            Questown.LOGGER.error("No town exists. Cannot start.");
+            return;
+        }
         Collection<BlockPos> bss = entity.town.findMatchedRecipeBlocks(
                 i -> i instanceof BedBlock
         );
