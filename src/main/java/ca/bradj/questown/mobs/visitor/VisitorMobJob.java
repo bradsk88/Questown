@@ -183,23 +183,27 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
-        if (tools.hasPick()) {
+        else if (tools.hasPick()) {
             List<MCTownItem> axed = computeWoodPickaxedItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
-        if (tools.hasShovel()) {
+        else if (tools.hasShovel()) {
             List<MCTownItem> axed = computeWoodShoveledItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
-        if (tools.hasRod()) {
+        else if (tools.hasRod()) {
             List<MCTownItem> axed = computeFishedItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
         // TODO: Handle other tool types
-        items.addAll(computeGatheredItems(level, maxItems));
+        else {
+            // Increase the number of gathered items if no tool is carried
+            items.addAll(computeGatheredItems(level, Math.min(3, maxItems), maxItems));
+        }
+        items.addAll(computeGatheredItems(level, Math.min(6, maxItems), maxItems));
 
         ImmutableList<MCTownItem> list = items.build();
 
@@ -211,9 +215,10 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     @NotNull
     private static List<MCTownItem> computeGatheredItems(
             ServerLevel level,
+            int minItems,
             int maxItems
     ) {
-        return getLoots(level, maxItems, new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
+        return getLoots(level, minItems, maxItems, new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
     }
 
     @NotNull
@@ -222,7 +227,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_axe");
-        return getLoots(level, maxItems, rl);
+        return getLoots(level, 3, maxItems, rl);
     }
 
     @NotNull
@@ -231,7 +236,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_pickaxe_wood");
-        return getLoots(level, maxItems, rl);
+        return getLoots(level, 3, maxItems, rl);
     }
 
     @NotNull
@@ -240,7 +245,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_shovel_wood");
-        return getLoots(level, maxItems, rl);
+        return getLoots(level, 3, maxItems, rl);
     }
 
     @NotNull
@@ -249,12 +254,13 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation("minecraft", "gameplay/fishing");
-        return getLoots(level, maxItems, rl);
+        return getLoots(level, 3, maxItems, rl);
     }
 
     @NotNull
     private static List<MCTownItem> getLoots(
             ServerLevel level,
+            int minItems,
             int maxItems,
             ResourceLocation rl
     ) {
@@ -266,13 +272,11 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
-        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
-        int bound = Math.max(0, maxItems - 1);
-        int max = level.random.nextInt(bound + 1);
-        for (int i = 0; i < max; i++) {
-            b.addAll(lootTable.getRandomItems(lc));
+        ArrayList<ItemStack> rItems = new ArrayList<>();
+        int max = Math.min(minItems, level.random.nextInt(maxItems) + 1);
+        while (rItems.size() < max) {
+            rItems.addAll(lootTable.getRandomItems(lc));
         }
-        ArrayList<ItemStack> rItems = new ArrayList<>(b.build());
         Collections.shuffle(rItems);
         int subLen = Math.min(rItems.size(), maxItems);
         List<MCTownItem> list = rItems.stream()
