@@ -5,7 +5,9 @@ import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AbstractGlassBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
@@ -39,8 +41,6 @@ public class WallDetection {
             return true;
         }
 
-        // TODO: Windows
-
         return false;
     }
 
@@ -62,6 +62,9 @@ public class WallDetection {
             Level level,
             BlockState blockState
     ) {
+        if (blockState.getBlock() instanceof AbstractGlassBlock || blockState.getBlock() instanceof IronBarsBlock) {
+            return true;
+        }
         return blockState.getShape(level, bp).bounds().getSize() >= 1 && !blockState.propagatesSkylightDown(
                 level,
                 bp
