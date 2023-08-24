@@ -100,10 +100,10 @@ public class GathererJournalTest {
 
     static class TestSignals implements GathererJournal.SignalSource {
 
-        GathererJournal.Signals currentSignal = GathererJournal.Signals.UNDEFINED;
+        Signals currentSignal = Signals.UNDEFINED;
 
         @Override
-        public GathererJournal.Signals getSignal() {
+        public Signals getSignal() {
             return currentSignal;
         }
     }
@@ -151,7 +151,7 @@ public class GathererJournalTest {
         // Trigger morning signal
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 new InventoryStateProvider<>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -189,7 +189,7 @@ public class GathererJournalTest {
     void testMorningSignalWithNoBreadAvailable() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 emptyInventory(),
                 new Statuses.TownStateProvider() {
                     @Override
@@ -240,7 +240,7 @@ public class GathererJournalTest {
     void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 withFoodAndLoot(),
                 infiniteStorageWithGate()
         );
@@ -295,7 +295,7 @@ public class GathererJournalTest {
     void testMorningSignalWithBreadAvailable() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 foodOnly(),
                 infiniteStorageWithGate()
         );
@@ -357,16 +357,16 @@ public class GathererJournalTest {
 
         gatherer.addItem(new TestItem("bread"));
 
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Trigger afternoon to set status to GATHERING_HUNGRY (to mimic typical scenario)
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger one evening signal for food
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick((heldItems) -> ImmutableList.of(
                 new TestItem("seeds"),
                 new TestItem("seeds"),
@@ -378,7 +378,7 @@ public class GathererJournalTest {
         ));
 
         // Trigger second evening signal for loot (signals happen in game every tick)
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick((heldItems) -> ImmutableList.of(
                 new TestItem("seeds"),
                 new TestItem("seeds"),
@@ -426,19 +426,19 @@ public class GathererJournalTest {
 
         gatherer.addItem(new TestItem("bread"));
 
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Collection<TestItem> items = gatherer.getItems();
@@ -475,7 +475,7 @@ public class GathererJournalTest {
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Trigger afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
@@ -505,7 +505,7 @@ public class GathererJournalTest {
         gatherer.initializeStatus(GathererJournal.Status.IDLE);
 
         // Trigger afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
@@ -537,16 +537,16 @@ public class GathererJournalTest {
         gatherer.addItem(new TestItem("bread"));
         gatherer.addItem(new TestItem("bread"));
 
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Trigger afternoon to set status to GATHERING_HUNGRY
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Collection<TestItem> items = gatherer.getItems();
@@ -586,11 +586,11 @@ public class GathererJournalTest {
 
         // With no food, trigger morning signal
         // Gatherer will begin looking for food
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Trigger afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
@@ -621,17 +621,17 @@ public class GathererJournalTest {
 
         gatherer.addItem(new TestItem("bread"));
 
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
         // Trigger FIRST afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger SECOND afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
     }
@@ -664,7 +664,7 @@ public class GathererJournalTest {
         // Initially has food
         gatherer.addItem(new TestItem("bread"));
 
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
@@ -672,12 +672,12 @@ public class GathererJournalTest {
         gatherer.removeItem(new TestItem("bread"));
 
         // Trigger FIRST afternoon signal (goes to IDLE due to legacy change detection)
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.IDLE, gatherer.getStatus());
 
         // Trigger SECOND afternoon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
     }
@@ -709,7 +709,7 @@ public class GathererJournalTest {
         gatherer.addItem(gold);
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Assert that the status is set to "returned successful"
@@ -744,7 +744,7 @@ public class GathererJournalTest {
         gatherer.addItem(gold);
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Assert that the status is set to "returned successful"
@@ -752,7 +752,7 @@ public class GathererJournalTest {
 
         // Make sure we don't flip back and forth between statuses
 
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         // Assert that the status is set to "returned successful"
@@ -787,19 +787,19 @@ public class GathererJournalTest {
         gatherer.addItem(gold);
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.NO_SPACE, gatherer.getStatus());
 
         gatherer.removeItem(gold);
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
 
         // Confirm stays in that status
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         Assertions.assertEquals(GathererJournal.Status.RELAXING, gatherer.getStatus());
@@ -833,12 +833,12 @@ public class GathererJournalTest {
         gatherer.addItem(gold);
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
-                GathererJournal.Signals.EVENING,
+                Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -871,7 +871,7 @@ public class GathererJournalTest {
 
         newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE, // Happens when you remove an item
-                GathererJournal.Signals.EVENING,
+                Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -905,7 +905,7 @@ public class GathererJournalTest {
         // Confirm stays in that status
         newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
-                GathererJournal.Signals.EVENING,
+                Signals.EVENING,
                 emptyInventory(),
                 infiniteStorageWithGate()
         );
@@ -939,14 +939,14 @@ public class GathererJournalTest {
         // No food
 
         // Trigger morning signal
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, gatherer.getStatus());
 
         // No noon signal
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
     }
@@ -978,24 +978,24 @@ public class GathererJournalTest {
         gatherer.addItem(new TestItem("bread"));
 
         // Trigger morning signal
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
         // No noon signal
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger another evening signal (happens every tick in game)
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(items -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.RETURNING_AT_NIGHT, gatherer.getStatus());
 
         // Trigger another evening signal (happens every tick in game)
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         // Must have loot or else gatherer will go to "relaxing" instead of "returned success"
         gatherer.tick((tools) -> ImmutableList.of(
                 new TestItem("gold")
@@ -1032,27 +1032,27 @@ public class GathererJournalTest {
         gatherer.addItem(new TestItem("bread"));
 
         // Trigger morning signal
-        sigs.currentSignal = GathererJournal.Signals.MORNING;
+        sigs.currentSignal = Signals.MORNING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING, gatherer.getStatus());
 
         // Start returning at noon
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, gatherer.getStatus());
 
         // Trigger evening signal
-        sigs.currentSignal = GathererJournal.Signals.EVENING;
+        sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.RETURNING_AT_NIGHT, gatherer.getStatus());
 
         // Trigger noon signal
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.RETURNING, gatherer.getStatus());
 
         // Trigger noon signal again
-        sigs.currentSignal = GathererJournal.Signals.NOON;
+        sigs.currentSignal = Signals.NOON;
         gatherer.tick(heldItems -> ImmutableList.of());
         Assertions.assertEquals(GathererJournal.Status.STAYING, gatherer.getStatus());
     }

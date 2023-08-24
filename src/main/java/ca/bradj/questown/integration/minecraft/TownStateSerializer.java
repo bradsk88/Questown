@@ -1,26 +1,20 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.HeldItem;
-import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
-import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -54,7 +48,7 @@ public class TownStateSerializer {
             vTag.putDouble("x", e.xPosition);
             vTag.putDouble("y", e.yPosition);
             vTag.putDouble("z", e.zPosition);
-            vTag.putString("journal_status", e.journal.status().name());
+            vTag.putString("journal_status", e.journal.statusStringValue());
             ListTag journalItems = new ListTag();
             for (MCHeldItem item : e.journal.items()) {
                 journalItems.add(item.serializeNBT());

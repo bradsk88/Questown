@@ -15,7 +15,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     private final FoodRemover<I> remover;
     private final LootGiver<I> lootGiver;
     private final Town<I> town;
-    private final GathererJournal.EmptyFactory<H> emptyFactory;
+    private final EmptyFactory<H> emptyFactory;
     private final ItemToEntityMover<I, H> converter;
     private final GathererJournal.ToolsChecker<H> toolChecker;
 
@@ -23,7 +23,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
             FoodRemover<I> remover,
             LootGiver<I> lootGiver,
             Town<I> town,
-            GathererJournal.EmptyFactory<H> emptyFactory,
+            EmptyFactory<H> emptyFactory,
             ItemToEntityMover<I, H> converter,
             GathererJournal.ToolsChecker<H> toolChecker
     ) {
@@ -68,7 +68,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         long max = currentTick + ticksPassed;
 
         for (long i = start; i <= max; i = getNextDaySegment(i, max)) {
-            GathererJournal.Signals signal = GathererJournal.Signals.fromGameTime(
+            Signals signal = Signals.fromGameTime(
                     i
             );
             GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
@@ -118,7 +118,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
             List<H> outItems,
             Town<I> town,
             ItemToEntityMover<I, H> converter,
-            GathererJournal.EmptyFactory<H> emptyFactory
+            EmptyFactory<H> emptyFactory
     ) {
         ImmutableList<I> itemsToDeposit = ImmutableList.copyOf(
                 outItems.stream()
@@ -153,7 +153,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     private static <I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
             List<H> outItems,
             I food,
-            GathererJournal.Signals signal,
+            Signals signal,
             ItemToEntityMover<I, H> mover
     ) {
         // TODO: More efficient way to do this?

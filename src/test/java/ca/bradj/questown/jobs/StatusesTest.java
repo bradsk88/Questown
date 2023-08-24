@@ -10,7 +10,7 @@ class StatusesTest {
     public void test_should_change_to_returning_if_currently_returned_success_and_signal_is_noon() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
-                GathererJournal.Signals.NOON,
+                Signals.NOON,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -60,7 +60,7 @@ class StatusesTest {
     public void test_should_stay_dropping_if_currently_dropping_and_signal_is_evening() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.DROPPING_LOOT,
-                GathererJournal.Signals.EVENING,
+                Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -118,7 +118,7 @@ class StatusesTest {
     public void test_should_stay_dropping_if_currently_dropping_and_inventory_full_and_signal_is_morning() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.DROPPING_LOOT,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -176,7 +176,7 @@ class StatusesTest {
     public void test_should_stay_in_nospace_if_currently_nospace_and_inventory_full_and_no_space_and_signal_is_morning() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_SPACE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -227,7 +227,7 @@ class StatusesTest {
     public void test_return_nogate_when_no_gate_and_signal_is_morning() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -280,7 +280,7 @@ class StatusesTest {
     public void test_return_gathering_when_status_is_no_gate_and_signal_is_morning() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_GATE,
-                GathererJournal.Signals.MORNING,
+                Signals.MORNING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -333,7 +333,7 @@ class StatusesTest {
     public void test_change_to_stating_when_no_gate_and_signal_is_noon() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.UNSET,
-                GathererJournal.Signals.NOON,
+                Signals.NOON,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
@@ -386,7 +386,7 @@ class StatusesTest {
     public void test_change_to_dropping_when_no_space_status_but_town_has_space_and_signal_is_evening() {
         GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_SPACE,
-                GathererJournal.Signals.EVENING,
+                Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {

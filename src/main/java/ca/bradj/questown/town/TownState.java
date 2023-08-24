@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -113,13 +114,13 @@ public class TownState<
     public static final class VillagerData<I extends HeldItem<I, ? extends GathererJournal.Item<?>>> {
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
-        public final GathererJournal.Snapshot<I> journal;
+        public final Snapshot<I> journal;
 
         public VillagerData(
                 double xPosition,
                 double yPosition,
                 double zPosition,
-                GathererJournal.Snapshot<I> journal,
+                Snapshot<I> journal,
                 UUID uuid
         ) {
             this.xPosition = xPosition;

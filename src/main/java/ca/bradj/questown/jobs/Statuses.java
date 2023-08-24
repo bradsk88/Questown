@@ -13,7 +13,7 @@ public class Statuses {
 
     public static @Nullable GathererJournal.Status getNewStatusFromSignal(
             GathererJournal.Status currentStatus,
-            GathererJournal.Signals signal,
+            Signals signal,
             InventoryStateProvider<?> inventory,
             TownStateProvider town
     ) {

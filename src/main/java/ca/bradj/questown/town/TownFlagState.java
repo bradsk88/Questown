@@ -4,9 +4,10 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.mobs.visitor.VisitorMobJob;
+import ca.bradj.questown.mobs.visitor.GathererJob;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -47,10 +48,9 @@ public class TownFlagState {
                     return null;
                 }
                 Vec3 pos = entity.position();
+                Snapshot snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<>(
-                        pos.x, pos.y, pos.z,
-                        ((VisitorMobEntity) entity).getJobJournalSnapshot(),
-                        entity.getUUID()
+                        pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
                 vB.add(data);
             }
@@ -97,24 +97,30 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> VisitorMobJob.getLootFromLevel(sl, max, tools);
+        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> GathererJob.getLootFromLevel(sl, max, tools);
         GathererTimeWarper<MCTownItem, MCHeldItem> warper = new GathererTimeWarper<MCTownItem, MCHeldItem>(
                 storedState, loot, storedState,
                 MCHeldItem::Air, MCHeldItem::new,
-                VisitorMobJob::checkTools
+                GathererJob::checkTools
         );
 
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            GathererJournal.Snapshot<MCHeldItem> unwarped = v.journal;
+            Snapshot unwarped = v.journal;
             Questown.LOGGER.debug("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
-            GathererJournal.Snapshot<MCHeldItem> warped = warper.timeWarp(
-                    unwarped,
-                    dayTime,
-                    ticksPassed,
-                    v.getCapacity()
-            );
-            Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
+            Snapshot warped = unwarped;
+            if (unwarped instanceof GathererJournal.Snapshot<?>) {
+                warped = warper.timeWarp(
+                        (GathererJournal.Snapshot<MCHeldItem>) unwarped,
+                        dayTime,
+                        ticksPassed,
+                        v.getCapacity()
+                );
+                Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
+            } else {
+                // TODO: Implement generic snapshot warping
+                Questown.LOGGER.error("Warping not implemented");
+            }
             villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
         }
 

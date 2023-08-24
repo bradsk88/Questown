@@ -7,7 +7,7 @@ import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -111,14 +111,14 @@ public class VisitorMobEntity extends PathfinderMob {
             SensorType.NEAREST_BED
     );
 
-    final VisitorMobJob job = getJob();
+    Job<MCHeldItem, ? extends Snapshot> job = getJob();
     private static final int inventoryCapacity = 6;
     private final AABB defaultBB;
 
     // TODO: Make this abstract or injectable
     @NotNull
-    private VisitorMobJob getJob() {
-        return new VisitorMobJob(level.isClientSide() ? null : (ServerLevel) level, inventoryCapacity);
+    private GathererJob getJob() {
+        return new GathererJob(level.isClientSide() ? null : (ServerLevel) level, inventoryCapacity, uuid);
     }
 
     boolean sitting = true;
@@ -297,8 +297,6 @@ public class VisitorMobEntity extends PathfinderMob {
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
-            job.tryDropLoot(uuid, blockPosition());
-            job.tryTakeFood(blockPosition());
             entityData.set(status, job.getStatus().name());
         }
     }
@@ -368,7 +366,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
-        job.getItems().forEach(v -> items.add(v.serializeNBT()));
+        Jobs.getItems(job).forEach(v -> items.add(v.serializeNBT()));
         p_21484_.put("items", items);
     }
 
@@ -627,11 +625,11 @@ public class VisitorMobEntity extends PathfinderMob {
 //        return false;
 //    }
 
-    public void setStatusListener(GathererJournal.StatusListener l) {
+    public void setStatusListener(StatusListener l) {
         job.addStatusListener(l);
     }
 
-    public GathererJournal.Snapshot<MCHeldItem> getJobJournalSnapshot() {
+    public Snapshot getJobJournalSnapshot() {
         return job.getJournalSnapshot();
     }
 
@@ -640,9 +638,15 @@ public class VisitorMobEntity extends PathfinderMob {
             double xPos,
             double yPos,
             double zPos,
-            GathererJournal.Snapshot<MCHeldItem> journal
+            Snapshot journal
     ) {
-        job.initialize(journal);
+        // TODO: Implement generic job initialization
+        if (journal instanceof GathererJournal.Snapshot && job instanceof GathererJob j) {
+            j.initialize((GathererJournal.Snapshot<MCHeldItem>) journal);
+            job = j;
+        } else {
+            Questown.LOGGER.error("Initialization not implemented");
+        }
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;
@@ -673,4 +677,17 @@ public class VisitorMobEntity extends PathfinderMob {
     public void addChangeListener(ChangeListener cl) {
         this.changeListeners.add(cl);
     }
+
+    // TODO: Generalize
+    public void convertToCook() {
+        if (level.isClientSide()) {
+            return;
+        }
+        Job<MCHeldItem, ? extends Snapshot> job1 = new CookJob(
+                (ServerLevel) level,
+                6
+        );
+        this.job = job1;
+    }
+
 }

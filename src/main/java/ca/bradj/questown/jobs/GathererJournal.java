@@ -40,8 +40,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         this.inventory.set(slotIndex, this.inventory.get(slotIndex).unlocked());
     }
 
-    public List<Boolean> getSlotLockStatuses() {
-        return this.inventory.stream().map(HeldItem::isLocked).toList();
+    public ImmutableList<Boolean> getSlotLockStatuses() {
+        return ImmutableList.copyOf(this.inventory.stream().map(HeldItem::isLocked).toList());
     }
 
     public interface Converter<I extends Item<I>, H extends HeldItem<H, I>> {
@@ -253,17 +253,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     }
 
     public void setItems(Iterable<H> mcTownItemStream) {
-        ImmutableList.Builder<H> b = ImmutableList.builder();
-        mcTownItemStream.forEach(b::add);
-        ImmutableList<H> initItems = b.build();
-        if (initItems.size() != this.getCapacity()) {
-            throw new IllegalArgumentException(String.format(
-                    "Argument to setItems is wrong length. Should be %s",
-                    this.getCapacity()
-            ));
-        }
-        inventory.clear();
-        inventory.addAll(initItems);
+        Jobs.setItemsOnJournal(mcTownItemStream, inventory, getCapacity());
         updateItemListeners();
     }
 
@@ -271,23 +261,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         inventory.clear();
         inventory.addAll(build);
         changeStatus(Status.IDLE);
-    }
-
-    public enum Signals {
-        UNDEFINED, MORNING, NOON, EVENING, NIGHT;
-
-        public static Signals fromGameTime(long gameTime) {
-            long dayTime = gameTime % 24000;
-            if (dayTime < 6000) {
-                return GathererJournal.Signals.MORNING;
-            } else if (dayTime < 11500) {
-                return GathererJournal.Signals.NOON;
-            } else if (dayTime < 22000) {
-                return GathererJournal.Signals.EVENING;
-            } else {
-                return GathererJournal.Signals.NIGHT;
-            }
-        }
     }
 
     // TODO: Add state for LEAVING and add signal for "left town"
@@ -334,10 +307,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
     }
 
-    public interface StatusListener {
-        void statusChanged(Status newStatus);
-    }
-
     public interface ItemsListener<I> {
         void itemsChanged(ImmutableList<I> items);
     }
@@ -372,15 +341,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
     }
 
-    public interface LootProvider<I extends GathererJournal.Item> {
+    public interface LootProvider<I extends GathererJournal.Item<I>> {
         Collection<I> getLoot(Tools tools);
     }
 
-    public interface EmptyFactory<I extends Item> {
-        I makeEmptyItem();
-    }
-
-    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status, ImmutableList<H> items) {
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status, ImmutableList<H> items) implements ca.bradj.questown.jobs.Snapshot<H> {
 
         public Snapshot<H> eatFoodFromInventory(
                 EmptyFactory<H> ef,
@@ -426,6 +391,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         public String toString() {
             String itemsStr = "[\n\t" + String.join("\n\t", items.stream().map(Object::toString).toList()) + "\n]";
             return "Snapshot{" + "\n\tstatus=" + status + ",\n\titems=" + itemsStr + "\n}";
+        }
+
+        @Override
+        public String statusStringValue() {
+            return status.name();
         }
     }
 }

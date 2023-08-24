@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -22,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class GathererInventoryMenu extends AbstractContainerMenu implements GathererJournal.StatusListener {
+public class GathererInventoryMenu extends AbstractContainerMenu implements StatusListener {
 
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
