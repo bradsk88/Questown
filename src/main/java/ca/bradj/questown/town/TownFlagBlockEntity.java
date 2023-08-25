@@ -488,6 +488,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId) {
+        return roomsMap.getRoomsMatching(recipeId);
+    }
+
+    @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch i : roomsMap.getAllMatches()) {

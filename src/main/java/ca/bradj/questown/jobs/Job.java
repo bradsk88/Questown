@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -42,7 +43,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
 
     DataSlot getLockSlot(int i);
 
-    BlockPos getTarget(
+    @Nullable BlockPos getTarget(
             BlockPos entityPos,
             TownInterface town
     );

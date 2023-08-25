@@ -45,7 +45,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         @NotNull Iterable<I> giveLoot(int max, GathererJournal.Tools tools);
     }
 
-    public interface Town<I extends GathererJournal.Item<I>> extends Statuses.TownStateProvider {
+    public interface Town<I extends GathererJournal.Item<I>> extends GathererStatuses.TownStateProvider {
 
         // Returns any items that were NOT deposited
         ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
@@ -71,7 +71,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
             Signals signal = Signals.fromGameTime(
                     i
             );
-            GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+            GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                     output.status(), signal, stateGetter, town
             );
             if (newStatus == null) {

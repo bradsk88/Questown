@@ -38,6 +38,7 @@ public class TownCycle {
         ImmutableCollection<Position> foundDoors = ImmutableList.of();
         if (scanAroundPosition != null) {
             foundDoors = findDoors(checker, scanAroundPosition);
+            // TODO: Register these doors?
         }
         ImmutableList.Builder<Position> b = ImmutableList.builder();
         ImmutableList<Position> allDoors = b.addAll(foundDoors).addAll(registeredDoors).build();

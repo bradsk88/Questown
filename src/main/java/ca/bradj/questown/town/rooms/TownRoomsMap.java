@@ -2,6 +2,7 @@ package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.town.MCRoom;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -15,6 +16,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
@@ -184,5 +186,26 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     public void registerDoor(Position p, int scanLevel) {
         registeredDoors.add(new BlockPos(p.x, scanLevel, p.z)); // FIXME: Define our own type to avoid confusion
         Questown.LOGGER.debug("Door was registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
+    }
+
+    public Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId) {
+        ImmutableList.Builder<MCRoom> b = ImmutableList.builder();
+        for (BlockPos p : registeredDoors) {
+            int y = p.getY();
+            Position pz = Positions.FromBlockPos(p);
+            TownRooms rooms = activeRooms.get(y);
+            Optional<Room> room = rooms.getAll().stream().filter(v -> v.getDoorPos().equals(pz)).findFirst();
+            if (room.isEmpty()) {
+                Questown.LOGGER.error("No active room found for registered door position {}", p);
+                continue;
+            }
+            ActiveRecipes<RoomRecipeMatch> recipes = activeRecipes.get(y);
+            for (Map.Entry<Position, RoomRecipeMatch> m : recipes.entrySet()) {
+                if (m.getValue().getRecipeID().equals(recipeId)) {
+                    b.add(new MCRoom(room.get(), y));
+                }
+            }
+        }
+        return b.build();
     }
 }

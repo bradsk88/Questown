@@ -678,12 +678,22 @@ public class VisitorMobEntity extends PathfinderMob {
         this.changeListeners.add(cl);
     }
 
+    // TODO: Remove this
+    @Override
+    public boolean hurt(
+            DamageSource p_21016_,
+            float p_21017_
+    ) {
+        convertToCook();
+        return super.hurt(p_21016_, p_21017_);
+    }
+
     // TODO: Generalize
     public void convertToCook() {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot> job1 = new CookJob(
+        Job<MCHeldItem, ? extends Snapshot> job1 = new FarmerJob(
                 (ServerLevel) level,
                 6
         );

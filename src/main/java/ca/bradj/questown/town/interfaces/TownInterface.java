@@ -4,10 +4,12 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.MCRoom;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +52,8 @@ public interface TownInterface {
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 
     UUID getRandomVillager(Random random);
+
+    Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

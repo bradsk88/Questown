@@ -15,7 +15,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I> & GathererJournal.Item<H>> {
     private final SignalSource sigs;
     private final EmptyFactory<H> emptyFactory;
-    private final Statuses.TownStateProvider storageCheck;
+    private final GathererStatuses.TownStateProvider storageCheck;
     private final int capacity;
     private final Converter<I, H> converter;
     private List<H> inventory;
@@ -52,7 +52,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             SignalSource sigs,
             EmptyFactory<H> ef,
             Converter<I, H> converter,
-            Statuses.TownStateProvider cont,
+            GathererStatuses.TownStateProvider cont,
             int inventoryCapacity,
             ToolsChecker<H> tools
     ) {
@@ -187,7 +187,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         Signals sig = sigs.getSignal();
-        @Nullable GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        @Nullable GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 status,
                 sig,
                 this.invState,
@@ -267,7 +267,9 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
     public enum Status {
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
-        RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE;
+        RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
+        // TODO: Move to farmer-specific status
+        FARMING;
 
         public static Status from(String s) {
             return switch (s) {
@@ -345,7 +347,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         Collection<I> getLoot(Tools tools);
     }
 
-    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status, ImmutableList<H> items) implements ca.bradj.questown.jobs.Snapshot<H> {
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status,
+                                                               ImmutableList<H> items) implements ca.bradj.questown.jobs.Snapshot<H> {
 
         public Snapshot<H> eatFoodFromInventory(
                 EmptyFactory<H> ef,

@@ -115,7 +115,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -137,7 +137,7 @@ public class GathererJournalTest {
     // TODO: Move many of these to StatusesTest
     @Test
     void testMorningSignalWithNoSpaceInInventory() {
-        Statuses.TownStateProvider noSpace = new Statuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider noSpace = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return false;
@@ -149,7 +149,7 @@ public class GathererJournalTest {
             }
         };
         // Trigger morning signal
-        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new InventoryStateProvider<>() {
@@ -187,11 +187,11 @@ public class GathererJournalTest {
 
     @Test
     void testMorningSignalWithNoBreadAvailable() {
-        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 emptyInventory(),
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -238,7 +238,7 @@ public class GathererJournalTest {
 
     @Test
     void testMorningSignal_WithFoodAndLootAvailable_ShouldReturnLoot() {
-        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 withFoodAndLoot(),
@@ -248,8 +248,8 @@ public class GathererJournalTest {
         Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, newStatus);
     }
 
-    private Statuses.TownStateProvider infiniteStorageWithGate() {
-        return new Statuses.TownStateProvider() {
+    private GathererStatuses.TownStateProvider infiniteStorageWithGate() {
+        return new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return true;
@@ -293,7 +293,7 @@ public class GathererJournalTest {
 
     @Test
     void testMorningSignalWithBreadAvailable() {
-        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 foodOnly(),
@@ -340,7 +340,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -408,7 +408,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -458,7 +458,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -488,7 +488,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -518,7 +518,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -568,7 +568,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -603,7 +603,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -645,7 +645,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -689,7 +689,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -719,7 +719,7 @@ public class GathererJournalTest {
     @Test
     void testEveningSignalSetsNoSpaceStatus_WhenNoSpaceInTown() {
         TestSignals sigs = new TestSignals();
-        Statuses.TownStateProvider noSpaceInTown = new Statuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider noSpaceInTown = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return false;
@@ -762,7 +762,7 @@ public class GathererJournalTest {
     @Test
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasNoSpace() {
         TestSignals sigs = new TestSignals();
-        Statuses.TownStateProvider noSpace = new Statuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider noSpace = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return false;
@@ -808,7 +808,7 @@ public class GathererJournalTest {
     @Test
     void testEveningSignalMovesFromSuccessToRelaxingStatusWhenNoItems_AndTownHasSpace() {
         TestSignals sigs = new TestSignals();
-        Statuses.TownStateProvider hasSpace = new Statuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider hasSpace = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return true;
@@ -836,7 +836,7 @@ public class GathererJournalTest {
         sigs.currentSignal = Signals.EVENING;
         gatherer.tick(heldItems -> ImmutableList.of());
 
-        GathererJournal.Status newStatus = Statuses.getNewStatusFromSignal(
+        GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
                 Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item>() {
@@ -869,7 +869,7 @@ public class GathererJournalTest {
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, newStatus);
 
-        newStatus = Statuses.getNewStatusFromSignal(
+        newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE, // Happens when you remove an item
                 Signals.EVENING,
                 new InventoryStateProvider<GathererJournal.Item>() {
@@ -903,7 +903,7 @@ public class GathererJournalTest {
         Assertions.assertEquals(GathererJournal.Status.RELAXING, newStatus);
 
         // Confirm stays in that status
-        newStatus = Statuses.getNewStatusFromSignal(
+        newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
                 Signals.EVENING,
                 emptyInventory(),
@@ -920,7 +920,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -958,7 +958,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return false;
@@ -1012,7 +1012,7 @@ public class GathererJournalTest {
                 sigs,
                 () -> new TestItem(""),
                 t -> t,
-                new Statuses.TownStateProvider() {
+                new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;

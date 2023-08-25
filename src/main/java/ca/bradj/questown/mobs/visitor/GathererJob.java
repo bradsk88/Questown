@@ -2,7 +2,7 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.gui.GathererInventoryMenu;
+import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -76,7 +76,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             this.locks.add(new LockSlot(i, this));
         }
 
-        Statuses.TownStateProvider town = new Statuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider town = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return successTarget != null && successTarget.isStillValid();
@@ -314,6 +314,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
             case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(town);
             case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
+            case FARMING -> throw new IllegalArgumentException("Gatherer was given farmer status");
         };
     }
 
@@ -534,7 +535,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new GathererInventoryMenu(windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e);
+                return new InventoryAndStatusMenu(windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e);
             }
         }, data -> {
             data.writeInt(journal.getCapacity());

@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.StatusListener;
@@ -17,13 +16,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class GathererInventoryMenu extends AbstractContainerMenu implements StatusListener {
+public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
 
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
@@ -36,14 +34,14 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Stat
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
 
-    public static GathererInventoryMenu ForClientSide(
+    public static InventoryAndStatusMenu ForClientSide(
             int windowId,
             Inventory inv,
             FriendlyByteBuf buf
     ) {
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
-        return new GathererInventoryMenu(windowId,
+        return new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(size) {
                     @Override
@@ -54,7 +52,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Stat
         );
     }
 
-    public GathererInventoryMenu(
+    public InventoryAndStatusMenu(
             int windowId,
             Container gathererInv,
             Inventory inv,
@@ -64,37 +62,7 @@ public class GathererInventoryMenu extends AbstractContainerMenu implements Stat
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
         this.playerInventory = new InvWrapper(inv);
-        this.gathererInventory = new InvWrapper(gathererInv) {
-            @NotNull
-            @Override
-            public ItemStack insertItem(
-                    int slot,
-                    @NotNull ItemStack stack,
-                    boolean simulate
-            ) {
-                ItemStack result = super.insertItem(slot, stack, simulate);
-                boolean transferredAny = !stack.equals(result);
-                if (transferredAny) {
-                    Questown.LOGGER.debug("Marking slot {} as locked", slot);
-                    lockedSlots.get(slot).set(1); // 1 - locked
-                }
-                return result;
-            }
-
-            @NotNull
-            @Override
-            public ItemStack extractItem(
-                    int slot,
-                    int amount,
-                    boolean simulate
-            ) {
-                ItemStack extracted = super.extractItem(slot, amount, simulate);
-                if (!extracted.isEmpty()) {
-                    lockedSlots.get(slot).set(0);
-                }
-                return extracted;
-            }
-        };
+        this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.entity = gatherer;
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove

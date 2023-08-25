@@ -19,9 +19,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-import static ca.bradj.questown.gui.GathererInventoryMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
+import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
 
-public class GathererInventoryScreen extends AbstractContainerScreen<GathererInventoryMenu> {
+public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryAndStatusMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -30,7 +30,7 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
 
-    public GathererInventoryScreen(GathererInventoryMenu gathererInv, Inventory playerInv, Component title) {
+    public InventoryAndStatusScreen(InventoryAndStatusMenu gathererInv, Inventory playerInv, Component title) {
         super(gathererInv, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
@@ -71,6 +71,9 @@ public class GathererInventoryScreen extends AbstractContainerScreen<GathererInv
                 // TODO: Icon for this
                 new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
             case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
+                // TODO: Icon for this
+                new ResourceLocation("questown", "textures/error.png");
+            case FARMING ->
                 // TODO: Icon for this
                 new ResourceLocation("questown", "textures/error.png");
         };

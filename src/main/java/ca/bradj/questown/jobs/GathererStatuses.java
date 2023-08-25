@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
-public class Statuses {
+public class GathererStatuses {
 
     public interface TownStateProvider {
 
