@@ -40,10 +40,13 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -55,6 +58,7 @@ import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -67,6 +71,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -106,6 +113,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     final VisitorMobJob job = getJob();
     private static final int inventoryCapacity = 6;
+    private final AABB defaultBB;
 
     // TODO: Make this abstract or injectable
     @NotNull
@@ -126,6 +134,7 @@ public class VisitorMobEntity extends PathfinderMob {
             TownInterface town
     ) {
         super(ownType, level);
+        this.defaultBB = getBoundingBox();
         this.town = town;
         if (town != null) {
             initBrain();
@@ -143,7 +152,10 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public static AttributeSupplier setAttributes() {
-        return PathfinderMob.createMobAttributes().build();
+        return PathfinderMob
+                .createMobAttributes()
+                .add(Attributes.FOLLOW_RANGE, 48.0)
+                .build();
     }
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getCorePackage(
@@ -292,14 +304,64 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
+    public void remove(RemovalReason p_146834_) {
+        super.remove(p_146834_);
+        if (p_146834_.equals(RemovalReason.KILLED)) {
+            for (int i = 0; i < getInventory().getContainerSize(); i++) {
+                level.addFreshEntity(new ItemEntity(level, position().x, position().y, position().z, getInventory().getItem(i)));
+            }
+        }
+    }
+
+    @Override
     public boolean isColliding(
             BlockPos p_20040_,
             BlockState p_20041_
     ) {
-        if (!this.entityData.get(visible)) {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
             return false;
         }
         return super.isColliding(p_20040_, p_20041_);
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return false;
+        }
+        return super.canBeCollidedWith();
+    }
+
+    @Override
+    public boolean canCollideWith(Entity p_20303_) {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return false;
+        }
+        return super.canCollideWith(p_20303_);
+    }
+
+    @Override
+    public void push(double p_20286_, double p_20287_, double p_20288_) {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return;
+        }
+        super.push(p_20286_, p_20287_, p_20288_);
+    }
+
+    @Override
+    protected void pushEntities() {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return;
+        }
+        super.pushEntities();
+    }
+
+    @Override
+    public boolean hurt(DamageSource p_21016_, float p_21017_) {
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return false;
+        }
+        return super.hurt(p_21016_, p_21017_);
     }
 
     @Override
@@ -384,6 +446,11 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
+    public float getPathfindingMalus(BlockPathTypes p_21440_) {
+        return super.getPathfindingMalus(p_21440_);
+    }
+
+    @Override
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
@@ -436,6 +503,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public void stopSleeping() {
         super.stopSleeping();
         this.brain.setMemory(MemoryModuleType.LAST_WOKEN, this.level.getGameTime());
+        this.setHealth(this.getMaxHealth());
     }
 
     @Override

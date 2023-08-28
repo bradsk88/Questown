@@ -135,7 +135,18 @@ public class Statuses {
 
         // TODO: What if the gatherer is out but doesn't have food (somehow)
         //  Maybe they return unsuccessfully (and early?)
-        throw new IllegalStateException("Unhandled status branch");
+        throw new IllegalStateException(
+                String.format(
+                        "Unhandled status branch [" +
+                                "curStatus: %s, hasGate: %s, storAvl: %s" +
+                                "droppable: %s, items: %s, food: %s, full: %s, valid: %s" +
+                        "]",
+                        currentStatus, town.hasGate(), town.IsStorageAvailable(),
+                        inventory.hasAnyDroppableLoot(), inventory.hasAnyItems(),
+                        inventory.inventoryHasFood(), inventory.inventoryIsFull(),
+                        inventory.isValid()
+                )
+        );
     }
 
     @Nullable

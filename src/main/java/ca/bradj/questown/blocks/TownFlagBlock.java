@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -107,10 +109,15 @@ public class TownFlagBlock extends BaseEntityBlock {
             InteractionHand hand,
             TownFlagBlockEntity entity
     ) {
+        ItemStack itemInHand = player.getItemInHand(hand);
+        if (itemInHand.getItem().equals(Items.APPLE)) {
+            entity.addImmediateReward(new SpawnVisitorReward(entity));
+            return InteractionResult.sidedSuccess(false);
+        }
+
         // TODO: Consider making a new recipe type so any item can be cnverted to
         //  any other item and with the parent NBT stored on the new item.
         ItemStack converted = null;
-        ItemStack itemInHand = player.getItemInHand(hand);
 
         if (itemInHand.getItem().equals(ItemsInit.WELCOME_MAT_BLOCK.get())) {
             converted = itemInHand;

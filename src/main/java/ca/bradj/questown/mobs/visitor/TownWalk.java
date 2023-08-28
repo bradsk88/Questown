@@ -10,6 +10,8 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 
+import java.util.Optional;
+
 public class TownWalk extends Behavior<VisitorMobEntity> {
     private static final int REPEAT_BUFFER = 20;
     private static final int PAUSE_TICKS = 100;
@@ -23,7 +25,8 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
     ) {
         super(ImmutableMap.of(
                 MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_ABSENT,
-                MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryStatus.VALUE_PRESENT
+                MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryStatus.VALUE_PRESENT,
+                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryStatus.REGISTERED
         ));
         this.speedModifier = speedModifier;
     }
@@ -46,7 +49,25 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (target == null) {
             return false;
         }
+        Questown.LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;
+    }
+
+    @Override
+    protected boolean canStillUse(ServerLevel level, VisitorMobEntity entity, long p_22547_) {
+        boolean b = super.canStillUse(level, entity, p_22547_);
+        if (!b) {
+            return b;
+        }
+        Optional<Long> since = entity.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        if (since.isEmpty()) {
+            entity.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, level.getDayTime());
+            return b;
+        }
+        long trying = level.getDayTime() - since.get();
+        Questown.LOGGER.debug("Trying to reach target for {}", trying);
+        // TODO: Give up
+        return b;
     }
 
     @Override

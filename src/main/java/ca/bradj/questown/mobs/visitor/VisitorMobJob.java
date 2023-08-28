@@ -53,6 +53,8 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
     private boolean dropping;
 
     private List<LockSlot> locks = new ArrayList<>();
+    private GathererJournal.Signals passedThroughGate = GathererJournal.Signals.UNDEFINED;
+    private boolean closeToGate;
 
     public VisitorMobJob(
             @Nullable ServerLevel level,
@@ -147,6 +149,12 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             return;
         }
         processSignal(town.getServerLevel(), this);
+
+        this.closeToGate = false;
+        if (signal == GathererJournal.Signals.MORNING) {
+            this.closeToGate = isCloseTo(entityPos, town.getClosestWelcomeMatPos(entityPos));
+        }
+
         if (successTarget != null && !successTarget.isStillValid()) {
             successTarget = null;
         }
@@ -381,8 +389,17 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             TownInterface town,
             Vec3 entityPos
     ) {
+        if (passedThroughGate != GathererJournal.Signals.UNDEFINED && passedThroughGate.equals(signal)) {
+            return true;
+        }
+        passedThroughGate = GathererJournal.Signals.UNDEFINED;
         if (journal.getStatus() == GathererJournal.Status.GATHERING) {
-            return isVeryCloseTo(entityPos, getEnterExitPos(town));
+            boolean veryCloseTo = isVeryCloseTo(entityPos, getEnterExitPos(town));
+            if (veryCloseTo) {
+                this.passedThroughGate = signal;
+                return true;
+            }
+            return false;
         }
         return journal.getStatus().isReturning();
     }
@@ -620,6 +637,10 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
 
     public DataSlot getLockSlot(int i) {
         return this.locks.get(i);
+    }
+
+    public boolean shouldBeNoClip(TownInterface town, BlockPos position) {
+        return this.closeToGate;
     }
 
 

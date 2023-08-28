@@ -249,6 +249,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.setChanged();
     }
 
+    public void addImmediateReward(MCReward r) {
+        this.asapRewards.push(r);
+        this.setChanged();
+    }
+
     private void grantAdvancementOnApproach() {
         MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
             if (event.getEntity() instanceof ServerPlayer sp) {
