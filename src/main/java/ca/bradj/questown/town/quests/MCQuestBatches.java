@@ -1,13 +1,14 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
-public class MCQuestBatches extends QuestBatches<ResourceLocation, MCQuest, MCReward, MCQuestBatch> {
+public class MCQuestBatches extends QuestBatches<ResourceLocation, MCRoom, MCQuest, MCReward, MCQuestBatch> {
 
     public static final Serializer SERIALIZER = new Serializer();
 

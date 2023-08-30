@@ -1,6 +1,8 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -11,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
-public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward> {
+public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> {
     public static final Serializer SERIALIZER = new Serializer();
     private UUID owner;
 
@@ -27,11 +29,8 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCQuest, MCReward
             }
 
             @Override
-            public MCQuest withStatus(
-                    MCQuest input,
-                    Quest.QuestStatus status
-            ) {
-                return input.withStatus(status);
+            public MCQuest completed(MCRoom room, MCQuest input) {
+                return input.completed(room);
             }
         }, reward);
         this.owner = owner;

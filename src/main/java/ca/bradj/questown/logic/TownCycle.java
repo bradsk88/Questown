@@ -8,6 +8,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
 import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

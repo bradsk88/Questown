@@ -10,6 +10,7 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -23,7 +24,7 @@ import java.util.stream.Stream;
 
 public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
-    private final Map<Integer, ActiveRecipes<RoomRecipeMatch>> activeRecipes = new HashMap<>();
+    private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = new HashMap<>();
     private int scanLevel = 0;
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
@@ -52,7 +53,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
                 scanAroundPos, ars, registeredDoors
         );
-        ars.update(rooms);
+        List<AbstractMap.SimpleEntry<Position, Optional<MCRoom>>> array = rooms.entrySet().stream().map(v -> new AbstractMap.SimpleEntry<>(
+                v.getKey(), v.getValue().map(z -> new MCRoom(
+                        z.getDoorPos(), z.getSpaces(), scanY
+        )))).toList();
+        ImmutableMap<Position, Optional<MCRoom>> mcRooms = ImmutableMap.copyOf(array);
+        ars.update(mcRooms);
 
         ars.getAll().forEach(room -> {
             Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(
@@ -61,13 +67,13 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     ars,
                     scanY
             );
-            activeRecipes.get(scanLevel).update(room.getDoorPos(), recipe.orElse(null));
+            activeRecipes.get(scanLevel).update(room, room, recipe.orElse(null));
         });
     }
 
     private TownRooms getOrCreateRooms(int scanLevel) {
         if (!activeRecipes.containsKey(scanLevel)) {
-            ActiveRecipes<RoomRecipeMatch> v = new ActiveRecipes<>();
+            ActiveRecipes<MCRoom, RoomRecipeMatch> v = new ActiveRecipes<>();
             activeRecipes.put(scanLevel, v);
             v.addChangeListener(changeListener);
         }
@@ -125,14 +131,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void initialize(
             TownFlagBlockEntity owner,
-            Map<Integer, ActiveRecipes<RoomRecipeMatch>> ars,
+            Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> ars,
             ImmutableList<BlockPos> registeredDoors
     ) {
         if (!this.activeRecipes.isEmpty()) {
             throw new IllegalStateException("Double initialization");
         }
         this.activeRecipes.putAll(ars);
-        for (ActiveRecipes<RoomRecipeMatch> r : ars.values()) {
+        for (ActiveRecipes<MCRoom, RoomRecipeMatch> r : ars.values()) {
             r.addChangeListener(owner);
         }
         this.registeredDoors.addAll(registeredDoors);
@@ -141,7 +147,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     /**
      * @deprecated Used for a migration only.
      */
-    public ActiveRecipes<RoomRecipeMatch> getRecipes(int i) {
+    public ActiveRecipes<MCRoom, RoomRecipeMatch> getRecipes(int i) {
         return activeRecipes.get(i);
     }
 
@@ -149,17 +155,18 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         this.changeListener = townFlagBlockEntity; // TODO: Interface
     }
 
-    public Collection<Room> getAllRooms() {
+    public Collection<MCRoom> getAllRooms() {
         return this.activeRooms.values().stream().map(TownRooms::getAll).flatMap(Collection::stream).toList();
     }
 
     @Override
     public void updateRecipeForRoom(
             int scanLevel,
-            Position doorPos,
+            MCRoom oldRoom,
+            MCRoom newRoom,
             @Nullable RoomRecipeMatch resourceLocation
     ) {
-        this.activeRecipes.get(scanLevel).update(doorPos, resourceLocation);
+        this.activeRecipes.get(scanLevel).update(oldRoom, newRoom, resourceLocation);
     }
 
     public int numRecipes() {

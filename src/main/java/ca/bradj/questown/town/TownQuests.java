@@ -1,20 +1,19 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
-import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
@@ -41,7 +40,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     public static void addRandomBatchForVisitor(TownInterface town, TownQuests quests, UUID visitorUUID) {
-        int minItems = 100 + (100 * (getVillagers(quests).size() + 1))/2;
+        int minItems = 100 + (100 * (getVillagers(quests).size() + 1)) / 2;
 
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList reward = new MCRewardList(
@@ -76,8 +75,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
     }
 
-    public void markQuestAsComplete(ResourceLocation q) {
-        questBatches.markRecipeAsComplete(q);
+    public void markQuestAsComplete(MCRoom room, ResourceLocation q) {
+        questBatches.markRecipeAsComplete(room, q);
+    }
+
+    public void markAsConverted(
+            MCRoom oldRoom, ResourceLocation oldRecipeID,
+            MCRoom newRoom, ResourceLocation newRecipeID
+    ) {
+        questBatches.markRecipeAsConverted(
+                oldRoom, oldRecipeID,
+                newRoom, newRecipeID
+        );
+    }
+
+    public void markQuestAsLost(MCRoom oldRoom, ResourceLocation recipeID) {
+        questBatches.markRecipeAsLost(oldRoom, recipeID);
     }
 
     @Override
@@ -86,7 +99,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     @Override
-    public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
+    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
         this.changeListener.questBatchCompleted(quest);
     }
 
@@ -94,8 +107,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         this.changeListener = townFlagBlockEntity;
     }
 
-    public ImmutableList<Quest<ResourceLocation>> getAll() {
-        return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation>) v).toList());
+    public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
+        return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation, MCRoom>) v).toList());
     }
 
     public Collection<MCQuest> getAllForVillager(UUID uuid) {
@@ -112,5 +125,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
     public Collection<MCQuestBatch> getBatches() {
         return this.questBatches.getAllBatches();
+    }
+
+    public boolean canBeUpgraded(
+            ResourceLocation fromRecipeID,
+            ResourceLocation toRecipeID
+    ) {
+        ImmutableList<Quest<ResourceLocation, MCRoom>> all = this.getAll();
+        return all.stream().anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
+    }
+
+    @NotNull
+    private static Predicate<Quest<ResourceLocation, MCRoom>> matchesToUpgrade(
+            ResourceLocation from, ResourceLocation to
+    ) {
+        return v -> v.getWantedId().equals(to) && v.fromRecipeID()
+                .map(z -> z.equals(from))
+                .orElse(false);
     }
 }

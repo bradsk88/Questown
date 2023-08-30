@@ -1,5 +1,8 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class QuestsTest {
 
-    private QuestBatch<Integer, TestQuest, Reward> quests;
+    private static final Room testRoom1 = new Room(
+            new Position(1, 2),
+            new InclusiveSpace(new Position(3, 4), new Position(5, 6))
+    );
+    private static final Room testRoom2 = new Room(
+            new Position(7, 8),
+            new InclusiveSpace(new Position(9, 10), new Position(11, 12))
+    );
+
+    private QuestBatch<Integer, Room, TestQuest, Reward> quests;
 
     @BeforeEach
     void setUp() {
@@ -23,11 +35,8 @@ class QuestsTest {
             }
 
             @Override
-            public TestQuest withStatus(
-                    TestQuest input,
-                    Quest.QuestStatus status
-            ) {
-                TestQuest testQuest = new TestQuest(input.recipeId, status);
+            public TestQuest completed(Room room, TestQuest input) {
+                TestQuest testQuest = new TestQuest(input.recipeId, Quest.QuestStatus.COMPLETED);
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
@@ -49,7 +58,7 @@ class QuestsTest {
         quests.addNewQuest(1);
         quests.addNewQuest(2);
 
-        assertTrue(quests.getCompleted().isEmpty());
+        assertTrue(quests.getCompletedRecipeIDs().isEmpty());
     }
 
     @Test
@@ -57,10 +66,10 @@ class QuestsTest {
         quests.addNewQuest(1);
         quests.addNewQuest(2);
 
-        quests.markRecipeAsComplete(1);
-        quests.markRecipeAsComplete(2);
+        quests.markRecipeAsComplete(testRoom1, 1);
+        quests.markRecipeAsComplete(testRoom2, 2);
 
-        assertEquals(List.of(1, 2), quests.getCompleted());
+        assertEquals(List.of(1, 2), quests.getCompletedRecipeIDs());
     }
 
     @Test
@@ -68,7 +77,7 @@ class QuestsTest {
         quests.addNewQuest(1);
 
         assertEquals(1, quests.getAll().size());
-        assertEquals(1, quests.getAll().get(0).getId());
+        assertEquals(1, quests.getAll().get(0).getWantedId());
     }
 
     @Test
@@ -88,9 +97,9 @@ class QuestsTest {
     @Test
     void markRecipeAsComplete_doesNothing_whenNoMatchingIncompleteQuests() {
         quests.addNewQuest(1);
-        quests.markRecipeAsComplete(1);
+        quests.markRecipeAsComplete(testRoom1, 1);
 
-        assertEquals(List.of(1), quests.getCompleted());
+        assertEquals(List.of(1), quests.getCompletedRecipeIDs());
     }
 
     @Test
@@ -98,12 +107,12 @@ class QuestsTest {
         quests.addNewQuest(1);
         quests.addNewQuest(2);
 
-        quests.markRecipeAsComplete(1);
+        quests.markRecipeAsComplete(testRoom1, 1);
 
-        Optional<TestQuest> completedQuest = quests.getAll().stream().filter(v -> v.getId() == 1).findFirst();
+        Optional<TestQuest> completedQuest = quests.getAll().stream().filter(v -> v.getWantedId() == 1).findFirst();
         assertTrue(completedQuest.isPresent());
         assertEquals(Quest.QuestStatus.COMPLETED, completedQuest.get().getStatus());
-        assertEquals(List.of(1), quests.getCompleted());
+        assertEquals(List.of(1), quests.getCompletedRecipeIDs());
     }
 
     @Test
@@ -117,22 +126,22 @@ class QuestsTest {
             public void questCompleted(TestQuest q) {
 
                 assertEquals(completedQuest.getUUID(), q.getUUID());
-                assertEquals(completedQuest.getId(), q.getId());
+                assertEquals(completedQuest.getWantedId(), q.getWantedId());
                 assertEquals(Quest.QuestStatus.COMPLETED, q.getStatus());
             }
 
             @Override
-            public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
+            public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
 
             }
         };
         quests.addChangeListener(listener);
 
-        quests.markRecipeAsComplete(1);
+        quests.markRecipeAsComplete(testRoom1, 1);
     }
 }
 
-class TestQuest extends Quest<Integer> {
+class TestQuest extends Quest<Integer, Room> {
 
     TestQuest(Integer id) {
         super(id);

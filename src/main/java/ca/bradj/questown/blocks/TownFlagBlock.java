@@ -11,6 +11,7 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -250,7 +251,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        ImmutableList<Quest<ResourceLocation>> aQ = entity.getAllQuests();
+        ImmutableList<Quest<ResourceLocation, MCRoom>> aQ = entity.getAllQuests();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {

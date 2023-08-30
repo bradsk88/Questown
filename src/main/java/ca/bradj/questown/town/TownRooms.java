@@ -4,9 +4,6 @@ import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
-import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.WallDetection;
-import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -15,6 +12,7 @@ import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import ca.bradj.roomrecipes.rooms.ActiveRooms;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
@@ -23,16 +21,12 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.DoorBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
 
-public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener {
+public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener<MCRoom> {
 
     private RecipeRoomChangeListener changeListener;
 
@@ -41,10 +35,15 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     }
 
     public interface RecipeRoomChangeListener {
-        void updateRecipeForRoom(int scanLevel, Position doorPos, @Nullable RoomRecipeMatch resourceLocation);
+        void updateRecipeForRoom(
+                int scanLevel,
+                @Nullable MCRoom oldRoom,
+                @Nullable MCRoom newRoom,
+                @Nullable RoomRecipeMatch resourceLocation
+        );
     }
 
-    private final ActiveRooms rooms = new ActiveRooms();
+    private final ActiveRooms<MCRoom> rooms = new ActiveRooms<>();
     private final int scanLevel;
     private final TownFlagBlockEntity entity;
 
@@ -76,11 +75,11 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         return WallDetection.IsDoor(entity.getServerLevel(), dp, getY());
     }
 
-    public void update(ImmutableMap<Position, Optional<Room>> rooms) {
+    public void update(ImmutableMap<Position, Optional<MCRoom>> rooms) {
         this.rooms.update(rooms);
     }
 
-    public Collection<Room> getAll() {
+    public Collection<MCRoom> getAll() {
         return this.rooms.getAll();
     }
 
@@ -91,12 +90,12 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     @Override
     public void roomAdded(
             Position doorPos,
-            Room room
+            MCRoom room
     ) {
         grantAdvancement(doorPos);
         handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
-        changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.orElse(null));
+        changeListener.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
@@ -128,13 +127,14 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     @Override
     public void roomResized(
             Position doorPos,
-            Room oldRoom,
-            Room newRoom
+            MCRoom oldRoom,
+            MCRoom newRoom
     ) {
 
         handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), newRoom, this, getY());
-        this.changeListener.updateRecipeForRoom(scanLevel, doorPos, recipe.orElse(null));
+        ServerLevel serverLevel = entity.getServerLevel();
+        Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(serverLevel, newRoom, this, getY());
+        this.changeListener.updateRecipeForRoom(scanLevel, oldRoom, newRoom, recipe.orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_size_changed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
@@ -145,7 +145,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     @Override
     public void roomDestroyed(
             Position doorPos,
-            Room room
+            MCRoom room
     ) {
         Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
         entity.broadcastMessage(new TranslatableComponent(
@@ -154,12 +154,12 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                 doorPos.getUIString()
         ));
         handleRoomChange(room, ParticleTypes.SMOKE);
-        changeListener.updateRecipeForRoom(scanLevel, doorPos, null);
+        changeListener.updateRecipeForRoom(scanLevel, room, null, null);
     }
 
 
     private void handleRoomChange(
-            Room room,
+            MCRoom room,
             ParticleOptions pType
     ) {
         for (InclusiveSpace space : room.getSpaces()) {

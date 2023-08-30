@@ -34,7 +34,7 @@ public class PendingQuests {
         }
         int cost = batch.getAll().stream()
                 // TODO: Pre-compute and cache recipe costs
-                .map(v -> PendingQuests.computeCosts(level, v.getId(), maxItemWeight))
+                .map(v -> PendingQuests.computeCosts(level, v.getWantedId(), maxItemWeight))
                 .reduce(Integer::sum)
                 .orElse(0);
         if (cost >= maxItemWeight) {

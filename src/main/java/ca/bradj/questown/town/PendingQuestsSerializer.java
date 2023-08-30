@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -27,7 +28,7 @@ public class PendingQuestsSerializer {
         ListTag aq = new ListTag();
         for (PendingQuests q : batches) {
             MCQuestBatch asBatch = new MCQuestBatch(q.batch.getOwner(), q.batch.getReward());
-            q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getId()));
+            q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getWantedId()));
             CompoundTag tag = MCQuestBatch.SERIALIZER.serializeNBT(asBatch);
             tag.putInt(NBT_WEIGHT_THRESHOLD, q.maxItemWeight);
             aq.add(tag);
@@ -49,8 +50,8 @@ public class PendingQuestsSerializer {
             MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
             PendingQuests pendingQuests = new PendingQuests(threshold, b.getOwner(), b.getReward());
-            for (Quest<ResourceLocation> q : b.getAll()) {
-                pendingQuests.batch.addNewQuest(q.getId());
+            for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
+                pendingQuests.batch.addNewQuest(q.getWantedId());
             }
             aqs.add(pendingQuests);
         }

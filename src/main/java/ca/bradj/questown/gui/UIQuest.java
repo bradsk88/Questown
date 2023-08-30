@@ -1,12 +1,11 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
@@ -36,7 +35,7 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public static List<UIQuest> fromLevel(
             Level level,
-            Collection<? extends Quest<ResourceLocation>> aQ
+            Collection<? extends Quest<ResourceLocation, MCRoom>> aQ
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -44,12 +43,12 @@ public class UIQuest implements Comparable<UIQuest> {
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         return aQ.stream().map(v -> {
-            RoomRecipe q = rMap.get(v.getId());
+            RoomRecipe q = rMap.get(v.getWantedId());
             if (q == null) {
                 return null;
             }
             int recipeStrength = 1; // TODO: Add getter to RoomRecipes
-            return new UIQuest(new RoomRecipe(v.getId(), q.getIngredients(), recipeStrength), v.getStatus());
+            return new UIQuest(new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength), v.getStatus());
         }).toList();
     }
 

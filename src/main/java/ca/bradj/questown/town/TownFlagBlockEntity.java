@@ -16,12 +16,13 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -57,7 +58,7 @@ import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<RoomRecipeMatch>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
 
     public static final String ID = "flag_base_block_entity";
     // TODO: Extract serialization
@@ -285,7 +286,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
     }
 
-    public ImmutableList<Quest<ResourceLocation>> getAllQuests() {
+    public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
         return quests.getAll();
     }
 
@@ -301,48 +302,56 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void roomRecipeCreated(
-            Position roomDoorPos,
+            MCRoom roomDoorPos,
             RoomRecipeMatch match
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.recipe_created",
                 new TranslatableComponent(String.format("room.%s", match.getRecipeID().getPath())),
-                roomDoorPos.getUIString()
+                roomDoorPos.getDoorPos().getUIString()
         ));
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markQuestAsComplete(match.getRecipeID());
+        quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
     }
 
     @Override
     public void roomRecipeChanged(
-            Position roomDoorPos,
+            MCRoom oldRoom,
             RoomRecipeMatch oldRecipeId,
+            MCRoom newRoom,
             RoomRecipeMatch newRecipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_changed",
                 new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
                 new TranslatableComponent("room." + newRecipeId.getRecipeID().getPath()),
-                roomDoorPos.getUIString()
+                newRoom.getDoorPos().getUIString()
         ));
-        // TODO: Get room
+        // TODO: Render sparkles
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        if (!oldRecipeId.equals(newRecipeId)) { // TODO: Add quests as a listener instead of doing this call
-            quests.markQuestAsComplete(newRecipeId.getRecipeID());
+        if (oldRecipeId  == null && newRecipeId != null) {
+            quests.markQuestAsComplete(newRoom, newRecipeId.getRecipeID());
         }
-        // TODO: Mark removed recipe as lost?
+        else if (!oldRecipeId.equals(newRecipeId)) { // TODO: Add quests as a listener instead of doing this call
+            if (quests.canBeUpgraded(oldRecipeId.getRecipeID(), newRecipeId.getRecipeID())) {
+                quests.markAsConverted(oldRoom, oldRecipeId.getRecipeID(), newRoom, newRecipeId.getRecipeID());
+            } else {
+                quests.markQuestAsLost(oldRoom, oldRecipeId.getRecipeID());
+                quests.markQuestAsComplete(newRoom, newRecipeId.getRecipeID());
+            }
+        }
     }
 
     @Override
     public void roomRecipeDestroyed(
-            Position roomDoorPos,
+            MCRoom roomDoorPos,
             RoomRecipeMatch oldRecipeId
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
                 new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
-                roomDoorPos.getUIString()
+                roomDoorPos.getDoorPos().getUIString()
         ));
         // TODO: Get room
 //        handleRoomChange(, ParticleTypes.LARGE_SMOKE);
@@ -352,7 +361,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public void questCompleted(MCQuest quest) {
         broadcastMessage(new TranslatableComponent(
                 "messages.town_flag.quest_completed",
-                RoomRecipes.getName(quest.getId())
+                RoomRecipes.getName(quest.getWantedId())
         )); // TODO: Do this in a different quest listener (specialized in "messaging")
         setChanged();
         FireworkRocketEntity firework = new FireworkRocketEntity(
@@ -366,7 +375,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public void questBatchCompleted(QuestBatch<?, ?, ?> quest) {
+    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
         // TODO: Handle this by informing the user, etc.
         setChanged();
     }
@@ -462,7 +471,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     private @Nullable Position getWanderTargetPosition() {
-        Collection<Room> all = roomsMap.getAllRooms();
+        Collection<MCRoom> all = roomsMap.getAllRooms();
         return pois.getWanderTarget(getServerLevel(), all);
     }
 
@@ -478,14 +487,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public void campfireFound() {
-        quests.markQuestAsComplete(SpecialQuests.CAMPFIRE);
+    public void campfireFound(BlockPos bp) {
+        Position pos = Positions.FromBlockPos(bp);
+        MCRoom room = new MCRoom(pos, ImmutableList.of(new InclusiveSpace(pos, pos)), bp.getY());
+        quests.markQuestAsComplete(room, SpecialQuests.CAMPFIRE);
     }
 
     @Override
-    public void townGateFound() {
+    public void townGateFound(BlockPos bp) {
         Questown.LOGGER.debug("Town Gate found");
-        quests.markQuestAsComplete(SpecialQuests.TOWN_GATE);
+        Position pos = Positions.FromBlockPos(bp);
+        MCRoom room = new MCRoom(pos, ImmutableList.of(new InclusiveSpace(pos, pos)), bp.getY());
+        quests.markQuestAsComplete(room, SpecialQuests.TOWN_GATE);
     }
 
     public Collection<RoomRecipeMatch> getMatches() {

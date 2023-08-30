@@ -6,6 +6,7 @@ import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,7 +41,7 @@ public class TownPois {
         return new Vec3(vs.getX(), vs.getY(), vs.getZ());
     }
 
-    public Position getWanderTarget(ServerLevel level, Collection<Room> all) {
+    public Position getWanderTarget(ServerLevel level, Collection<? extends Room> all) {
         // TODO: Put these on a stack each tick. Don't iterate every room on every tick.
         for (Room r : all) {
             if (level.getRandom().nextInt(all.size()) == 0) {
@@ -85,8 +86,8 @@ public class TownPois {
     }
 
     public interface Listener {
-        void campfireFound();
-        void townGateFound();
+        void campfireFound(BlockPos pos);
+        void townGateFound(BlockPos pos);
     }
 
     private Listener listener;
@@ -97,7 +98,7 @@ public class TownPois {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = TownCycle.findCampfire(flagPos, level);
-        fire.ifPresent((bp) -> listener.campfireFound());
+        fire.ifPresent((bp) -> listener.campfireFound(bp));
 
         BlockPos welcomePos = getWelcomeMatPos(level);
         if (welcomePos == null) {
@@ -109,7 +110,7 @@ public class TownPois {
                 position -> WallDetection.IsWall(level, position, welcomePos.getY())
         );
         if (gate != null) {
-            listener.townGateFound();
+            listener.townGateFound(gate);
             visitorSpot = gate;
         }
     }

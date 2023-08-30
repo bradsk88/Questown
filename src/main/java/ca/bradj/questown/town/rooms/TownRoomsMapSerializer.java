@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -38,7 +39,7 @@ public class TownRoomsMapSerializer {
                 doorsB.add(new BlockPos(x, y, z));
             }
         }
-        Map<Integer, ActiveRecipes<RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
+        Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
 //            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES); TODO: Bring back? (Cost to re-compute is low, I think)
 //            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
