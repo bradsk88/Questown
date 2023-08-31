@@ -5,6 +5,7 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,12 +32,22 @@ class QuestsTest {
         quests = new QuestBatch<>(new Quest.QuestFactory<>() {
             @Override
             public TestQuest newQuest(Integer recipeId) {
-                return new TestQuest(recipeId);
+                return TestQuest.standalone(recipeId, Quest.QuestStatus.ACTIVE);
+            }
+
+            @Override
+            public TestQuest newUpgradeQuest(Integer oldRecipeId, Integer newRecipeId) {
+                return TestQuest.upgrade(newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
             }
 
             @Override
             public TestQuest completed(Room room, TestQuest input) {
-                TestQuest testQuest = new TestQuest(input.recipeId, Quest.QuestStatus.COMPLETED);
+                TestQuest testQuest;
+                if (input.fromRecipeID().isPresent()) {
+                    testQuest = TestQuest.upgrade(input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.COMPLETED);
+                } else {
+                    testQuest = TestQuest.standalone(input.recipeId, Quest.QuestStatus.COMPLETED);
+                }
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
@@ -48,7 +59,8 @@ class QuestsTest {
 
             @Override
             protected @NotNull RewardApplier getApplier() {
-                return () -> {};
+                return () -> {
+                };
             }
         });
     }
@@ -85,7 +97,10 @@ class QuestsTest {
         quests.addNewQuest(1);
         ImmutableList<TestQuest> allQuests = quests.getAll();
 
-        assertThrows(UnsupportedOperationException.class, () -> allQuests.add(new TestQuest(2)));
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> allQuests.add(TestQuest.standalone(2, Quest.QuestStatus.ACTIVE))
+        );
     }
 
     @Test
@@ -116,6 +131,23 @@ class QuestsTest {
     }
 
     @Test
+    void markRecipeAsComplete_removesMatchingCompletedQuestWhenCompletingUpgradeQuest() {
+        quests.addNewQuest(1);
+        quests.addNewUpgradeQuest(1, 2);
+
+        quests.markRecipeAsComplete(testRoom1, 1);
+        quests.markRecipeAsConverted(1, testRoom1, 2);
+
+        List<TestQuest> completedQuests = quests.getAll()
+                .stream()
+                .filter(v -> v.getWantedId() == 2)
+                .toList();
+        assertEquals(1, completedQuests.size());
+        assertEquals(Quest.QuestStatus.COMPLETED, completedQuests.get(0).getStatus());
+        assertEquals(List.of(2), quests.getCompletedRecipeIDs());
+    }
+
+    @Test
     void markRecipeAsComplete_notifiesChangeListener() {
         quests.addNewQuest(1);
 
@@ -143,16 +175,20 @@ class QuestsTest {
 
 class TestQuest extends Quest<Integer, Room> {
 
-    TestQuest(Integer id) {
-        super(id);
+    TestQuest(Integer id, @Nullable Integer from) {
+        super(id, from);
     }
 
-    TestQuest(
-            Integer id,
-            QuestStatus status
-    ) {
-        super(id);
-        super.status = status;
+    public static TestQuest standalone(Integer id, QuestStatus status) {
+        TestQuest testQuest = new TestQuest(id, null);
+        testQuest.status = status;
+        return testQuest;
+    }
+
+    public static TestQuest upgrade(Integer id, Integer from, QuestStatus status) {
+        TestQuest testQuest = new TestQuest(id, from);
+        testQuest.status = status;
+        return testQuest;
     }
 
     @Override
@@ -161,6 +197,8 @@ class TestQuest extends Quest<Integer, Room> {
                 "uuid=" + uuid +
                 ", recipeId=" + recipeId +
                 ", status=" + status +
+                ", completedOn=" + completedOn +
+                ", from=" + fromRecipeID() +
                 '}';
     }
 }

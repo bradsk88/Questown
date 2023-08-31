@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 // Quests is a unit testable module for the quests of a town
@@ -57,6 +58,10 @@ public class QuestBatch<
         this.quests.add(this.questFactory.newQuest(id));
     }
 
+    public void addNewUpgradeQuest(KEY fromID, KEY toID) {
+        this.quests.add(this.questFactory.newUpgradeQuest(fromID, toID));
+    }
+
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.quests);
     }
@@ -101,7 +106,7 @@ public class QuestBatch<
         Stream<QUEST> newMatches = this.quests.stream()
                 .filter(v -> newRecipeID.equals(v.getWantedId()));
         Optional<QUEST> complete = oldMatches.filter(Quest::isComplete).findFirst();
-        Optional<QUEST> incomplete = newMatches.filter(Quest::isComplete).findFirst();
+        Optional<QUEST> incomplete = newMatches.filter(Predicate.not(Quest::isComplete)).findFirst();
         if (incomplete.isEmpty() || complete.isEmpty()) {
             return false;
         }

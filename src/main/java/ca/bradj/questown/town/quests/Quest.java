@@ -12,16 +12,17 @@ public class Quest<KEY, ROOM extends Room> {
     protected KEY recipeId;
     protected QuestStatus status;
     protected ROOM completedOn;
-    private KEY fromRecipeID;
+    private final KEY fromRecipeID;
 
     Quest() {
-        this(null);
+        this(null, null);
     }
 
-    public Quest(KEY recipe) {
+    protected Quest(KEY recipe, @Nullable KEY oldRecipe) {
         this.uuid = UUID.randomUUID();
         this.recipeId = recipe;
         this.status = QuestStatus.ACTIVE;
+        this.fromRecipeID = oldRecipe;
     }
 
     public KEY getWantedId() {
@@ -86,6 +87,9 @@ public class Quest<KEY, ROOM extends Room> {
     interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
         QUEST newQuest(
                 KEY recipeId
+        );
+        QUEST newUpgradeQuest(
+                KEY oldRecipeId, KEY newRecipeId
         );
         QUEST completed(
                 ROOM room,

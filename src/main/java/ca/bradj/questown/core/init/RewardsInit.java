@@ -3,16 +3,18 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.quests.MCDelayedReward;
 import ca.bradj.questown.town.quests.MCRewardList;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
-import ca.bradj.questown.town.rewards.Registry;
-import ca.bradj.questown.town.rewards.RewardType;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import ca.bradj.questown.town.rewards.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
 public class RewardsInit {
+
+    private static final RewardsInit INSTANCE = new RewardsInit();
+
+    private RewardsInit() {
+    }
 
     public static final DeferredRegister<RewardType<?>> REWARD_TYPES = DeferredRegister.create(
             Registry.Keys.REWARD_TYPES,
@@ -46,6 +48,14 @@ public class RewardsInit {
             () -> RewardType.Builder
                     .of((rType, flag) -> new AddBatchOfRandomQuestsForVisitorReward(rType, flag, null))
                     .build(new ResourceLocation(Questown.MODID, AddBatchOfRandomQuestsForVisitorReward.ID).toString())
+    );
+
+    public static final RegistryObject<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
+            = REWARD_TYPES.register(
+            AddRandomUpgradeQuest.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddRandomUpgradeQuest(rType, flag, INSTANCE))
+                    .build(new ResourceLocation(Questown.MODID, AddRandomUpgradeQuest.ID).toString())
     );
 
     public static void register(IEventBus bus) {

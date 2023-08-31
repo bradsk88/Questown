@@ -15,7 +15,6 @@ import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
@@ -74,12 +73,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final MCAsapRewards asapRewards = new MCAsapRewards();
     private final Stack<PendingQuests> asapRandomAwdForVisitor = new Stack<>();
     private final UUID uuid = UUID.randomUUID();
+    private final TownFlagState state = new TownFlagState(this);
     public long advancedTimeOnTick = -1;
-    private boolean isInitializedQuests = false;
     List<LivingEntity> entities = new ArrayList<>();
+    private boolean isInitializedQuests = false;
     private boolean everScanned = false;
     private boolean changed = false;
-    private final TownFlagState state = new TownFlagState(this);
 
 
     public TownFlagBlockEntity(
@@ -87,11 +86,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState p_155230_
     ) {
         super(TilesInit.TOWN_FLAG.get(), p_155229_, p_155230_);
-    }
-
-    public void setChanged() {
-        super.setChanged();
-        this.changed = true;
     }
 
     public static void tick(
@@ -127,6 +121,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.pois.tick(sl, blockPos);
 
         e.everScanned = true;
+    }
+
+    public static boolean debuggerReleaseControl() {
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        return true;
+    }
+
+    public void setChanged() {
+        super.setChanged();
+        this.changed = true;
     }
 
     @Override
@@ -205,11 +209,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    public static boolean debuggerReleaseControl() {
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        return true;
     }
 
     @Override
@@ -383,6 +382,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
         TownQuests.addRandomBatchForVisitor(this, quests, visitorUUID);
+        setChanged();
+    }
+
+    @Override
+    public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
+        TownQuests.addUpgradeQuest(this, quests, visitorUUID);
         setChanged();
     }
 

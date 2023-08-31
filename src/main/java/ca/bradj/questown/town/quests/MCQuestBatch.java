@@ -1,7 +1,6 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
@@ -25,7 +24,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         super(new Quest.QuestFactory<>() {
             @Override
             public MCQuest newQuest(ResourceLocation recipeId) {
-                return new MCQuest(recipeId);
+                return MCQuest.standalone(recipeId);
+            }
+
+            @Override
+            public MCQuest newUpgradeQuest(ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
+                return MCQuest.upgrade(oldRecipeId, newRecipeId);
             }
 
             @Override
@@ -73,9 +77,8 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             int num = nbt.getInt(NBT_NUM_QUESTS);
             ListTag aq = nbt.getList(NBT_QUESTS, Tag.TAG_COMPOUND);
             for (int i = 0; i < num; i++) {
-                MCQuest q = new MCQuest();
                 CompoundTag tag = aq.getCompound(i);
-                MCQuest.SERIALIZER.deserializeNBT(tag, q);
+                MCQuest q = MCQuest.SERIALIZER.deserializeNBT(tag);
                 aqs.add(q);
             }
             MCReward reward = MCReward.SERIALIZER.deserializeNBT(entity, nbt.getCompound(NBT_REWARD));

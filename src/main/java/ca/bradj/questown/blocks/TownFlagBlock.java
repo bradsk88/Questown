@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -48,10 +49,7 @@ import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -114,6 +112,15 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(Items.APPLE)) {
             entity.addImmediateReward(new SpawnVisitorReward(entity));
             return InteractionResult.sidedSuccess(false);
+        }
+
+        if (itemInHand.getItem().equals(Items.DIAMOND)) {
+            for (UUID uuid : entity.getVillagers()) {
+                entity.addImmediateReward(
+                        new AddRandomUpgradeQuest(entity, uuid)
+                );
+                return InteractionResult.sidedSuccess(false);
+            }
         }
 
         // TODO: Consider making a new recipe type so any item can be cnverted to

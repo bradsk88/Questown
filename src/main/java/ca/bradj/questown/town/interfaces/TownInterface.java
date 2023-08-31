@@ -46,6 +46,8 @@ public interface TownInterface {
 
     @Nullable BlockPos getClosestWelcomeMatPos(BlockPos reference);
 
+    void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

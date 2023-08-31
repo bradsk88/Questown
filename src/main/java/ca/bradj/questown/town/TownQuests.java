@@ -1,16 +1,17 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -39,15 +40,57 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         quests.questBatches.add(fireQuest);
     }
 
-    public static void addRandomBatchForVisitor(TownInterface town, TownQuests quests, UUID visitorUUID) {
-        int minItems = 100 + (100 * (getVillagers(quests).size() + 1)) / 2;
-
+    public static void addUpgradeQuest(TownInterface town, TownQuests quests, UUID visitorUUID) {
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList reward = new MCRewardList(
                 town,
                 new SpawnVisitorReward(town, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
         );
+
+        Collection<MCQuest> all = quests.getAllForVillager(visitorUUID);
+        Collection<MCQuest> villagerQuests = all
+                .stream()
+                .filter(v -> v.fromRecipeID().isEmpty() && v.isComplete())
+                .toList();
+
+        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
+        if (villagerQuests.isEmpty()) {
+            villagerQuests = all;
+        }
+
+        ImmutableList<MCQuest> questsList = ImmutableList.copyOf(villagerQuests);
+
+        int index = town.getServerLevel().getRandom().nextInt(questsList.size());
+        MCQuest quest = questsList.get(index);
+
+        ResourceLocation upgradeRecipe = getUpgradeRecipe(quest.getWantedId());
+        if (upgradeRecipe == null) {
+            // FIXME: Add a failure path
+            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
+            return;
+        }
+
+        MCQuestBatch upgradeQuest = new MCQuestBatch(visitorUUID, new MCDelayedReward(town, reward));
+        upgradeQuest.addNewQuest(upgradeRecipe);
+
+        quests.questBatches.add(upgradeQuest);
+    }
+
+    private static @Nullable ResourceLocation getUpgradeRecipe(ResourceLocation fromRecipeId) {
+        // TODO: Implement this
+        return null;
+    }
+
+    public static void addRandomBatchForVisitor(TownInterface town, TownQuests quests, UUID visitorUUID) {
+        UUID nextVisitorUUID = UUID.randomUUID();
+        MCRewardList reward = new MCRewardList(
+                town,
+                new SpawnVisitorReward(town, nextVisitorUUID),
+                new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
+        );
+
+        int minItems = 100 + (100 * (getVillagers(quests).size() + 1)) / 2;
         quests.pendingQuests.push(new PendingQuests(
                 minItems, visitorUUID, new MCDelayedReward(town, reward)
         ));

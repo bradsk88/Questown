@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 public class MCQuest extends Quest<ResourceLocation, MCRoom> {
@@ -15,12 +16,23 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     MCQuest() {
         super();
     }
-    public MCQuest(ResourceLocation recipe) {
-        super(recipe);
+    private MCQuest(
+            ResourceLocation wantedRecipe,
+            @Nullable ResourceLocation fromRecipe
+    ) {
+        super(wantedRecipe, fromRecipe);
+    }
+
+    public static MCQuest standalone(ResourceLocation recipeId) {
+        return null;
+    }
+
+    public static MCQuest upgrade(ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
+        return null;
     }
 
     public MCQuest completed(MCRoom room) {
-        MCQuest q = new MCQuest(this.getWantedId());
+        MCQuest q = new MCQuest(this.getWantedId(), this.fromRecipeID().orElse(null));
         q.uuid = this.uuid;
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
@@ -48,7 +60,8 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             return ct;
         }
 
-        public void deserializeNBT(CompoundTag nbt, Quest<ResourceLocation, MCRoom> quest) {
+        public MCQuest deserializeNBT(CompoundTag nbt) {
+            MCQuest quest = new MCQuest();
             UUID uuid = nbt.getUUID(NBT_UUID);
             ResourceLocation recipeId = new ResourceLocation(nbt.getString(NBT_RECIPE_ID));
             QuestStatus status = QuestStatus.valueOf(nbt.getString(NBT_STATUS));
@@ -62,6 +75,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             Position doorPos = new Position(doorX, doorZ);
             InclusiveSpace space = new InclusiveSpace(new Position(aaX, aaZ), new Position(bbX, bbZ));
             quest.initialize(uuid, recipeId, status, new MCRoom(doorPos, ImmutableList.of(space), doorY));
+            return quest;
         }
 
     }
