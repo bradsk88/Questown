@@ -24,11 +24,11 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     }
 
     public static MCQuest standalone(ResourceLocation recipeId) {
-        return null;
+        return new MCQuest(recipeId, null);
     }
 
     public static MCQuest upgrade(ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
-        return null;
+        return new MCQuest(newRecipeId, oldRecipeId);
     }
 
     public MCQuest completed(MCRoom room) {
@@ -43,6 +43,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
         private static final String NBT_UUID = "uuid";
         private static final String NBT_RECIPE_ID = "recipe_id";
+        private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_STATUS = "status";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
@@ -57,6 +58,20 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             ct.putUUID(NBT_UUID, quest.getUUID());
             ct.putString(NBT_RECIPE_ID, quest.getWantedId().toString());
             ct.putString(NBT_STATUS, quest.getStatus().name());
+
+            if (quest.completedOn != null) {
+                ct.putInt(NBT_COMPLETED_ON_DOORPOS_X, quest.completedOn.getDoorPos().x);
+                ct.putInt(NBT_COMPLETED_ON_DOORPOS_Y, quest.completedOn.yCoord);
+                ct.putInt(NBT_COMPLETED_ON_DOORPOS_Z, quest.completedOn.getDoorPos().z);
+                ct.putInt(NBT_COMPLETED_ON_AA_X, quest.completedOn.getSpace().getWestX());
+                ct.putInt(NBT_COMPLETED_ON_AA_Z, quest.completedOn.getSpace().getNorthZ());
+                ct.putInt(NBT_COMPLETED_ON_BB_X, quest.completedOn.getSpace().getEastX());
+                ct.putInt(NBT_COMPLETED_ON_BB_Z, quest.completedOn.getSpace().getSouthZ());
+            }
+
+            if (quest.fromRecipeID().isPresent()) {
+                ct.putString(NBT_FROM_RECIPE_ID, quest.fromRecipeID().get().toString());
+            }
             return ct;
         }
 
@@ -74,7 +89,15 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             int bbZ = nbt.getInt(NBT_COMPLETED_ON_BB_Z);
             Position doorPos = new Position(doorX, doorZ);
             InclusiveSpace space = new InclusiveSpace(new Position(aaX, aaZ), new Position(bbX, bbZ));
-            quest.initialize(uuid, recipeId, status, new MCRoom(doorPos, ImmutableList.of(space), doorY));
+            ResourceLocation fromRecipeId = null;
+            if (nbt.contains(NBT_FROM_RECIPE_ID)) {
+                fromRecipeId = new ResourceLocation(nbt.getString(NBT_FROM_RECIPE_ID));
+            }
+            quest.initialize(
+                    uuid, recipeId, status,
+                    new MCRoom(doorPos, ImmutableList.of(space), doorY),
+                    fromRecipeId
+            );
             return quest;
         }
 

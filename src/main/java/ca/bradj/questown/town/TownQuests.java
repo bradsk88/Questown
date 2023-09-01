@@ -1,15 +1,23 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,15 +56,24 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
         );
 
-        Collection<MCQuest> all = quests.getAllForVillager(visitorUUID);
-        Collection<MCQuest> villagerQuests = all
+        Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID)
                 .stream()
-                .filter(v -> v.fromRecipeID().isEmpty() && v.isComplete())
+                .filter(Quest::isComplete)
+                .toList();
+        Collection<MCQuest> villagerQuests = completed
+                .stream()
+                // TODO: Filter out recipes that have already been slated for upgrade
+                .filter(v -> v.fromRecipeID().isEmpty())
                 .toList();
 
         // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
         if (villagerQuests.isEmpty()) {
-            villagerQuests = all;
+            villagerQuests = completed;
+        }
+
+        if (villagerQuests.isEmpty()) {
+            // FIXME: Add a failure path
+            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
         }
 
         ImmutableList<MCQuest> questsList = ImmutableList.copyOf(villagerQuests);
@@ -64,7 +81,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         int index = town.getServerLevel().getRandom().nextInt(questsList.size());
         MCQuest quest = questsList.get(index);
 
-        ResourceLocation upgradeRecipe = getUpgradeRecipe(quest.getWantedId());
+        ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), quest.getWantedId());
         if (upgradeRecipe == null) {
             // FIXME: Add a failure path
             Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
@@ -72,14 +89,40 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         }
 
         MCQuestBatch upgradeQuest = new MCQuestBatch(visitorUUID, new MCDelayedReward(town, reward));
-        upgradeQuest.addNewQuest(upgradeRecipe);
+        upgradeQuest.addNewUpgradeQuest(quest.getWantedId(), upgradeRecipe);
 
         quests.questBatches.add(upgradeQuest);
     }
 
-    private static @Nullable ResourceLocation getUpgradeRecipe(ResourceLocation fromRecipeId) {
-        // TODO: Implement this
+    private static @Nullable ResourceLocation getUpgradeRecipe(
+            Level level, ResourceLocation fromRecipeId
+    ) {
+        Optional<RoomRecipe> recipe = RoomRecipes.getById(level, fromRecipeId);
+        if (recipe.isEmpty()) {
+            return null;
+        }
+
+        List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
+        for (RoomRecipe aRecipe : all) {
+            Collection<Item> toIng = getItems(aRecipe.getIngredients());
+            Collection<Item> fromIng = getItems(recipe.get().getIngredients());
+            if (toIng.equals(fromIng)) {
+                continue; // Perfect overlap. So not an upgrade.
+            }
+            if (toIng.size() > fromIng.size() && toIng.containsAll(fromIng)) {
+                return aRecipe.getId();
+            }
+            // TODO: But what about going from torches to lanterns, for example
+            //  Or tags, like minecraft:beds?  The approach above probably won't work.
+        }
         return null;
+    }
+
+    @NotNull
+    private static List<Item> getItems(NonNullList<Ingredient> ing) {
+        return ing.stream()
+                .flatMap(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem))
+                .toList();
     }
 
     public static void addRandomBatchForVisitor(TownInterface town, TownQuests quests, UUID visitorUUID) {
@@ -123,12 +166,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     public void markAsConverted(
-            MCRoom oldRoom, ResourceLocation oldRecipeID,
-            MCRoom newRoom, ResourceLocation newRecipeID
+            MCRoom room,
+            ResourceLocation oldRecipeID,
+            ResourceLocation newRecipeID
     ) {
         questBatches.markRecipeAsConverted(
-                oldRoom, oldRecipeID,
-                newRoom, newRecipeID
+                room, oldRecipeID, newRecipeID
         );
     }
 
@@ -175,7 +218,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             ResourceLocation toRecipeID
     ) {
         ImmutableList<Quest<ResourceLocation, MCRoom>> all = this.getAll();
-        return all.stream().anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
+        return all.stream()
+                .filter(Predicates.not(Quest::isComplete))
+                .anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
     }
 
     @NotNull
@@ -185,5 +230,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         return v -> v.getWantedId().equals(to) && v.fromRecipeID()
                 .map(z -> z.equals(from))
                 .orElse(false);
+    }
+
+    public void changeRoomOnly(MCRoom oldRoom, MCRoom newRoom) {
+        questBatches.changeRoomOnly(oldRoom, newRoom);
     }
 }

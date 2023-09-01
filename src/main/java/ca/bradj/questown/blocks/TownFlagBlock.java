@@ -139,6 +139,9 @@ public class TownFlagBlock extends BaseEntityBlock {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
             // TODO: Advancement
         }
+        if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
+            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
+        }
 
         if (converted != null) {
             StoreFlagInputOnOutputNBT(itemInHand, converted);

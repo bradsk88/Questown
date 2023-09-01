@@ -151,8 +151,9 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
         processSignal(town.getServerLevel(), this);
 
         this.closeToGate = false;
-        if (signal == GathererJournal.Signals.MORNING) {
-            this.closeToGate = isCloseTo(entityPos, town.getClosestWelcomeMatPos(entityPos));
+        BlockPos welcomeMat = town.getClosestWelcomeMatPos(entityPos);
+        if (signal == GathererJournal.Signals.MORNING && welcomeMat != null) {
+            this.closeToGate = isCloseTo(entityPos, welcomeMat);
         }
 
         if (successTarget != null && !successTarget.isStillValid()) {
@@ -162,7 +163,7 @@ public class VisitorMobJob implements GathererJournal.SignalSource, GathererJour
             foodTarget = null;
         }
         if (gateTarget != null) {
-            if (town.getClosestWelcomeMatPos(entityPos) == null) {
+            if (welcomeMat == null) {
                 gateTarget = null;
             }
         }

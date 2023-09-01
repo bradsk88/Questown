@@ -2,9 +2,11 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +19,7 @@ public class QuestBatches<
         QUEST extends Quest<KEY, ROOM>,
         REWARD extends Reward,
         BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>
-> implements QuestBatch.ChangeListener<QUEST> {
+        > implements QuestBatch.ChangeListener<QUEST> {
 
     protected final List<BATCH> batches = new ArrayList<>();
     private QuestBatch.ChangeListener<QUEST> changeListener = new QuestBatch.ChangeListener<QUEST>() {
@@ -73,16 +75,41 @@ public class QuestBatches<
         }
     }
 
+    public interface ConversionFunc {
+        void apply();
+    }
+
     public void markRecipeAsConverted(
-            ROOM oldRoom, KEY oldRecipeID, ROOM newRoom, KEY newRecipeID) {
+            ROOM room, KEY oldRecipeID, KEY newRecipeID) {
+        ConversionFunc oldQuest = null;
+        ConversionFunc newQuest = null;
+
         for (BATCH b : batches) {
-            if (b.markRecipeAsConverted(oldRecipeID, newRoom, newRecipeID)) {
-                break;
+            if (oldQuest == null) {
+                QUEST match = b.findMatch(room, oldRecipeID);
+                if (match != null) {
+                    oldQuest = () -> b.markConsumed(match);
+                }
+            }
+            if (newQuest == null) {
+                if (b.canMarkRecipeAsConverted(oldRecipeID, newRecipeID)) {
+                    newQuest = () -> b.markRecipeAsConverted(room, oldRecipeID, newRecipeID);
+                }
+            }
+            if (oldQuest != null && newQuest != null) {
+                oldQuest.apply(); newQuest.apply();
+                return;
             }
         }
     }
 
     public void markRecipeAsLost(ROOM oldRoom, KEY recipeID) {
+        // TODO: Implement
+    }
 
+    public void changeRoomOnly(ROOM oldRoom, ROOM newRoom) {
+        for (BATCH b : batches) {
+            b.changeRoomOnly(oldRoom, newRoom);
+        }
     }
 }

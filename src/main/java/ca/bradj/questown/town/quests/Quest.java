@@ -12,7 +12,7 @@ public class Quest<KEY, ROOM extends Room> {
     protected KEY recipeId;
     protected QuestStatus status;
     protected ROOM completedOn;
-    private final KEY fromRecipeID;
+    private KEY fromRecipeID;
 
     Quest() {
         this(null, null);
@@ -45,12 +45,14 @@ public class Quest<KEY, ROOM extends Room> {
             UUID uuid,
             KEY recipeId,
             QuestStatus status,
-            @Nullable ROOM completedOn
+            @Nullable ROOM completedOn,
+            @Nullable KEY fromRecipeID
     ) {
         this.uuid = uuid;
         this.recipeId = recipeId;
         this.status = status;
         this.completedOn = completedOn;
+        this.fromRecipeID = fromRecipeID;
     }
 
     public Optional<KEY> fromRecipeID() {

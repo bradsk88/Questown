@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -42,13 +43,18 @@ public class RoomRecipes {
         return b.build();
     }
     public static Optional<RoomRecipe> getById(Level level, ResourceLocation id) {
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        List<RoomRecipe> recipes = getAllRecipes(level);
         for (RoomRecipe r : recipes) {
             if (id.equals(r.getId())) {
                 return Optional.of(r);
             }
         }
         return Optional.empty();
+    }
+
+    @NotNull
+    public static List<RoomRecipe> getAllRecipes(Level level) {
+        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
     }
 
     public static Component getName(ResourceLocation id) {

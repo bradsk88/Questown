@@ -145,7 +145,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     }
 
     /**
-     * @deprecated Used for a migration only.
+     * @Deprecated Used for a migration only.
      */
     public ActiveRecipes<MCRoom, RoomRecipeMatch> getRecipes(int i) {
         return activeRecipes.get(i);

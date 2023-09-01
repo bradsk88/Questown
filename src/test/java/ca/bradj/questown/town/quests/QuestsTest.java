@@ -136,7 +136,7 @@ class QuestsTest {
         quests.addNewUpgradeQuest(1, 2);
 
         quests.markRecipeAsComplete(testRoom1, 1);
-        quests.markRecipeAsConverted(1, testRoom1, 2);
+        quests.markRecipeAsConverted(testRoom1, 1, 2);
 
         List<TestQuest> completedQuests = quests.getAll()
                 .stream()

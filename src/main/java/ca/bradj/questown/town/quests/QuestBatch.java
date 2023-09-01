@@ -1,7 +1,9 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -97,22 +99,34 @@ public class QuestBatch<
         return true;
     }
 
-    public boolean markRecipeAsConverted(
-            KEY oldRecipeID,
-            ROOM newRoom, KEY newRecipeID
-    ) {
-        Stream<QUEST> oldMatches = this.quests.stream()
-                .filter(v -> oldRecipeID.equals(v.getWantedId()));
+    public boolean canMarkRecipeAsConverted(KEY oldRecipeID, KEY newRecipeID) {
         Stream<QUEST> newMatches = this.quests.stream()
                 .filter(v -> newRecipeID.equals(v.getWantedId()));
-        Optional<QUEST> complete = oldMatches.filter(Quest::isComplete).findFirst();
         Optional<QUEST> incomplete = newMatches.filter(Predicate.not(Quest::isComplete)).findFirst();
-        if (incomplete.isEmpty() || complete.isEmpty()) {
+        return incomplete.isPresent() &&
+                incomplete.get().fromRecipeID()
+                        .map(v -> v.equals(oldRecipeID))
+                        .orElse(false);
+    }
+
+    public boolean markRecipeAsConverted(
+            ROOM newRoom,
+            KEY oldRecipeID,
+            KEY newRecipeID
+    ) {
+        Stream<QUEST> newMatches = this.quests.stream()
+                .filter(v -> newRecipeID.equals(v.getWantedId()));
+        Optional<QUEST> incomplete = newMatches
+                .filter(Predicate.not(Quest::isComplete))
+                .findFirst();
+        if (incomplete.isEmpty()) {
             return false;
         }
-        QUEST oldQuest = complete.get();
         QUEST converted = incomplete.get();
-        this.quests.remove(oldQuest);
+        Optional<KEY> fr = converted.fromRecipeID();
+        if (fr.isEmpty() || !fr.get().equals(oldRecipeID)) {
+            return false;
+        }
         this.quests.remove(converted);
         QUEST convCompleted = this.questFactory.completed(newRoom, converted);
         this.quests.add(convCompleted);
@@ -136,6 +150,35 @@ public class QuestBatch<
 
     public int size() {
         return this.quests.size();
+    }
+
+    public void changeRoomOnly(ROOM oldRoom, ROOM newRoom) {
+        List<QUEST> snapshot = ImmutableList.copyOf(this.quests);
+        this.quests.clear();
+        this.quests.addAll(snapshot.stream().peek(
+                v -> {
+                    if (oldRoom.equals(v.completedOn)) {
+                        Questown.LOGGER.debug(
+                                "Quest completion room updated after room size change. {} -> {}",
+                                oldRoom, newRoom
+                        );
+                        v.completedOn = newRoom;
+                    }
+                }
+        ).toList());
+    }
+
+    public @Nullable QUEST findMatch(ROOM room, KEY oldRecipeID) {
+        Optional<QUEST> found = this.quests.stream()
+                .filter(v -> room.equals(v.completedOn) && oldRecipeID.equals(v.recipeId))
+                .findFirst();
+        return found.orElse(null);
+    }
+
+    public void markConsumed(QUEST match) {
+        // TODO: Instead of removing quests, change their status so it gets filtered out
+        //  of UIs by default, but can still be audited.
+        this.quests.remove(match);
     }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {

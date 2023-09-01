@@ -317,27 +317,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void roomRecipeChanged(
             MCRoom oldRoom,
-            RoomRecipeMatch oldRecipeId,
+            RoomRecipeMatch oldMatch,
             MCRoom newRoom,
-            RoomRecipeMatch newRecipeId
+            RoomRecipeMatch newMatch
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_changed",
-                new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
-                new TranslatableComponent("room." + newRecipeId.getRecipeID().getPath()),
+                new TranslatableComponent("room." + oldMatch.getRecipeID().getPath()),
+                new TranslatableComponent("room." + newMatch.getRecipeID().getPath()),
                 newRoom.getDoorPos().getUIString()
         ));
         // TODO: Render sparkles
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        if (oldRecipeId  == null && newRecipeId != null) {
-            quests.markQuestAsComplete(newRoom, newRecipeId.getRecipeID());
+        if (oldMatch  == null && newMatch != null) {
+            quests.markQuestAsComplete(newRoom, newMatch.getRecipeID());
+            return;
         }
-        else if (!oldRecipeId.equals(newRecipeId)) { // TODO: Add quests as a listener instead of doing this call
-            if (quests.canBeUpgraded(oldRecipeId.getRecipeID(), newRecipeId.getRecipeID())) {
-                quests.markAsConverted(oldRoom, oldRecipeId.getRecipeID(), newRoom, newRecipeId.getRecipeID());
+        if (oldMatch.getRecipeID().equals(newMatch.getRecipeID())) {
+            if (!oldRoom.equals(newRoom)) {
+                quests.changeRoomOnly(oldRoom, newRoom);
+            }
+        }
+        if (!oldMatch.getRecipeID().equals(newMatch.getRecipeID())) {
+            // TODO: Add quests as a listener instead of doing these calls
+            if (quests.canBeUpgraded(oldMatch.getRecipeID(), newMatch.getRecipeID())) {
+                quests.markAsConverted(newRoom, oldMatch.getRecipeID(), newMatch.getRecipeID());
             } else {
-                quests.markQuestAsLost(oldRoom, oldRecipeId.getRecipeID());
-                quests.markQuestAsComplete(newRoom, newRecipeId.getRecipeID());
+                quests.markQuestAsLost(oldRoom, oldMatch.getRecipeID());
+                quests.markQuestAsComplete(newRoom, newMatch.getRecipeID());
             }
         }
     }
