@@ -51,6 +51,18 @@ class QuestsTest {
                 testQuest.uuid = input.uuid;
                 return testQuest;
             }
+
+            @Override
+            public TestQuest lost(TestQuest input) {
+                TestQuest testQuest;
+                if (input.fromRecipeID().isPresent()) {
+                    testQuest = TestQuest.upgrade(input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
+                } else {
+                    testQuest = TestQuest.standalone(input.recipeId, Quest.QuestStatus.ACTIVE);
+                }
+                testQuest.uuid = input.uuid;
+                return testQuest;
+            }
         }, new Reward() {
             @Override
             protected String getName() {
@@ -138,13 +150,13 @@ class QuestsTest {
         quests.markRecipeAsComplete(testRoom1, 1);
         quests.markRecipeAsConverted(testRoom1, 1, 2);
 
-        List<TestQuest> completedQuests = quests.getAll()
+        List<TestQuest> converted = quests.getAll()
                 .stream()
                 .filter(v -> v.getWantedId() == 2)
                 .toList();
-        assertEquals(1, completedQuests.size());
-        assertEquals(Quest.QuestStatus.COMPLETED, completedQuests.get(0).getStatus());
-        assertEquals(List.of(2), quests.getCompletedRecipeIDs());
+        assertEquals(1, converted.size());
+        assertEquals(Quest.QuestStatus.COMPLETED, converted.get(0).getStatus());
+        assertEquals(List.of(1, 2), quests.getCompletedRecipeIDs());
     }
 
     @Test
@@ -164,6 +176,11 @@ class QuestsTest {
 
             @Override
             public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
+
+            }
+
+            @Override
+            public void questLost(TestQuest quest) {
 
             }
         };

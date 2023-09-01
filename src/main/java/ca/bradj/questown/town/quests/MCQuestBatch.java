@@ -36,6 +36,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             public MCQuest completed(MCRoom room, MCQuest input) {
                 return input.completed(room);
             }
+
+            @Override
+            public MCQuest lost(MCQuest foundQuest) {
+                return foundQuest.lost();
+            }
         }, reward);
         this.owner = owner;
     }

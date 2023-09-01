@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -38,6 +39,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -327,8 +329,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 new TranslatableComponent("room." + newMatch.getRecipeID().getPath()),
                 newRoom.getDoorPos().getUIString()
         ));
-        // TODO: Render sparkles
-//        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
+        TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.FLASH);
         if (oldMatch  == null && newMatch != null) {
             quests.markQuestAsComplete(newRoom, newMatch.getRecipeID());
             return;
@@ -359,8 +360,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getDoorPos().getUIString()
         ));
-        // TODO: Get room
-//        handleRoomChange(, ParticleTypes.LARGE_SMOKE);
+        TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
+        quests.markQuestAsLost(roomDoorPos, oldRecipeId.getRecipeID());
     }
 
     @Override
@@ -375,9 +376,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 getBlockPos().getX(),
                 getBlockPos().getY() + 10,
                 getBlockPos().getZ(),
-                Items.FIREWORK_ROCKET.getDefaultInstance()
+                new ItemStack(Items.FIREWORK_ROCKET.getDefaultInstance().getItem(), 3)
         );
         level.addFreshEntity(firework);
+    }
+
+    @Override
+    public void questLost(MCQuest quest) {
+        broadcastMessage(new TranslatableComponent(
+                "messages.town_flag.quest_lost",
+                RoomRecipes.getName(quest.getWantedId())
+        )); // TODO: Do this in a different quest listener (specialized in "messaging")
+        setChanged();
     }
 
     @Override

@@ -39,6 +39,14 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
+    public MCQuest lost() {
+        MCQuest q = new MCQuest(this.getWantedId(), this.fromRecipeID().orElse(null));
+        q.uuid = this.uuid;
+        q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
+        q.completedOn = null;
+        return q;
+    }
+
     public static class Serializer {
 
         private static final String NBT_UUID = "uuid";

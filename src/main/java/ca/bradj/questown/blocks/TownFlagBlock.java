@@ -285,7 +285,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                 ResourceLocation id;
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE);
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null);
                 } else {
                     id = recipe.getRecipeId();
                 }

@@ -3,6 +3,7 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -36,6 +37,11 @@ public class QuestBatch<
         public void questBatchCompleted(
                 QuestBatch<?, ?, ?, ?> quest
         ) {
+            // No op by default
+        }
+
+        @Override
+        public void questLost(QUEST foundQuest) {
             // No op by default
         }
     };
@@ -181,9 +187,30 @@ public class QuestBatch<
         this.quests.remove(match);
     }
 
+    public boolean markRecipeAsLost(@NotNull ROOM oldRoom, @NotNull KEY recipeID) {
+        QUEST foundQuest = null;
+        for (QUEST q : quests) {
+            if (oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())) {
+                foundQuest = q;
+                break;
+            }
+        }
+        if (foundQuest == null) {
+            return false;
+        }
+        if (this.quests.remove(foundQuest)) {
+            this.quests.add(questFactory.lost(foundQuest));
+            this.changeListener.questLost(foundQuest);
+            return true;
+        }
+        return false;
+    }
+
     public interface ChangeListener<QUEST extends Quest<?, ?>> {
         void questCompleted(QUEST quest);
 
         void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest);
+
+        void questLost(QUEST quest);
     }
 }

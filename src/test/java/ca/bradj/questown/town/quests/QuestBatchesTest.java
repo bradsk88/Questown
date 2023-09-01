@@ -38,6 +38,20 @@ class QuestBatchesTest {
                     testQuest.completedOn = room;
                     return testQuest;
                 }
+
+                @Override
+                public TestQuest lost(TestQuest input) {
+
+                    TestQuest testQuest;
+                    if (input.fromRecipeID().isPresent()) {
+                        testQuest = TestQuest.upgrade(input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
+                    } else {
+                        testQuest = TestQuest.standalone(input.recipeId, Quest.QuestStatus.ACTIVE);
+                    }
+                    testQuest.uuid = input.uuid;
+                    testQuest.completedOn = null;
+                    return testQuest;
+                }
             }, new Reward() {
                 @Override
                 protected String getName() {

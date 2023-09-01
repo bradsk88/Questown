@@ -32,6 +32,11 @@ public class QuestBatches<
         public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
             // No op by default
         }
+
+        @Override
+        public void questLost(QUEST quest) {
+            // No op by default
+        }
     };
 
     public void initialize(ImmutableList<BATCH> bs) {
@@ -52,6 +57,11 @@ public class QuestBatches<
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
         this.changeListener.questBatchCompleted(quest);
+    }
+
+    @Override
+    public void questLost(QUEST quest) {
+        this.changeListener.questLost(quest);
     }
 
     public void addChangeListener(QuestBatch.ChangeListener<QUEST> listener) {
@@ -97,14 +107,19 @@ public class QuestBatches<
                 }
             }
             if (oldQuest != null && newQuest != null) {
-                oldQuest.apply(); newQuest.apply();
+                oldQuest.apply();
+                newQuest.apply();
                 return;
             }
         }
     }
 
     public void markRecipeAsLost(ROOM oldRoom, KEY recipeID) {
-        // TODO: Implement
+        for (BATCH b : batches) {
+            if (b.markRecipeAsLost(oldRoom, recipeID)) {
+                return;
+            }
+        }
     }
 
     public void changeRoomOnly(ROOM oldRoom, ROOM newRoom) {

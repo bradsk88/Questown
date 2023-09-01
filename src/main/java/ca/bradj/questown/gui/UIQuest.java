@@ -24,13 +24,16 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public final Quest.QuestStatus status;
     private final RoomRecipe recipe;
+    public final ResourceLocation fromRecipe;
 
     public UIQuest(
             RoomRecipe recipe,
-            Quest.QuestStatus status
+            Quest.QuestStatus status,
+            @Nullable ResourceLocation fromRecipe
     ) {
         this.recipe = recipe;
         this.status = status;
+        this.fromRecipe = fromRecipe;
     }
 
     public static List<UIQuest> fromLevel(
@@ -48,7 +51,10 @@ public class UIQuest implements Comparable<UIQuest> {
                 return null;
             }
             int recipeStrength = 1; // TODO: Add getter to RoomRecipes
-            return new UIQuest(new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength), v.getStatus());
+            return new UIQuest(
+                    new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength),
+                    v.getStatus(), v.fromRecipeID().orElse(null)
+            );
         }).toList();
     }
 
@@ -93,25 +99,39 @@ public class UIQuest implements Comparable<UIQuest> {
                     p_44103_,
                     p_44104_.getAsJsonObject("recipe")
             );
-            return new UIQuest(recipe, Quest.QuestStatus.valueOf(status));
+            ResourceLocation fromID = null;
+            if (p_44104_.has("from_id")) {
+                fromID = new ResourceLocation(p_44104_.get("from_id").getAsString());
+            }
+            return new UIQuest(recipe, Quest.QuestStatus.valueOf(status), fromID);
+        }
+
+        public void toNetwork(
+                FriendlyByteBuf buf,
+                UIQuest p_44102_
+        ) {
+            buf.writeUtf(p_44102_.status.asString());
+            this.recipeSerializer.toNetwork(buf, p_44102_.recipe);
+            String fromStr = "";
+            if (p_44102_.fromRecipe != null) {
+                fromStr = p_44102_.fromRecipe.toString();
+            }
+            buf.writeUtf(fromStr);
         }
 
         @Nullable
         public UIQuest fromNetwork(
                 ResourceLocation p_44105_,
-                FriendlyByteBuf p_44106_
+                FriendlyByteBuf buf
         ) {
-            String status = p_44106_.readUtf();
-            RoomRecipe rec = this.recipeSerializer.fromNetwork(p_44105_, p_44106_);
-            return new UIQuest(rec, Quest.QuestStatus.fromString(status));
-        }
-
-        public void toNetwork(
-                FriendlyByteBuf p_44101_,
-                UIQuest p_44102_
-        ) {
-            p_44101_.writeUtf(p_44102_.status.asString());
-            this.recipeSerializer.toNetwork(p_44101_, p_44102_.recipe);
+            String status = buf.readUtf();
+            RoomRecipe rec = this.recipeSerializer.fromNetwork(p_44105_, buf);
+            String fromStr = buf.readUtf();
+            ResourceLocation from = null;
+            if (!fromStr.isEmpty()) {
+                from = new ResourceLocation(fromStr);
+            }
+            return new UIQuest(rec, Quest.QuestStatus.fromString(status), from);
         }
     }
 }

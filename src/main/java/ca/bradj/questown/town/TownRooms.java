@@ -93,7 +93,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             MCRoom room
     ) {
         grantAdvancement(doorPos);
-        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
+        addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
         changeListener.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null));
         entity.broadcastMessage(new TranslatableComponent(
@@ -131,7 +131,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             MCRoom newRoom
     ) {
 
-        handleRoomChange(newRoom, ParticleTypes.HAPPY_VILLAGER);
+        addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         ServerLevel serverLevel = entity.getServerLevel();
         Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(serverLevel, newRoom, this, getY());
         this.changeListener.updateRecipeForRoom(scanLevel, oldRoom, newRoom, recipe.orElse(null));
@@ -153,24 +153,24 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
         ));
-        handleRoomChange(room, ParticleTypes.SMOKE);
+        addParticles(entity.getServerLevel(), room, ParticleTypes.SMOKE);
         changeListener.updateRecipeForRoom(scanLevel, room, null, null);
     }
 
 
-    private void handleRoomChange(
+    public static void addParticles(
+            ServerLevel sl,
             MCRoom room,
             ParticleOptions pType
     ) {
         for (InclusiveSpace space : room.getSpaces()) {
             RoomEffects.renderParticlesBetween(space, (x, z) -> {
-                BlockPos bp = new BlockPos(x, getY(), z);
-                ServerLevel sl = entity.getServerLevel();
+                BlockPos bp = new BlockPos(x, room.yCoord, z);
                 if (!sl.isEmptyBlock(bp)) {
                     return;
                 }
-                sl.sendParticles(pType, x, getY(), z, 2, 0, 1, 0, 1);
-                sl.sendParticles(pType, x, getY() + 1, z, 2, 0, 1, 0, 1);
+                sl.sendParticles(pType, x, room.yCoord, z, 2, 0, 1, 0, 1);
+                sl.sendParticles(pType, x, room.yCoord + 1, z, 2, 0, 1, 0, 1);
             });
         }
     }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -11,8 +12,8 @@ public class Quest<KEY, ROOM extends Room> {
     protected UUID uuid;
     protected KEY recipeId;
     protected QuestStatus status;
-    protected ROOM completedOn;
-    private KEY fromRecipeID;
+    protected @Nullable ROOM completedOn;
+    private @Nullable KEY fromRecipeID;
 
     Quest() {
         this(null, null);
@@ -97,6 +98,8 @@ public class Quest<KEY, ROOM extends Room> {
                 ROOM room,
                 QUEST input
         );
+
+        QUEST lost(QUEST foundQuest);
     }
 
 

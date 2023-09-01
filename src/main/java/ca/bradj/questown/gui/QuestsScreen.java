@@ -140,7 +140,12 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             if (recipe == null) {
                 continue;
             }
-            Component recipeName = new TextComponent(recipe.getName().getString());
+            Component recipeName = recipe.getName();
+            if (recipe.fromRecipe != null) {
+                Component fromName = RoomRecipes.getName(recipe.fromRecipe);
+                recipeName = new TranslatableComponent("quests.upgrade", fromName, recipeName);
+            }
+
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
                 recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);

@@ -32,6 +32,7 @@
   "tooltips.villagers.job.gatherer.status_1.RELAXING": "Gatherer has finished",
   "tooltips.villagers.job.gatherer.status_2.RELAXING": "their work for the day",
   "quests.build_a": "Build a %s",
+  "quests.upgrade": "%s -> %s",
   "quests.completed_suffix": "%s (Completed)",
   "room.no_recipe": "Room",
   "room.crafting_room": "Crafting Room",

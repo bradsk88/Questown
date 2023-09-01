@@ -175,7 +175,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         );
     }
 
-    public void markQuestAsLost(MCRoom oldRoom, ResourceLocation recipeID) {
+    public void markQuestAsLost(
+            MCRoom oldRoom, ResourceLocation recipeID
+    ) {
         questBatches.markRecipeAsLost(oldRoom, recipeID);
     }
 
@@ -187,6 +189,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
         this.changeListener.questBatchCompleted(quest);
+    }
+
+    @Override
+    public void questLost(MCQuest quest) {
+        this.changeListener.questLost(quest);
     }
 
     public void setChangeListener(TownFlagBlockEntity townFlagBlockEntity) {
