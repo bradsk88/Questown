@@ -19,7 +19,7 @@
   "tooltips.villagers.job.gatherer.status_2.NO_SPACE": "in a room to deposit their items.",
   "tooltips.villagers.job.gatherer.status_1.NO_FOOD": "Gatherer is looking for food.",
   "tooltips.villagers.job.gatherer.status_2.NO_FOOD": "",
-  "tooltips.villagers.job.gatherer.status_1.NO_GATE": "Gatherer cannot find town gate",
+  "tooltips.villagers.job.gatherer.status_1.NO_GATE": "Gatherer is looking for the town gate",
   "tooltips.villagers.job.gatherer.status_2.NO_GATE": "(Check the old journal for info)",
   "tooltips.villagers.job.gatherer.status_1.STAYING": "Gatherer is staying. Make sure they",
   "tooltips.villagers.job.gatherer.status_2.STAYING": "have access to food in the morning.",
