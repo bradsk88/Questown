@@ -106,6 +106,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
 
         List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
+
+        ImmutableList.Builder<ResourceLocation> possibleUpgrades = ImmutableList.builder();
+
         for (RoomRecipe aRecipe : all) {
             Collection<List<String>> toIng = getItemKeyStrings(aRecipe.getIngredients());
             Collection<List<String>> fromIng = getItemKeyStrings(fromIngredients);
@@ -113,15 +116,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 continue; // Perfect overlap. So not an upgrade.
             }
             if (RoomRecipes.containsAllTags(fromIng, toIng)) {
-                return aRecipe.getId();
+                possibleUpgrades.add(aRecipe.getId());
             }
-            // TODO: But what about going from torches to lanterns, for example
-            //  Or tags, like minecraft:beds?  The approach above probably won't work.
-            //  Use tags in lower level recipes, and more specific tags (or specific
-            //  items) in higher level recipes.  If the lower level tag contains all
-            //  items from the upper level tag, allow the upgrade.
         }
-        return null;
+
+        ImmutableList<ResourceLocation> upgrades = possibleUpgrades.build();
+        if (upgrades.isEmpty()) {
+            return null;
+        }
+
+        return upgrades.get(level.getRandom().nextInt(upgrades.size()));
     }
 
     @NotNull
