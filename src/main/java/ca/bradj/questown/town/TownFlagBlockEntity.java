@@ -323,29 +323,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             MCRoom newRoom,
             RoomRecipeMatch newMatch
     ) {
+        ResourceLocation oldMatchID = oldMatch.getRecipeID();
+        ResourceLocation newMatchID = newMatch.getRecipeID();
         broadcastMessage(new TranslatableComponent(
                 "messages.building.room_changed",
-                new TranslatableComponent("room." + oldMatch.getRecipeID().getPath()),
-                new TranslatableComponent("room." + newMatch.getRecipeID().getPath()),
+                new TranslatableComponent("room." + oldMatchID.getPath()),
+                new TranslatableComponent("room." + newMatchID.getPath()),
                 newRoom.getDoorPos().getUIString()
         ));
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.FLASH);
         if (oldMatch  == null && newMatch != null) {
-            quests.markQuestAsComplete(newRoom, newMatch.getRecipeID());
+            quests.markQuestAsComplete(newRoom, newMatchID);
             return;
         }
-        if (oldMatch.getRecipeID().equals(newMatch.getRecipeID())) {
+        if (oldMatchID.equals(newMatchID)) {
             if (!oldRoom.equals(newRoom)) {
                 quests.changeRoomOnly(oldRoom, newRoom);
             }
         }
-        if (!oldMatch.getRecipeID().equals(newMatch.getRecipeID())) {
+        if (!oldMatchID.equals(newMatchID)) {
             // TODO: Add quests as a listener instead of doing these calls
-            if (quests.canBeUpgraded(oldMatch.getRecipeID(), newMatch.getRecipeID())) {
-                quests.markAsConverted(newRoom, oldMatch.getRecipeID(), newMatch.getRecipeID());
+            if (quests.canBeUpgraded(oldMatchID, newMatchID)) {
+                quests.markAsConverted(newRoom, oldMatchID, newMatchID);
             } else {
-                quests.markQuestAsLost(oldRoom, oldMatch.getRecipeID());
-                quests.markQuestAsComplete(newRoom, newMatch.getRecipeID());
+                quests.markQuestAsLost(oldRoom, oldMatchID);
+                quests.markQuestAsComplete(newRoom, newMatchID);
             }
         }
     }
@@ -406,6 +408,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
         TownQuests.addUpgradeQuest(this, quests, visitorUUID);
         setChanged();
+    }
+
+    @Override
+    public UUID getRandomVillager(Random random) {
+        List<UUID> villagers = ImmutableList.copyOf(getVillagers());
+        return villagers.get(random.nextInt(villagers.size()));
     }
 
     @Override

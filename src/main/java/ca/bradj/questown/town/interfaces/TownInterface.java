@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,6 +48,8 @@ public interface TownInterface {
     @Nullable BlockPos getClosestWelcomeMatPos(BlockPos reference);
 
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
+
+    UUID getRandomVillager(Random random);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

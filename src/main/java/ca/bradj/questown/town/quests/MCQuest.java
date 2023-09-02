@@ -55,11 +55,11 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_STATUS = "status";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
-        private static final String NBT_COMPLETED_ON_DOORPOS_Z = "doorpos_x";
+        private static final String NBT_COMPLETED_ON_DOORPOS_Z = "doorpos_z";
         private static final String NBT_COMPLETED_ON_AA_X = "aa_x";
-        private static final String NBT_COMPLETED_ON_AA_Z = "aa_x";
+        private static final String NBT_COMPLETED_ON_AA_Z = "aa_z";
         private static final String NBT_COMPLETED_ON_BB_X = "bb_x";
-        private static final String NBT_COMPLETED_ON_BB_Z = "bb_x";
+        private static final String NBT_COMPLETED_ON_BB_Z = "bb_z";
 
         public CompoundTag serializeNBT(Quest<ResourceLocation, MCRoom> quest) {
             CompoundTag ct = new CompoundTag();

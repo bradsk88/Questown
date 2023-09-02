@@ -3,10 +3,10 @@
   "recipe_strength": 1,
   "ingredients": [
     {
-      "item": "minecraft:lantern"
+      "tag": "questown:lanterns"
     },
     {
-      "item": "minecraft:lantern"
+      "tag": "questown:lanterns"
     },
     {
       "item": "minecraft:crafting_table"

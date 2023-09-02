@@ -3,7 +3,7 @@
   "recipe_strength": 1,
   "ingredients": [
     {
-      "item": "minecraft:torch"
+      "tag": "questown:light_sources"
     },
     {
       "item": "minecraft:target"
