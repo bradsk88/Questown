@@ -355,14 +355,6 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean hurt(DamageSource p_21016_, float p_21017_) {
-        if (this.job.shouldBeNoClip(town, blockPosition())) {
-            return false;
-        }
-        return super.hurt(p_21016_, p_21017_);
-    }
-
-    @Override
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
@@ -684,7 +676,14 @@ public class VisitorMobEntity extends PathfinderMob {
             DamageSource p_21016_,
             float p_21017_
     ) {
-        convertToCook();
+        if (p_21016_.getEntity() instanceof Player) {
+            convertToCook();
+        }
+
+        if (this.job.shouldBeNoClip(town, blockPosition())) {
+            return false;
+        }
+
         return super.hurt(p_21016_, p_21017_);
     }
 

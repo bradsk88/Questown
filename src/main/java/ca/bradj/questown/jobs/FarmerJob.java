@@ -5,12 +5,12 @@ import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.MCRoom;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -228,7 +228,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 Random random = town.getServerLevel().getRandom();
                 InclusiveSpace space = room.get().getSpace();
                 Position pos = InclusiveSpaces.getRandomEnclosedPosition(space, random);
-                int farmLandY = room.get().getY() + 1; // TODO: Only required while we put doors in the ground
+                int farmLandY = room.get().yCoord + 1; // TODO: Only required while we put doors in the ground
                 return Positions.ToBlock(pos, farmLandY);
             }
         }
