@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:torch",
+    "minecraft:lantern",
+    "minecraft:sea_lantern",
+    "minecraft:soul_lantern",
+    "minecraft:jack_o_lantern",
+    "minecraft:campfire"
+  ]
+}

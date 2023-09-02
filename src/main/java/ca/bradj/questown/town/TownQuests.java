@@ -97,31 +97,43 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     private static @Nullable ResourceLocation getUpgradeRecipe(
             Level level, ResourceLocation fromRecipeId
     ) {
-        Optional<RoomRecipe> recipe = RoomRecipes.getById(level, fromRecipeId);
-        if (recipe.isEmpty()) {
+        Optional<RoomRecipe> fromRecipe = RoomRecipes.getById(level, fromRecipeId);
+        if (fromRecipe.isEmpty()) {
             return null;
         }
+        NonNullList<Ingredient> fromIngredients = fromRecipe.get().getIngredients();
+
+
 
         List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
         for (RoomRecipe aRecipe : all) {
-            Collection<Item> toIng = getItems(aRecipe.getIngredients());
-            Collection<Item> fromIng = getItems(recipe.get().getIngredients());
+            Collection<List<String>> toIng = getItemKeyStrings(aRecipe.getIngredients());
+            Collection<List<String>> fromIng = getItemKeyStrings(fromIngredients);
             if (toIng.equals(fromIng)) {
                 continue; // Perfect overlap. So not an upgrade.
             }
-            if (toIng.size() > fromIng.size() && toIng.containsAll(fromIng)) {
+            if (RoomRecipes.containsAllTags(fromIng, toIng)) {
                 return aRecipe.getId();
             }
             // TODO: But what about going from torches to lanterns, for example
             //  Or tags, like minecraft:beds?  The approach above probably won't work.
+            //  Use tags in lower level recipes, and more specific tags (or specific
+            //  items) in higher level recipes.  If the lower level tag contains all
+            //  items from the upper level tag, allow the upgrade.
         }
         return null;
     }
 
     @NotNull
-    private static List<Item> getItems(NonNullList<Ingredient> ing) {
+    private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                .flatMap(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem))
+                .map(v -> Arrays
+                        .stream(v.getItems())
+                        .map(ItemStack::getItem)
+                        .map(Item::getRegistryName)
+                        .filter(Objects::nonNull)
+                        .map(ResourceLocation::toString)
+                        .toList())
                 .toList();
     }
 

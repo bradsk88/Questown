@@ -15,6 +15,8 @@ public class TagsInit {
         public static final TagKey<Item> PICKAXES = createTag("pickaxes");
         public static final TagKey<Item> SHOVELS = createTag("shovels");
         public static final TagKey<Item> FISHING_RODS = createTag("fishing_rods");
+        public static final TagKey<Item> LIGHT_SOURCES = createTag("light_sources");
+        public static final TagKey<Item> LANTERNS = createTag("lanterns");
 
 
         private static TagKey<Item> createTag(String name) {

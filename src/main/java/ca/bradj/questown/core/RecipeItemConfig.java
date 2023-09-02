@@ -1,10 +1,12 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.core.init.TagsInit;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.InMemoryFormat;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.common.Tags;
 
 public class RecipeItemConfig {
 
@@ -21,10 +23,14 @@ public class RecipeItemConfig {
         //    CraftedResource(Items.Stick, [CraftedResource(Items.OAK_PLANKS, [RawResource(Items.OAK_WOOD)])])
         //  ]).calculate()
         defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), 10);
+        // TODO: Tags that allow for you to choose from a range of easy-to-hard blocks should use the weight of the easiest block
+        // In this case, we know that "light sources" contains torches, so we use torch weight
+        defaultItemWeights.add(String.format("#%s", TagsInit.Items.LIGHT_SOURCES.location()), 20);
         defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), 20);
         defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), 20);
         defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), 30);
         defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), 40);
+        defaultItemWeights.add(String.format("#%s", Tags.Items.CHESTS.location()), 40);
         defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), 40);
         defaultItemWeights.add(String.format("#%s", ItemTags.SIGNS.location()), 50);
         defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), 135);

@@ -42,6 +42,7 @@ public class RoomRecipes {
         }
         return b.build();
     }
+
     public static Optional<RoomRecipe> getById(Level level, ResourceLocation id) {
         List<RoomRecipe> recipes = getAllRecipes(level);
         for (RoomRecipe r : recipes) {
@@ -58,6 +59,9 @@ public class RoomRecipes {
     }
 
     public static Component getName(ResourceLocation id) {
+        if (id.getPath().startsWith("special_quest")) {
+            return new TranslatableComponent(id.getPath());
+        }
         return new TranslatableComponent(String.format("room.%s", id.getPath()));
     }
 
@@ -110,6 +114,30 @@ public class RoomRecipes {
             }
         }
         return weight;
+    }
+
+    public static boolean containsAllTags(
+            Iterable<? extends List<String>> haystack,
+            Iterable<? extends List<String>> needles
+    ) {
+        boolean found = false;
+        for (List<String> h : haystack) {
+            boolean iFound = false;
+            for (List<String> n : needles) {
+                if (iFound) {
+                    continue;
+                }
+                if (h.containsAll(n)) {
+                    iFound = true;
+                }
+            }
+            if (iFound) {
+                found = true;
+                continue;
+            }
+            return false;
+        }
+        return found;
     }
 }
 
