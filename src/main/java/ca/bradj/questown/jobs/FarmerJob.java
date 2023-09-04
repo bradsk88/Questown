@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -13,31 +13,32 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.Container;
-import net.minecraft.world.ContainerListener;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.*;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ToolActions;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener {
     private final ArrayList<DataSlot> locks = new ArrayList<>();
@@ -45,6 +46,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private final Container inventory;
     private Signals signal;
     private FarmerJournal<MCTownItem, MCHeldItem> journal;
+    private int ticksSinceLastFarmAction;
 
     public FarmerJob(
             @Nullable ServerLevel level,
@@ -64,7 +66,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             this.locks.add(new LockSlot(i, this));
         }
 
-        this.journal = new FarmerJournal<>(() -> this.signal, inventoryCapacity);
+        this.journal = new FarmerJournal<>(
+                () -> this.signal, inventoryCapacity,
+                MCHeldItem::Air
+        );
     }
 
     @Override
@@ -74,8 +79,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     @Override
     public GathererJournal.Status getStatus() {
-        // TODO: Implement different statuses
-        return GathererJournal.Status.IDLE;
+        return journal.getStatus();
     }
 
     @Override
@@ -87,14 +91,19 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public void tick(
             TownInterface town,
-            BlockPos entityPos
+            BlockPos entityPos,
+            BlockPos facingPos
     ) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
         processSignal(town.getServerLevel(), this);
 
-        // TODO: Implement all of this
+        if (getStatus() == GathererJournal.Status.FARMING) {
+            tryFarming(town, facingPos);
+        }
+
+        // TODO: Implement all of this for cook
 //        // TODO: Take cooked food to chests
 //        if (successTarget != null && !successTarget.isStillValid()) {
 //            successTarget = null;
@@ -114,6 +123,67 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        tryTakeFood(entityPos);
     }
 
+    private void tryFarming(TownInterface town, BlockPos facingPos) {
+        if (!isInFarm(town, facingPos)) {
+            return;
+        }
+        ticksSinceLastFarmAction++;
+        if (ticksSinceLastFarmAction < Config.FARM_ACTION_INTERVAL.get()) {
+            return;
+        }
+        ticksSinceLastFarmAction = 0;
+        BlockPos blockPos = facingPos.below();
+        BlockState blockState = town.getServerLevel().getBlockState(blockPos);
+        BlockHitResult bhr = new BlockHitResult(
+                Vec3.atCenterOf(blockPos), Direction.UP,
+                blockPos, false
+        );
+        if (blockState.getBlock() instanceof CropBlock cb) {
+            if (cb.isMaxAge(blockState)) {
+                List<ItemStack> drops = CropBlock.getDrops(blockState, town.getServerLevel(), blockPos, null);
+                drops.forEach(v -> journal.addItem(MCHeldItem.fromMCItemStack(v)));
+                // TODO: Handle more drops than inventory
+                blockState.setValue(CropBlock.AGE, 0);
+            }
+        }
+        if (tryPlanting(town, facingPos, blockState, bhr)) {
+            return;
+        }
+        BlockState mState = tryTilling(town, facingPos, blockState, bhr);
+        if (mState != null) {
+            town.getServerLevel().setBlock(blockPos, mState, 11);
+        }
+    }
+
+    @Nullable
+    private static BlockState tryTilling(TownInterface town, BlockPos entityPos, BlockState blockState, BlockHitResult bhr) {
+        return blockState.getToolModifiedState(new UseOnContext(
+                town.getServerLevel(), null, InteractionHand.MAIN_HAND,
+                // TODO: Determine tool from held item
+                Items.WOODEN_HOE.getDefaultInstance(), bhr
+        ), ToolActions.HOE_TILL, false);
+    }
+
+    private boolean tryPlanting(TownInterface town, BlockPos facingPos, BlockState blockState, BlockHitResult bhr) {
+        InteractionResult result = Items.WHEAT_SEEDS.useOn(new UseOnContext(
+                town.getServerLevel(), null, InteractionHand.MAIN_HAND,
+                Items.WHEAT_SEEDS.getDefaultInstance(), bhr
+        ));
+        return result.consumesAction();
+    }
+
+    private boolean isInFarm(TownInterface town, BlockPos entityPos) {
+        Collection<MCRoom> rooms = town.getFarms();
+        for (MCRoom foundRoom : rooms) {
+            boolean inFarm = foundRoom.yCoord == entityPos.getY() &&
+                    foundRoom.contains(Positions.FromBlockPos(entityPos));
+            if (inFarm) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     private static void processSignal(
             Level level,
@@ -131,7 +201,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
          */
 
         e.signal = Signals.fromGameTime(level.getDayTime());
-        // TODO: Tick the journal
         e.journal.tick(e);
     }
 
@@ -219,17 +288,21 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             TownInterface town
     ) {
         if (journal.getStatus() == GathererJournal.Status.FARMING) {
-            // FIXME: Instead of using a recipe, just scan to make sure room is full of dirt blocks
-            //  Recipes have an associated "quantity" of blocks. Which doesn't make sense for farms.
-            ResourceLocation farmID = new ResourceLocation(Questown.MODID, "farm");
-            Collection<MCRoom> rooms = town.getRoomsMatching(farmID);
+            Collection<MCRoom> rooms = town.getFarms();
             Optional<MCRoom> room = rooms.stream().findFirst();
             if (room.isPresent()) {
-                Random random = town.getServerLevel().getRandom();
-                InclusiveSpace space = room.get().getSpace();
-                Position pos = InclusiveSpaces.getRandomEnclosedPosition(space, random);
-                int farmLandY = room.get().yCoord + 1; // TODO: Only required while we put doors in the ground
-                return Positions.ToBlock(pos, farmLandY);
+                MCRoom foundRoom = room.get();
+                boolean inFarm = foundRoom.yCoord == entityPos.getY() &&
+                        foundRoom.contains(Positions.FromBlockPos(entityPos));
+                if (inFarm) {
+                    Random random = town.getServerLevel().getRandom();
+                    InclusiveSpace space = foundRoom.getSpace();
+                    Position pos = InclusiveSpaces.getRandomEnclosedPosition(space, random);
+                    int farmLandY = foundRoom.yCoord + 1; // TODO: Only required while we put doors in the ground
+                    return Positions.ToBlock(pos, farmLandY);
+                }
+                // TODO: Make this farmer open the gate and go through
+                return Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
             }
         }
         // TODO: Implement target finding
@@ -244,6 +317,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public boolean shouldBeNoClip(TownInterface town, BlockPos blockPos) {
         return false;
+    }
+
+    @Override
+    public Component getJobName() {
+        return new TranslatableComponent("jobs.farmer");
     }
 
     @Override

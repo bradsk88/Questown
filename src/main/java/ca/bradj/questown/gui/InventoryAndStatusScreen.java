@@ -161,10 +161,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 TranslatableComponent component = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_1." + menu.getStatus().name()
+                        "tooltips.villagers.job.gatherer.status_1." + menu.getStatus().name(), menu.getJobName()
                 );
                 TranslatableComponent component2 = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_2." + menu.getStatus().name()
+                        "tooltips.villagers.job.gatherer.status_2." + menu.getStatus().name(), menu.getJobName()
                 );
                 super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
                 return;

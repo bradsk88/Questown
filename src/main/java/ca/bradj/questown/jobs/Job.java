@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.DataSlot;
@@ -20,7 +21,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
 
     void tick(
             TownInterface town,
-            BlockPos entityPos
+            BlockPos entityPos,
+            BlockPos facingPos
     );
 
     boolean shouldDisappear(
@@ -51,4 +53,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
     void initializeItems(Iterable<H> itemz);
 
     boolean shouldBeNoClip(TownInterface town, BlockPos blockPos);
+
+    Component getJobName();
 }

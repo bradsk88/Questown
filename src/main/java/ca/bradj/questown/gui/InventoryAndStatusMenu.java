@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,6 +34,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     private final DataSlot statusSlot;
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
+    private final Component jobName;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -64,6 +66,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.entity = gatherer;
+        this.jobName = gatherer.getJobName();
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
@@ -256,5 +259,9 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     @Override
     public void statusChanged(GathererJournal.Status newStatus) {
         this.statusSlot.set(newStatus.ordinal());
+    }
+
+    public Component getJobName() {
+        return this.jobName;
     }
 }

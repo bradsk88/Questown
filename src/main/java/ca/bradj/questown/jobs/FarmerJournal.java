@@ -5,21 +5,27 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
 public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
-    private final List<H> inventory;
+    private final JournalItemList<H> inventory;
+    private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
     private final GathererJournal.SignalSource sigs;
     private GathererJournal.Status status;
 
     public FarmerJournal(
             GathererJournal.SignalSource sigs,
-            int capacity
+            int capacity,
+            EmptyFactory<H> ef
     ) {
         this.sigs = sigs;
-        this.inventory = new ArrayList<>();
+        this.inventory = new JournalItemList<>(capacity, ef);
         this.capacity = capacity;
+        this.invState = new DefaultInventoryStateProvider<>(
+                () -> ImmutableList.copyOf(this.inventory)
+        );
     }
 
     public void initialize(FarmerJournal.Snapshot<H> journal) {
@@ -31,7 +37,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     }
 
     public void setItems(Iterable<H> mcTownItemStream) {
-        Jobs.setItemsOnJournal(mcTownItemStream, inventory, capacity);
+        inventory.setItems(mcTownItemStream);
         updateItemListeners();
     }
 
@@ -80,6 +86,18 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
 
     public GathererJournal.Status getStatus() {
         return status;
+    }
+
+    public void addItem(H item) {
+        if (this.invState.inventoryIsFull()) {
+            throw new IllegalStateException("Inventory is full");
+        }
+        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        inventory.set(inventory.indexOf(emptySlot), item);
+        updateItemListeners();
+        if (status == GathererJournal.Status.NO_FOOD && item.isFood()) { // TODO: Test
+            changeStatus(GathererJournal.Status.IDLE);
+        }
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(

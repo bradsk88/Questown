@@ -18,6 +18,7 @@ public class TownRoomsMapSerializer {
 
     public static final TownRoomsMapSerializer INSTANCE = new TownRoomsMapSerializer();
     private static final String NBT_REGISTERED_DOORS = String.format("%s_registered_doors", Questown.MODID);
+    private static final String NBT_REGISTERED_FENCE_GATES = String.format("%s_registered_fence_gates", Questown.MODID);
     public static final String NBT_ACTIVE_RECIPES = String.format("%s_active_recipes", Questown.MODID);
     private static final String NBT_POS_X = "position_x";
     private static final String NBT_POS_Y = "position_y";
@@ -28,7 +29,7 @@ public class TownRoomsMapSerializer {
             TownFlagBlockEntity owner,
             TownRoomsMap roomsMap
     ) {
-        ImmutableList.Builder<BlockPos> doorsB = ImmutableList.builder();
+        ImmutableList.Builder<TownPosition> doorsB = ImmutableList.builder();
         if (tag.contains(NBT_REGISTERED_DOORS)) {
             ListTag doors = tag.getList(NBT_REGISTERED_DOORS, Tag.TAG_COMPOUND);
             for (Tag t : doors) {
@@ -36,7 +37,18 @@ public class TownRoomsMapSerializer {
                 int x = ct.getInt(NBT_POS_X);
                 int y = ct.getInt(NBT_POS_Y);
                 int z = ct.getInt(NBT_POS_Z);
-                doorsB.add(new BlockPos(x, y, z));
+                doorsB.add(new TownPosition(x, z, y));
+            }
+        }
+        ImmutableList.Builder<TownPosition> gates = ImmutableList.builder();
+        if (tag.contains(NBT_REGISTERED_FENCE_GATES)) {
+            ListTag doors = tag.getList(NBT_REGISTERED_FENCE_GATES, Tag.TAG_COMPOUND);
+            for (Tag t : doors) {
+                CompoundTag ct = (CompoundTag) t;
+                int x = ct.getInt(NBT_POS_X);
+                int y = ct.getInt(NBT_POS_Y);
+                int z = ct.getInt(NBT_POS_Z);
+                doorsB.add(new TownPosition(x, z, y));
             }
         }
         Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
@@ -45,17 +57,17 @@ public class TownRoomsMapSerializer {
 //            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
 //            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
-        roomsMap.initialize(owner, activeRecipes, doorsB.build());
+        roomsMap.initialize(owner, activeRecipes, doorsB.build(), gates.build());
     }
 
     public Tag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();
-        for (BlockPos bp : roomsMap.getRegisteredDoors()) {
+        for (TownPosition bp : roomsMap.getRegisteredDoors()) {
             CompoundTag bpt = new CompoundTag();
-            bpt.putInt(NBT_POS_X, bp.getX());
-            bpt.putInt(NBT_POS_Y, bp.getY());
-            bpt.putInt(NBT_POS_Z, bp.getZ());
+            bpt.putInt(NBT_POS_X, bp.x);
+            bpt.putInt(NBT_POS_Y, bp.scanLevel);
+            bpt.putInt(NBT_POS_Z, bp.z);
             doors.add(bpt);
         }
         tag.put(NBT_REGISTERED_DOORS, doors);

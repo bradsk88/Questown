@@ -7,23 +7,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TownDoorItem extends Item {
-    public static final String ITEM_ID = "town_door";
+public class TownFenceGateItem extends Item {
+    public static final String ITEM_ID = "town_fence_gate";
 
-    public TownDoorItem() {
+    public TownFenceGateItem() {
         super(Questown.DEFAULT_ITEM_PROPS);
     }
 
     @Override
     public InteractionResult useOn(net.minecraft.world.item.context.UseOnContext ctx) {
-        return placeAndRegisterContainedItem(ctx);
-    }
-
-    @NotNull
-    private static InteractionResult placeAndRegisterContainedItem(net.minecraft.world.item.context.UseOnContext ctx) {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
                 ctx.getItemInHand());
         if (input == null) {
@@ -33,9 +27,8 @@ public class TownDoorItem extends Item {
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));
         if (interactionResult.equals(InteractionResult.CONSUME) && ctx.getLevel() instanceof ServerLevel sl) {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.registerDoor(ctx.getClickedPos().above());
+            parent.registerFenceGate(ctx.getClickedPos().above());
         }
         return interactionResult;
     }
-
 }

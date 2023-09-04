@@ -21,6 +21,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_ITEM_WEIGHT;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -42,6 +44,9 @@ public class Config {
         DEFAULT_ITEM_WEIGHT = BUILDER.comment(
                 "The default weight that will be assigned to items when choosing new quests. " +
                         "See questown-item-weights-server.toml"
+        ).define("DefaultItemWeight", 100);
+        FARM_ACTION_INTERVAL = BUILDER.comment(
+                "The number of ticks that farmers will wait between actions"
         ).define("DefaultItemWeight", 100);
 
         BUILDER.pop();

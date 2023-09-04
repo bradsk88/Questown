@@ -293,7 +293,7 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-        job.tick(town, blockPosition());
+        job.tick(town, blockPosition(), blockPosition().relative(getDirection()));
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
@@ -659,6 +659,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public DataSlot getLockSlot(int i) {
         return job.getLockSlot(i);
+    }
+
+    public Component getJobName() {
+        return job.getJobName();
     }
 
     public interface ChangeListener {

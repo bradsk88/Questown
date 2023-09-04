@@ -5,7 +5,6 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
@@ -23,15 +22,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener<MCRoom> {
 
-    private RecipeRoomChangeListener changeListener;
+    private final List<RecipeRoomChangeListener> changeListeners = new ArrayList<>();
 
-    public void setRecipeRoomChangeListener(RecipeRoomChangeListener townRoomsMap) {
-        this.changeListener = townRoomsMap;
+    public void addRecipeRoomChangeListener(RecipeRoomChangeListener cl) {
+        this.changeListeners.add(cl);
     }
 
     public interface RecipeRoomChangeListener {
@@ -83,10 +84,6 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         return this.rooms.getAll();
     }
 
-    public Collection<RoomRecipeMatch> getMatches() {
-        return this.entity.getMatches();
-    }
-
     @Override
     public void roomAdded(
             Position doorPos,
@@ -94,13 +91,19 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     ) {
         grantAdvancement(doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
-        changeListener.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null));
+        Optional<RoomRecipeMatch> recipe = getActiveRecipe(entity.getServerLevel(), room);
+        changeListeners.forEach(
+                cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
+        );
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_created",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
         ));
+    }
+
+    protected Optional<RoomRecipeMatch> getActiveRecipe(ServerLevel entity, MCRoom room) {
+        return RecipeDetection.getActiveRecipe(entity, room, this, getY());
     }
 
     private void grantAdvancement(
@@ -133,8 +136,12 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
         addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         ServerLevel serverLevel = entity.getServerLevel();
-        Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(serverLevel, newRoom, this, getY());
-        this.changeListener.updateRecipeForRoom(scanLevel, oldRoom, newRoom, recipe.orElse(null));
+        Optional<RoomRecipeMatch> recipe = getActiveRecipe(serverLevel, newRoom);
+        this.changeListeners.forEach(
+                changeListener -> changeListener.updateRecipeForRoom(
+                        scanLevel, oldRoom, newRoom, recipe.orElse(null)
+                )
+        );
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_size_changed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
@@ -147,14 +154,16 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             MCRoom room
     ) {
-        Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(entity.getServerLevel(), room, this, getY());
+        Optional<RoomRecipeMatch> recipe = getActiveRecipe(entity.getServerLevel(), room);
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
         ));
         addParticles(entity.getServerLevel(), room, ParticleTypes.SMOKE);
-        changeListener.updateRecipeForRoom(scanLevel, room, null, null);
+        changeListeners.forEach(
+                cl -> cl.updateRecipeForRoom(scanLevel, room, null, null)
+        );
     }
 
 

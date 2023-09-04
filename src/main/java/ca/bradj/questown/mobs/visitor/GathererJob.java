@@ -14,6 +14,7 @@ import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -145,8 +146,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     public void tick(
             TownInterface town,
-            BlockPos entityPos
-    ) {
+            BlockPos entityPos,
+            BlockPos relative) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
@@ -625,6 +626,11 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     public boolean shouldBeNoClip(TownInterface town, BlockPos position) {
         return this.closeToGate;
+    }
+
+    @Override
+    public Component getJobName() {
+        return new TranslatableComponent("jobs.gatherer");
     }
 
 

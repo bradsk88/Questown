@@ -17,25 +17,6 @@ public class Jobs {
         return b.build();
     }
 
-
-    public static <H extends HeldItem<H, ?> & GathererJournal.Item<H>> void setItemsOnJournal(
-            Iterable<H> mcTownItemStream,
-            List<H> inventory,
-            int capacity
-    ) {
-        ImmutableList.Builder<H> b = ImmutableList.builder();
-        mcTownItemStream.forEach(b::add);
-        ImmutableList<H> initItems = b.build();
-        if (initItems.size() != capacity) {
-            throw new IllegalArgumentException(String.format(
-                    "Argument to setItems is wrong length. Should be %s", capacity
-            ));
-        }
-        inventory.clear();
-        inventory.addAll(initItems);
-
-    }
-
     public static boolean isUnchanged(
             Container container,
             ImmutableList<MCHeldItem> items

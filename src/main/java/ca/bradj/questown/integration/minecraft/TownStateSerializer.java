@@ -50,6 +50,9 @@ public class TownStateSerializer {
             vTag.putDouble("z", e.zPosition);
             vTag.putString("journal_status", e.journal.statusStringValue());
             ListTag journalItems = new ListTag();
+            if (e.journal.items().size() != e.getCapacity()) {
+                throw new IllegalStateException("Journal items do not match capacity");
+            }
             for (MCHeldItem item : e.journal.items()) {
                 journalItems.add(item.serializeNBT());
             }

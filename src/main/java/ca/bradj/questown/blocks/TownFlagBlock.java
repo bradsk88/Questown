@@ -45,6 +45,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.common.Tags;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -141,6 +142,13 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
+        }
+        if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
+            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
+            // TODO: Advancement
+        }
+        if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
+            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
         }
 
         if (converted != null) {

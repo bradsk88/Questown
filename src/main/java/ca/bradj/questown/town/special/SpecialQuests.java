@@ -16,6 +16,7 @@ public class SpecialQuests {
     public static final ResourceLocation CAMPFIRE = new ResourceLocation(Questown.MODID, "special_quest.campfire");
     public static final ResourceLocation BROKEN = new ResourceLocation(Questown.MODID, "special_quest.broken");
     public static final ResourceLocation TOWN_GATE = new ResourceLocation(Questown.MODID, "special_quest.town_gate");
+    public static final ResourceLocation FARM = new ResourceLocation(Questown.MODID, "special_quest.farm");
 
     public static final Map<ResourceLocation, RoomRecipe> SPECIAL_QUESTS = ImmutableMap.of(
             BROKEN,

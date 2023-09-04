@@ -16,9 +16,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     private final SignalSource sigs;
     private final EmptyFactory<H> emptyFactory;
     private final GathererStatuses.TownStateProvider storageCheck;
-    private final int capacity;
     private final Converter<I, H> converter;
-    private List<H> inventory;
+    private JournalItemList<H> inventory;
     private boolean ate = false;
     private List<ItemsListener<H>> listeners = new ArrayList<>();
     private List<StatusListener> statusListeners = new ArrayList<>();
@@ -61,11 +60,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         this.emptyFactory = ef;
         this.converter = converter;
         this.storageCheck = cont;
-        this.inventory = new ArrayList<>();
-        this.capacity = inventoryCapacity;
-        for (int i = 0; i < getCapacity(); i++) {
-            this.inventory.add(ef.makeEmptyItem());
-        }
+        this.inventory = new JournalItemList<>(inventoryCapacity, ef);
         this.tools = tools;
         updateItemListeners();
     }
@@ -164,7 +159,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     }
 
     public int getCapacity() {
-        return capacity;
+        return inventory.size();
     }
 
     public void addItem(H item) {
@@ -226,7 +221,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
     private void addLoot(Collection<I> loot) {
         Iterator<I> iterator = loot.iterator();
-        for (int i = 0; i < getCapacity(); i++) {
+        for (int i = 0; i < inventory.size(); i++) {
             if (!iterator.hasNext()) {
                 break;
             }
@@ -253,7 +248,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     }
 
     public void setItems(Iterable<H> mcTownItemStream) {
-        Jobs.setItemsOnJournal(mcTownItemStream, inventory, getCapacity());
+        inventory.setItems(mcTownItemStream);
         updateItemListeners();
     }
 

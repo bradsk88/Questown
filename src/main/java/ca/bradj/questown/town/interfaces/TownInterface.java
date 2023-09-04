@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,6 +55,10 @@ public interface TownInterface {
     UUID getRandomVillager(Random random);
 
     Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId);
+
+    Collection<MCRoom> getFarms();
+
+    void registerFenceGate(BlockPos above);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

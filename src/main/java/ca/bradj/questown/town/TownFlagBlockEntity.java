@@ -308,7 +308,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         broadcastMessage(new TranslatableComponent(
                 "messages.building.recipe_created",
-                new TranslatableComponent(String.format("room.%s", match.getRecipeID().getPath())),
+                RoomRecipes.getName(match.getRecipeID()),
                 roomDoorPos.getDoorPos().getUIString()
         ));
         // TODO: get room for rendering effect
@@ -493,6 +493,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public Collection<MCRoom> getFarms() {
+        return roomsMap.getFarms();
+    }
+
+    @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch i : roomsMap.getAllMatches()) {
@@ -585,6 +590,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void registerDoor(BlockPos clickedPos) {
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - getTownFlagBasePos().getY());
+        setChanged();
+    }
+
+    @Override
+    public void registerFenceGate(BlockPos clickedPos) {
+        roomsMap.registerFenceGate(Positions.FromBlockPos(clickedPos), clickedPos.getY() - getTownFlagBasePos().getY());
         setChanged();
     }
 }
