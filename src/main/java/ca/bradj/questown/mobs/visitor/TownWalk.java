@@ -79,7 +79,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         this.nextUpdate = lvl.getGameTime() + (long) lvl.getRandom().nextInt(REPEAT_BUFFER);
         BlockPos bp = this.target;
         int dist = 1;
-        if (e.getStatus() == GathererJournal.Status.GATHERING) {
+        if (e.getStatus().hasPreciseTarget()) {
             dist = 0;
         }
         e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, dist));

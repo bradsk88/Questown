@@ -10,6 +10,8 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.rooms.XWall;
+import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -100,7 +102,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         processSignal(town.getServerLevel(), this);
 
         if (getStatus() == GathererJournal.Status.FARMING) {
-            tryFarming(town, facingPos);
+            if (isInFarm(town, entityPos)) {
+                tryFarming(town, facingPos);
+            }
         }
 
         // TODO: Implement all of this for cook
@@ -124,9 +128,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     private void tryFarming(TownInterface town, BlockPos facingPos) {
-        if (!isInFarm(town, facingPos)) {
-            return;
-        }
         ticksSinceLastFarmAction++;
         if (ticksSinceLastFarmAction < Config.FARM_ACTION_INTERVAL.get()) {
             return;
@@ -144,7 +145,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 drops.forEach(v -> journal.addItem(MCHeldItem.fromMCItemStack(v)));
                 // TODO: Handle more drops than inventory
                 blockState.setValue(CropBlock.AGE, 0);
+                return;
             }
+            // TODO: Check inventory for bone meal
+            cb.performBonemeal(town.getServerLevel(), town.getServerLevel().getRandom(), blockPos, blockState);
         }
         if (tryPlanting(town, facingPos, blockState, bhr)) {
             return;
@@ -294,7 +298,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 MCRoom foundRoom = room.get();
                 boolean inFarm = foundRoom.yCoord == entityPos.getY() &&
                         foundRoom.contains(Positions.FromBlockPos(entityPos));
-                if (inFarm) {
+                BlockPos gateInteractionSpot = getGateInteractionSpot(town, foundRoom, room);
+                if (inFarm || entityPos.equals(gateInteractionSpot)) {
                     Random random = town.getServerLevel().getRandom();
                     InclusiveSpace space = foundRoom.getSpace();
                     Position pos = InclusiveSpaces.getRandomEnclosedPosition(space, random);
@@ -302,11 +307,31 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     return Positions.ToBlock(pos, farmLandY);
                 }
                 // TODO: Make this farmer open the gate and go through
-                return Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
+                return gateInteractionSpot;
             }
         }
-        // TODO: Implement target finding
+        // TODO: Finish implementing target finding
         return null;
+    }
+
+    @NotNull
+    private static BlockPos getGateInteractionSpot(TownInterface town, MCRoom foundRoom, Optional<MCRoom> room) {
+        BlockPos fencePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
+        Optional<XWall> backXWall = room.get().getBackXWall();
+        if (backXWall.isPresent()) {
+            if (backXWall.get().getZ() > fencePos.getZ()) {
+                return fencePos.offset(0, 0, -1);
+            }
+            return fencePos.offset(0, 0, 1);
+        }
+        Optional<ZWall> backZWall = room.get().getBackZWall();
+        if (backZWall.isPresent()) {
+            if (backZWall.get().getX() > fencePos.getX()) {
+                return fencePos.offset(-1, 0, 0);
+            }
+            return fencePos.offset(1, 0, 0);
+        }
+        return fencePos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()));
     }
 
     @Override

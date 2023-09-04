@@ -68,11 +68,16 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
@@ -429,7 +434,24 @@ public class VisitorMobEntity extends PathfinderMob {
 
     @Override
     protected PathNavigation createNavigation(Level p_21480_) {
-        GroundPathNavigation gpn = new GroundPathNavigation(this, p_21480_);
+        GroundPathNavigation gpn = new GroundPathNavigation(this, p_21480_) {
+            @Override
+            protected PathFinder createPathFinder(int p_26453_) {
+                this.nodeEvaluator = new WalkNodeEvaluator() {
+                    @Override
+                    protected BlockPathTypes evaluateBlockPathType(BlockGetter p_77614_, boolean p_77615_, boolean p_77616_, BlockPos p_77617_, BlockPathTypes p_77618_) {
+                        p_77618_ = super.evaluateBlockPathType(p_77614_, p_77615_, p_77616_, p_77617_, p_77618_);
+
+                        if (p_77618_ == BlockPathTypes.FENCE && !(p_77614_.getBlockState(p_77617_).getBlock() instanceof FenceGateBlock)) {
+                            p_77618_ = BlockPathTypes.DOOR_OPEN;
+                        }
+                        return p_77618_;
+                    }
+                };
+                this.nodeEvaluator.setCanPassDoors(true);
+                return new PathFinder(this.nodeEvaluator, p_26453_);
+            }
+        };
         gpn.setCanOpenDoors(true);
         gpn.setCanPassDoors(true);
         return gpn;
@@ -444,6 +466,7 @@ public class VisitorMobEntity extends PathfinderMob {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(2, new OpenGateGoal(this, true));
         // TODO: Make a behaviour that only runs in the day
 //        this.goalSelector.addGoal(4, new TownWalk(this, 2, 0.5f));
     }
@@ -608,7 +631,11 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public GathererJournal.Status getStatus() {
-        return GathererJournal.Status.from(entityData.get(status));
+        String s = entityData.get(status);
+        if (s.isEmpty()) {
+            return GathererJournal.Status.UNSET;
+        }
+        return GathererJournal.Status.from(s);
     }
 
 //    // If all else fails, we can use this

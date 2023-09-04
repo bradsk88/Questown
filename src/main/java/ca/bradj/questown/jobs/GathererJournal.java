@@ -283,7 +283,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "RETURNING_AT_NIGHT" -> RETURNING_AT_NIGHT;
                 case "CAPTURED" -> CAPTURED;
                 case "RELAXING" -> RELAXING;
-                default -> UNSET;
+                case "FARMING" -> FARMING;
+                default -> throw new IllegalArgumentException("Unexpected status " + s);
             };
         }
 
@@ -301,6 +302,10 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
         public boolean isFinishingUp() {
             return ImmutableList.of(RETURNED_SUCCESS, DROPPING_LOOT).contains(this);
+        }
+
+        public boolean hasPreciseTarget() {
+            return this == GATHERING || this == FARMING;
         }
     }
 

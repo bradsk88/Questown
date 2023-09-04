@@ -38,6 +38,7 @@ public class Admire extends Behavior<VisitorMobEntity> {
         return s != GathererJournal.Status.GATHERING &&
                 s != GathererJournal.Status.DROPPING_LOOT &&
                 s != GathererJournal.Status.NO_FOOD &&
+                s != GathererJournal.Status.FARMING &&
                 s != GathererJournal.Status.NO_GATE;
     }
 
