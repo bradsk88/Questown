@@ -3,20 +3,20 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 
-import java.util.Optional;
-
-public class Admire extends Behavior<VisitorMobEntity> {
+public class TendCrops extends Behavior<VisitorMobEntity> {
 
     private final int maxAdmireTicks;
     private int admireTicks;
     private BlockPos look;
+    private float yRot;
 
-    public Admire(
+    public TendCrops(
             int maxAdmireTicks
     ) {
         super(ImmutableMap.of(
@@ -35,7 +35,7 @@ public class Admire extends Behavior<VisitorMobEntity> {
             return false;
         }
         GathererJournal.Status s = p_22539_.getStatus();
-        return !s.isWorking() && !s.isPreparing();
+        return s == GathererJournal.Status.FARMING;
     }
 
     @Override
@@ -49,12 +49,9 @@ public class Admire extends Behavior<VisitorMobEntity> {
         if (lvl.getRandom().nextBoolean()) {
             ref = e.blockPosition().above();
         }
-        this.look = ref.relative(e.getDirection(), 4);
-        if (lvl.getRandom().nextBoolean()) {
-            this.look = look.relative(e.getDirection().getClockWise(), 4);
-        } else if (lvl.getRandom().nextBoolean()) {
-            this.look = look.relative(e.getDirection().getCounterClockWise(), 4);
-        }
+        Direction randomDirection = Direction.Plane.HORIZONTAL.getRandomDirection(lvl.getRandom());
+        this.look = ref.relative(randomDirection);
+        this.yRot = randomDirection.toYRot();
     }
 
     @Override
@@ -91,6 +88,7 @@ public class Admire extends Behavior<VisitorMobEntity> {
         super.tick(p_22551_, e, p_22553_);
         e.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
+        e.setYRot(yRot);
         this.admireTicks++;
     }
 }

@@ -1,12 +1,14 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.roomrecipes.core.space.Position;
 import org.jetbrains.annotations.Nullable;
 
 public class FarmerStatuses {
 
     public static @Nullable GathererJournal.Status getNewStatusFromSignal(
             GathererJournal.Status currentStatus,
-            Signals signal
+            Signals signal,
+            boolean isInFarm
     ) {
 //        if (!inventory.isValid()) {
 //            throw new IllegalStateException("Inventory state is invalid");
@@ -14,13 +16,13 @@ public class FarmerStatuses {
         switch (signal) {
 //            GathererJournal.Status status = null;
             case MORNING -> {
-                return handleMorning(currentStatus);
+                return handleMorning(currentStatus, isInFarm);
             }
             case NOON -> {
-                return handleNoon(currentStatus);
+                return handleNoon(currentStatus, isInFarm);
             }
             case EVENING -> {
-                return handleEvening(currentStatus);
+                return handleEvening(currentStatus, isInFarm);
             }
             case NIGHT -> {
                 if (currentStatus == GathererJournal.Status.STAYING || currentStatus == GathererJournal.Status.RETURNED_FAILURE || currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
@@ -34,32 +36,51 @@ public class FarmerStatuses {
         }
     }
 
-    @Nullable
-    private static GathererJournal.Status handleMorning(
-            GathererJournal.Status currentStatus
+    private static GathererJournal.@Nullable Status handleMorning(
+            GathererJournal.Status currentStatus,
+            boolean isInFarm
     ) {
-        if (currentStatus == GathererJournal.Status.FARMING) {
+        if (isInFarm) {
+            if (currentStatus == GathererJournal.Status.FARMING) {
+                return null;
+            }
+            return GathererJournal.Status.FARMING;
+        }
+        if (currentStatus == GathererJournal.Status.WALKING_TO_FARM) {
             return null;
         }
-        return GathererJournal.Status.FARMING;
+        return GathererJournal.Status.WALKING_TO_FARM;
     }
 
     private static GathererJournal.@Nullable Status handleNoon(
-            GathererJournal.Status currentStatus
+            GathererJournal.Status currentStatus,
+            boolean isInFarm
     ) {
-        if (currentStatus == GathererJournal.Status.FARMING) {
+        if (isInFarm) {
+            if (currentStatus == GathererJournal.Status.FARMING) {
+                return null;
+            }
+            return GathererJournal.Status.FARMING;
+        }
+        if (currentStatus == GathererJournal.Status.WALKING_TO_FARM) {
             return null;
         }
-        return GathererJournal.Status.FARMING;
+        return GathererJournal.Status.WALKING_TO_FARM;
     }
 
-    @Nullable
-    private static GathererJournal.Status handleEvening(
-            GathererJournal.Status currentStatus
+    private static GathererJournal.@Nullable Status handleEvening(
+            GathererJournal.Status currentStatus,
+            boolean isInFarm
     ) {
-        if (currentStatus == GathererJournal.Status.FARMING) {
+        if (isInFarm) {
+            if (currentStatus == GathererJournal.Status.FARMING) {
+                return null;
+            }
+            return GathererJournal.Status.FARMING;
+        }
+        if (currentStatus == GathererJournal.Status.WALKING_TO_FARM) {
             return null;
         }
-        return GathererJournal.Status.FARMING;
+        return GathererJournal.Status.WALKING_TO_FARM;
     }
 }

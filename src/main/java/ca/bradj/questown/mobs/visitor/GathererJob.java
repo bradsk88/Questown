@@ -12,6 +12,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -147,7 +148,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     public void tick(
             TownInterface town,
             BlockPos entityPos,
-            BlockPos relative) {
+            Direction relative) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
@@ -156,7 +157,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         this.closeToGate = false;
         BlockPos welcomeMat = town.getClosestWelcomeMatPos(entityPos);
         if (signal == Signals.MORNING && welcomeMat != null) {
-            this.closeToGate = isCloseTo(entityPos, welcomeMat);
+            this.closeToGate = Jobs.isCloseTo(entityPos, welcomeMat);
         }
 
         if (successTarget != null && !successTarget.isStillValid()) {
@@ -315,7 +316,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
             case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(town);
             case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
-            case FARMING -> throw new IllegalArgumentException("Gatherer was given farmer status");
+            case FARMING, WALKING_TO_FARM -> throw new IllegalArgumentException("Gatherer was given farmer status");
         };
     }
 
@@ -398,7 +399,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         }
         passedThroughGate = Signals.UNDEFINED;
         if (journal.getStatus() == GathererJournal.Status.GATHERING) {
-            boolean veryCloseTo = isVeryCloseTo(entityPos, getEnterExitPos(town));
+            boolean veryCloseTo = Jobs.isVeryCloseTo(entityPos, getEnterExitPos(town));
             if (veryCloseTo) {
                 this.passedThroughGate = signal;
                 return true;
@@ -406,22 +407,6 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             return false;
         }
         return journal.getStatus().isReturning();
-    }
-
-    private boolean isCloseTo(
-            @NotNull BlockPos entityPos,
-            @NotNull BlockPos targetPos
-    ) {
-        double d = targetPos.distToCenterSqr(entityPos.getX(), entityPos.getY(), entityPos.getZ());
-        return d < 5;
-    }
-
-    private boolean isVeryCloseTo(
-            Vec3 entityPos,
-            @NotNull BlockPos targetPos
-    ) {
-        double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
-        return d < 0.5;
     }
 
     public boolean isCloseToFood(
@@ -433,7 +418,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         if (!foodTarget.hasItem(MCTownItem::isFood)) {
             return false;
         }
-        return isCloseTo(entityPos, Positions.ToBlock(foodTarget.getPosition(), foodTarget.yPosition));
+        return Jobs.isCloseTo(entityPos, Positions.ToBlock(foodTarget.getPosition(), foodTarget.yPosition));
     }
 
     public boolean isCloseToChest(
@@ -445,7 +430,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         if (!successTarget.hasItem(MCTownItem::isEmpty)) {
             return false;
         }
-        return isCloseTo(entityPos, Positions.ToBlock(successTarget.getPosition(), successTarget.yPosition));
+        return Jobs.isCloseTo(entityPos, Positions.ToBlock(successTarget.getPosition(), successTarget.yPosition));
     }
 
     public void tryTakeFood(BlockPos entityPos) {
@@ -570,16 +555,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     @Override
     public void itemsChanged(ImmutableList<MCHeldItem> items) {
-        if (Jobs.isUnchanged(inventory, items)) {
-            return;
-        }
-
-        for (int i = 0; i < items.size(); i++) {
-            if (items.get(i).get().equals(inventory.getItem(i).getItem())) {
-                continue;
-            }
-            inventory.setItem(i, new ItemStack(items.get(i).get().get(), 1));
-        }
+        Jobs.handleItemChanges(inventory, items);
     }
 
     public Container getInventory() {

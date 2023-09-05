@@ -1,12 +1,13 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
 public class GathererStatuses {
 
     public interface TownStateProvider {
-
         boolean IsStorageAvailable();
         boolean hasGate();
     }

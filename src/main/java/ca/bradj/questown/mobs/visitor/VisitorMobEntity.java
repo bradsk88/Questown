@@ -83,6 +83,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.system.CallbackI;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -171,7 +172,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTargetSink()),
-                Pair.of(4, new Admire(200)),
+                Pair.of(3, new TendCrops(200)),
+                Pair.of(4, new Admire(100)),
                 Pair.of(5, new CoerceWalk()),
                 Pair.of(9, new ValidateBed()),
                 Pair.of(10, new FindOpenBed())
@@ -298,11 +300,36 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-        job.tick(town, blockPosition(), blockPosition().relative(getDirection()));
+        job.tick(town, blockPosition(), getDirection());
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
             entityData.set(status, job.getStatus().name());
+        }
+
+        this.openNearbyGates();
+    }
+
+    private void openNearbyGates() {
+        if (getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
+            BlockPos on = blockPosition();
+            BlockState bs = level.getBlockState(on);
+            if (bs.getBlock() instanceof FenceGateBlock) {
+                bs = bs.setValue(FenceGateBlock.OPEN, true);
+                level.setBlock(on, bs, 10);
+            }
+            BlockPos front = on.relative(getDirection());
+            BlockState fbs = level.getBlockState(front);
+            if (fbs.getBlock() instanceof FenceGateBlock) {
+                fbs = fbs.setValue(FenceGateBlock.OPEN, true);
+                level.setBlock(front, fbs, 10);
+            }
+            BlockPos behind = on.relative(getDirection().getOpposite());
+            BlockState bbs = level.getBlockState(behind);
+            if (bbs.getBlock() instanceof FenceGateBlock) {
+                bbs = bbs.setValue(FenceGateBlock.OPEN, false);
+                level.setBlock(behind, bbs, 10);
+            }
         }
     }
 

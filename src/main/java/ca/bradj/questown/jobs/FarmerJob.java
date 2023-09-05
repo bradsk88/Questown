@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -22,7 +23,9 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.*;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,8 +33,10 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -42,13 +47,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener {
+public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem> {
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     private ArrayList<StatusListener> statusListeners = new ArrayList<>();
     private final Container inventory;
     private Signals signal;
     private FarmerJournal<MCTownItem, MCHeldItem> journal;
     private int ticksSinceLastFarmAction;
+    private MCRoom selectedFarm;
+    private WorkSpot workSpot;
 
     public FarmerJob(
             @Nullable ServerLevel level,
@@ -72,6 +79,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 () -> this.signal, inventoryCapacity,
                 MCHeldItem::Air
         );
+        this.journal.addItemListener(this);
     }
 
     @Override
@@ -86,25 +94,77 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     @Override
     public void initializeStatus(GathererJournal.Status s) {
-        // TODO: Implement
-        return;
+        Questown.LOGGER.debug("Initialized journal to state {}", s);
+        this.journal.initializeStatus(s);
+    }
+
+    @Override
+    public void itemsChanged(ImmutableList<MCHeldItem> items) {
+        Jobs.handleItemChanges(inventory, items);
+    }
+
+    private static class WorkSpot {
+        public WorkSpot(
+                @NotNull BlockPos position,
+                @NotNull FarmerAction action
+        ) {
+            this.position = position;
+            this.action = action;
+        }
+
+        private final BlockPos position;
+        private final FarmerAction action;
+
+        @Override
+        public String toString() {
+            return "WorkSpot{" +
+                    "position=" + position +
+                    ", action=" + action +
+                    '}';
+        }
     }
 
     @Override
     public void tick(
             TownInterface town,
             BlockPos entityPos,
-            BlockPos facingPos
+            Direction facingPos
     ) {
-        if (town == null || town.getServerLevel() == null) {
+        ServerLevel sl = town.getServerLevel();
+        if (town == null || sl == null) {
             return;
         }
-        processSignal(town.getServerLevel(), this);
+        boolean isInFarm = false;
+        if (selectedFarm != null) {
+            isInFarm = entityPos.equals(getGateInteractionSpot(town, selectedFarm));
+            if (!isInFarm) {
+                isInFarm = InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos));
+            }
+        }
+        processSignal(sl, this, isInFarm);
 
         if (getStatus() == GathererJournal.Status.FARMING) {
-            if (isInFarm(town, entityPos)) {
-                tryFarming(town, facingPos);
+            Iterator<FarmerAction> itemAction = journal.getItems()
+                    .stream()
+                    .map(FarmerJob::fromItem)
+                    .filter(v -> v != FarmerAction.UNDEFINED)
+                    .iterator();
+
+            this.workSpot = null;
+            while (this.workSpot == null) {
+                if (!itemAction.hasNext()) {
+                    break;
+                }
+                FarmerAction next = itemAction.next();
+                if (next == FarmerAction.UNDEFINED) {
+                    continue;
+                }
+                this.workSpot = getWorkSpot(sl, selectedFarm, next);
             }
+            if (this.workSpot == null) {
+                this.workSpot = getWorkSpot(sl, selectedFarm, FarmerAction.UNDEFINED);
+            }
+            tryFarming(town, entityPos);
         }
 
         // TODO: Implement all of this for cook
@@ -127,71 +187,155 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        tryTakeFood(entityPos);
     }
 
-    private void tryFarming(TownInterface town, BlockPos facingPos) {
+    private @Nullable WorkSpot getWorkSpot(
+            ServerLevel level,
+            MCRoom selectedFarm,
+            FarmerAction farmerAction
+    ) {
+        WorkSpot secondChoice = null;
+        for (InclusiveSpace space : selectedFarm.getSpaces()) {
+            Collection<Position> posz = InclusiveSpaces.getAllEnclosedPositions(space);
+            for (Position v : posz) {
+                BlockPos bp = Positions.ToBlock(v, selectedFarm.yCoord);
+                BlockState cropBlock = level.getBlockState(bp);
+                BlockState groundBlock = level.getBlockState(bp.below());
+                FarmerAction blockAction = fromBlocks(groundBlock, cropBlock);
+                // TODO: [Optimize] Cache these values
+                if (blockAction == farmerAction) {
+                    return new WorkSpot(bp.below(), farmerAction);
+                }
+                if (secondChoice == null && blockAction == FarmerAction.TILL || blockAction == FarmerAction.HARVEST) {
+                    secondChoice = new WorkSpot(bp.below(), blockAction);
+                }
+            }
+        }
+        return secondChoice;
+    }
+
+    private void tryFarming(
+            TownInterface town,
+            BlockPos entityPos
+    ) {
+        if (town.getServerLevel() == null) {
+            return;
+        }
+
         ticksSinceLastFarmAction++;
         if (ticksSinceLastFarmAction < Config.FARM_ACTION_INTERVAL.get()) {
             return;
         }
         ticksSinceLastFarmAction = 0;
-        BlockPos blockPos = facingPos.below();
-        BlockState blockState = town.getServerLevel().getBlockState(blockPos);
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(blockPos), Direction.UP,
-                blockPos, false
-        );
-        if (blockState.getBlock() instanceof CropBlock cb) {
-            if (cb.isMaxAge(blockState)) {
-                List<ItemStack> drops = CropBlock.getDrops(blockState, town.getServerLevel(), blockPos, null);
-                drops.forEach(v -> journal.addItem(MCHeldItem.fromMCItemStack(v)));
-                // TODO: Handle more drops than inventory
-                blockState.setValue(CropBlock.AGE, 0);
-                return;
-            }
-            // TODO: Check inventory for bone meal
-            cb.performBonemeal(town.getServerLevel(), town.getServerLevel().getRandom(), blockPos, blockState);
-        }
-        if (tryPlanting(town, facingPos, blockState, bhr)) {
+
+        if (workSpot == null || workSpot.action == FarmerAction.UNDEFINED) {
             return;
         }
-        BlockState mState = tryTilling(town, facingPos, blockState, bhr);
-        if (mState != null) {
-            town.getServerLevel().setBlock(blockPos, mState, 11);
+
+        BlockPos groundPos = workSpot.position;
+        if (!Jobs.isCloseTo(entityPos, groundPos)) {
+            return;
+        }
+        BlockPos cropBlock = groundPos.above();
+
+        switch (workSpot.action) {
+            case TILL -> tryTilling(town.getServerLevel(), groundPos);
+            case PLANT -> tryPlanting(town.getServerLevel(), groundPos);
+            case BONE -> tryBoning(town.getServerLevel(), cropBlock);
+            case HARVEST -> tryHarvestCrop(town.getServerLevel(), cropBlock);
+        }
+    }
+
+    private void tryBoning(
+            ServerLevel level,
+            BlockPos cropBlock
+    ) {
+        BlockState bs = level.getBlockState(cropBlock);
+        if (bs.getBlock() instanceof CropBlock cb) {
+            cb.performBonemeal(level, level.getRandom(), cropBlock, bs);
+            BlockState after = level.getBlockState(cropBlock);
+            if (!after.equals(bs)) {
+                for (int i = 0; i < inventory.getContainerSize(); i++) {
+                    ItemStack item = inventory.getItem(i);
+                    if (Items.BONE_MEAL.equals(item.getItem())) {
+                        Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                        inventory.removeItem(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void tryHarvestCrop(
+            ServerLevel level,
+            BlockPos cropBlock
+    ) {
+        BlockState bs = level.getBlockState(cropBlock);
+        if (bs.getBlock() instanceof CropBlock cb) {
+            if (cb.isMaxAge(bs)) {
+                List<ItemStack> drops = CropBlock.getDrops(bs, level, cropBlock, null);
+                drops.forEach(v -> {
+                    if (journal.isInventoryFull()) {
+                        level.addFreshEntity(new ItemEntity(level, cropBlock.getX(), cropBlock.getY(), cropBlock.getZ(), v));
+                    } else {
+                        journal.addItem(MCHeldItem.fromMCItemStack(v));
+                    }
+                });
+                // TODO: Handle more drops than inventory capacity
+                bs = bs.setValue(CropBlock.AGE, 0);
+                level.setBlock(cropBlock, bs, 10);
+            }
         }
     }
 
     @Nullable
-    private static BlockState tryTilling(TownInterface town, BlockPos entityPos, BlockState blockState, BlockHitResult bhr) {
-        return blockState.getToolModifiedState(new UseOnContext(
-                town.getServerLevel(), null, InteractionHand.MAIN_HAND,
+    private static void tryTilling(
+            ServerLevel level,
+            BlockPos groundPos
+    ) {
+        BlockHitResult bhr = new BlockHitResult(
+                Vec3.atCenterOf(groundPos), Direction.UP,
+                groundPos, false
+        );
+        BlockState bs = level.getBlockState(groundPos);
+        bs = bs.getToolModifiedState(new UseOnContext(
+                level, null, InteractionHand.MAIN_HAND,
                 // TODO: Determine tool from held item
                 Items.WOODEN_HOE.getDefaultInstance(), bhr
         ), ToolActions.HOE_TILL, false);
+        if (bs == null) {
+            return;
+        }
+        level.setBlock(groundPos, bs, 11);
     }
 
-    private boolean tryPlanting(TownInterface town, BlockPos facingPos, BlockState blockState, BlockHitResult bhr) {
+    private void tryPlanting(
+            ServerLevel level,
+            BlockPos groundPos
+    ) {
+        BlockHitResult bhr = new BlockHitResult(
+                Vec3.atCenterOf(groundPos), Direction.UP,
+                groundPos, false
+        );
         InteractionResult result = Items.WHEAT_SEEDS.useOn(new UseOnContext(
-                town.getServerLevel(), null, InteractionHand.MAIN_HAND,
+                level, null, InteractionHand.MAIN_HAND,
                 Items.WHEAT_SEEDS.getDefaultInstance(), bhr
         ));
-        return result.consumesAction();
-    }
-
-    private boolean isInFarm(TownInterface town, BlockPos entityPos) {
-        Collection<MCRoom> rooms = town.getFarms();
-        for (MCRoom foundRoom : rooms) {
-            boolean inFarm = foundRoom.yCoord == entityPos.getY() &&
-                    foundRoom.contains(Positions.FromBlockPos(entityPos));
-            if (inFarm) {
-                return true;
+        if (result.consumesAction()) {
+            for (int i = 0; i < inventory.getContainerSize(); i++) {
+                ItemStack item = inventory.getItem(i);
+                if (Items.WHEAT_SEEDS.equals(item.getItem())) {
+                    Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                    inventory.removeItem(i, 1);
+                    break;
+                }
             }
         }
-        return false;
     }
-
 
     private static void processSignal(
             Level level,
-            FarmerJob e
+            FarmerJob e,
+            boolean isInFarm
     ) {
         if (level.isClientSide()) {
             return;
@@ -205,7 +349,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
          */
 
         e.signal = Signals.fromGameTime(level.getDayTime());
-        e.journal.tick(e);
+        e.journal.tick(e, isInFarm);
     }
 
     @Override
@@ -291,40 +435,54 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             BlockPos entityPos,
             TownInterface town
     ) {
-        if (journal.getStatus() == GathererJournal.Status.FARMING) {
+        if (journal.getStatus() == GathererJournal.Status.WALKING_TO_FARM) {
             Collection<MCRoom> rooms = town.getFarms();
             Optional<MCRoom> room = rooms.stream().findFirst();
             if (room.isPresent()) {
-                MCRoom foundRoom = room.get();
-                boolean inFarm = foundRoom.yCoord == entityPos.getY() &&
-                        foundRoom.contains(Positions.FromBlockPos(entityPos));
-                BlockPos gateInteractionSpot = getGateInteractionSpot(town, foundRoom, room);
-                if (inFarm || entityPos.equals(gateInteractionSpot)) {
-                    Random random = town.getServerLevel().getRandom();
-                    InclusiveSpace space = foundRoom.getSpace();
-                    Position pos = InclusiveSpaces.getRandomEnclosedPosition(space, random);
-                    int farmLandY = foundRoom.yCoord + 1; // TODO: Only required while we put doors in the ground
-                    return Positions.ToBlock(pos, farmLandY);
+                this.selectedFarm = room.get();
+                return getGateInteractionSpot(town, selectedFarm);
+            } else {
+                this.selectedFarm = null;
+            }
+        }
+
+        BlockPos gateInteractionSpot = getGateInteractionSpot(town, selectedFarm);
+        if (journal.getStatus() == GathererJournal.Status.FARMING) {
+            if (workSpot != null) {
+                return workSpot.position;
+            }
+            boolean inFarm = selectedFarm.yCoord == entityPos.getY() &&
+                    InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos));
+            if (inFarm || entityPos.equals(gateInteractionSpot)) {
+                Random random = town.getServerLevel().getRandom();
+                BlockPos workSpot = entityPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(random));
+                if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(workSpot))) {
+                    return workSpot;
                 }
-                // TODO: Make this farmer open the gate and go through
-                return gateInteractionSpot;
+                return Positions.ToBlock(InclusiveSpaces.getMidpoint(selectedFarm.getSpace()), selectedFarm.yCoord);
             }
         }
         // TODO: Finish implementing target finding
         return null;
     }
 
-    @NotNull
-    private static BlockPos getGateInteractionSpot(TownInterface town, MCRoom foundRoom, Optional<MCRoom> room) {
+    @Nullable
+    private static BlockPos getGateInteractionSpot(
+            TownInterface town,
+            @Nullable MCRoom foundRoom
+    ) {
+        if (foundRoom == null) {
+            return null;
+        }
         BlockPos fencePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
-        Optional<XWall> backXWall = room.get().getBackXWall();
+        Optional<XWall> backXWall = foundRoom.getBackXWall();
         if (backXWall.isPresent()) {
             if (backXWall.get().getZ() > fencePos.getZ()) {
                 return fencePos.offset(0, 0, -1);
             }
             return fencePos.offset(0, 0, 1);
         }
-        Optional<ZWall> backZWall = room.get().getBackZWall();
+        Optional<ZWall> backZWall = foundRoom.getBackZWall();
         if (backZWall.isPresent()) {
             if (backZWall.get().getX() > fencePos.getX()) {
                 return fencePos.offset(-1, 0, 0);
@@ -340,7 +498,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public boolean shouldBeNoClip(TownInterface town, BlockPos blockPos) {
+    public boolean shouldBeNoClip(
+            TownInterface town,
+            BlockPos blockPos
+    ) {
         return false;
     }
 
@@ -362,5 +523,46 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             b.add(new MCHeldItem(MCTownItem.fromMCItemStack(item), locks.get(i).get() == 1));
         }
         journal.setItemsNoUpdateNoCheck(b.build());
+    }
+
+    private enum FarmerAction {
+        TILL,
+        PLANT,
+        BONE,
+        HARVEST,
+        UNDEFINED
+    }
+
+    private static FarmerAction fromBlocks(
+            BlockState groundState,
+            BlockState cropState
+    ) {
+        if (Ingredient.of(ItemTags.DIRT).test(new ItemStack(groundState.getBlock().asItem()))) {
+            if (cropState.isAir()) {
+                return FarmerAction.TILL;
+            }
+        }
+        if (groundState.getBlock() instanceof FarmBlock) {
+            if (!(cropState.getBlock() instanceof CropBlock)) {
+                return FarmerAction.PLANT;
+            }
+        }
+        if (cropState.getBlock() instanceof CropBlock cb) {
+            if (cb.isMaxAge(cropState)) {
+                return FarmerAction.HARVEST;
+            }
+            return FarmerAction.BONE;
+        }
+        return FarmerAction.UNDEFINED;
+    }
+
+    private static FarmerAction fromItem(MCHeldItem stack) {
+        if (Ingredient.of(Items.BONE_MEAL).test(stack.toItem().toItemStack())) {
+            return FarmerAction.BONE;
+        }
+        if (Ingredient.of(Items.WHEAT_SEEDS).test(stack.toItem().toItemStack())) {
+            return FarmerAction.PLANT;
+        }
+        return FarmerAction.UNDEFINED;
     }
 }

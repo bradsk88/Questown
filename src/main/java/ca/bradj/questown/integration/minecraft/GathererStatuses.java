@@ -89,8 +89,8 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
             case RELAXING -> RELAXING;
-            case FARMING -> throw new IllegalArgumentException(
-                    "UNSET is a metavalue, and should never be provided"
+            case FARMING, WALKING_TO_FARM -> throw new IllegalArgumentException(
+                    String.format("%s is not a valid gatherer status", status)
             );
         };
     }

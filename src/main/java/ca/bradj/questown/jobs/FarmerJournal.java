@@ -5,7 +5,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
 public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
@@ -14,6 +13,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     private final int capacity;
     private final GathererJournal.SignalSource sigs;
     private GathererJournal.Status status;
+    private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
 
     public FarmerJournal(
             GathererJournal.SignalSource sigs,
@@ -43,8 +43,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
 
     private void updateItemListeners() {
         ImmutableList<H> copyForListeners = ImmutableList.copyOf(inventory);
-        // TODO: Implement listeners
-//        this.listeners.forEach(l -> l.itemsChanged(copyForListeners));
+        this.listeners.forEach(l -> l.itemsChanged(copyForListeners));
     }
 
     public ImmutableList<H> getItems() {
@@ -71,13 +70,13 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         return capacity;
     }
 
-    public void tick(FarmerJob e) {
+    public void tick(FarmerJob e, boolean isInFarm) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
         @Nullable GathererJournal.Status newStatus = FarmerStatuses.getNewStatusFromSignal(
-                status, sig
+                status, sig, isInFarm
         );
         if (newStatus != null) {
             changeStatus(newStatus);
@@ -98,6 +97,18 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         if (status == GathererJournal.Status.NO_FOOD && item.isFood()) { // TODO: Test
             changeStatus(GathererJournal.Status.IDLE);
         }
+    }
+
+    public void addItemListener(GathererJournal.ItemsListener<H> l) {
+        this.listeners.add(l);
+    }
+
+    public void initializeStatus(GathererJournal.Status s) {
+        this.status = s;
+    }
+
+    public boolean isInventoryFull() {
+        return this.invState.inventoryIsFull();
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -22,7 +23,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
     void tick(
             TownInterface town,
             BlockPos entityPos,
-            BlockPos facingPos
+            Direction facingPos
     );
 
     boolean shouldDisappear(

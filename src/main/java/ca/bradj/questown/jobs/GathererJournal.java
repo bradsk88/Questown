@@ -264,6 +264,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
         // TODO: Move to farmer-specific status
+        WALKING_TO_FARM,
         FARMING;
 
         public static Status from(String s) {
@@ -284,6 +285,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "CAPTURED" -> CAPTURED;
                 case "RELAXING" -> RELAXING;
                 case "FARMING" -> FARMING;
+                case "WALKING_TO_FARM" -> WALKING_TO_FARM;
                 default -> throw new IllegalArgumentException("Unexpected status " + s);
             };
         }
@@ -292,12 +294,12 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             return ImmutableList.of(RETURNING, RETURNING_AT_NIGHT).contains(this);
         }
 
-        public boolean isGathering() {
-            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY).contains(this);
+        public boolean isWorking() {
+            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY, FARMING).contains(this);
         }
 
         public boolean isPreparing() {
-            return ImmutableList.of(NO_GATE, NO_FOOD).contains(this);
+            return ImmutableList.of(NO_GATE, NO_FOOD, WALKING_TO_FARM).contains(this);
         }
 
         public boolean isFinishingUp() {
@@ -305,7 +307,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         public boolean hasPreciseTarget() {
-            return this == GATHERING || this == FARMING;
+            return this == GATHERING || this == WALKING_TO_FARM || this == FARMING;
         }
     }
 
