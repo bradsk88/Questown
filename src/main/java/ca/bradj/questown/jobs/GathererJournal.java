@@ -174,6 +174,14 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
     }
 
+    public boolean addItemIfSlotAvailable(H item) {
+        if (Jobs.addItemIfSlotAvailable(this.inventory, this.invState, item)) {
+            updateItemListeners();
+            return true;
+        }
+        return false;
+    }
+
     public void tick(
             LootProvider<I> loot
     ) {

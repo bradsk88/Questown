@@ -63,4 +63,17 @@ public class Jobs {
             inventory.setItem(i, new ItemStack(items.get(i).get().get(), 1));
         }
     }
+
+    public static <H extends HeldItem<H, ?>> boolean addItemIfSlotAvailable(
+            JournalItemList<H> inventory,
+            DefaultInventoryStateProvider<H> invState,
+            H item
+    ) {
+        if (invState.inventoryIsFull()) {
+            return false;
+        }
+        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        inventory.set(inventory.indexOf(emptySlot), item);
+        return true;
+    }
 }

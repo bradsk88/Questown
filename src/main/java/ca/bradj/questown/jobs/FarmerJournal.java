@@ -99,6 +99,14 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         }
     }
 
+    public boolean addItemIfSlotAvailable(H item) {
+        if (Jobs.addItemIfSlotAvailable(this.inventory, this.invState, item)) {
+            updateItemListeners();
+            return true;
+        }
+        return false;
+    }
+
     public void addItemListener(GathererJournal.ItemsListener<H> l) {
         this.listeners.add(l);
     }

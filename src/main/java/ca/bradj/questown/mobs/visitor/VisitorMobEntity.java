@@ -7,6 +7,7 @@ import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -140,6 +141,7 @@ public class VisitorMobEntity extends PathfinderMob {
             TownInterface town
     ) {
         super(ownType, level);
+        this.setCanPickUpLoot(true);
         this.defaultBB = getBoundingBox();
         this.town = town;
         if (town != null) {
@@ -757,4 +759,29 @@ public class VisitorMobEntity extends PathfinderMob {
         this.job = job1;
     }
 
+    @Override
+    protected void pickUpItem(ItemEntity p_21471_) {
+        ItemStack itemstack = p_21471_.getItem();
+        int taken = 0;
+        for (int i = 0; i < itemstack.getCount(); i++) {
+            if (this.job.addToEmptySlot(MCTownItem.fromMCItemStack(itemstack))) {
+                taken++;
+                continue;
+            }
+            break;
+        }
+        if (taken == 0) {
+            return;
+        }
+        if (taken < itemstack.getCount()) {
+            itemstack.shrink(taken);
+            this.spawnAtLocation(itemstack);
+            p_21471_.discard();
+        }
+        if (taken > 0) {
+            this.onItemPickup(p_21471_);
+            this.take(p_21471_, itemstack.getCount());
+            p_21471_.discard();
+        }
+    }
 }

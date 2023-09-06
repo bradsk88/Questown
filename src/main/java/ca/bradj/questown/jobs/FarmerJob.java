@@ -198,14 +198,26 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             for (Position v : posz) {
                 BlockPos bp = Positions.ToBlock(v, selectedFarm.yCoord);
                 BlockState cropBlock = level.getBlockState(bp);
-                BlockState groundBlock = level.getBlockState(bp.below());
-                FarmerAction blockAction = fromBlocks(groundBlock, cropBlock);
+                BlockPos gp = bp.below();
+                BlockState groundBlock = level.getBlockState(gp);
+                FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock);
                 // TODO: [Optimize] Cache these values
-                if (blockAction == farmerAction) {
-                    return new WorkSpot(bp.below(), farmerAction);
+                ImmutableList<FarmerAction> itemlessActions = ImmutableList.of(
+                        FarmerAction.HARVEST,
+                        FarmerAction.TILL
+                );
+                if (farmerAction == FarmerAction.UNDEFINED && itemlessActions.contains(blockAction)) {
+                    // TODO: We might want to scan all blocks to find up to one
+                    //  of each action, and then choose a block by order of
+                    //  preference: Harvest > Plant > Bone > Till
+                    // For now, we'll just go to the first block who can be actioned
+                    return new WorkSpot(gp, blockAction);
                 }
-                if (secondChoice == null && blockAction == FarmerAction.TILL || blockAction == FarmerAction.HARVEST) {
-                    secondChoice = new WorkSpot(bp.below(), blockAction);
+                if (blockAction == farmerAction && blockAction != FarmerAction.UNDEFINED) {
+                    return new WorkSpot(gp, farmerAction);
+                }
+                if (secondChoice == null && itemlessActions.contains(blockAction)) {
+                    secondChoice = new WorkSpot(gp, blockAction);
                 }
             }
         }
@@ -275,12 +287,18 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 List<ItemStack> drops = CropBlock.getDrops(bs, level, cropBlock, null);
                 drops.forEach(v -> {
                     if (journal.isInventoryFull()) {
-                        level.addFreshEntity(new ItemEntity(level, cropBlock.getX(), cropBlock.getY(), cropBlock.getZ(), v));
+                        level.addFreshEntity(new ItemEntity(
+                                level,
+                                cropBlock.getX(),
+                                cropBlock.getY(),
+                                cropBlock.getZ(),
+                                v
+                        ));
                     } else {
+                        // TODO: Remember the location of the drop and come back to pick them up
                         journal.addItem(MCHeldItem.fromMCItemStack(v));
                     }
                 });
-                // TODO: Handle more drops than inventory capacity
                 bs = bs.setValue(CropBlock.AGE, 0);
                 level.setBlock(cropBlock, bs, 10);
             }
@@ -292,20 +310,30 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerLevel level,
             BlockPos groundPos
     ) {
+        BlockState bs = getTilledState(level, groundPos);
+        if (bs == null) return;
+        level.setBlock(groundPos, bs, 11);
+    }
+
+    @Nullable
+    private static BlockState getTilledState(
+            ServerLevel level,
+            BlockPos groundPos
+    ) {
+        BlockState bs = level.getBlockState(groundPos);
         BlockHitResult bhr = new BlockHitResult(
                 Vec3.atCenterOf(groundPos), Direction.UP,
                 groundPos, false
         );
-        BlockState bs = level.getBlockState(groundPos);
         bs = bs.getToolModifiedState(new UseOnContext(
                 level, null, InteractionHand.MAIN_HAND,
                 // TODO: Determine tool from held item
                 Items.WOODEN_HOE.getDefaultInstance(), bhr
         ), ToolActions.HOE_TILL, false);
         if (bs == null) {
-            return;
+            return null;
         }
-        level.setBlock(groundPos, bs, 11);
+        return bs;
     }
 
     private void tryPlanting(
@@ -435,8 +463,13 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             BlockPos entityPos,
             TownInterface town
     ) {
+        Collection<MCRoom> farms = town.getFarms();
+        if (!farms.contains(selectedFarm)) {
+            selectedFarm = null;
+        }
+
         if (journal.getStatus() == GathererJournal.Status.WALKING_TO_FARM) {
-            Collection<MCRoom> rooms = town.getFarms();
+            Collection<MCRoom> rooms = farms;
             Optional<MCRoom> room = rooms.stream().findFirst();
             if (room.isPresent()) {
                 this.selectedFarm = room.get();
@@ -511,6 +544,19 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public boolean addToEmptySlot(MCTownItem mcTownItem) {
+        boolean isAllowedToPickUp = ImmutableList.of(
+                Items.WHEAT_SEEDS,
+                Items.BONE_MEAL,
+                Items.WHEAT
+        ).contains(mcTownItem.get());
+        if (!isAllowedToPickUp) {
+            return false;
+        }
+        return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
+    }
+
+    @Override
     public void containerChanged(Container p_18983_) {
         if (Jobs.isUnchanged(p_18983_, journal.getItems())) {
             return;
@@ -534,10 +580,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     private static FarmerAction fromBlocks(
+            ServerLevel level,
+            BlockPos groundPos,
             BlockState groundState,
             BlockState cropState
     ) {
-        if (Ingredient.of(ItemTags.DIRT).test(new ItemStack(groundState.getBlock().asItem()))) {
+        if (getTilledState(level, groundPos) != null) {
             if (cropState.isAir()) {
                 return FarmerAction.TILL;
             }

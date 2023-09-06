@@ -609,5 +609,10 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return new TranslatableComponent("jobs.gatherer");
     }
 
+    @Override
+    public boolean addToEmptySlot(MCTownItem mcTownItem) {
+        return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
+    }
+
 
 }

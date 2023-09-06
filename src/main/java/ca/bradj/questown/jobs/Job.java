@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
@@ -56,4 +57,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
     boolean shouldBeNoClip(TownInterface town, BlockPos blockPos);
 
     Component getJobName();
+
+    boolean addToEmptySlot(MCTownItem mcTownItem);
 }
