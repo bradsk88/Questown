@@ -3,8 +3,10 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -56,6 +58,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private int ticksSinceLastFarmAction;
     private MCRoom selectedFarm;
     private WorkSpot workSpot;
+    private ContainerTarget<MCContainer, MCTownItem> successTarget;
 
     public FarmerJob(
             @Nullable ServerLevel level,
@@ -164,7 +167,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             if (this.workSpot == null) {
                 this.workSpot = getWorkSpot(sl, selectedFarm, FarmerAction.UNDEFINED);
             }
+
+            // TODO: Should this be a status that gets computed by the journal?
+            if (workSpot != null && workSpot.action == FarmerAction.HARVEST) {
+                workSpot = null;
+            }
+
             tryFarming(town, entityPos);
+            // TODO: Implement
+//            tryDropLoot();
+//            tryGetSupplies();
         }
 
         // TODO: Implement all of this for cook
@@ -187,6 +199,25 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        tryTakeFood(entityPos);
     }
 
+    private BlockPos setupForDropLoot(TownInterface town) {
+        Questown.LOGGER.debug("Visitor is searching for chest space");
+        if (this.successTarget != null) {
+            if (!this.successTarget.hasItem(MCTownItem::isEmpty)) {
+                this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+            }
+        } else {
+            this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+        }
+        if (this.successTarget != null) {
+            Questown.LOGGER.debug("Located chest at {}", this.successTarget.getPosition());
+            return Positions.ToBlock(this.successTarget.getInteractPosition(), this.successTarget.getYPosition());
+        } else {
+            Questown.LOGGER.debug("No chests exist in town");
+            return town.getRandomWanderTarget();
+        }
+    }
+
+    // TODO: Should this go on the town? (or a town helper)
     private @Nullable WorkSpot getWorkSpot(
             ServerLevel level,
             MCRoom selectedFarm,
@@ -479,20 +510,18 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
         }
 
-        BlockPos gateInteractionSpot = getGateInteractionSpot(town, selectedFarm);
         if (journal.getStatus() == GathererJournal.Status.FARMING) {
             if (workSpot != null) {
                 return workSpot.position;
             }
-            boolean inFarm = selectedFarm.yCoord == entityPos.getY() &&
-                    InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos));
-            if (inFarm || entityPos.equals(gateInteractionSpot)) {
-                Random random = town.getServerLevel().getRandom();
-                BlockPos workSpot = entityPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(random));
-                if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(workSpot))) {
-                    return workSpot;
-                }
-                return Positions.ToBlock(InclusiveSpaces.getMidpoint(selectedFarm.getSpace()), selectedFarm.yCoord);
+            if (journal.isInventoryEmpty()) {
+                return setupForDropLoot(town);
+            }
+            if (journal.getItems().stream().noneMatch(v -> ImmutableList.of(
+                    Items.WHEAT_SEEDS,
+                    Items.BONE_MEAL
+            ).contains(v.get().get()))) {
+                return setupForDropLoot(town);
             }
         }
         // TODO: Finish implementing target finding

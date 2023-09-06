@@ -39,6 +39,14 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
     }
 
 
+    public boolean inventoryIsEmpty() {
+        if (!this.isValid()) {
+            throw new IllegalStateException("Inventory must be size 6");
+        }
+        return this.itemsSource.GetCurrentItems().stream().allMatch(GathererJournal.Item::isEmpty);
+    }
+
+
     @Override
     public boolean inventoryHasFood() {
         if (!this.isValid()) {

@@ -119,6 +119,10 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         return this.invState.inventoryIsFull();
     }
 
+    public boolean isInventoryEmpty() {
+        return invState.inventoryIsEmpty();
+    }
+
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
             GathererJournal.Status status, ImmutableList<H> items
     ) implements ca.bradj.questown.jobs.Snapshot<H> {
