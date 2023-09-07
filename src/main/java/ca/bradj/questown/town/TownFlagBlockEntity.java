@@ -535,7 +535,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void townGateFound(BlockPos bp) {
-        Questown.LOGGER.debug("Town Gate found");
         Position pos = Positions.FromBlockPos(bp);
         MCRoom room = new MCRoom(pos, ImmutableList.of(new InclusiveSpace(pos, pos)), bp.getY());
         quests.markQuestAsComplete(room, SpecialQuests.TOWN_GATE);

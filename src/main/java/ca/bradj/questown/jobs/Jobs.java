@@ -107,15 +107,15 @@ public class Jobs {
     }
 
     public interface LootDropper<I> {
-        UUID UUID();
 
+        UUID UUID();
         boolean hasAnyLootToDrop();
 
         Iterable<I> getItems();
 
         boolean removeItem(I mct);
-    }
 
+    }
     public static boolean tryDropLoot(
             LootDropper<MCHeldItem> dropper,
             BlockPos entityPos,
@@ -158,6 +158,31 @@ public class Jobs {
             }
         }
         return true;
+    }
+
+    public interface ContainerItemTaker {
+
+        void addItem(MCHeldItem mcHeldItem);
+    }
+
+    public static void tryTakeContainerItems(
+            ContainerItemTaker farmerJob,
+            BlockPos entityPos,
+            ContainerTarget<MCContainer, MCTownItem> suppliesTarget,
+            ContainerTarget.CheckFn<MCTownItem> check
+    ) {
+        if (!isCloseToChest(entityPos, suppliesTarget)) {
+            return;
+        }
+        for (int i = 0; i < suppliesTarget.size(); i++) {
+            MCTownItem mcTownItem = suppliesTarget.getItem(i);
+            if (check.Matches(mcTownItem)) {
+                Questown.LOGGER.debug("Villager is taking {} from {}", mcTownItem, suppliesTarget);
+                farmerJob.addItem(new MCHeldItem(mcTownItem));
+                suppliesTarget.getContainer().removeItem(i, 1);
+                break;
+            }
+        }
     }
 
     private static boolean isCloseToChest(

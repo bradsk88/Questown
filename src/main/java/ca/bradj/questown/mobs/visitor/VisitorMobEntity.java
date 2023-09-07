@@ -608,6 +608,15 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
+    protected void jumpFromGround() {
+        if (getStatus() == GathererJournal.Status.FARMING) {
+            // Jumping destroys crops
+            return;
+        }
+        super.jumpFromGround();
+    }
+
+    @Override
     public InteractionResult interactAt(
             Player player,
             Vec3 p_19981_,

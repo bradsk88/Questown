@@ -48,8 +48,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
+public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     private ArrayList<StatusListener> statusListeners = new ArrayList<>();
     private final Container inventory;
@@ -59,6 +60,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private MCRoom selectedFarm;
     private WorkSpot workSpot;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
+    private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
     private ImmutableList<Item> holdItems = ImmutableList.of(
@@ -136,6 +138,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return journal.removeItem(mct);
     }
 
+    @Override
+    public void addItem(MCHeldItem mcHeldItem) {
+        journal.addItem(mcHeldItem);
+    }
+
     private static class WorkSpot {
         public WorkSpot(
                 @NotNull BlockPos position,
@@ -178,7 +185,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         tryFarming(town, entityPos);
         tryDropLoot(entityPos);
-//            tryGetSupplies();
+        tryGetSupplies(entityPos);
 
         // TODO: Implement all of this for cook
 //        // TODO: Take cooked food to chests
@@ -213,6 +220,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
     }
 
+    private void tryGetSupplies(
+            BlockPos entityPos
+    ) {
+        // TODO: Introduce this status for farmer
+//        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
+//            return;
+//        }
+        Jobs.tryTakeContainerItems(this, entityPos, suppliesTarget, (item) -> holdItems.contains(item.get()));
+    }
+
     @Override
     public @Nullable BlockPos getTarget(
             BlockPos entityPos,
@@ -228,15 +245,15 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             selectedFarm = null;
         }
 
+        Collection<MCRoom> rooms = farms;
+        Optional<MCRoom> room = rooms.stream().findFirst();
+        this.selectedFarm = room.orElse(null);
+        if (selectedFarm == null) {
+            return null;
+        }
+
         if (journal.getStatus() == GathererJournal.Status.WALKING_TO_FARM) {
-            Collection<MCRoom> rooms = farms;
-            Optional<MCRoom> room = rooms.stream().findFirst();
-            if (room.isPresent()) {
-                this.selectedFarm = room.get();
-                return getGateInteractionSpot(town, selectedFarm);
-            } else {
-                this.selectedFarm = null;
-            }
+            return getGateInteractionSpot(town, selectedFarm);
         }
 
         if (journal.getStatus() == GathererJournal.Status.FARMING) {
@@ -245,6 +262,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     .map(FarmerJob::fromItem)
                     .filter(v -> v != FarmerAction.UNDEFINED)
                     .iterator();
+
+            Collection<WorkSpot> spots = listAllWorkspots(sl, selectedFarm);
 
             this.workSpot = null;
             while (this.workSpot == null) {
@@ -255,83 +274,128 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 if (next == FarmerAction.UNDEFINED) {
                     continue;
                 }
-                this.workSpot = getWorkSpot(sl, selectedFarm, next);
+                this.workSpot = getWorkSpot(spots, next);
             }
             if (this.workSpot == null) {
-                this.workSpot = getWorkSpot(sl, selectedFarm, FarmerAction.UNDEFINED);
+                this.workSpot = getWorkSpot(spots, FarmerAction.UNDEFINED);
             }
 
             if (workSpot != null) {
                 return workSpot.position;
             }
+            Set<Item> suppliesNeeded = spots
+                    .stream()
+                    .map(v -> v.action)
+                    .map(v -> switch (v) {
+                        case PLANT -> Items.WHEAT_SEEDS;
+                        case BONE -> Items.BONE_MEAL;
+                        default -> null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
             if (journal.isInventoryEmpty()) {
-                // TODO: If town has supplies, go get them
-                // setupForGetSupplies(town)
-                // Wander the field and wait for crops to grow
+                if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos))) {
+                    return getGateInteractionSpot(town, selectedFarm);
+                }
+                setupForGetSupplies(town, suppliesNeeded);
+                if (suppliesTarget != null) {
+                    return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
+                }
                 return Positions.ToBlock(
                         InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
                         selectedFarm.yCoord
                 );
             }
-            if (journal.getItems().stream().noneMatch(v -> ImmutableList.of(
-                    Items.WHEAT_SEEDS,
-                    Items.BONE_MEAL
-            ).contains(v.get().get()))) {
+            if (journal.getItems().stream().noneMatch(v -> suppliesNeeded.contains(v.get().get()))) {
                 // TODO: Add a dropping_loot status to the journal?
                 if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos))) {
                     return getGateInteractionSpot(town, selectedFarm);
                 }
                 return setupForDropLoot(town);
             }
+            return Positions.ToBlock(
+                    InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
+                    selectedFarm.yCoord
+            );
         }
         // TODO: Finish implementing target finding
         return null;
     }
 
     private BlockPos setupForDropLoot(TownInterface town) {
-       this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
-       if (this.successTarget != null) {
-           return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
-       }
+        this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
+        if (this.successTarget != null) {
+            return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
+        }
         return town.getRandomWanderTarget();
     }
+
+    private void setupForGetSupplies(
+            TownInterface town,
+            Set<Item> suppliesNeeded
+    ) {
+        Questown.LOGGER.debug("Farmer is searching for supplies");
+        if (this.suppliesTarget != null) {
+            if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
+                this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
+            }
+        } else {
+            this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
+        }
+        if (this.suppliesTarget != null) {
+            Questown.LOGGER.debug("Farmer located supplies at {}", this.suppliesTarget.getPosition());
+        }
+    }
+
     // TODO: Should this go on the town? (or a town helper)
 
     private @Nullable WorkSpot getWorkSpot(
-            ServerLevel level,
-            MCRoom selectedFarm,
+            Iterable<? extends WorkSpot> spots,
             FarmerAction farmerAction
     ) {
         WorkSpot secondChoice = null;
-        for (InclusiveSpace space : selectedFarm.getSpaces()) {
+        for (WorkSpot spot : spots) {
+            FarmerAction blockAction = spot.action;
+            // TODO: [Optimize] Cache these values
+            ImmutableList<FarmerAction> itemlessActions = ImmutableList.of(
+                    FarmerAction.HARVEST,
+                    FarmerAction.TILL
+            );
+            if (farmerAction == FarmerAction.UNDEFINED && itemlessActions.contains(blockAction)) {
+                // TODO: We might want to scan all blocks to find up to one
+                //  of each action, and then choose a block by order of
+                //  preference: Harvest > Plant > Bone > Till
+                // For now, we'll just go to the first block who can be actioned
+                return spot;
+            }
+            if (blockAction == farmerAction && blockAction != FarmerAction.UNDEFINED) {
+                return spot;
+            }
+            if (secondChoice == null && itemlessActions.contains(blockAction)) {
+                secondChoice = spot;
+            }
+        }
+        return secondChoice;
+    }
+
+    Collection<WorkSpot> listAllWorkspots(
+            ServerLevel level,
+            MCRoom farm
+    ) {
+        ImmutableList.Builder<WorkSpot> b = ImmutableList.builder();
+        for (InclusiveSpace space : farm.getSpaces()) {
             Collection<Position> posz = InclusiveSpaces.getAllEnclosedPositions(space);
             for (Position v : posz) {
-                BlockPos bp = Positions.ToBlock(v, selectedFarm.yCoord);
+                BlockPos bp = Positions.ToBlock(v, farm.yCoord);
                 BlockState cropBlock = level.getBlockState(bp);
                 BlockPos gp = bp.below();
                 BlockState groundBlock = level.getBlockState(gp);
                 FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock);
                 // TODO: [Optimize] Cache these values
-                ImmutableList<FarmerAction> itemlessActions = ImmutableList.of(
-                        FarmerAction.HARVEST,
-                        FarmerAction.TILL
-                );
-                if (farmerAction == FarmerAction.UNDEFINED && itemlessActions.contains(blockAction)) {
-                    // TODO: We might want to scan all blocks to find up to one
-                    //  of each action, and then choose a block by order of
-                    //  preference: Harvest > Plant > Bone > Till
-                    // For now, we'll just go to the first block who can be actioned
-                    return new WorkSpot(gp, blockAction);
-                }
-                if (blockAction == farmerAction && blockAction != FarmerAction.UNDEFINED) {
-                    return new WorkSpot(gp, farmerAction);
-                }
-                if (secondChoice == null && itemlessActions.contains(blockAction)) {
-                    secondChoice = new WorkSpot(gp, blockAction);
-                }
+                b.add(new WorkSpot(gp, blockAction));
             }
         }
-        return secondChoice;
+        return b.build();
     }
 
     private void tryFarming(
@@ -370,7 +434,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerLevel level,
             BlockPos cropBlock
     ) {
-         BlockState bs = level.getBlockState(cropBlock);
+        BlockState bs = level.getBlockState(cropBlock);
         if (bs.getBlock() instanceof CropBlock cb) {
             cb.performBonemeal(level, level.getRandom(), cropBlock, bs);
             BlockState after = level.getBlockState(cropBlock);
