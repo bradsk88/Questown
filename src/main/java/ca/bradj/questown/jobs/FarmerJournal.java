@@ -14,18 +14,30 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     private final GathererJournal.SignalSource sigs;
     private GathererJournal.Status status;
     private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
+    private EmptyFactory<H> emptyFactory;
+    private final ItemChecker<H> itemsToHold;
+
+    public interface ItemChecker<H> {
+        boolean shouldHoldForWork(
+                GathererJournal.Status status,
+                H item
+        );
+    }
 
     public FarmerJournal(
             GathererJournal.SignalSource sigs,
             int capacity,
+            ItemChecker<H> itemsToHold,
             EmptyFactory<H> ef
     ) {
         this.sigs = sigs;
+        this.itemsToHold = itemsToHold;
         this.inventory = new JournalItemList<>(capacity, ef);
         this.capacity = capacity;
         this.invState = new DefaultInventoryStateProvider<>(
                 () -> ImmutableList.copyOf(this.inventory)
         );
+        this.emptyFactory = ef;
     }
 
     public void initialize(FarmerJournal.Snapshot<H> journal) {
@@ -121,6 +133,28 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
 
     public boolean isInventoryEmpty() {
         return invState.inventoryIsEmpty();
+    }
+
+    public boolean removeItem(H mct) {
+        int index = inventory.lastIndexOf(mct);
+        if (index < 0) {
+            // Item must have already been removed by a different thread.
+            return false;
+        }
+
+        inventory.set(index, emptyFactory.makeEmptyItem());
+        updateItemListeners();
+        // TODO: Add FARMER_EATING status
+//        if (status == GathererJournal.Status.GATHERING_EATING) {
+//            changeStatus(GathererJournal.Status.GATHERING);
+//        }
+        // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
+        changeStatus(GathererJournal.Status.IDLE);
+        return true;
+    }
+
+    public boolean hasAnyLootToDrop() {
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked() && !itemsToHold.shouldHoldForWork(status, v));
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(

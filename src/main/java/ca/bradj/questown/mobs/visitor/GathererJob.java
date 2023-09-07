@@ -10,7 +10,6 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -41,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>>, GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, LockSlotHaver {
+public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>>, GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
     private final @Nullable ServerLevel level;
     private final Container inventory;
@@ -367,21 +366,11 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     private BlockPos setupForDropLoot(TownInterface town) {
-        Questown.LOGGER.debug("Visitor is searching for chest space");
+        this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
         if (this.successTarget != null) {
-            if (!this.successTarget.hasItem(MCTownItem::isEmpty)) {
-                this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
-            }
-        } else {
-            this.successTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+            return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
         }
-        if (this.successTarget != null) {
-            Questown.LOGGER.debug("Located chest at {}", this.successTarget.getPosition());
-            return Positions.ToBlock(this.successTarget.getInteractPosition(), this.successTarget.getYPosition());
-        } else {
-            Questown.LOGGER.debug("No chests exist in town");
-            return town.getRandomWanderTarget();
-        }
+        return town.getRandomWanderTarget();
     }
 
     private BlockPos setupForLeaveTown(TownInterface town) {
@@ -421,18 +410,6 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return Jobs.isCloseTo(entityPos, Positions.ToBlock(foodTarget.getPosition(), foodTarget.yPosition));
     }
 
-    public boolean isCloseToChest(
-            @NotNull BlockPos entityPos
-    ) {
-        if (successTarget == null) {
-            return false;
-        }
-        if (!successTarget.hasItem(MCTownItem::isEmpty)) {
-            return false;
-        }
-        return Jobs.isCloseTo(entityPos, Positions.ToBlock(successTarget.getPosition(), successTarget.yPosition));
-    }
-
     public void tryTakeFood(BlockPos entityPos) {
         if (journal.getStatus() != GathererJournal.Status.NO_FOOD) {
             return;
@@ -464,45 +441,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         if (this.dropping) {
             Questown.LOGGER.debug("Trying to drop too quickly");
         }
-        this.dropping = true;
-        if (!journal.hasAnyLootToDrop()) {
-            Questown.LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
-            this.dropping = false;
-            return;
-        }
-        if (!isCloseToChest(entityPos)) {
-            Questown.LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
-            this.dropping = false;
-            return;
-        }
-        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(journal.getItems()));
-        for (MCHeldItem mct : snapshot) {
-            if (mct.isEmpty()) {
-                continue;
-            }
-            // TODO: Unit tests of this logic!
-            if (mct.isLocked()) {
-                Questown.LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
-                continue;
-            }
-            Questown.LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, successTarget);
-            boolean added = false;
-            for (int i = 0; i < successTarget.container.size(); i++) {
-                if (added) {
-                    break;
-                }
-                if (successTarget.container.getItem(i).isEmpty()) {
-                    if (journal.removeItem(mct)) {
-                        successTarget.container.setItem(i, mct.toItem());
-                    }
-                    added = true;
-                }
-            }
-            if (!added) {
-                Questown.LOGGER.debug("Nope. No space for {}", mct);
-            }
-        }
-        this.dropping = false;
+        this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
     }
 
     public boolean openScreen(
@@ -615,4 +554,23 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
 
+    @Override
+    public UUID UUID() {
+        return ownerUUID;
+    }
+
+    @Override
+    public boolean hasAnyLootToDrop() {
+        return journal.hasAnyLootToDrop();
+    }
+
+    @Override
+    public Iterable<MCHeldItem> getItems() {
+        return journal.getItems();
+    }
+
+    @Override
+    public boolean removeItem(MCHeldItem mct) {
+        return journal.removeItem(mct);
+    }
 }

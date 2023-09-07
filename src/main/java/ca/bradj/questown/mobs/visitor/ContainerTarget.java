@@ -1,9 +1,11 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -79,6 +81,10 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
 
     public boolean isFull() {
         return container.isFull();
+    }
+
+    public BlockPos getBlockPos() {
+        return Positions.ToBlock(getPosition(), getYPosition());
     }
 
     public interface Container<I extends GathererJournal.Item<I>> {
