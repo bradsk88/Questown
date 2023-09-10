@@ -289,7 +289,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     .map(v -> switch (v) {
                         case PLANT -> Items.WHEAT_SEEDS;
                         case BONE -> Items.BONE_MEAL;
-                        default -> null;
+                        case TILL, HARVEST -> null;
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
