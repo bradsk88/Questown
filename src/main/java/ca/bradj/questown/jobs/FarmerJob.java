@@ -37,6 +37,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -67,6 +68,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             Items.BONE_MEAL,
             Items.WHEAT_SEEDS
     );
+
+    ImmutableList<FarmerAction> itemlessActions = ImmutableList.of(
+            FarmerAction.HARVEST,
+            FarmerAction.TILL
+    );
+
     private final UUID ownerUUID;
 
     public FarmerJob(
@@ -257,10 +264,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         if (journal.getStatus() == GathererJournal.Status.FARMING) {
-            Iterator<FarmerAction> itemAction = journal.getItems()
+            Iterator<Collection<FarmerAction>> itemAction = journal.getItems()
                     .stream()
                     .map(FarmerJob::fromItem)
-                    .filter(v -> v != FarmerAction.UNDEFINED)
+                    .filter(v -> !v.isEmpty())
                     .iterator();
 
             Collection<WorkSpot> spots = listAllWorkspots(sl, selectedFarm);
@@ -270,26 +277,27 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 if (!itemAction.hasNext()) {
                     break;
                 }
-                FarmerAction next = itemAction.next();
-                if (next == FarmerAction.UNDEFINED) {
+                Collection<FarmerAction> next = itemAction.next();
+                if (next.isEmpty()) {
                     continue;
                 }
                 this.workSpot = getWorkSpot(spots, next);
             }
             if (this.workSpot == null) {
-                this.workSpot = getWorkSpot(spots, FarmerAction.UNDEFINED);
+                this.workSpot = getWorkSpot(spots, ImmutableList.of());
             }
 
             if (workSpot != null) {
+                Questown.LOGGER.debug("{} using workspot with action {}", this.ownerUUID, workSpot.action);
                 return workSpot.position;
             }
             Set<Item> suppliesNeeded = spots
                     .stream()
                     .map(v -> v.action)
                     .map(v -> switch (v) {
-                        case PLANT -> Items.WHEAT_SEEDS;
+                        case PLANT, COMPOST -> Items.WHEAT_SEEDS;
                         case BONE -> Items.BONE_MEAL;
-                        case TILL, HARVEST -> null;
+                        case TILL, HARVEST, UNDEFINED -> null;
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
@@ -351,24 +359,20 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     private @Nullable WorkSpot getWorkSpot(
             Iterable<? extends WorkSpot> spots,
-            FarmerAction farmerAction
+            Collection<FarmerAction> farmerActions
     ) {
         WorkSpot secondChoice = null;
         for (WorkSpot spot : spots) {
             FarmerAction blockAction = spot.action;
             // TODO: [Optimize] Cache these values
-            ImmutableList<FarmerAction> itemlessActions = ImmutableList.of(
-                    FarmerAction.HARVEST,
-                    FarmerAction.TILL
-            );
-            if (farmerAction == FarmerAction.UNDEFINED && itemlessActions.contains(blockAction)) {
+            if (farmerActions.isEmpty() && itemlessActions.contains(blockAction)) {
                 // TODO: We might want to scan all blocks to find up to one
                 //  of each action, and then choose a block by order of
-                //  preference: Harvest > Plant > Bone > Till
+                //  preference: Harvest > Plant > Bone > Compost > Till
                 // For now, we'll just go to the first block who can be actioned
                 return spot;
             }
-            if (blockAction == farmerAction && blockAction != FarmerAction.UNDEFINED) {
+            if (farmerActions.contains(blockAction) && blockAction != FarmerAction.UNDEFINED) {
                 return spot;
             }
             if (secondChoice == null && itemlessActions.contains(blockAction)) {
@@ -398,39 +402,65 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return b.build();
     }
 
-    private void tryFarming(
+    private boolean tryFarming(
             TownInterface town,
             BlockPos entityPos
     ) {
         if (town.getServerLevel() == null) {
-            return;
+            return false;
         }
 
         ticksSinceLastFarmAction++;
         if (ticksSinceLastFarmAction < Config.FARM_ACTION_INTERVAL.get()) {
-            return;
+            return false;
         }
         ticksSinceLastFarmAction = 0;
 
         if (workSpot == null || workSpot.action == FarmerAction.UNDEFINED) {
-            return;
+            return false;
         }
 
         BlockPos groundPos = workSpot.position;
         if (!Jobs.isCloseTo(entityPos, groundPos)) {
-            return;
+            return false;
         }
         BlockPos cropBlock = groundPos.above();
 
-        switch (workSpot.action) {
+        return switch (workSpot.action) {
+            case UNDEFINED -> false;
             case TILL -> tryTilling(town.getServerLevel(), groundPos);
             case PLANT -> tryPlanting(town.getServerLevel(), groundPos);
             case BONE -> tryBoning(town.getServerLevel(), cropBlock);
             case HARVEST -> tryHarvestCrop(town.getServerLevel(), cropBlock);
-        }
+            case COMPOST -> tryComposeSeeds(town.getServerLevel(), cropBlock);
+        };
     }
 
-    private void tryBoning(
+    private boolean tryComposeSeeds(ServerLevel level, BlockPos cropBlock) {
+        BlockState oldState = level.getBlockState(cropBlock);
+        if (oldState.getValue(ComposterBlock.LEVEL) == 8) {
+            BlockState blockState = ComposterBlock.extractProduce(oldState, level, cropBlock);
+            return !oldState.equals(blockState);
+        }
+
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack item = inventory.getItem(i);
+            if (Items.WHEAT_SEEDS.equals(item.getItem())) {
+                BlockState blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
+                if (oldState.equals(blockstate)) {
+                    return false;
+                }
+                level.setBlockAndUpdate(cropBlock, blockstate);
+                Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                inventory.removeItem(i, 1);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean tryBoning(
             ServerLevel level,
             BlockPos cropBlock
     ) {
@@ -449,9 +479,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 }
             }
         }
+        return true;
     }
 
-    private void tryHarvestCrop(
+    private boolean tryHarvestCrop(
             ServerLevel level,
             BlockPos cropBlock
     ) {
@@ -477,16 +508,18 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 level.setBlock(cropBlock, bs, 10);
             }
         }
+        return true;
     }
 
     @Nullable
-    private static void tryTilling(
+    private static boolean tryTilling(
             ServerLevel level,
             BlockPos groundPos
     ) {
         BlockState bs = getTilledState(level, groundPos);
-        if (bs == null) return;
+        if (bs == null) return false;
         level.setBlock(groundPos, bs, 11);
+        return true;
     }
 
     @Nullable
@@ -510,7 +543,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return bs;
     }
 
-    private void tryPlanting(
+    private boolean tryPlanting(
             ServerLevel level,
             BlockPos groundPos
     ) {
@@ -532,6 +565,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 }
             }
         }
+        return true;
     }
 
     private static void processSignal(
@@ -709,6 +743,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         PLANT,
         BONE,
         HARVEST,
+        COMPOST,
         UNDEFINED
     }
 
@@ -734,16 +769,19 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
             return FarmerAction.BONE;
         }
+        if (cropState.getBlock() instanceof ComposterBlock) {
+            return FarmerAction.COMPOST;
+        }
         return FarmerAction.UNDEFINED;
     }
 
-    private static FarmerAction fromItem(MCHeldItem stack) {
+    private static Collection<FarmerAction> fromItem(MCHeldItem stack) {
         if (Ingredient.of(Items.BONE_MEAL).test(stack.toItem().toItemStack())) {
-            return FarmerAction.BONE;
+            return ImmutableList.of(FarmerAction.BONE);
         }
         if (Ingredient.of(Items.WHEAT_SEEDS).test(stack.toItem().toItemStack())) {
-            return FarmerAction.PLANT;
+            return ImmutableList.of(FarmerAction.PLANT, FarmerAction.COMPOST);
         }
-        return FarmerAction.UNDEFINED;
+        return ImmutableList.of();
     }
 }
