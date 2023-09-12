@@ -21,6 +21,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
@@ -298,7 +299,7 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-        job.tick(town, blockPosition(), getDirection());
+        job.tick(town, blockPosition(), position(), getDirection());
         if (!level.isClientSide()) {
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
@@ -316,8 +317,21 @@ public class VisitorMobEntity extends PathfinderMob {
                 bs = bs.setValue(FenceGateBlock.OPEN, true);
                 level.setBlock(on, bs, 10);
             }
-            BlockPos front = on.relative(getDirection());
+            Direction dir = getDirection();
+            BlockPos front = on.relative(dir);
             BlockState fbs = level.getBlockState(front);
+            if (fbs.getBlock() instanceof FenceGateBlock) {
+                fbs = fbs.setValue(FenceGateBlock.OPEN, true);
+                level.setBlock(front, fbs, 10);
+            }
+            front = on.relative(dir.getCounterClockWise());
+            fbs = level.getBlockState(front);
+            if (fbs.getBlock() instanceof FenceGateBlock) {
+                fbs = fbs.setValue(FenceGateBlock.OPEN, true);
+                level.setBlock(front, fbs, 10);
+            }
+            front = on.relative(dir.getClockWise());
+            fbs = level.getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
                 level.setBlock(front, fbs, 10);
@@ -579,7 +593,7 @@ public class VisitorMobEntity extends PathfinderMob {
             this.kill();
             return null;
         }
-        BlockPos target = job.getTarget(blockPosition(), town);
+        BlockPos target = job.getTarget(blockPosition(), position(), town);
         if (target != null) {
             this.setWanderTarget(target);
         } else {

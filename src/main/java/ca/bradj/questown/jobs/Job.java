@@ -5,6 +5,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Position;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -23,7 +24,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
 
     void tick(
             TownInterface town,
-            BlockPos entityPos,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
             Direction facingPos
     );
 
@@ -48,7 +50,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
     DataSlot getLockSlot(int i);
 
     @Nullable BlockPos getTarget(
-            BlockPos entityPos,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
             TownInterface town
     );
 

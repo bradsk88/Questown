@@ -48,7 +48,7 @@ public class TownRoomsMapSerializer {
                 int x = ct.getInt(NBT_POS_X);
                 int y = ct.getInt(NBT_POS_Y);
                 int z = ct.getInt(NBT_POS_Z);
-                doorsB.add(new TownPosition(x, z, y));
+                gates.add(new TownPosition(x, z, y));
             }
         }
         Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
@@ -71,6 +71,16 @@ public class TownRoomsMapSerializer {
             doors.add(bpt);
         }
         tag.put(NBT_REGISTERED_DOORS, doors);
+
+        ListTag gates = new ListTag();
+        for (TownPosition bp : roomsMap.getRegisteredGates()) {
+            CompoundTag bpt = new CompoundTag();
+            bpt.putInt(NBT_POS_X, bp.x);
+            bpt.putInt(NBT_POS_Y, bp.scanLevel);
+            bpt.putInt(NBT_POS_Z, bp.z);
+            gates.add(bpt);
+        }
+        tag.put(NBT_REGISTERED_DOORS, gates);
         return tag;
     }
 }

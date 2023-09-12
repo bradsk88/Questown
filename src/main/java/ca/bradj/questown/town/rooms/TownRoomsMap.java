@@ -41,8 +41,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return registeredDoors;
     }
 
-    // FIXME: Store on NBT
+    public Set<TownPosition> getRegisteredGates() {
+        return registeredFenceGates;
+    }
+
     private final Set<TownPosition> registeredDoors = new HashSet<>();
+
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
 
     public TownRoomsMap(TownFlagBlockEntity entity) {
@@ -123,6 +127,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
         return activeRooms.get(scanLevel);
     }
+
     private TownRooms getOrCreateFarms(int scanLevel) {
         if (!activeFarms.containsKey(scanLevel)) {
             TownRooms v = new TownRooms(
@@ -134,7 +139,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     ImmutableMap<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(entity, room, room.yCoord, false);
                     return Optional.of(new RoomRecipeMatch(
                             room, SpecialQuests.FARM, blocks.entrySet()
-                     ));
+                    ));
                 }
             };
             activeFarms.put(scanLevel, v);

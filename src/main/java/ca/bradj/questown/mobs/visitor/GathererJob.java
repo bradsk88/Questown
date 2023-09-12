@@ -12,6 +12,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Position;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -147,7 +148,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     public void tick(
             TownInterface town,
             BlockPos entityPos,
-            Direction relative) {
+            Vec3 position, Direction relative) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
@@ -304,13 +305,14 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     public BlockPos getTarget(
-            BlockPos entityPos,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
             TownInterface town
     ) {
         BlockPos enterExitPos = getEnterExitPos(town); // TODO: Smarter logic? Town gate?
         return switch (journal.getStatus()) {
             case NO_FOOD -> handleNoFoodStatus(town);
-            case NO_GATE -> handleNoGateStatus(entityPos, town);
+            case NO_GATE -> handleNoGateStatus(entityBlockPos, town);
             case UNSET, IDLE, STAYING, RELAXING -> null;
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
             case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(town);

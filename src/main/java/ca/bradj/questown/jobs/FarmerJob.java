@@ -174,7 +174,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public void tick(
             TownInterface town,
-            BlockPos entityPos,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
             Direction facingPos
     ) {
         ServerLevel sl = town.getServerLevel();
@@ -183,16 +184,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
         boolean isInFarm = false;
         if (selectedFarm != null) {
-            isInFarm = entityPos.equals(getGateInteractionSpot(town, selectedFarm));
+            isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm));
             if (!isInFarm) {
-                isInFarm = InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos));
+                isInFarm = areAllPartsOfEntityInFarm(entityPos);
             }
         }
         processSignal(sl, this, isInFarm);
 
-        tryFarming(town, entityPos);
-        tryDropLoot(entityPos);
-        tryGetSupplies(entityPos);
+        tryFarming(town, entityBlockPos);
+        tryDropLoot(entityBlockPos);
+        tryGetSupplies(entityBlockPos);
 
         // TODO: Implement all of this for cook
 //        // TODO: Take cooked food to chests
@@ -212,6 +213,18 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        }
 //        tryDropLoot(entityPos);
 //        tryTakeFood(entityPos);
+    }
+
+    private boolean areAllPartsOfEntityInFarm(Vec3 entityPos) {
+        Position p1 = new Position((int) (entityPos.x + 0.5), (int) (entityPos.z + 0.5));
+        Position p2 = new Position((int) (entityPos.x + 0.5), (int) (entityPos.z - 0.5));
+        Position p3 = new Position((int) (entityPos.x - 0.5), (int) (entityPos.z + 0.5));
+        Position p4 = new Position((int) (entityPos.x - 0.5), (int) (entityPos.z - 0.5));
+        boolean corner1 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p1);
+        boolean corner2 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p2);
+        boolean corner3 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p3);
+        boolean corner4 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p4);
+        return corner1 && corner2 && corner3 && corner4;
     }
 
     private void tryDropLoot(
@@ -239,7 +252,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     @Override
     public @Nullable BlockPos getTarget(
-            BlockPos entityPos,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
             TownInterface town
     ) {
         @Nullable ServerLevel sl = town.getServerLevel();
@@ -302,7 +316,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
             if (journal.isInventoryEmpty()) {
-                if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos))) {
+                if (areAllPartsOfEntityInFarm(entityPos)) {
                     return getGateInteractionSpot(town, selectedFarm);
                 }
                 setupForGetSupplies(town, suppliesNeeded);
@@ -316,7 +330,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
             if (journal.getItems().stream().noneMatch(v -> suppliesNeeded.contains(v.get().get()))) {
                 // TODO: Add a dropping_loot status to the journal?
-                if (InclusiveSpaces.contains(selectedFarm.getSpaces(), Positions.FromBlockPos(entityPos))) {
+                if (areAllPartsOfEntityInFarm(entityPos)) {
                     return getGateInteractionSpot(town, selectedFarm);
                 }
                 return setupForDropLoot(town);
@@ -537,10 +551,15 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 // TODO: Determine tool from held item
                 Items.WOODEN_HOE.getDefaultInstance(), bhr
         ), ToolActions.HOE_TILL, false);
-        if (bs == null) {
-            return null;
+
+        if (bs != null) {
+            BlockState moistened = bs.setValue(FarmBlock.MOISTURE, 2);
+            if (!moistened.equals(bs)) {
+                return moistened;
+            }
         }
-        return bs;
+
+        return null;
     }
 
     private boolean tryPlanting(
