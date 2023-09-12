@@ -314,9 +314,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             return ImmutableList.of(RETURNED_SUCCESS, DROPPING_LOOT).contains(this);
         }
 
-        public boolean hasPreciseTarget() {
-            return this == GATHERING || this == WALKING_TO_FARM || this == FARMING;
-        }
     }
 
     public interface ItemsListener<I> {

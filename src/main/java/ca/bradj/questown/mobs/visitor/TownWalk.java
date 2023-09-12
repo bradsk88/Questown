@@ -49,6 +49,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (target == null) {
             return false;
         }
+        if (e.getStatus() == GathererJournal.Status.GATHERING) {
+            return true;
+        }
         Questown.LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;
     }
@@ -78,10 +81,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
     ) {
         this.nextUpdate = lvl.getGameTime() + (long) lvl.getRandom().nextInt(REPEAT_BUFFER);
         BlockPos bp = this.target;
-        int dist = 1;
-        if (e.getStatus().hasPreciseTarget()) {
-            dist = 0;
-        }
+        // DO NOT CHANGE THIS. It makes path finding way less reliable.
+        // If you need the entity to stand nearby a block rather than on it, YOU need to do that math.
+        int dist = 0;
         e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, dist));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
         Questown.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
