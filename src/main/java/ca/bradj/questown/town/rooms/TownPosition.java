@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.rooms;
 
+import java.util.Objects;
+
 public class TownPosition {
     public final int x;
     public final int z;
@@ -9,5 +11,27 @@ public class TownPosition {
         this.x = x;
         this.z = z;
         this.scanLevel = scanLevel;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TownPosition that = (TownPosition) o;
+        return x == that.x && z == that.z && scanLevel == that.scanLevel;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, z, scanLevel);
+    }
+
+    @Override
+    public String toString() {
+        return "TownPosition{" +
+                "x=" + x +
+                ", z=" + z +
+                ", scanLevel=" + scanLevel +
+                '}';
     }
 }

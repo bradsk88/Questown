@@ -386,6 +386,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 // For now, we'll just go to the first block who can be actioned
                 return spot;
             }
+            // FIXME: When the farmer is holding wheat seeds, this logic causes
+            //  them to prefer composting over planting. That means they will
+            //  almost NEVER plant seeds when a composter is present.
             if (farmerActions.contains(blockAction) && blockAction != FarmerAction.UNDEFINED) {
                 return spot;
             }
@@ -461,12 +464,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ItemStack item = inventory.getItem(i);
             if (Items.WHEAT_SEEDS.equals(item.getItem())) {
                 BlockState blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
-                if (oldState.equals(blockstate)) {
+                if (item.getCount() > 0) {
                     return false;
                 }
                 level.setBlockAndUpdate(cropBlock, blockstate);
                 Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
-                inventory.removeItem(i, 1);
+                inventory.setChanged();
                 return true;
             }
         }

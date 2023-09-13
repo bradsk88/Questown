@@ -23,6 +23,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
@@ -73,6 +74,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.FenceBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -288,65 +290,6 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public void baseTick() {
         super.baseTick();
-        pushAwayFromFences();
-    }
-
-    private void pushAwayFromFences() {
-        // Logic stolen from Minecraft's liquid pushing code
-        AABB aabb = this.getBoundingBox().deflate(0.001D);
-        int i = Mth.floor(aabb.minX);
-        int j = Mth.ceil(aabb.maxX);
-        int k = Mth.floor(aabb.minY);
-        int l = Mth.ceil(aabb.maxY);
-        int i1 = Mth.floor(aabb.minZ);
-        int j1 = Mth.ceil(aabb.maxZ);
-        double d0 = 0.0D;
-        boolean flag = this.isPushedByFluid();
-        boolean flag1 = false;
-        Vec3 vec3 = Vec3.ZERO;
-        int k1 = 0;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-
-        for(int l1 = i; l1 < j; ++l1) {
-            for(int i2 = k; i2 < l; ++i2) {
-                for(int j2 = i1; j2 < j1; ++j2) {
-                    blockpos$mutableblockpos.set(l1, i2, j2);
-                    BlockState blockState = this.level.getBlockState(blockpos$mutableblockpos);
-                    if (blockState.is(BlockTags.FENCES)) {
-                        // TODO: Do all block have the same height? What is it?
-                        double d1 = (double)((float)i2 + blockState.getHeight(this.level, blockpos$mutableblockpos));
-                        if (d1 >= aabb.minY) {
-                            flag1 = true;
-                            d0 = Math.max(d1 - aabb.minY, d0);
-                            if (flag) {
-                                // TODO: Infer from facing property?
-                                Vec3 vec31 = blockState.getFlow(this.level, blockpos$mutableblockpos);
-                                if (d0 < 0.4D) {
-                                    vec31 = vec31.scale(d0);
-                                }
-
-                                vec3 = vec3.add(vec31);
-                                ++k1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (vec3.length() > 0.0D) {
-            if (k1 > 0) {
-                vec3 = vec3.scale(1.0D / (double)k1);
-            }
-
-            Vec3 vec32 = this.getDeltaMovement();
-            double d2 = 0.003D;
-            if (Math.abs(vec32.x) < 0.003D && Math.abs(vec32.z) < 0.003D && vec3.length() < 0.0045000000000000005D) {
-                vec3 = vec3.normalize().scale(0.0045000000000000005D);
-            }
-
-            this.setDeltaMovement(this.getDeltaMovement().add(vec3));
-        }
     }
 
     @Override
@@ -548,7 +491,7 @@ public class VisitorMobEntity extends PathfinderMob {
                     protected BlockPathTypes evaluateBlockPathType(BlockGetter p_77614_, boolean p_77615_, boolean p_77616_, BlockPos p_77617_, BlockPathTypes p_77618_) {
                         p_77618_ = super.evaluateBlockPathType(p_77614_, p_77615_, p_77616_, p_77617_, p_77618_);
 
-                        if (p_77618_ == BlockPathTypes.FENCE && !(p_77614_.getBlockState(p_77617_).getBlock() instanceof FenceGateBlock)) {
+                        if (p_77618_ == BlockPathTypes.FENCE && (p_77614_.getBlockState(p_77617_).getBlock() instanceof FenceGateBlock)) {
                             p_77618_ = BlockPathTypes.DOOR_OPEN;
                         }
                         return p_77618_;

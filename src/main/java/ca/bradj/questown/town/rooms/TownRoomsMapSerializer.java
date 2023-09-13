@@ -40,15 +40,15 @@ public class TownRoomsMapSerializer {
                 doorsB.add(new TownPosition(x, z, y));
             }
         }
-        ImmutableList.Builder<TownPosition> gates = ImmutableList.builder();
+        ImmutableList.Builder<TownPosition> gatesB = ImmutableList.builder();
         if (tag.contains(NBT_REGISTERED_FENCE_GATES)) {
-            ListTag doors = tag.getList(NBT_REGISTERED_FENCE_GATES, Tag.TAG_COMPOUND);
-            for (Tag t : doors) {
+            ListTag gates = tag.getList(NBT_REGISTERED_FENCE_GATES, Tag.TAG_COMPOUND);
+            for (Tag t : gates) {
                 CompoundTag ct = (CompoundTag) t;
                 int x = ct.getInt(NBT_POS_X);
                 int y = ct.getInt(NBT_POS_Y);
                 int z = ct.getInt(NBT_POS_Z);
-                gates.add(new TownPosition(x, z, y));
+                gatesB.add(new TownPosition(x, z, y));
             }
         }
         Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
@@ -57,7 +57,7 @@ public class TownRoomsMapSerializer {
 //            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);
 //            this.roomsMap.initialize(this, ImmutableMap.of(0, ars)); // TODO: Support more levels
         }
-        roomsMap.initialize(owner, activeRecipes, doorsB.build(), gates.build());
+        roomsMap.initialize(owner, activeRecipes, doorsB.build(), gatesB.build());
     }
 
     public Tag serializeNBT(TownRoomsMap roomsMap) {
@@ -80,7 +80,7 @@ public class TownRoomsMapSerializer {
             bpt.putInt(NBT_POS_Z, bp.z);
             gates.add(bpt);
         }
-        tag.put(NBT_REGISTERED_DOORS, gates);
+        tag.put(NBT_REGISTERED_FENCE_GATES, gates);
         return tag;
     }
 }
