@@ -163,6 +163,8 @@ public class Jobs {
     public interface ContainerItemTaker {
 
         void addItem(MCHeldItem mcHeldItem);
+
+        boolean isInventoryFull();
     }
 
     public static void tryTakeContainerItems(
@@ -172,6 +174,9 @@ public class Jobs {
             ContainerTarget.CheckFn<MCTownItem> check
     ) {
         if (!isCloseToChest(entityPos, suppliesTarget)) {
+            return;
+        }
+        if (farmerJob.isInventoryFull()) {
             return;
         }
         for (int i = 0; i < suppliesTarget.size(); i++) {
@@ -190,9 +195,6 @@ public class Jobs {
             ContainerTarget<?, ? extends GathererJournal.Item<?>> chest
     ) {
         if (chest == null) {
-            return false;
-        }
-        if (!chest.hasItem(GathererJournal.Item::isEmpty)) {
             return false;
         }
         return Jobs.isCloseTo(entityPos, chest.getBlockPos());

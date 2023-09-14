@@ -150,6 +150,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         journal.addItem(mcHeldItem);
     }
 
+    @Override
+    public boolean isInventoryFull() {
+        return journal.isInventoryFull();
+    }
+
     private static class WorkSpot {
         public WorkSpot(
                 @NotNull BlockPos position,
@@ -278,7 +283,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         if (journal.getStatus() == GathererJournal.Status.FARMING) {
-            Iterator<Collection<FarmerAction>> itemAction = journal.getItems()
+            Iterator<List<FarmerAction>> itemAction = journal.getItems()
                     .stream()
                     .map(FarmerJob::fromItem)
                     .filter(v -> !v.isEmpty())
@@ -291,7 +296,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 if (!itemAction.hasNext()) {
                     break;
                 }
-                Collection<FarmerAction> next = itemAction.next();
+                List<FarmerAction> next = itemAction.next();
                 if (next.isEmpty()) {
                     continue;
                 }
@@ -373,7 +378,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     private @Nullable WorkSpot getWorkSpot(
             Iterable<? extends WorkSpot> spots,
-            Collection<FarmerAction> farmerActions
+            List<FarmerAction> farmerActions
     ) {
         WorkSpot secondChoice = null;
         for (WorkSpot spot : spots) {
@@ -389,8 +394,14 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             // FIXME: When the farmer is holding wheat seeds, this logic causes
             //  them to prefer composting over planting. That means they will
             //  almost NEVER plant seeds when a composter is present.
+            if (!farmerActions.isEmpty()) {
+                if (farmerActions.get(0) == blockAction && blockAction != FarmerAction.UNDEFINED) {
+                    return spot;
+                }
+            }
             if (farmerActions.contains(blockAction) && blockAction != FarmerAction.UNDEFINED) {
-                return spot;
+                // TODO: Tests for this. Does this logic always prefer the 0th element and fall back to the nth matching?
+                secondChoice = spot;
             }
             if (secondChoice == null && itemlessActions.contains(blockAction)) {
                 secondChoice = spot;
@@ -491,6 +502,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     if (Items.BONE_MEAL.equals(item.getItem())) {
                         Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
                         inventory.removeItem(i, 1);
+                        inventory.setChanged();
                         break;
                     }
                 }
@@ -797,7 +809,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return FarmerAction.UNDEFINED;
     }
 
-    private static Collection<FarmerAction> fromItem(MCHeldItem stack) {
+    private static List<FarmerAction> fromItem(MCHeldItem stack) {
         if (Ingredient.of(Items.BONE_MEAL).test(stack.toItem().toItemStack())) {
             return ImmutableList.of(FarmerAction.BONE);
         }
