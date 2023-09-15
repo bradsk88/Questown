@@ -540,7 +540,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         quests.markQuestAsComplete(room, SpecialQuests.TOWN_GATE);
     }
 
-    public Collection<RoomRecipeMatch> getMatches() {
+    public Collection<RoomRecipeMatch<MCRoom>> getMatches() {
         return this.roomsMap.getAllMatches();
     }
 

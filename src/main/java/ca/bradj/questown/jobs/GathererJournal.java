@@ -297,7 +297,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "FARMING" -> FARMING;
                 case "WALKING_TO_FARM" -> WALKING_TO_FARM;
                 case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
-                case "GOING_TO_WORK" -> GOING_TO_BAKERY;
+                case "GOING_TO_BAKERY" -> GOING_TO_BAKERY;
                 case "NO_SUPPLIES" -> NO_SUPPLIES;
                 case "BAKING" -> BAKING;
                 // TODO: Can this be protected by a compiler check?

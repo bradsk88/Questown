@@ -61,7 +61,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     private BakerJournal<MCTownItem, MCHeldItem, RoomRecipeMatch> journal;
     private int ticksSinceLastFarmAction;
     private RoomRecipeMatch<MCRoom> selectedBakery;
-    private BlockPos workSpot;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -285,36 +284,32 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return null;
         }
 
-        switch(journal.getStatus()) {
-            case GOING_TO_BAKERY, BAKING: {
-                workSpot = getOvenInteractionSpot(town, selectedBakery);
-                return workSpot;
+        switch (journal.getStatus()) {
+            case GOING_TO_BAKERY, BAKING -> {
+                WorkSpot ovenInteractionSpot = getOvenInteractionSpot(town, selectedBakery);
+                if (ovenInteractionSpot != null) {
+                    return ovenInteractionSpot.interactionSpot;
+                }
             }
-            case DROPPING_LOOT: {
-                setupForDropLoot(town);
-                successTarget.getBlockPos();
+            case DROPPING_LOOT -> {
+                successTarget = Jobs.setupForDropLoot(town, this.successTarget);
+                if (successTarget != null) {
+                    return successTarget.getBlockPos();
+                }
             }
-            case COLLECTING_SUPPLIES: {
+            case COLLECTING_SUPPLIES -> {
                 setupForGetSupplies(town, holdItems);
-                suppliesTarget.getBlockPos();
+                return suppliesTarget.getBlockPos();
             }
-            default: return null;
         }
-    }
-
-    private BlockPos setupForDropLoot(TownInterface town) {
-        this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
-        if (this.successTarget != null) {
-            return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
-        }
-        return town.getRandomWanderTarget();
+        return null;
     }
 
     private void setupForGetSupplies(
             TownInterface town,
             Set<Item> suppliesNeeded
     ) {
-        Questown.LOGGER.debug("Farmer is searching for supplies");
+        Questown.LOGGER.debug("Baker is searching for supplies");
         if (this.suppliesTarget != null) {
             if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
                 this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
@@ -323,7 +318,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
         }
         if (this.suppliesTarget != null) {
-            Questown.LOGGER.debug("Farmer located supplies at {}", this.suppliesTarget.getPosition());
+            Questown.LOGGER.debug("Baker located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
 
@@ -346,20 +341,25 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return false;
         }
 
-        if (!Jobs.isCloseTo(entityPos, workSpot)) {
+        WorkSpot oven = getOvenInteractionSpot(town, selectedBakery);
+        if (oven == null) {
             return false;
         }
 
-        BlockState oldState = sl.getBlockState(workSpot);
+        if (!Jobs.isCloseTo(entityPos, oven.block)) {
+            return false;
+        }
+
+        BlockState oldState = sl.getBlockState(oven.block);
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack item = inventory.getItem(i);
-            if (Items.WHEAT_SEEDS.equals(item.getItem())) {
+            if (Items.WHEAT.equals(item.getItem())) {
                 BlockState blockstate = BreadOvenBlock.insertItem(oldState, item);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;
                 }
-                sl.setBlockAndUpdate(workSpot, blockstate);
+                sl.setBlockAndUpdate(oven.block, blockstate);
                 Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
                 inventory.setChanged();
                 return true;
@@ -612,8 +612,21 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         return locks.get(i);
     }
 
+    public static class WorkSpot {
+        final BlockPos block;
+        final BlockPos interactionSpot;
+
+        public WorkSpot(
+                BlockPos block,
+                BlockPos interactionSpot
+        ) {
+            this.block = block;
+            this.interactionSpot = interactionSpot;
+        }
+    }
+
     @Nullable
-    private static BlockPos getOvenInteractionSpot(
+    private static WorkSpot getOvenInteractionSpot(
             TownInterface town,
             @Nullable RoomRecipeMatch<MCRoom> foundRoom
     ) {
@@ -636,7 +649,10 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
         // TODO: Make oven horizontal block and get direction property
 
-        return ovenPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()));
+        return new WorkSpot(
+                ovenPos,
+                ovenPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()))
+        );
     }
 
     @Override

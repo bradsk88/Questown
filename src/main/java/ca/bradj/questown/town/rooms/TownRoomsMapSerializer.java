@@ -51,7 +51,7 @@ public class TownRoomsMapSerializer {
                 gatesB.add(new TownPosition(x, z, y));
             }
         }
-        Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = ImmutableMap.of();
+        Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = ImmutableMap.of();
         if (tag.contains(NBT_ACTIVE_RECIPES)) {
 //            CompoundTag data = tag.getCompound(NBT_ACTIVE_RECIPES); TODO: Bring back? (Cost to re-compute is low, I think)
 //            ActiveRecipes<ResourceLocation> ars = ActiveRecipesSerializer.INSTANCE.deserializeNBT(data);

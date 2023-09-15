@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +27,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
 
     @Override
     public boolean hasNonSupplyItems() {
-        return inventory.stream().anyMatch(v -> !itemsToHold.shouldHoldForWork(status, v));
+        return inventory.stream().filter(Predicates.not(GathererJournal.Item::isEmpty)).anyMatch(v -> !itemsToHold.shouldHoldForWork(status, v));
     }
 
     public interface ItemChecker<H> {

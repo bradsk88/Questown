@@ -3,7 +3,6 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -18,7 +17,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import java.util.List;
 
 public class BreadOvenBlock extends Block {
-    public static final String ITEM_ID = "bred_oven_block";
+    public static final String ITEM_ID = "bread_oven_block";
 
     public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
             "bake_state", 0, 3
