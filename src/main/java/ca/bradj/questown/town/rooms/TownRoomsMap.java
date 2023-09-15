@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
     private final Map<Integer, TownRooms> activeFarms = new HashMap<>();
-    private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> activeRecipes = new HashMap<>();
+    private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private int scanLevel = 0;
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
@@ -74,11 +74,10 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ars.update(mcRooms);
 
         ars.getAll().forEach(room -> {
-            Optional<RoomRecipeMatch> recipe = RecipeDetection.getActiveRecipe(
+            Optional<RoomRecipeMatch<MCRoom>> recipe = RecipeDetection.getActiveRecipe(
                     level,
                     room,
-                    ars,
-                    scanY
+                    ars
             );
             activeRecipes.get(scanLevel).update(room, room, recipe.orElse(null));
         });
@@ -111,7 +110,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     private TownRooms getOrCreateRooms(int scanLevel) {
         if (!activeRecipes.containsKey(scanLevel)) {
-            ActiveRecipes<MCRoom, RoomRecipeMatch> v = new ActiveRecipes<>();
+            ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> v = new ActiveRecipes<>();
             activeRecipes.put(scanLevel, v);
             v.addChangeListener(changeListener);
         }
@@ -135,9 +134,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     changeListener // TODO: Consider using listener instead of passing entity
             ) {
                 @Override
-                protected Optional<RoomRecipeMatch> getActiveRecipe(ServerLevel entity, MCRoom room) {
-                    ImmutableMap<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(entity, room, room.yCoord, false);
-                    return Optional.of(new RoomRecipeMatch(
+                protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(ServerLevel entity, MCRoom room) {
+                    ImmutableMap<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(entity, room, false);
+                    return Optional.of(new RoomRecipeMatch<>(
                             room, SpecialQuests.FARM, blocks.entrySet()
                     ));
                 }
@@ -198,7 +197,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void initialize(
             TownFlagBlockEntity owner,
-            Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch>> ars,
+            Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> ars,
             ImmutableList<TownPosition> registeredDoors,
             ImmutableList<TownPosition> registeredFenceGates
     ) {
@@ -206,7 +205,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             throw new IllegalStateException("Double initialization");
         }
         this.activeRecipes.putAll(ars);
-        for (ActiveRecipes<MCRoom, RoomRecipeMatch> r : ars.values()) {
+        for (ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> r : ars.values()) {
             r.addChangeListener(owner);
         }
         this.registeredDoors.addAll(registeredDoors);
@@ -216,7 +215,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     /**
      * @Deprecated Used for a migration only.
      */
-    public ActiveRecipes<MCRoom, RoomRecipeMatch> getRecipes(int i) {
+    public ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> getRecipes(int i) {
         return activeRecipes.get(i);
     }
 
@@ -242,8 +241,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return this.activeRecipes.size();
     }
 
-    public Collection<RoomRecipeMatch> getAllMatches() {
-        Stream<RoomRecipeMatch> objectStream = this.activeRecipes.values()
+    public Collection<RoomRecipeMatch<MCRoom>> getAllMatches() {
+        Stream<RoomRecipeMatch<MCRoom>> objectStream = this.activeRecipes.values()
                 .stream()
                 .map(ActiveRecipes::entrySet)
                 .flatMap(v -> v.stream().map(Map.Entry::getValue));
@@ -260,8 +259,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         Questown.LOGGER.debug("Fence gate was registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
     }
 
-    public Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId) {
-        ImmutableList.Builder<MCRoom> b = ImmutableList.builder();
+    public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
+        ImmutableList.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableList.builder();
         for (TownPosition p : registeredDoors) {
             Position pz = new Position(p.x, p.z);
             TownRooms rooms = activeRooms.get(p.scanLevel);
@@ -270,10 +269,10 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 Questown.LOGGER.error("No active room found for registered door position {}", p);
                 continue;
             }
-            ActiveRecipes<MCRoom, RoomRecipeMatch> recipes = activeRecipes.get(p.scanLevel);
-            for (Map.Entry<MCRoom, RoomRecipeMatch> m : recipes.entrySet()) {
-                if (m.getValue().getRecipeID().equals(recipeId)) {
-                    b.add(room.get());
+            ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> recipes = activeRecipes.get(p.scanLevel);
+            for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : recipes.entrySet()) {
+                if (m.getKey().equals(room.get()) && m.getValue().getRecipeID().equals(recipeId)) {
+                    b.add(m.getValue());
                 }
             }
         }

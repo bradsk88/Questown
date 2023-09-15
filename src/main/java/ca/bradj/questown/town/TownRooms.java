@@ -40,7 +40,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                 int scanLevel,
                 @Nullable MCRoom oldRoom,
                 @Nullable MCRoom newRoom,
-                @Nullable RoomRecipeMatch resourceLocation
+                @Nullable RoomRecipeMatch<MCRoom> resourceLocation
         );
     }
 
@@ -91,7 +91,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     ) {
         grantAdvancement(doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipeMatch> recipe = getActiveRecipe(entity.getServerLevel(), room);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
         );
@@ -102,8 +102,8 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         ));
     }
 
-    protected Optional<RoomRecipeMatch> getActiveRecipe(ServerLevel entity, MCRoom room) {
-        return RecipeDetection.getActiveRecipe(entity, room, this, getY());
+    protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(ServerLevel entity, MCRoom room) {
+        return RecipeDetection.getActiveRecipe(entity, room, this);
     }
 
     private void grantAdvancement(
@@ -136,7 +136,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
         addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         ServerLevel serverLevel = entity.getServerLevel();
-        Optional<RoomRecipeMatch> recipe = getActiveRecipe(serverLevel, newRoom);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(serverLevel, newRoom);
         this.changeListeners.forEach(
                 changeListener -> changeListener.updateRecipeForRoom(
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
@@ -154,7 +154,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             MCRoom room
     ) {
-        Optional<RoomRecipeMatch> recipe = getActiveRecipe(entity.getServerLevel(), room);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
         entity.broadcastMessage(new TranslatableComponent(
                 "messages.building.room_destroyed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),

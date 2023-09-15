@@ -69,6 +69,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FarmBlock;
@@ -765,8 +766,14 @@ public class VisitorMobEntity extends PathfinderMob {
             DamageSource p_21016_,
             float p_21017_
     ) {
-        if (p_21016_.getEntity() instanceof Player) {
-            convertToCook();
+        if (p_21016_.getEntity() instanceof Player p) {
+            ItemStack itemInHand = p.getItemInHand(InteractionHand.MAIN_HAND);
+            if (itemInHand.is(Items.WHEAT_SEEDS)) {
+                convertToFarmer();
+            }
+            if (itemInHand.is(Items.BREAD)) {
+                convertToBaker();
+            }
         }
 
         if (this.job.shouldBeNoClip(town, blockPosition())) {
@@ -777,11 +784,22 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     // TODO: Generalize
-    public void convertToCook() {
+    public void convertToFarmer() {
         if (level.isClientSide()) {
             return;
         }
         Job<MCHeldItem, ? extends Snapshot> job1 = new FarmerJob(
+                (ServerLevel) level,
+                uuid, 6
+        );
+        this.job = job1;
+    }
+
+    public void convertToBaker() {
+        if (level.isClientSide()) {
+            return;
+        }
+        Job<MCHeldItem, ? extends Snapshot> job1 = new BakerJob(
                 (ServerLevel) level,
                 uuid, 6
         );

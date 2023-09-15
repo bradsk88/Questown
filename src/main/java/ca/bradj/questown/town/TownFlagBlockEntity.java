@@ -59,7 +59,7 @@ import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
-public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
+public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
 
     public static final String ID = "flag_base_block_entity";
     // TODO: Extract serialization
@@ -449,7 +449,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public ContainerTarget findMatchingContainer(ContainerTarget.CheckFn c) {
+    public @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c) {
         return TownContainers.findMatching(this, c);
     }
 
@@ -488,7 +488,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId) {
+    public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
         return roomsMap.getRoomsMatching(recipeId);
     }
 
@@ -500,7 +500,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
-        for (RoomRecipeMatch i : roomsMap.getAllMatches()) {
+        for (RoomRecipeMatch<MCRoom> i : roomsMap.getAllMatches()) {
             for (Map.Entry<BlockPos, Block> j : i.getContainedBlocks().entrySet()) {
                 if (mr.doesMatch(j.getValue())) {
                     b.add(j.getKey());

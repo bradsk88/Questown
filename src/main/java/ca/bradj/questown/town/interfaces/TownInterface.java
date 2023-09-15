@@ -7,12 +7,12 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +42,7 @@ public interface TownInterface {
 
     Set<UUID> getVillagers();
 
-    ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
+    @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
 
     void registerEntity(VisitorMobEntity vEntity);
 
@@ -54,7 +54,7 @@ public interface TownInterface {
 
     UUID getRandomVillager(Random random);
 
-    Collection<MCRoom> getRoomsMatching(ResourceLocation recipeId);
+    Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 
     Collection<MCRoom> getFarms();
 

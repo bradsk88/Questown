@@ -273,7 +273,9 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
         // TODO: Move to farmer-specific status
         WALKING_TO_FARM,
-        FARMING;
+        FARMING,
+        // TODO: Move to baker-specific status
+        COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING;
 
         public static Status from(String s) {
             return switch (s) {
@@ -294,6 +296,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "RELAXING" -> RELAXING;
                 case "FARMING" -> FARMING;
                 case "WALKING_TO_FARM" -> WALKING_TO_FARM;
+                case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
+                case "GOING_TO_WORK" -> GOING_TO_BAKERY;
+                case "NO_SUPPLIES" -> NO_SUPPLIES;
+                case "BAKING" -> BAKING;
+                // TODO: Can this be protected by a compiler check?
                 default -> throw new IllegalArgumentException("Unexpected status " + s);
             };
         }

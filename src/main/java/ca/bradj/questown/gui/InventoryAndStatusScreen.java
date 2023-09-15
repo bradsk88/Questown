@@ -73,7 +73,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
                 // TODO: Icon for this
                 new ResourceLocation("questown", "textures/error.png");
-            case FARMING, WALKING_TO_FARM ->
+            case FARMING, WALKING_TO_FARM, COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING ->
                 // TODO: Icon for this
                 new ResourceLocation("questown", "textures/error.png");
         };

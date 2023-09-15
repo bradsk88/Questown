@@ -89,7 +89,8 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
             case RELAXING -> RELAXING;
-            case FARMING, WALKING_TO_FARM -> throw new IllegalArgumentException(
+            case FARMING, WALKING_TO_FARM, COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING
+                    -> throw new IllegalArgumentException(
                     String.format("%s is not a valid gatherer status", status)
             );
         };
