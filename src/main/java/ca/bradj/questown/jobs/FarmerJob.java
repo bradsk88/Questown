@@ -460,11 +460,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case PLANT -> tryPlanting(town.getServerLevel(), groundPos);
             case BONE -> tryBoning(town.getServerLevel(), cropBlock);
             case HARVEST -> tryHarvestCrop(town.getServerLevel(), cropBlock);
-            case COMPOST -> tryComposeSeeds(town.getServerLevel(), cropBlock);
+            case COMPOST -> tryCompostSeeds(town.getServerLevel(), cropBlock);
         };
     }
 
-    private boolean tryComposeSeeds(ServerLevel level, BlockPos cropBlock) {
+    private boolean tryCompostSeeds(ServerLevel level, BlockPos cropBlock) {
         BlockState oldState = level.getBlockState(cropBlock);
         if (oldState.getValue(ComposterBlock.LEVEL) == 8) {
             BlockState blockState = ComposterBlock.extractProduce(oldState, level, cropBlock);
@@ -476,8 +476,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             if (Items.WHEAT_SEEDS.equals(item.getItem())) {
                 BlockState blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
                 if (item.getCount() > 0) {
+                    // didn't insert successfully
                     return false;
                 }
+                // Farmer gets a bonus "insert" that players don't get.
+                item.grow(1);
+                blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
                 level.setBlockAndUpdate(cropBlock, blockstate);
                 Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
                 inventory.setChanged();
