@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "questown:blocks/bread_oven_block_top",
+    "front": "questown:blocks/bread_oven_block_front_on",
+    "side": "questown:blocks/bread_oven_block_side"
+  }
+}

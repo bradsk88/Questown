@@ -66,7 +66,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     private boolean dropping;
 
     private ImmutableSet<Item> holdItems = ImmutableSet.of(
-            Items.WHEAT
+            Items.WHEAT,
+            Items.COAL
     );
 
     private final UUID ownerUUID;
@@ -167,9 +168,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return containedBlocks.entrySet().stream()
                     .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
                     .map(v -> sl.getBlockState(v.getKey()))
-                    .filter(v -> v.hasProperty(BreadOvenBlock.BAKE_STATE))
-                    .map(v -> v.getValue(BreadOvenBlock.BAKE_STATE))
-                    .noneMatch(v -> v <= 1);
+                    .noneMatch(BreadOvenBlock::canAddIngredients);
         };
 
         processSignal(sl, this, new BakerStatuses.TownStateProvider<>() {
@@ -351,9 +350,30 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         }
 
         BlockState oldState = sl.getBlockState(oven.block);
+
+        if (BreadOvenBlock.hasBread(oldState)) {
+            BlockState blockState = BreadOvenBlock.extractBread(oldState, sl, oven.block);
+            return !oldState.equals(blockState);
+        }
+
+        if (!BreadOvenBlock.canAddIngredients(oldState)) {
+            return false;
+        }
+
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack item = inventory.getItem(i);
-            if (Items.WHEAT.equals(item.getItem())) {
+            if (BreadOvenBlock.canAcceptWheat(oldState) && Items.WHEAT.equals(item.getItem())) {
+                BlockState blockstate = BreadOvenBlock.insertItem(oldState, item);
+                if (item.getCount() > 0) {
+                    // didn't insert successfully
+                    return false;
+                }
+                sl.setBlockAndUpdate(oven.block, blockstate);
+                Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                inventory.setChanged();
+                return true;
+            }
+            if (BreadOvenBlock.canAcceptCoal(oldState) && Items.COAL.equals(item.getItem())) {
                 BlockState blockstate = BreadOvenBlock.insertItem(oldState, item);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
@@ -638,7 +658,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
                 .filter(v -> {
                     BlockState bs = town.getServerLevel().getBlockState(v.getKey());
-                    return bs.hasProperty(BreadOvenBlock.BAKE_STATE) && bs.getValue(BreadOvenBlock.BAKE_STATE) <= 1;
+                    return BreadOvenBlock.canAddIngredients(bs);
                 })
                 .findFirst();
         if (foundOven.isEmpty()) {

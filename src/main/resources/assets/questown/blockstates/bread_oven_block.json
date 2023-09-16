@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "facing=east,bake_state=0": {
+      "model": "questown:block/bread_oven_block",
+      "y": 90
+    },
+    "facing=east,bake_state=1": {
+      "model": "questown:block/bread_oven_block_fill_1",
+      "y": 90
+    },
+    "facing=east,bake_state=2": {
+      "model": "questown:block/bread_oven_block_fill_2",
+      "y": 90
+    },
+    "facing=east,bake_state=3": {
+      "model": "questown:block/bread_oven_block_on",
+      "y": 90
+    },
+    "facing=east,bake_state=4": {
+      "model": "questown:block/bread_oven_block_bread",
+      "y": 90
+    },
+    "facing=north,bake_state=0": {
+      "model": "questown:block/bread_oven_block"
+    },
+    "facing=north,bake_state=1": {
+      "model": "questown:block/bread_oven_block_fill_1"
+    },
+    "facing=north,bake_state=2": {
+      "model": "questown:block/bread_oven_block_fill_2"
+    },
+    "facing=north,bake_state=3": {
+      "model": "questown:block/bread_oven_block_on"
+    },
+    "facing=north,bake_state=4": {
+      "model": "questown:block/bread_oven_block_bread"
+    },
+    "facing=south,bake_state=0": {
+      "model": "questown:block/bread_oven_block",
+      "y": 180
+    },
+    "facing=south,bake_state=1": {
+      "model": "questown:block/bread_oven_block_fill_1",
+      "y": 180
+    },
+    "facing=south,bake_state=2": {
+      "model": "questown:block/bread_oven_block_fill_2",
+      "y": 180
+    },
+    "facing=south,bake_state=3": {
+      "model": "questown:block/bread_oven_block_on",
+      "y": 180
+    },
+    "facing=south,bake_state=4": {
+      "model": "questown:block/bread_oven_block_bread",
+      "y": 180
+    },
+    "facing=west,bake_state=0": {
+      "model": "questown:block/bread_oven_block",
+      "y": 270
+    },
+    "facing=west,bake_state=1": {
+      "model": "questown:block/bread_oven_block_fill_1",
+      "y": 270
+    },
+    "facing=west,bake_state=2": {
+      "model": "questown:block/bread_oven_block_fill_2",
+      "y": 270
+    },
+    "facing=west,bake_state=3": {
+      "model": "questown:block/bread_oven_block_on",
+      "y": 270
+    },
+    "facing=west,bake_state=4": {
+      "model": "questown:block/bread_oven_block_bread",
+      "y": 270
+    }
+  }
+}
