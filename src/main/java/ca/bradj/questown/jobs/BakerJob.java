@@ -363,7 +363,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack item = inventory.getItem(i);
             if (BreadOvenBlock.canAcceptWheat(oldState) && Items.WHEAT.equals(item.getItem())) {
-                BlockState blockstate = BreadOvenBlock.insertItem(oldState, item);
+                BlockState blockstate = BreadOvenBlock.insertItem(sl, oldState, item);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;
@@ -374,7 +374,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 return true;
             }
             if (BreadOvenBlock.canAcceptCoal(oldState) && Items.COAL.equals(item.getItem())) {
-                BlockState blockstate = BreadOvenBlock.insertItem(oldState, item);
+                BlockState blockstate = BreadOvenBlock.insertItem(sl, oldState, item);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;

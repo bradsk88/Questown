@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.ScheduledBlock;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
@@ -118,11 +119,29 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.roomsMap.tick(sl, blockPos);
 
+        advanceScheduledBlocks(sl, e.roomsMap);
+
         e.asapRewards.tick();
 
         e.pois.tick(sl, blockPos);
 
         e.everScanned = true;
+    }
+
+    private static void advanceScheduledBlocks(
+            ServerLevel level,
+            TownRoomsMap roomsMap
+    ) {
+        for (RoomRecipeMatch<MCRoom> r : roomsMap.getAllMatches()) {
+            for (Map.Entry<BlockPos, Block> b : r.getContainedBlocks().entrySet()) {
+                if (b.getValue() instanceof ScheduledBlock sb) {
+                    BlockState bs = sb.tryAdvance(level.getBlockState(b.getKey()), (int) level.getDayTime());
+                    if (bs != null) {
+                        level.setBlock(b.getKey(), bs, 11);
+                    }
+                }
+            }
+        }
     }
 
     public static boolean debuggerReleaseControl() {

@@ -23,6 +23,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -47,7 +49,10 @@ public class Config {
         ).define("DefaultItemWeight", 100);
         FARM_ACTION_INTERVAL = BUILDER.comment(
                 "The number of ticks that farmers will wait between actions"
-        ).define("DefaultItemWeight", 100);
+        ).define("FarmActionInterval", 100);
+        BAKING_TIME = BUILDER.comment(
+                "The number of ticks it takes for a villager to bake bread"
+        ).define("BakingTime", 1000);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

@@ -1,5 +1,6 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -25,15 +26,26 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Random;
 
-public class BreadOvenBlock extends HorizontalDirectionalBlock {
+public class BreadOvenBlock extends HorizontalDirectionalBlock implements ScheduledBlock {
     public static final String ITEM_ID = "bread_oven_block";
 
     public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
             "bake_state", 0, 4
+    );
+
+    private static final int BAKE_STATE_EMPTY = 0;
+    private static final int BAKE_STATE_HALF_FILLED = 1;
+    private static final int BAKE_STATE_FILLED = 2;
+    private static final int BAKE_STATE_BAKING = 3;
+    private static final int BAKE_STATE_BAKED = 4;
+
+    public static final IntegerProperty STARTED_BAKING_AT = IntegerProperty.create(
+            "stared_baking_at", 0, 24000
     );
 
     public BreadOvenBlock(
@@ -41,12 +53,13 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
         super(
                 Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .lightLevel((BlockState bs) -> bs.getValue(BAKE_STATE) == 3 ? 10 : 0)
+                        .lightLevel((BlockState bs) -> bs.getValue(BAKE_STATE) == BAKE_STATE_BAKING ? 10 : 0)
                         .strength(1.0F, 10.0F)
         );
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(BAKE_STATE, 0)
                 .setValue(FACING, Direction.NORTH)
+                .setValue(STARTED_BAKING_AT, 0)
         );
     }
 
@@ -55,6 +68,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
     }
 
     public static BlockState insertItem(
+            ServerLevel level,
             BlockState oldState,
             ItemStack item
     ) {
@@ -65,7 +79,12 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
                         canAcceptCoal(oldState) && item.is(Items.COAL)
         ) {
             item.shrink(1);
-            return oldState.setValue(BAKE_STATE, curValue + 1);
+            int val = curValue + 1;
+            BlockState blockState = oldState.setValue(BAKE_STATE, val);
+            if (val == BAKE_STATE_BAKING) {
+                blockState = blockState.setValue(STARTED_BAKING_AT, (int) level.getDayTime());
+            }
+            return blockState;
         }
         return oldState;
     }
@@ -74,21 +93,27 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) < 2;
+        return oldState.getValue(BAKE_STATE) < BAKE_STATE_FILLED;
     }
 
     public static boolean canAcceptCoal(BlockState oldState) {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) == 2;
+        return oldState.getValue(BAKE_STATE) == BAKE_STATE_FILLED;
+    }
+    public static boolean isBaking(BlockState oldState) {
+        if (!oldState.hasProperty(BAKE_STATE)) {
+            return false;
+        }
+        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKING;
     }
 
     public static boolean hasBread(BlockState oldState) {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) == 4;
+        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKED;
     }
 
     public static BlockState extractBread(
@@ -96,7 +121,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
             ServerLevel sl,
             BlockPos block
     ) {
-        BlockState bs = oldState.setValue(BAKE_STATE, 0);
+        BlockState bs = oldState.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
         sl.setBlock(block, bs, 11);
         BlockPos a = block.above();
         sl.addFreshEntity(new ItemEntity(sl, a.getX(), a.getY(), a.getZ(), new ItemStack(Items.BREAD, 1)));
@@ -116,11 +141,13 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
         if (!(ctx.getLevel() instanceof ServerLevel sl)) {
             return blockState;
         }
-        return blockState.setValue(FACING, ctx.getHorizontalDirection().getOpposite());
+        return blockState
+                .setValue(FACING, ctx.getHorizontalDirection().getOpposite())
+                .setValue(STARTED_BAKING_AT, 0);
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(BAKE_STATE, FACING);
+        p_51385_.add(BAKE_STATE, FACING, STARTED_BAKING_AT);
     }
 
 
@@ -130,7 +157,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
             BlockPos p_53637_,
             Random p_53638_
     ) {
-        if (p_53635_.getValue(BAKE_STATE) == 3) {
+        if (p_53635_.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
             double d0 = (double) p_53637_.getX() + 0.5D;
             double d1 = (double) p_53637_.getY();
             double d2 = (double) p_53637_.getZ() + 0.5D;
@@ -171,8 +198,30 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock {
         // TODO: Remove this?
         BlockState bs = p_60504_.getBlockState(p_60505_);
         Integer now = bs.getValue(BAKE_STATE);
-        bs = bs.setValue(BAKE_STATE, (now + 1) % 5);
+        bs = bs.setValue(BAKE_STATE, (now + 1) % 4);
         p_60504_.setBlock(p_60505_, bs, 11);
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public @Nullable BlockState tryAdvance(
+            BlockState blockState,
+            int dayTime
+    ) {
+        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
+            if (isBaking(blockState)) {
+                return blockState.setValue(STARTED_BAKING_AT, dayTime);
+            }
+        }
+
+        Integer started = blockState.getValue(STARTED_BAKING_AT);
+
+        if (isBaking(blockState)) {
+            if (dayTime > started + Config.BAKING_TIME.get()) {
+                return blockState.setValue(BAKE_STATE, BAKE_STATE_BAKED);
+            }
+        }
+
+        return null;
     }
 }
