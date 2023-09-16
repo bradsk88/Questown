@@ -45,7 +45,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
     private static final int BAKE_STATE_BAKED = 4;
 
     public static final IntegerProperty STARTED_BAKING_AT = IntegerProperty.create(
-            "stared_baking_at", 0, 24000
+            "stared_baking_at", 0, 24
     );
 
     public BreadOvenBlock(
@@ -82,7 +82,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             int val = curValue + 1;
             BlockState blockState = oldState.setValue(BAKE_STATE, val);
             if (val == BAKE_STATE_BAKING) {
-                blockState = blockState.setValue(STARTED_BAKING_AT, (int) level.getDayTime());
+                int dayHour = (int) (level.getDayTime() % 24000) / 1000;
+                blockState = blockState.setValue(STARTED_BAKING_AT, dayHour);
             }
             return blockState;
         }
@@ -102,6 +103,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         }
         return oldState.getValue(BAKE_STATE) == BAKE_STATE_FILLED;
     }
+
     public static boolean isBaking(BlockState oldState) {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
@@ -208,16 +210,23 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             BlockState blockState,
             int dayTime
     ) {
+        int hour = (dayTime % 24000) / 1000;
         if (!blockState.hasProperty(STARTED_BAKING_AT)) {
             if (isBaking(blockState)) {
-                return blockState.setValue(STARTED_BAKING_AT, dayTime);
+                return blockState.setValue(STARTED_BAKING_AT, hour);
             }
         }
 
         Integer started = blockState.getValue(STARTED_BAKING_AT);
 
         if (isBaking(blockState)) {
-            if (dayTime > started + Config.BAKING_TIME.get()) {
+            if (started == 0) {
+                return blockState.setValue(STARTED_BAKING_AT, hour);
+            }
+
+            int plus = Config.BAKING_TIME.get() / 1000;
+            int doneHour = started + plus;
+            if (hour > doneHour) {
                 return blockState.setValue(BAKE_STATE, BAKE_STATE_BAKED);
             }
         }

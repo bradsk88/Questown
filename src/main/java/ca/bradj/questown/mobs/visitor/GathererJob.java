@@ -318,7 +318,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
             case FARMING, WALKING_TO_FARM
                     -> throw new IllegalArgumentException("Gatherer was given farmer status");
-            case COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING
+            case COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD
                     -> throw new IllegalArgumentException("Gatherer was given baker status");
         };
     }

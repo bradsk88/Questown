@@ -4,10 +4,13 @@ import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+
 public class BakerStatuses {
 
     public interface InventoryStateProvider {
         boolean inventoryFull();
+
         boolean hasNonSupplyItems();
     }
 
@@ -15,6 +18,7 @@ public class BakerStatuses {
         boolean hasSupplies();
         boolean isBakeryFull(RoomRecipeMatch<ROOM> room);
         boolean hasBakerySpace();
+        Collection<ROOM> bakeriesWithBread();
     }
 
     public interface EntityStateProvider<ROOM extends Room> {
@@ -60,6 +64,11 @@ public class BakerStatuses {
             return GathererJournal.Status.DROPPING_LOOT;
         }
 
+        Collection<ROOM> breads = town.bakeriesWithBread();
+        if (!breads.isEmpty()) {
+            return GathererJournal.Status.COLLECTING_BREAD;
+        }
+
         if (!town.hasSupplies()) {
             return nullIfUnchanged(currentStatus, GathererJournal.Status.NO_SUPPLIES);
         }
@@ -68,7 +77,8 @@ public class BakerStatuses {
     }
 
     private static GathererJournal.Status nullIfUnchanged(
-            GathererJournal.Status oldStatus, GathererJournal.Status newStatus
+            GathererJournal.Status oldStatus,
+            GathererJournal.Status newStatus
     ) {
         if (oldStatus == newStatus) {
             return null;

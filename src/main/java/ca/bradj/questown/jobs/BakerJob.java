@@ -190,6 +190,26 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
                 return rooms.stream().anyMatch(v -> !_isBakeryFull.apply(v));
             }
+
+            @Override
+            public Collection<MCRoom> bakeriesWithBread() {
+                ResourceLocation id = new ResourceLocation(Questown.MODID, "bakery");
+                Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
+                return rooms.stream()
+                        .filter(v -> {
+                            for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                                if (!(e.getValue() instanceof BreadOvenBlock)) {
+                                    continue;
+                                }
+                                if (BreadOvenBlock.hasBread(sl.getBlockState(e.getKey()))) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        })
+                        .map(v -> v.room)
+                        .toList();
+            }
         }, new BakerStatuses.EntityStateProvider<>() {
             @Override
             public @Nullable RoomRecipeMatch<MCRoom> getEntityBakeryLocation() {
@@ -273,7 +293,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
                 BlockState blockState = sl.getBlockState(blocks.getKey());
-                if (BreadOvenBlock.canAddIngredients(blockState)) {
+                if (BreadOvenBlock.canAddIngredients(blockState) || BreadOvenBlock.hasBread(blockState)) {
                     selectedBakery = match;
                     break;
                 }
@@ -284,7 +304,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         }
 
         switch (journal.getStatus()) {
-            case GOING_TO_BAKERY, BAKING -> {
+            case GOING_TO_BAKERY, BAKING, COLLECTING_BREAD -> {
                 WorkSpot ovenInteractionSpot = getOvenInteractionSpot(town, selectedBakery);
                 if (ovenInteractionSpot != null) {
                     return ovenInteractionSpot.interactionSpot;
@@ -654,18 +674,35 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return null;
         }
 
-        Optional<Map.Entry<BlockPos, Block>> foundOven = foundRoom.getContainedBlocks().entrySet().stream()
+        Optional<Map.Entry<BlockPos, Block>> fillableOven = foundRoom.getContainedBlocks().entrySet().stream()
                 .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
                 .filter(v -> {
                     BlockState bs = town.getServerLevel().getBlockState(v.getKey());
                     return BreadOvenBlock.canAddIngredients(bs);
                 })
                 .findFirst();
-        if (foundOven.isEmpty()) {
+        Optional<Map.Entry<BlockPos, Block>> ovenWithBread = foundRoom.getContainedBlocks().entrySet().stream()
+                .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
+                .filter(v -> {
+                    BlockState bs = town.getServerLevel().getBlockState(v.getKey());
+                    return BreadOvenBlock.hasBread(bs);
+                })
+                .findFirst();
+        if (fillableOven.isEmpty() && ovenWithBread.isEmpty()) {
             return null;
         }
 
-        BlockPos ovenPos = foundOven.get().getKey();
+        if (ovenWithBread.isPresent()) {
+            BlockPos ovenPos = ovenWithBread.get().getKey();
+
+            // TODO: Make oven horizontal block and get direction property
+
+            return new WorkSpot(
+                    ovenPos,
+                    ovenPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()))
+            );
+        }
+        BlockPos ovenPos = fillableOven.get().getKey();
 
         // TODO: Make oven horizontal block and get direction property
 

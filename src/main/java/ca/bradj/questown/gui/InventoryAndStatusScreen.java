@@ -30,7 +30,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
 
-    public InventoryAndStatusScreen(InventoryAndStatusMenu gathererInv, Inventory playerInv, Component title) {
+    public InventoryAndStatusScreen(
+            InventoryAndStatusMenu gathererInv,
+            Inventory playerInv,
+            Component title
+    ) {
         super(gathererInv, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
@@ -40,47 +44,46 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
     @NotNull
     private static ResourceLocation getStatusTexture(GathererJournal.Status status) {
-        return switch(status) {
-            case UNSET ->
-                new ResourceLocation("questown", "textures/error.png");
-            case IDLE ->
-                new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            case NO_SPACE ->
-                new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
-            case NO_FOOD ->
-                new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
-            case NO_GATE ->
-                new ResourceLocation("questown", "textures/menu/gatherer/no_gate.png");
+        return switch (status) {
+            case UNSET -> new ResourceLocation("questown", "textures/error.png");
+            case IDLE -> new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
+            case NO_SPACE -> new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
+            case NO_FOOD -> new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
+            case NO_GATE -> new ResourceLocation("questown", "textures/menu/gatherer/no_gate.png");
             case STAYING ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            case GATHERING ->
-                new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
-            case RETURNED_SUCCESS ->
-                new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
+                    new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
+            case GATHERING -> new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
+            case RETURNED_SUCCESS -> new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
             case RETURNED_FAILURE ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/error.png");
+                    new ResourceLocation("questown", "textures/error.png");
             case RETURNING ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/error.png");
+                    new ResourceLocation("questown", "textures/error.png");
             case CAPTURED ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/error.png");
+                    new ResourceLocation("questown", "textures/error.png");
             case RELAXING ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
+                    new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
             case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/error.png");
-            case FARMING, WALKING_TO_FARM, COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING ->
+                    new ResourceLocation("questown", "textures/error.png");
+            case FARMING, WALKING_TO_FARM, COLLECTING_SUPPLIES,
+                    GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD ->
                 // TODO: Icon for this
-                new ResourceLocation("questown", "textures/error.png");
+                    new ResourceLocation("questown", "textures/error.png");
         };
     }
 
     @Override
-    public void render(PoseStack stack, int mouseX, int mouseY, float partialTicks) {
+    public void render(
+            PoseStack stack,
+            int mouseX,
+            int mouseY,
+            float partialTicks
+    ) {
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         this.renderTooltip(stack, mouseX, mouseY);
@@ -89,7 +92,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     @Override
-    protected void renderBg(PoseStack stack, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(
+            PoseStack stack,
+            float partialTicks,
+            int mouseX,
+            int mouseY
+    ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
@@ -187,8 +195,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
     private boolean renderLocksTooltip(
             @NotNull PoseStack stack,
-            int leftX, int topY,
-            int mouseX, int mouseY
+            int leftX,
+            int topY,
+            int mouseX,
+            int mouseY
     ) {
         int rightX = leftX + 16;
         int botY = topY + 8;
