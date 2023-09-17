@@ -52,7 +52,7 @@ public class Config {
         ).define("FarmActionInterval", 100);
         BAKING_TIME = BUILDER.comment(
                 "The number of ticks it takes for a villager to bake bread (will be rounded down to nearest 1000)"
-        ).defineInRange("BakingTime", 1000, 1000, 24000);
+        ).defineInRange("BakingTime", 6000, 1000, 24000);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

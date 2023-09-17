@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -125,9 +126,16 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
     ) {
         BlockState bs = oldState.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
         sl.setBlock(block, bs, 11);
-        BlockPos a = block.above();
-        sl.addFreshEntity(new ItemEntity(sl, a.getX(), a.getY(), a.getZ(), new ItemStack(Items.BREAD, 1)));
+        moveBreadToWorld(sl, block);
         return bs;
+    }
+
+    private static void moveBreadToWorld(
+            ServerLevel level,
+            BlockPos b
+    ) {
+        level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), new ItemStack(Items.BREAD, 1)));
+        level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
 
     @Override
@@ -190,27 +198,64 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
 
     @Override
     public InteractionResult use(
-            BlockState p_60503_,
-            Level p_60504_,
-            BlockPos p_60505_,
-            Player p_60506_,
+            BlockState blockState,
+            Level level,
+            BlockPos pos,
+            Player player,
             InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        // TODO: Remove this?
-        BlockState bs = p_60504_.getBlockState(p_60505_);
-        Integer now = bs.getValue(BAKE_STATE);
-        bs = bs.setValue(BAKE_STATE, (now + 1) % 4);
-        p_60504_.setBlock(p_60505_, bs, 11);
-        return InteractionResult.CONSUME;
+        if (!(level instanceof ServerLevel sl)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        if (hasBread(blockState)) {
+            moveBreadToWorld(sl, pos);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        if (canAcceptWheat(blockState)) {
+            player.sendMessage(
+                    new TranslatableComponent("message.baker.villagers_will_add_wheat"),
+                    player.getUUID()
+            );
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        if (canAcceptCoal(blockState)) {
+            player.sendMessage(
+                    new TranslatableComponent("message.baker.villagers_will_add_coal"),
+                    player.getUUID()
+            );
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
+            if (isBaking(blockState)) {
+                blockState = blockState.setValue(STARTED_BAKING_AT, calculateCurrentHour(sl));
+                level.setBlock(pos, blockState, 11);
+            } else {
+                return InteractionResult.sidedSuccess(level.isClientSide);
+            }
+        }
+
+        int startTick = blockState.getValue(STARTED_BAKING_AT) * 1000;
+        int endTick = startTick + Config.BAKING_TIME.get();
+        long ticksLeft = endTick - (level.getDayTime() % 24000);
+
+        player.sendMessage(
+                new TranslatableComponent("message.baker.bread_still_baking", ticksLeft),
+                player.getUUID()
+        );
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
     public @Nullable BlockState tryAdvance(
-            BlockState blockState,
-            int dayTime
+            ServerLevel level,
+            BlockState blockState
     ) {
-        int hour = (dayTime % 24000) / 1000;
+        int hour = calculateCurrentHour(level);
         if (!blockState.hasProperty(STARTED_BAKING_AT)) {
             if (isBaking(blockState)) {
                 return blockState.setValue(STARTED_BAKING_AT, hour);
@@ -226,11 +271,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
 
             int plus = Config.BAKING_TIME.get() / 1000;
             int doneHour = started + plus;
-            if (hour > doneHour) {
+            if (hour >= doneHour) {
                 return blockState.setValue(BAKE_STATE, BAKE_STATE_BAKED);
             }
         }
 
         return null;
+    }
+
+    private static int calculateCurrentHour(ServerLevel level) {
+        return (int) (level.getDayTime() % 24000) / 1000;
     }
 }

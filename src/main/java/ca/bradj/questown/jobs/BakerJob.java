@@ -316,9 +316,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     return successTarget.getBlockPos();
                 }
             }
-            case COLLECTING_SUPPLIES -> {
+            case COLLECTING_SUPPLIES, NO_SUPPLIES -> {
                 setupForGetSupplies(town, holdItems);
-                return suppliesTarget.getBlockPos();
+                if (suppliesTarget != null) {
+                    return suppliesTarget.getBlockPos();
+                }
             }
         }
         return null;
@@ -733,9 +735,9 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     @Override
     public boolean addToEmptySlot(MCTownItem mcTownItem) {
         boolean isAllowedToPickUp = ImmutableList.of(
-                Items.WHEAT_SEEDS,
-                Items.BONE_MEAL,
-                Items.WHEAT
+                Items.COAL,
+                Items.WHEAT,
+                Items.BREAD
         ).contains(mcTownItem.get());
         if (!isAllowedToPickUp) {
             return false;

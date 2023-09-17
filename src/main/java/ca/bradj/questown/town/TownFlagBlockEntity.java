@@ -135,7 +135,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         for (RoomRecipeMatch<MCRoom> r : roomsMap.getAllMatches()) {
             for (Map.Entry<BlockPos, Block> b : r.getContainedBlocks().entrySet()) {
                 if (b.getValue() instanceof ScheduledBlock sb) {
-                    BlockState bs = sb.tryAdvance(level.getBlockState(b.getKey()), (int) level.getDayTime());
+                    BlockState bs = sb.tryAdvance(level, level.getBlockState(b.getKey()));
                     if (bs != null) {
                         level.setBlock(b.getKey(), bs, 11);
                     }

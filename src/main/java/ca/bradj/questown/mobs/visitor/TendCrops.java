@@ -14,7 +14,6 @@ public class TendCrops extends Behavior<VisitorMobEntity> {
     private final int maxAdmireTicks;
     private int admireTicks;
     private BlockPos look;
-    private float yRot;
 
     public TendCrops(
             int maxAdmireTicks
@@ -51,7 +50,6 @@ public class TendCrops extends Behavior<VisitorMobEntity> {
         }
         Direction randomDirection = Direction.Plane.HORIZONTAL.getRandomDirection(lvl.getRandom());
         this.look = ref.relative(randomDirection);
-        this.yRot = randomDirection.toYRot();
     }
 
     @Override
@@ -88,7 +86,6 @@ public class TendCrops extends Behavior<VisitorMobEntity> {
         super.tick(p_22551_, e, p_22553_);
         e.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
-        e.setYRot(yRot);
         this.admireTicks++;
     }
 }

@@ -72,6 +72,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -170,6 +171,8 @@ public class VisitorMobEntity extends PathfinderMob {
         return ImmutableList.of(
                 Pair.of(0, new Swim(0.8F)),
 //                Pair.of(0, new InteractWithDoor()),
+
+                Pair.of(0, new LookAtWalkTarget()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTargetSink()),
@@ -636,7 +639,9 @@ public class VisitorMobEntity extends PathfinderMob {
     protected void jumpFromGround() {
         if (getStatus() == GathererJournal.Status.FARMING) {
             // Jumping destroys crops
-            return;
+            if (!level.getBlockState(blockPosition()).is(Blocks.COMPOSTER)) {
+                return;
+            }
         }
         super.jumpFromGround();
     }
