@@ -60,6 +60,8 @@ public interface TownInterface {
 
     void registerFenceGate(BlockPos above);
 
+    void validateEntity(VisitorMobEntity visitorMobEntity);
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

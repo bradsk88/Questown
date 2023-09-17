@@ -311,6 +311,13 @@ public class VisitorMobEntity extends PathfinderMob {
         }
         job.tick(town, blockPosition(), position(), getDirection());
         if (!level.isClientSide()) {
+            if (town == null) {
+                Questown.LOGGER.error("Visitor mob's parent could not be determined. Removing");
+                remove(RemovalReason.DISCARDED);
+            } else {
+                town.validateEntity(this);
+            }
+
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
             entityData.set(status, job.getStatus().name());
@@ -723,13 +730,7 @@ public class VisitorMobEntity extends PathfinderMob {
             double zPos,
             Snapshot journal
     ) {
-        // TODO: Implement generic job initialization
-        if (journal instanceof GathererJournal.Snapshot && job instanceof GathererJob j) {
-            j.initialize((GathererJournal.Snapshot<MCHeldItem>) journal);
-            job = j;
-        } else {
-            Questown.LOGGER.error("Initialization not implemented");
-        }
+        job = JobsRegistry.getInitializedJob(journal, uuid);
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;

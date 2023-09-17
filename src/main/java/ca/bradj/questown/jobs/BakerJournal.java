@@ -180,5 +180,10 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         public String statusStringValue() {
             return this.status().name();
         }
+
+        @Override
+        public String jobStringValue() {
+            return "baker";
+        }
     }
 }

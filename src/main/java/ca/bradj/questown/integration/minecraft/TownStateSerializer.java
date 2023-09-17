@@ -1,7 +1,10 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.BakerJournal;
+import ca.bradj.questown.jobs.FarmerJournal;
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
@@ -58,6 +61,7 @@ public class TownStateSerializer {
             }
             vTag.put("journal_items", journalItems);
             vTag.putUUID("uuid", e.uuid);
+            vTag.putString("job", e.journal.jobStringValue());
             villagers.add(vTag);
         }
         tag.put("villagers", villagers);
@@ -116,9 +120,16 @@ public class TownStateSerializer {
                 CompoundTag itemCTag = (CompoundTag) itemTag;
                 iB.add(MCHeldItem.fromTag(itemCTag));
             }
+            ImmutableList<MCHeldItem> heldItems = iB.build();
+            Snapshot<MCHeldItem> journal = new GathererJournal.Snapshot<>(status, heldItems);
+            String job = vcTag.getString("job");
+            switch (job) {
+                case "farmer" -> journal = new FarmerJournal.Snapshot<>(status, heldItems);
+                case "baker" -> journal = new BakerJournal.Snapshot<>(status, heldItems);
+            }
             b.add(new TownState.VillagerData<>(
                     x, y, z,
-                    new GathererJournal.Snapshot<>(status, iB.build()),
+                    journal,
                     vcTag.getUUID("uuid")
             ));
         }

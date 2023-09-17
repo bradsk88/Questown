@@ -365,6 +365,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status,
                                                                ImmutableList<H> items) implements ca.bradj.questown.jobs.Snapshot<H> {
 
+        public static final String NAME = "gatherer";
+
         public Snapshot<H> eatFoodFromInventory(
                 EmptyFactory<H> ef,
                 Signals signal
@@ -414,6 +416,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         @Override
         public String statusStringValue() {
             return status.name();
+        }
+
+        @Override
+        public String jobStringValue() {
+            return NAME;
         }
     }
 }

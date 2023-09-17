@@ -164,5 +164,10 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         public String statusStringValue() {
             return this.status().name();
         }
+
+        @Override
+        public String jobStringValue() {
+            return "farmer";
+        }
     }
 }
