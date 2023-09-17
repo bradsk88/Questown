@@ -108,6 +108,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if ((stateChanged || e.changed) && e.everScanned) {
             e.state.putStateOnTile(e.getTileData(), e.uuid);
             e.changed = false;
+            setChanged(level, blockPos, state);
         }
 
         e.quests.tick(sl);

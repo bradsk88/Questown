@@ -54,7 +54,8 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     }
 
     public void initialize(BakerJournal.Snapshot<H> journal) {
-        // TODO: Implement
+        this.setItems(journal.items());
+        this.initializeStatus(journal.status());
     }
 
     public ImmutableList<Boolean> getSlotLockStatuses() {
@@ -184,6 +185,14 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         @Override
         public String jobStringValue() {
             return "baker";
+        }
+
+        @Override
+        public String toString() {
+            return "BakerJournal.Snapshot{" +
+                    "status=" + status +
+                    ", items=" + items +
+                    '}';
         }
     }
 }

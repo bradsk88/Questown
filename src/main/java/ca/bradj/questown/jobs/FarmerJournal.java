@@ -41,7 +41,8 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     }
 
     public void initialize(FarmerJournal.Snapshot<H> journal) {
-        // TODO: Implement
+        this.setItems(journal.items());
+        this.initializeStatus(journal.status());
     }
 
     public ImmutableList<Boolean> getSlotLockStatuses() {
@@ -168,6 +169,14 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         @Override
         public String jobStringValue() {
             return "farmer";
+        }
+
+        @Override
+        public String toString() {
+            return "FarmerJournal.Snapshot{" +
+                    "status=" + status +
+                    ", items=" + items +
+                    '}';
         }
     }
 }
