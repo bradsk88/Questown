@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -19,6 +18,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
+    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
     @Override
     public boolean inventoryFull() {
@@ -28,6 +28,10 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     @Override
     public boolean hasNonSupplyItems() {
         return inventory.stream().filter(Predicates.not(GathererJournal.Item::isEmpty)).anyMatch(v -> !itemsToHold.shouldHoldForWork(status, v));
+    }
+
+    public void addStatusListener(StatusListener o) {
+        this.statusListeners.add(o);
     }
 
     public interface ItemChecker<H> {
@@ -84,8 +88,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
 
     protected void changeStatus(GathererJournal.Status s) {
         this.status = s;
-        // TODO: Implement status listeners
-//        this.statusListeners.forEach(l -> l.statusChanged(this.status));
+        this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
     public Snapshot<H> getSnapshot(EmptyFactory<H> air) {

@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
     private final ArrayList<DataSlot> locks = new ArrayList<>();
-    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
     private final Container inventory;
     private Signals signal;
     private FarmerJournal<MCTownItem, MCHeldItem> journal;
@@ -106,7 +105,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     @Override
     public void addStatusListener(StatusListener o) {
-        this.statusListeners.add(o);
+        this.journal.addStatusListener(o);
     }
 
     @Override

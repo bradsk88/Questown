@@ -16,6 +16,11 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
+    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
+
+    public void addStatusListener(StatusListener o) {
+        this.statusListeners.add(o);
+    }
 
     public interface ItemChecker<H> {
         boolean shouldHoldForWork(
@@ -71,8 +76,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
 
     protected void changeStatus(GathererJournal.Status s) {
         this.status = s;
-        // TODO: Implement status listeners
-//        this.statusListeners.forEach(l -> l.statusChanged(this.status));
+        this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
     public Snapshot<H> getSnapshot(EmptyFactory<H> air) {

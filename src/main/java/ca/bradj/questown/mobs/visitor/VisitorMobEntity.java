@@ -731,6 +731,7 @@ public class VisitorMobEntity extends PathfinderMob {
             Snapshot journal
     ) {
         job = JobsRegistry.getInitializedJob(journal, uuid);
+        this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;

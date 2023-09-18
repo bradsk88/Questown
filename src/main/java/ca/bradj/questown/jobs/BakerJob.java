@@ -55,7 +55,6 @@ import java.util.function.Function;
 
 public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
     private final ArrayList<DataSlot> locks = new ArrayList<>();
-    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
     private final Container inventory;
     private Signals signal;
     private BakerJournal<MCTownItem, MCHeldItem, RoomRecipeMatch> journal;
@@ -102,7 +101,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
     @Override
     public void addStatusListener(StatusListener o) {
-        this.statusListeners.add(o);
+        this.journal.addStatusListener(o);
     }
 
     @Override
@@ -408,151 +407,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             }
         }
         return false;
-    }
-
-    private boolean tryCompostSeeds(
-            ServerLevel level,
-            BlockPos cropBlock
-    ) {
-        BlockState oldState = level.getBlockState(cropBlock);
-        if (oldState.getValue(ComposterBlock.LEVEL) == 8) {
-            BlockState blockState = ComposterBlock.extractProduce(oldState, level, cropBlock);
-            return !oldState.equals(blockState);
-        }
-
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            ItemStack item = inventory.getItem(i);
-            if (Items.WHEAT_SEEDS.equals(item.getItem())) {
-                BlockState blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
-                if (item.getCount() > 0) {
-                    // didn't insert successfully
-                    return false;
-                }
-                // Farmer gets a bonus "insert" that players don't get.
-                item.grow(1);
-                blockstate = ComposterBlock.insertItem(oldState, level, item, cropBlock);
-                level.setBlockAndUpdate(cropBlock, blockstate);
-                Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
-                inventory.setChanged();
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean tryBoning(
-            ServerLevel level,
-            BlockPos cropBlock
-    ) {
-        BlockState bs = level.getBlockState(cropBlock);
-        if (bs.getBlock() instanceof CropBlock cb) {
-            cb.performBonemeal(level, level.getRandom(), cropBlock, bs);
-            BlockState after = level.getBlockState(cropBlock);
-            if (!after.equals(bs)) {
-                for (int i = 0; i < inventory.getContainerSize(); i++) {
-                    ItemStack item = inventory.getItem(i);
-                    if (Items.BONE_MEAL.equals(item.getItem())) {
-                        Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
-                        inventory.removeItem(i, 1);
-                        inventory.setChanged();
-                        break;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
-    private boolean tryHarvestCrop(
-            ServerLevel level,
-            BlockPos cropBlock
-    ) {
-        BlockState bs = level.getBlockState(cropBlock);
-        if (bs.getBlock() instanceof CropBlock cb) {
-            if (cb.isMaxAge(bs)) {
-                List<ItemStack> drops = CropBlock.getDrops(bs, level, cropBlock, null);
-                drops.forEach(v -> {
-                    if (journal.isInventoryFull()) {
-                        level.addFreshEntity(new ItemEntity(
-                                level,
-                                cropBlock.getX(),
-                                cropBlock.getY(),
-                                cropBlock.getZ(),
-                                v
-                        ));
-                    } else {
-                        // TODO: Remember the location of the drop and come back to pick them up
-                        journal.addItem(MCHeldItem.fromMCItemStack(v));
-                    }
-                });
-                bs = bs.setValue(CropBlock.AGE, 0);
-                level.setBlock(cropBlock, bs, 10);
-            }
-        }
-        return true;
-    }
-
-    @Nullable
-    private static boolean tryTilling(
-            ServerLevel level,
-            BlockPos groundPos
-    ) {
-        BlockState bs = getTilledState(level, groundPos);
-        if (bs == null) return false;
-        level.setBlock(groundPos, bs, 11);
-        return true;
-    }
-
-    @Nullable
-    private static BlockState getTilledState(
-            ServerLevel level,
-            BlockPos groundPos
-    ) {
-        BlockState bs = level.getBlockState(groundPos);
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
-        bs = bs.getToolModifiedState(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                // TODO: Determine tool from held item
-                Items.WOODEN_HOE.getDefaultInstance(), bhr
-        ), ToolActions.HOE_TILL, false);
-
-        if (bs != null) {
-            BlockState moistened = bs.setValue(FarmBlock.MOISTURE, 2);
-            if (!moistened.equals(bs)) {
-                return moistened;
-            }
-        }
-
-        return null;
-    }
-
-    private boolean tryPlanting(
-            ServerLevel level,
-            BlockPos groundPos
-    ) {
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
-        InteractionResult result = Items.WHEAT_SEEDS.useOn(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                Items.WHEAT_SEEDS.getDefaultInstance(), bhr
-        ));
-        if (result.consumesAction()) {
-            for (int i = 0; i < inventory.getContainerSize(); i++) {
-                ItemStack item = inventory.getItem(i);
-                if (Items.WHEAT_SEEDS.equals(item.getItem())) {
-                    Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
-                    inventory.removeItem(i, 1);
-                    break;
-                }
-            }
-        }
-        return true;
     }
 
     private static void processSignal(
