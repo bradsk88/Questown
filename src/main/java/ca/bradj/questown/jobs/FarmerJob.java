@@ -76,7 +76,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private final UUID ownerUUID;
 
     public FarmerJob(
-            @Nullable ServerLevel level,
+            ServerLevel level,
             UUID ownerUUID,
             int inventoryCapacity
     ) {

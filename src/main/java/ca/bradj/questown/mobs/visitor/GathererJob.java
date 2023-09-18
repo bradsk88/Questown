@@ -42,7 +42,7 @@ import java.util.*;
 
 public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>>, GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
-    private final @Nullable ServerLevel level;
+    private @Nullable ServerLevel level;
     private final Container inventory;
     private final UUID ownerUUID;
     @Nullable ContainerTarget<MCContainer, MCTownItem> foodTarget;
@@ -58,11 +58,13 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     private boolean closeToGate;
 
     public GathererJob(
-            @Nullable ServerLevel level,
+            Level level, // null on client side
             int inventoryCapacity,
             UUID ownerUUID
     ) {
-        this.level = level;
+        if (!level.isClientSide()) {
+            this.level = (ServerLevel) level;
+        }
         this.ownerUUID = ownerUUID;
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
             @Override

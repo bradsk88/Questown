@@ -146,6 +146,7 @@ public class TownFlagState {
             for (TownState.VillagerData<MCHeldItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(
+                        sl,
                         v.uuid,
                         v.xPosition,
                         v.yPosition,

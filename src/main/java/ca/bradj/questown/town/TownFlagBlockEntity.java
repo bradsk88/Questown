@@ -589,7 +589,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         registerEntity(visitorMobEntity);
         TownState.VillagerData<MCHeldItem> m = match.get();
         visitorMobEntity.initialize(
-                m.uuid,
+                sl, m.uuid,
                 m.xPosition, m.yPosition, m.zPosition,
                 m.journal
         );

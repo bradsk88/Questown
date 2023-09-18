@@ -125,7 +125,7 @@ public class VisitorMobEntity extends PathfinderMob {
     // TODO: Make this abstract or injectable
     @NotNull
     private GathererJob getJob() {
-        return new GathererJob(level.isClientSide() ? null : (ServerLevel) level, inventoryCapacity, uuid);
+        return new GathererJob(level, inventoryCapacity, uuid);
     }
 
     boolean sitting = true;
@@ -309,7 +309,7 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-        job.tick(town, blockPosition(), position(), getDirection());
+            job.tick(town, blockPosition(), position(), getDirection());
         if (!level.isClientSide()) {
             if (town == null) {
                 Questown.LOGGER.error("Visitor mob's parent could not be determined. Removing");
@@ -724,13 +724,14 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public void initialize(
+            ServerLevel level,
             UUID uuid,
             double xPos,
             double yPos,
             double zPos,
             Snapshot journal
     ) {
-        job = JobsRegistry.getInitializedJob(journal, uuid);
+        job = JobsRegistry.getInitializedJob(level, journal, uuid);
         this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);

@@ -683,7 +683,7 @@ public class GathererJournalTest {
     }
 
     @Test
-    void testEveningSignalSetsReturnedSuccessfulStatus() {
+    void testEveningSignalSetsDroppingLootStatus() {
         TestSignals sigs = new TestSignals();
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
@@ -703,10 +703,41 @@ public class GathererJournalTest {
                 6,
                 noTools()
         );
-        gatherer.initializeStatus(GathererJournal.Status.IDLE);
+        gatherer.initializeStatus(GathererJournal.Status.RETURNING);
 
         TestItem gold = new TestItem("gold");
         gatherer.addItem(gold);
+
+        // Trigger evening signal
+        sigs.currentSignal = Signals.EVENING;
+        gatherer.tick(heldItems -> ImmutableList.of());
+
+        // Assert that the status is set to "returned successful"
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, gatherer.getStatus());
+    }
+
+    @Test
+    void testEveningSignalSetsReturnedSuccessfulStatus_EmptyInv() {
+        TestSignals sigs = new TestSignals();
+        GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
+                sigs,
+                () -> new TestItem(""),
+                t -> t,
+                new GathererStatuses.TownStateProvider() {
+                    @Override
+                    public boolean IsStorageAvailable() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean hasGate() {
+                        return true;
+                    }
+                },
+                6,
+                noTools()
+        );
+        gatherer.initializeStatus(GathererJournal.Status.RETURNING);
 
         // Trigger evening signal
         sigs.currentSignal = Signals.EVENING;
