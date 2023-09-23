@@ -25,6 +25,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -53,6 +55,9 @@ public class Config {
         BAKING_TIME = BUILDER.comment(
                 "The number of ticks it takes for a villager to bake bread (will be rounded down to nearest 1000)"
         ).defineInRange("BakingTime", 6000, 1000, 24000);
+        TICK_SAMPLING_RATE = BUILDER.comment(
+                "Advanced setting. For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
+        ).defineInRange("BakingTime", 100, 0, 500);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

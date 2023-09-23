@@ -134,6 +134,8 @@ public class VisitorMobEntity extends PathfinderMob {
     private boolean initializedItems;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
+    private final ArrayList<Integer> tickTimes = new ArrayList<>();
+    private final ArrayList<Integer> targetTimes = new ArrayList<>();
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -296,6 +298,20 @@ public class VisitorMobEntity extends PathfinderMob {
     public void tick() {
         super.tick();
 
+
+        long start = System.currentTimeMillis();
+        visitorTick();
+        long end = System.currentTimeMillis();
+
+        tickTimes.add((int) (end - start));
+
+        if (tickTimes.size() > 10) {
+            Questown.LOGGER.debug("VME Average tick length: {}", tickTimes.stream().mapToInt(Integer::intValue).average());
+            tickTimes.clear();
+        }
+    }
+
+    private void visitorTick() {
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
             Questown.LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
@@ -309,7 +325,7 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             job.initializeStatus(s);
         }
-            job.tick(town, blockPosition(), position(), getDirection());
+        job.tick(town, blockPosition(), position(), getDirection());
         if (!level.isClientSide()) {
             if (town == null) {
                 Questown.LOGGER.error("Visitor mob's parent could not be determined. Removing");
@@ -614,7 +630,17 @@ public class VisitorMobEntity extends PathfinderMob {
             this.kill();
             return null;
         }
+        long start = System.currentTimeMillis();
         BlockPos target = job.getTarget(blockPosition(), position(), town);
+        long end = System.currentTimeMillis();
+
+        targetTimes.add((int) (end - start));
+
+        if (targetTimes.size() > 10) {
+            Questown.LOGGER.debug("VME Average target acquisition length: {}", targetTimes.stream().mapToInt(Integer::intValue).average());
+            targetTimes.clear();
+        }
+
         if (target != null) {
             this.setWanderTarget(target);
         } else {

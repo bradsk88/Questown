@@ -1,9 +1,11 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
+import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -36,6 +38,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private int scanLevel = 0;
     private int scanBuffer = 0;
     private TownFlagBlockEntity changeListener;
+    private final ArrayList<Integer> times = new ArrayList<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -151,7 +154,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             ServerLevel level,
             BlockPos blockPos
     ) {
-
+        long start = System.currentTimeMillis();
 //        scanBuffer = (scanBuffer + 1) % 2;
 //        if (scanBuffer == 0) {
         // TODO: Use a FIFO queue and only run one iteration (y level) per tick
@@ -192,6 +195,23 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     .collect(Collectors.toSet());
             int y1 = blockPos.offset(0, scanLev, 0).getY();
             updateActiveFarms(level, scanLev, y1, doorsAtLevel);
+        }
+        profileTick(start);
+    }
+
+    private void profileTick(long start) {
+        if (Config.TICK_SAMPLING_RATE.get() == 0) {
+            return;
+        }
+        long end = System.currentTimeMillis();
+        times.add((int) (end - start));
+
+        if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
+            Questown.LOGGER.debug(
+                    "[TownRoomsMap] Average tick length: {}",
+                    times.stream().mapToInt(Integer::intValue).average()
+            );
+            times.clear();
         }
     }
 

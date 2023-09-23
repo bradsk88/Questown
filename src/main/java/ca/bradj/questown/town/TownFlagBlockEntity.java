@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.ScheduledBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
@@ -84,6 +85,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean everScanned = false;
     private boolean changed = false;
 
+    private final ArrayList<Integer> times = new ArrayList<>();
+
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -102,6 +105,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+
+        long start = System.currentTimeMillis();
 
         boolean stateChanged = e.state.tick(e, e.getTileData(), sl);
 
@@ -128,6 +133,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.pois.tick(sl, blockPos);
 
         e.everScanned = true;
+
+        profileTick(e, start);
+    }
+
+    private static void profileTick(
+            TownFlagBlockEntity e,
+            long start
+    ) {
+        if (Config.TICK_SAMPLING_RATE.get() > 0) {
+            long end = System.currentTimeMillis();
+            e.times.add((int) (end - start));
+
+            if (e.times.size() > Config.TICK_SAMPLING_RATE.get()) {
+                Questown.LOGGER.debug(
+                        "Average tick length: {}",
+                        e.times.stream().mapToInt(Integer::intValue).average()
+                );
+                e.times.clear();
+            }
+        }
     }
 
     private static void advanceScheduledBlocks(

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
@@ -8,6 +9,7 @@ import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.mobs.visitor.GathererJob;
+import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -35,6 +37,7 @@ public class TownFlagState {
     private final Stack<Function<TownFlagBlockEntity, TownState<MCContainer, MCTownItem, MCHeldItem>>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
+    private final ArrayList<Integer> times = new ArrayList<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
         this.parent = parent;
@@ -171,6 +174,7 @@ public class TownFlagState {
 
     // Returns true if changes detected
     public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
+        long start = System.currentTimeMillis();
         long lastTick = flagTag.getLong(NBT_LAST_TICK);
         long gt = level.getDayTime();
         long timeSinceWake = gt - lastTick;
@@ -198,7 +202,25 @@ public class TownFlagState {
                 item -> true
         ).iterator();
 
-        return checkForContainerChanges(level, matchIter);
+        boolean changes = checkForContainerChanges(level, matchIter);
+        profileTick(start);
+
+        return changes;
+    }
+
+    private void profileTick(long startTime) {
+        if (Config.TICK_SAMPLING_RATE.get() > 0) {
+            long end = System.currentTimeMillis();
+            times.add((int) (end - startTime));
+
+            if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
+                Questown.LOGGER.debug(
+                        "[TownFlagState] Average tick length: {}",
+                        times.stream().mapToInt(Integer::intValue).average()
+                );
+                times.clear();
+            }
+        }
     }
 
     private boolean checkForContainerChanges(

@@ -64,7 +64,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed mollis lacinia magn
     modId="roomrecipes"
     mandatory=true
     ordering="BEFORE"
-    versionRange="[1.18.2-0.0.3-alpha.1]"
+    versionRange="[1.18.2-0.0.3-alpha.1,1.18.2-0.0.3-alpha.2]"
     side="BOTH"
 [[dependencies.questown]]
     modId="jei"
