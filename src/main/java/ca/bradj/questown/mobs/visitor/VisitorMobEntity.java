@@ -14,6 +14,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -783,6 +784,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public Component getJobName() {
         return job.getJobName();
+    }
+
+    public Collection<? extends Quest<ResourceLocation, MCRoom>> getQuests() {
+        return town.getQuestsForVillager(uuid);
     }
 
     public interface ChangeListener {

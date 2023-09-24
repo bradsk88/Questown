@@ -1,20 +1,36 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.InventoryAndStatusMenu;
+import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -104,6 +120,50 @@ public class Jobs {
             Questown.LOGGER.debug("No chests exist in town");
             return null;
         }
+    }
+
+    public static boolean openInventoryAndStatusScreen(
+            int capacity,
+            Collection<MCHeldItem> items,
+            ServerPlayer sp,
+            VisitorMobEntity e
+    ) {
+        List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuests());
+        NetworkHooks.openGui(sp, new MenuProvider() {
+            @Override
+            public @NotNull Component getDisplayName() {
+                return TextComponent.EMPTY;
+            }
+
+            @Override
+            public @NotNull AbstractContainerMenu createMenu(
+                    int windowId,
+                    @NotNull Inventory inv,
+                    @NotNull Player p
+            ) {
+                TownQuestsContainer questsMenu = new TownQuestsContainer(windowId, quests);
+                return new InventoryAndStatusMenu(
+                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, questsMenu
+                );
+            }
+        }, data -> {
+            data.writeInt(capacity);
+            data.writeInt(e.getId());
+            UIQuest.Serializer ser = new UIQuest.Serializer();
+            data.writeInt(quests.size());
+            data.writeCollection(quests, (buf, recipe) -> {
+                ResourceLocation id;
+                if (recipe == null) {
+                    id = SpecialQuests.BROKEN;
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null);
+                } else {
+                    id = recipe.getRecipeId();
+                }
+                buf.writeResourceLocation(id);
+                ser.toNetwork(buf, recipe);
+            });
+        });
+        return true; // Different jobs might have screens or not
     }
 
     public interface LootDropper<I> {

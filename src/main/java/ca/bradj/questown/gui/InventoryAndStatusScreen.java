@@ -8,6 +8,7 @@ import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.textures.Textures;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -29,6 +30,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
+    private final QuestsScreen questScreen;
 
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu gathererInv,
@@ -36,10 +38,33 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Component title
     ) {
         super(gathererInv, playerInv, title);
+        this.questScreen = new QuestsScreen(menu.questMenu, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        int maybeX = (this.width / 2) + 32;
+        int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
+
+        this.addRenderableWidget(
+                new Button(
+                        maybeX, maybeY,
+                        48, 20,
+                        new TranslatableComponent("menu.quests"),
+                        (p_96776_) -> {
+                            openQuestsScreen();
+                        }
+                )
+        );
+    }
+
+    private void openQuestsScreen() {
+        this.minecraft.setScreen(questScreen);
     }
 
     @NotNull

@@ -1,7 +1,6 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,10 +27,10 @@ public class TownQuestsContainer extends AbstractContainerMenu {
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        this(windowId, read(data));
+        this(windowId, readQuests(data));
     }
 
-    private static Collection<UIQuest> read(FriendlyByteBuf data) {
+    public static Collection<UIQuest> readQuests(FriendlyByteBuf data) {
         int size = data.readInt();
         ArrayList<UIQuest> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
             ResourceLocation recipeID = buf.readResourceLocation();

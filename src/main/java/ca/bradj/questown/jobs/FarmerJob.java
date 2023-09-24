@@ -3,6 +3,8 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
+import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -661,33 +663,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
-
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new InventoryAndStatusMenu(windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e);
-            }
-        }, data -> {
-            data.writeInt(journal.getCapacity());
-            data.writeInt(e.getId());
-            data.writeCollection(journal.getItems(), (buf, item) -> {
-                ResourceLocation id = Items.AIR.getRegistryName();
-                if (item != null) {
-                    id = item.get().get().getRegistryName();
-                }
-                buf.writeResourceLocation(id);
-                buf.writeBoolean(item.isLocked());
-            });
-        });
-        return true; // Different jobs might have screens or not
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
     }
 
     @Override

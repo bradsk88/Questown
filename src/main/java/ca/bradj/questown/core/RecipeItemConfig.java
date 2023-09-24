@@ -3,10 +3,13 @@ package ca.bradj.questown.core;
 import ca.bradj.questown.core.init.TagsInit;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.InMemoryFormat;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.Tags;
+
+import java.util.Collections;
 
 public class RecipeItemConfig {
 
@@ -17,25 +20,82 @@ public class RecipeItemConfig {
     private static final Config defaultItemWeights = Config.of(InMemoryFormat.defaultInstance());
     public static final ForgeConfigSpec.ConfigValue<Config> itemWeights;
 
+    private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
+            CommonRecipes.TORCH_INGREDIENTS, false
+    );
+
+    private static final int CRAFTING_TABLE = RecipeItemScore.canCraftInFourGrid(
+            CommonRecipes.CRAFTING_TABLE, false
+    );
+    private static final int BED = RecipeItemScore.requiresCraftingTable(ImmutableList.of(
+            new MinedResource("wool", Rarity.MEDIUM),
+            new MinedResource("wool", Rarity.MEDIUM),
+            new MinedResource("wool", Rarity.MEDIUM),
+            new CraftedResource("planks", 4, ImmutableList.of(
+                    new MinedResource("wood", Rarity.COMMON))
+            ),
+            new CraftedResource("planks", 4, ImmutableList.of(
+                    new MinedResource("wood", Rarity.COMMON))
+            ),
+            new CraftedResource("planks", 4, ImmutableList.of(
+                    new MinedResource("wood", Rarity.COMMON))
+            )
+    ), true);
+    private static final int DIRT =
+            new MinedResource("dirt", Rarity.EVERYWHERE).calculateValue();
+    private static final int CHEST = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.CHEST, false
+    );
+
+    private static final int FURNACE = RecipeItemScore.requiresCraftingTable(
+            Collections.nCopies(
+                    8,
+                    new MinedResource("cobblestone", Rarity.EVERYWHERE)
+            ),
+            false
+    );
+    private static final int SIGN = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.SIGN, false
+    );
+    private static final int BOOKSHELF = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.BOOKSHELF, false
+    );
+    private static final int ENCH_TABLE = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.ENCH_TABLE, false
+    );
+    private static final int BREW_STAND = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.BREW_STAND, false
+    );
+    private static final int LANTERN = RecipeItemScore.requiresCraftingTable(
+            CommonRecipes.LANTERN, false
+    );
+    private static final int TARGET = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    new MinedResource("redstone_dust", Rarity.MEDIUM),
+                    new MinedResource("redstone_dust", Rarity.MEDIUM),
+                    new MinedResource("redstone_dust", Rarity.MEDIUM),
+                    new MinedResource("redstone_dust", Rarity.MEDIUM),
+                    new CraftedResource("hay_bale", 1, Collections.nCopies(9, new FarmedResource("wheat", Rarity.EVERYWHERE)))
+            ), false
+    );
+
     static {
-        // TODO: Build a cost calculator that works like calculator.usesRecipe([
-        //    MinedResource(Items.COAL, Rarity.MEDIUM),
-        //    CraftedResource(Items.Stick, [CraftedResource(Items.OAK_PLANKS, [RawResource(Items.OAK_WOOD)])])
-        //  ]).calculate()
-        defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), 10);
+        defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), BED);
+        defaultItemWeights.add(String.format("#%s", ItemTags.DIRT.location()), DIRT);
         // TODO: Tags that allow for you to choose from a range of easy-to-hard blocks should use the weight of the easiest block
-        // In this case, we know that "light sources" contains torches, so we use torch weight
-        defaultItemWeights.add(String.format("#%s", TagsInit.Items.LIGHT_SOURCES.location()), 20);
-        defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), 20);
-        defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), 20);
-        defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), 30);
-        defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), 40);
-        defaultItemWeights.add(String.format("#%s", Tags.Items.CHESTS.location()), 40);
-        defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), 40);
-        defaultItemWeights.add(String.format("#%s", ItemTags.SIGNS.location()), 50);
-        defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), 135);
-        defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), 250);
-        defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), 350);
+        // In this case, we know that "light sources" contains torches, so we use torch weight for now
+        defaultItemWeights.add(String.format("#%s", TagsInit.Items.LIGHT_SOURCES.location()), TORCH_SCORE);
+        defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), TORCH_SCORE);
+        defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), CRAFTING_TABLE);
+        defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), LANTERN);
+        defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), CHEST);
+        defaultItemWeights.add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
+        defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), FURNACE);
+        defaultItemWeights.add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
+        defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), BOOKSHELF);
+        defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), ENCH_TABLE);
+        defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), BREW_STAND);
+        defaultItemWeights.add(Items.TARGET.getRegistryName().toString(), TARGET);
     }
 
     public static final String FILENAME = "questown-item-weights-server.toml";

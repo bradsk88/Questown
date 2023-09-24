@@ -35,6 +35,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
     private final Component jobName;
+    public final TownQuestsContainer questMenu;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -43,6 +44,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     ) {
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
+        TownQuestsContainer qMenu = new TownQuestsContainer(windowId, TownQuestsContainer.readQuests(buf));
         return new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(size) {
@@ -50,7 +52,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, inv, e.getSlotLocks(), e
+                }, inv, e.getSlotLocks(), e, qMenu
         );
     }
 
@@ -59,10 +61,12 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             Container gathererInv,
             Inventory inv,
             Collection<Boolean> slotLocks,
-            VisitorMobEntity gatherer
+            VisitorMobEntity gatherer,
+            TownQuestsContainer questMenu
 // For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
+        this.questMenu = questMenu;
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.entity = gatherer;
