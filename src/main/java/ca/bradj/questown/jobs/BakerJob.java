@@ -59,7 +59,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     private final UUID ownerUUID;
 
     public BakerJob(
-            @Nullable ServerLevel level,
             UUID ownerUUID,
             int inventoryCapacity
     ) {

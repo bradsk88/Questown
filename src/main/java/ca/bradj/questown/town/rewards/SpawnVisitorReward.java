@@ -76,7 +76,7 @@ public class SpawnVisitorReward extends MCReward {
             initUUID = vEntity.getUUID();
         }
         Vec3 vjp = entity.getVisitorJoinPos();
-        vEntity.initialize(sl, initUUID, vjp.x, vjp.y, vjp.z, EMPTY);
+        vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, EMPTY);
         entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
         Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());

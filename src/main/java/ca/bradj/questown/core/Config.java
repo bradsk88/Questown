@@ -31,6 +31,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -68,6 +70,9 @@ public class Config {
         QUEST_BATCH_VILLAGER_BOOST_FACTOR = BUILDER.comment(
                 "The minimum weight for a quest batch includes this factor, which is multiplied by the number of villagers. This causes a village to have an exponential difficulty curve as it grows."
         ).defineInRange("QuestBatchVillagerBoostFactor", 50, 0, 500);
+        BIOME_SCAN_RADIUS = BUILDER.comment(
+                "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
+        ).defineInRange("BiomeScanRadius", 5, 0, 100);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

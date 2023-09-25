@@ -25,6 +25,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.LootTables;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,7 @@ import java.util.*;
 
 public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>>, GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
-    private @Nullable ServerLevel level;
+    private @Nullable TownInterface town;
     private final Container inventory;
     private final UUID ownerUUID;
     @Nullable ContainerTarget<MCContainer, MCTownItem> foodTarget;
@@ -50,12 +51,12 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     private boolean closeToGate;
 
     public GathererJob(
-            Level level, // null on client side
+            TownInterface town, // null on client side
             int inventoryCapacity,
             UUID ownerUUID
     ) {
-        if (!level.isClientSide()) {
-            this.level = (ServerLevel) level;
+        if (town != null && !town.getServerLevel().isClientSide()) {
+            this.town = town;
         }
         this.ownerUUID = ownerUUID;
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -71,7 +72,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             this.locks.add(new LockSlot(i, this));
         }
 
-        GathererStatuses.TownStateProvider town = new GathererStatuses.TownStateProvider() {
+        GathererStatuses.TownStateProvider tsp = new GathererStatuses.TownStateProvider() {
             @Override
             public boolean IsStorageAvailable() {
                 return successTarget != null && successTarget.isStillValid();
@@ -84,7 +85,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         };
         journal = new GathererJournal<MCTownItem, MCHeldItem>(
                 this, MCHeldItem::Air, MCHeldItem::new,
-                town, inventoryCapacity, GathererJob::checkTools
+                tsp, inventoryCapacity, GathererJob::checkTools
         ) {
             @Override
             protected void changeStatus(Status s) {
@@ -173,21 +174,22 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
-        return getLootFromLevel(level, journal.getCapacity(), tools);
+        return getLootFromLevel(town, journal.getCapacity(), tools);
     }
 
     public static Collection<MCTownItem> getLootFromLevel(
-            ServerLevel level,
+            TownInterface town,
             int maxItems,
             GathererJournal.Tools tools
     ) {
-        if (level == null) {
+        if (town == null || town.getServerLevel() == null) {
             return ImmutableList.of();
         }
+        ServerLevel level = town.getServerLevel();
 
         ImmutableList.Builder<MCTownItem> items = ImmutableList.builder();
         if (tools.hasAxe()) {
-            List<MCTownItem> axed = computeAxedItems(level, maxItems);
+            List<MCTownItem> axed = computeAxedItems(town, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         } else if (tools.hasPick()) {
@@ -223,16 +225,25 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             int minItems,
             int maxItems
     ) {
-        return getLoots(level, minItems, maxItems, new ResourceLocation(Questown.MODID, "jobs/gatherer_vanilla"));
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_notools");
+        LootTable lootTable = level.getServer().getLootTables().get(rl);
+        return getLoots(level, lootTable, minItems, maxItems, rl);
     }
 
     @NotNull
     private static List<MCTownItem> computeAxedItems(
-            ServerLevel level,
+            TownInterface town,
             int maxItems
     ) {
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_axe");
-        return getLoots(level, 3, maxItems, rl);
+        ResourceLocation biome = town.getRandomNearbyBiome();
+        String id = String.format("jobs/gatherer_axe/%s/%s", biome.getNamespace(), biome.getPath());
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
+        LootTables tables = town.getServerLevel().getServer().getLootTables();
+        if (!tables.getIds().contains(rl)) {
+            rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_axe/default");
+        }
+        LootTable lootTable = tables.get(rl);
+        return getLoots(town.getServerLevel(), lootTable, 3, maxItems, rl);
     }
 
     @NotNull
@@ -241,7 +252,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_pickaxe_wood");
-        return getLoots(level, 3, maxItems, rl);
+        LootTable lootTable = level.getServer().getLootTables().get(rl);
+        return getLoots(level, lootTable, 3, maxItems, rl);
     }
 
     @NotNull
@@ -250,7 +262,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_shovel_wood");
-        return getLoots(level, 3, maxItems, rl);
+        LootTable lootTable = level.getServer().getLootTables().get(rl);
+        return getLoots(level, lootTable, 3, maxItems, rl);
     }
 
     @NotNull
@@ -259,12 +272,14 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation("minecraft", "gameplay/fishing");
-        return getLoots(level, 3, maxItems, rl);
+        LootTable lootTable = level.getServer().getLootTables().get(rl);
+        return getLoots(level, lootTable, 3, maxItems, rl);
     }
 
     @NotNull
     private static List<MCTownItem> getLoots(
             ServerLevel level,
+            LootTable lootTable,
             int minItems,
             int maxItems,
             ResourceLocation rl
@@ -273,7 +288,6 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             return ImmutableList.of();
         }
 
-        LootTable lootTable = level.getServer().getLootTables().get(rl);
         LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 

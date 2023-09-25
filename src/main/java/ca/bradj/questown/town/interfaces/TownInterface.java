@@ -79,6 +79,10 @@ public interface TownInterface {
 
     boolean hasEnoughBeds();
 
+    ResourceLocation getRandomNearbyBiome();
+
+    boolean isInitialized();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

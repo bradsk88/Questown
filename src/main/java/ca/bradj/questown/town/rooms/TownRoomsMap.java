@@ -255,7 +255,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             MCRoom newRoom,
             @Nullable RoomRecipeMatch resourceLocation
     ) {
-        this.activeRecipes.get(scanLevel).update(oldRoom, newRoom, resourceLocation);
+        getOrCreateRooms(scanLevel);
+        activeRecipes.get(scanLevel).update(oldRoom, newRoom, resourceLocation);
     }
 
     public int numRecipes() {

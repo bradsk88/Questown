@@ -47,7 +47,9 @@ import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -87,6 +89,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean isInitializedQuests = false;
     private boolean everScanned = false;
     private boolean changed = false;
+    private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
 
@@ -125,6 +128,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         long l = gameTime % 10;
         if (l != 0) {
             return;
+        }
+
+        if (e.nearbyBiomes.isEmpty()) {
+            ChunkPos here = new ChunkPos(blockPos);
+            Biome value = level.getBiome(blockPos).value();
+            e.nearbyBiomes.add(value);
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
+                    ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
+                    Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY())).value();
+                    e.nearbyBiomes.add(biome);
+                }
+            }
         }
 
         e.roomsMap.tick(sl, blockPos);
@@ -479,7 +495,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (f.isEmpty()) {
             Questown.LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
         } else {
-            f.get().setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, null, visitorUUID));
+            f.get().setJob(JobsRegistry.getInitializedJob(this, jobName, null, visitorUUID));
         }
     }
 
@@ -608,6 +624,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         return (beds / 2) >= entities.size();
     }
 
+    @Override
+    public ResourceLocation getRandomNearbyBiome() {
+        return nearbyBiomes.get(getServerLevel().getRandom().nextInt(nearbyBiomes.size())).getRegistryName();
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return isInitializedQuests && !nearbyBiomes.isEmpty();
+    }
+
     private @Nullable Position getWanderTargetPosition() {
         Collection<MCRoom> all = roomsMap.getAllRooms();
         return pois.getWanderTarget(getServerLevel(), all);
@@ -666,7 +692,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         registerEntity(visitorMobEntity);
         TownState.VillagerData<MCHeldItem> m = match.get();
         visitorMobEntity.initialize(
-                sl, m.uuid,
+                this, m.uuid,
                 m.xPosition, m.yPosition, m.zPosition,
                 m.journal
         );

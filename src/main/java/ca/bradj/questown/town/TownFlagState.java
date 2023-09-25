@@ -100,7 +100,7 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> GathererJob.getLootFromLevel(sl, max, tools);
+        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> GathererJob.getLootFromLevel(e, max, tools);
         GathererTimeWarper<MCTownItem, MCHeldItem> warper = new GathererTimeWarper<MCTownItem, MCHeldItem>(
                 storedState, loot, storedState,
                 MCHeldItem::Air, MCHeldItem::new,
@@ -149,7 +149,7 @@ public class TownFlagState {
             for (TownState.VillagerData<MCHeldItem> v : storedState.villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(
-                        sl,
+                        e,
                         v.uuid,
                         v.xPosition,
                         v.yPosition,
@@ -180,9 +180,8 @@ public class TownFlagState {
         long timeSinceWake = gt - lastTick;
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
-        flagTag.putLong(NBT_LAST_TICK, gt);
 
-        if (waking) {
+        if (waking && e.isInitialized()) {
             Questown.LOGGER.debug(
                     "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
                     timeSinceWake, gt, lastTick
@@ -194,6 +193,9 @@ public class TownFlagState {
                 e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             }
             // TODO: Make sure chests get filled/empty
+            flagTag.putLong(NBT_LAST_TICK, gt);
+        } else {
+            flagTag.putLong(NBT_LAST_TICK, gt);
         }
 
         // TODO: Run less often?

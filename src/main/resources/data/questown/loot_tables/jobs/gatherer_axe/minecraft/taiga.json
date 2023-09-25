@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:generic",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:spruce_wood"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:spruce_log"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:spruce_sapling"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:apple"
+        }
+      ],
+      "weight": 1
+    }
+  ]
+}

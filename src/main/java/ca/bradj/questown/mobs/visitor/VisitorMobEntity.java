@@ -127,7 +127,7 @@ public class VisitorMobEntity extends PathfinderMob {
     // TODO: Make this abstract or injectable
     @NotNull
     private GathererJob getJob() {
-        return new GathererJob(level, inventoryCapacity, uuid);
+        return new GathererJob(town, inventoryCapacity, uuid);
     }
 
     boolean sitting = true;
@@ -752,14 +752,14 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public void initialize(
-            ServerLevel level,
+            TownInterface town,
             UUID uuid,
             double xPos,
             double yPos,
             double zPos,
             Snapshot journal
     ) {
-        job = JobsRegistry.getInitializedJob(level, journal.jobStringValue(), journal, uuid);
+        job = JobsRegistry.getInitializedJob(town, journal.jobStringValue(), journal, uuid);
         this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
@@ -836,10 +836,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot> job1 = new FarmerJob(
-                (ServerLevel) level,
-                uuid, 6
-        );
+        Job<MCHeldItem, ? extends Snapshot> job1 = new FarmerJob(uuid, 6);
         this.job = job1;
     }
 
@@ -847,10 +844,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot> job1 = new BakerJob(
-                (ServerLevel) level,
-                uuid, 6
-        );
+        Job<MCHeldItem, ? extends Snapshot> job1 = new BakerJob(uuid, 6);
         this.job = job1;
     }
 

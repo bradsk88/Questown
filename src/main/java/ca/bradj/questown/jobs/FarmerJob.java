@@ -78,7 +78,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private final UUID ownerUUID;
 
     public FarmerJob(
-            ServerLevel level,
             UUID ownerUUID,
             int inventoryCapacity
     ) {
