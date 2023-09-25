@@ -26,6 +26,8 @@ public interface TownInterface {
 
     BlockPos getTownFlagBasePos();
 
+    void addImmediateReward(MCReward child);
+
     void addMorningReward(MCReward ev);
 
     void addBatchOfRandomQuestsForVisitor(UUID visitorUUID);
@@ -52,7 +54,7 @@ public interface TownInterface {
 
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 
-    UUID getRandomVillager(Random random);
+    UUID getRandomVillager();
 
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 
@@ -62,8 +64,22 @@ public interface TownInterface {
 
     void validateEntity(VisitorMobEntity visitorMobEntity);
 
+    Collection<UUID> getUnemployedVillagers();
+
+    void addRandomJobQuestForVisitor(UUID visitorUUID);
+
+    void changeJobForVisitor(
+            UUID visitorUUID,
+            String jobName
+    );
+
+    Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
+
+    Collection<String> getAvailableJobs();
+
+    boolean hasEnoughBeds();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }
-    Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
 }

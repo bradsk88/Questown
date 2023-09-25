@@ -27,6 +27,10 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> MIN_WEIGHT_PER_QUEST_BATCH;
+
+    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -34,7 +38,7 @@ public class Config {
         ).define("DoorSearchRadius", 100);
         CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
                 "The radius (around the town flag) where this mod will search for campfires which attract visitors"
-        ).define("DoorSearchRadius", 10);
+        ).define("CampfireSearchRadius", 10);
         IDEAL_QUEST_THRESHOLD_TICKS = BUILDER.comment(
                 "When a new batch of quests is added, the mod makes several attempts to find a large quest to add" +
                         " to the batch randomly. This determines how many ticks it will try before giving up and " +
@@ -57,7 +61,13 @@ public class Config {
         ).defineInRange("BakingTime", 6000, 1000, 24000);
         TICK_SAMPLING_RATE = BUILDER.comment(
                 "Advanced setting. For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
-        ).defineInRange("BakingTime", 100, 0, 500);
+        ).defineInRange("TickSamplingRate", 100, 0, 500);
+        MIN_WEIGHT_PER_QUEST_BATCH = BUILDER.comment(
+                "Minimum weight of quests in a batch. Quests are weighted by the items in the room. See questown-item-weights-server.toml"
+        ).defineInRange("MinWeightPerQuestBatch", 100, 0, 500);
+        QUEST_BATCH_VILLAGER_BOOST_FACTOR = BUILDER.comment(
+                "The minimum weight for a quest batch includes this factor, which is multiplied by the number of villagers. This causes a village to have an exponential difficulty curve as it grows."
+        ).defineInRange("QuestBatchVillagerBoostFactor", 50, 0, 500);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

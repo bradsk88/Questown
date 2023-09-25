@@ -144,6 +144,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     ));
                 }
             };
+            v.addRecipeRoomChangeListener(this);
             activeFarms.put(scanLevel, v);
         }
 

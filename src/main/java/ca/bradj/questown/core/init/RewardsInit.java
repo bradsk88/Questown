@@ -2,6 +2,7 @@ package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.town.quests.MCDelayedReward;
+import ca.bradj.questown.town.quests.MCInstantReward;
 import ca.bradj.questown.town.quests.MCRewardList;
 import ca.bradj.questown.town.rewards.*;
 import net.minecraft.resources.ResourceLocation;
@@ -35,6 +36,14 @@ public class RewardsInit {
                     .build(new ResourceLocation(Questown.MODID, MCDelayedReward.ID).toString())
     );
 
+
+    public static final RegistryObject<RewardType<MCInstantReward>> INSTANT = REWARD_TYPES.register(
+            MCInstantReward.ID,
+            () -> RewardType.Builder
+                    .of(MCInstantReward::new)
+                    .build(new ResourceLocation(Questown.MODID, MCInstantReward.ID).toString())
+    );
+
     public static final RegistryObject<RewardType<SpawnVisitorReward>> VISITOR = REWARD_TYPES.register(
             SpawnVisitorReward.ID,
             () -> RewardType.Builder
@@ -56,6 +65,22 @@ public class RewardsInit {
             () -> RewardType.Builder
                     .of((rType, flag) -> new AddRandomUpgradeQuest(rType, flag, INSTANCE))
                     .build(new ResourceLocation(Questown.MODID, AddRandomUpgradeQuest.ID).toString())
+    );
+
+    public static final RegistryObject<RewardType<AddRandomJobQuestReward>> RANDOM_JOB_FOR_VILLAGER
+            = REWARD_TYPES.register(
+            AddRandomJobQuestReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddRandomJobQuestReward(rType, flag, INSTANCE))
+                    .build(new ResourceLocation(Questown.MODID, AddRandomJobQuestReward.ID).toString())
+    );
+
+    public static final RegistryObject<RewardType<ChangeJobReward>> CHANGE_JOB
+            = REWARD_TYPES.register(
+            ChangeJobReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new ChangeJobReward(rType, flag, null, null))
+                    .build(new ResourceLocation(Questown.MODID, ChangeJobReward.ID).toString())
     );
 
     public static void register(IEventBus bus) {

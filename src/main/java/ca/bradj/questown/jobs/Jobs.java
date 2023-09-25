@@ -166,6 +166,14 @@ public class Jobs {
         return true; // Different jobs might have screens or not
     }
 
+    public static ResourceLocation getRoomForJob(String job) {
+        return switch (job) {
+            case "baker" -> new ResourceLocation(Questown.MODID, "bakery");
+            case "farmer" -> SpecialQuests.FARM;
+            default -> throw new IllegalArgumentException("Unhandled job type: '" + job + "'");
+        };
+    }
+
     public interface LootDropper<I> {
 
         UUID UUID();

@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
@@ -306,7 +307,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
         tickTimes.add((int) (end - start));
 
-        if (tickTimes.size() > 10) {
+        if (Config.TICK_SAMPLING_RATE.get() != 0 && tickTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
             Questown.LOGGER.debug("VME Average tick length: {}", tickTimes.stream().mapToInt(Integer::intValue).average());
             tickTimes.clear();
         }
@@ -637,7 +638,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
         targetTimes.add((int) (end - start));
 
-        if (targetTimes.size() > 10) {
+        if (Config.TICK_SAMPLING_RATE.get() != 0 && targetTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
             Questown.LOGGER.debug("VME Average target acquisition length: {}", targetTimes.stream().mapToInt(Integer::intValue).average());
             targetTimes.clear();
         }
@@ -758,7 +759,7 @@ public class VisitorMobEntity extends PathfinderMob {
             double zPos,
             Snapshot journal
     ) {
-        job = JobsRegistry.getInitializedJob(level, journal, uuid);
+        job = JobsRegistry.getInitializedJob(level, journal.jobStringValue(), journal, uuid);
         this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
@@ -788,6 +789,14 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public Collection<? extends Quest<ResourceLocation, MCRoom>> getQuests() {
         return town.getQuestsForVillager(uuid);
+    }
+
+    public boolean canAcceptJob() {
+        return job instanceof GathererJob;
+    }
+
+    public void setJob(Job<MCHeldItem, ? extends Snapshot> initializedJob) {
+        job = initializedJob;
     }
 
     public interface ChangeListener {

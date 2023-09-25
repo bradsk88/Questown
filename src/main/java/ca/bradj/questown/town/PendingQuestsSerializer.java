@@ -30,7 +30,7 @@ public class PendingQuestsSerializer {
             MCQuestBatch asBatch = new MCQuestBatch(q.batch.getOwner(), q.batch.getReward());
             q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getWantedId()));
             CompoundTag tag = MCQuestBatch.SERIALIZER.serializeNBT(asBatch);
-            tag.putInt(NBT_WEIGHT_THRESHOLD, q.maxItemWeight);
+            tag.putInt(NBT_WEIGHT_THRESHOLD, q.targetItemWeight);
             aq.add(tag);
         }
         ct.put(NBT_BATCHES, aq);

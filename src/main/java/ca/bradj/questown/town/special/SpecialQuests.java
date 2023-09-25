@@ -24,8 +24,11 @@ public class SpecialQuests {
             CAMPFIRE,
             new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE),
             TOWN_GATE,
-            new RoomRecipe(TOWN_GATE, NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())), Integer.MAX_VALUE)
+            new RoomRecipe(TOWN_GATE, NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())), Integer.MAX_VALUE),
+            FARM,
+            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FENCE_GATE.get())), Integer.MAX_VALUE)
     );
+    public static final ResourceLocation BEDROOM = new ResourceLocation(Questown.MODID, "bedroom");
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);

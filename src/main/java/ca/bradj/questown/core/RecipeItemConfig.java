@@ -79,6 +79,9 @@ public class RecipeItemConfig {
             ), false
     );
 
+    // TODO: Scan all recipes on server start and check for missing weights up front
+    // Currently, they only get scanned when the town flag tries to generate quests
+
     static {
         defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), BED);
         defaultItemWeights.add(String.format("#%s", ItemTags.DIRT.location()), DIRT);
@@ -97,6 +100,8 @@ public class RecipeItemConfig {
         defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), BREW_STAND);
         defaultItemWeights.add(Items.TARGET.getRegistryName().toString(), TARGET);
     }
+
+    // TODO: How can mod pack builders add weights to this?
 
     public static final String FILENAME = "questown-item-weights-server.toml";
 

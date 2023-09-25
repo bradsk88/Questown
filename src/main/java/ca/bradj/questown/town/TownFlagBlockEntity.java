@@ -7,6 +7,7 @@ import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -39,11 +40,13 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -116,7 +119,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             setChanged(level, blockPos, state);
         }
 
-        e.quests.tick(sl);
+        e.quests.tick(e);
 
         long gameTime = level.getGameTime();
         long l = gameTime % 10;
@@ -297,6 +300,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.setChanged();
     }
 
+    @Override
     public void addImmediateReward(MCReward r) {
         this.asapRewards.push(r);
         this.setChanged();
@@ -378,7 +382,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 newRoom.getDoorPos().getUIString()
         ));
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.FLASH);
-        if (oldMatch  == null && newMatch != null) {
+        if (oldMatch == null && newMatch != null) {
             quests.markQuestAsComplete(newRoom, newMatchID);
             return;
         }
@@ -457,9 +461,42 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public UUID getRandomVillager(Random random) {
+    public void addRandomJobQuestForVisitor(UUID visitorUUID) {
+        TownQuests.addJobQuest(this, quests, visitorUUID);
+        setChanged();
+    }
+
+    @Override
+    public void changeJobForVisitor(
+            UUID visitorUUID,
+            String jobName
+    ) {
+        Optional<VisitorMobEntity> f = entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> v.getUUID().equals(visitorUUID))
+                .findFirst();
+        if (f.isEmpty()) {
+            Questown.LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
+        } else {
+            f.get().setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, null, visitorUUID));
+        }
+    }
+
+    @Override
+    public UUID getRandomVillager() {
         List<UUID> villagers = ImmutableList.copyOf(getVillagers());
-        return villagers.get(random.nextInt(villagers.size()));
+        return villagers.get(getServerLevel().getRandom().nextInt(villagers.size()));
+    }
+
+    @Override
+    public Collection<UUID> getUnemployedVillagers() {
+        return entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(VisitorMobEntity::canAcceptJob)
+                .map(Entity::getUUID)
+                .toList();
     }
 
     @Override
@@ -554,6 +591,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
         }
         return b.build();
+    }
+
+    @Override
+    public Collection<String> getAvailableJobs() {
+        // TODO: Scan villagers to make this decision
+        return ImmutableList.of("farmer", "baker");
+    }
+
+    @Override
+    public boolean hasEnoughBeds() {
+        long beds = roomsMap.getAllMatches().stream()
+                .flatMap(v -> v.getContainedBlocks().values().stream())
+                .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem())))
+                .count();
+        return (beds / 2) >= entities.size();
     }
 
     private @Nullable Position getWanderTargetPosition() {
