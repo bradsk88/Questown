@@ -128,7 +128,7 @@ public class Jobs {
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuests());
+        List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuestsWithRewards());
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -155,7 +155,7 @@ public class Jobs {
                 ResourceLocation id;
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null);
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
                 } else {
                     id = recipe.getRecipeId();
                 }

@@ -8,12 +8,13 @@ import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -269,7 +270,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        ImmutableList<Quest<ResourceLocation, MCRoom>> aQ = entity.getAllQuests();
+        ImmutableMap<MCQuest, MCReward> aQ = entity.getAllQuestsWithRewards();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
@@ -289,16 +290,16 @@ public class TownFlagBlock extends BaseEntityBlock {
         }, data -> {
             UIQuest.Serializer ser = new UIQuest.Serializer();
             data.writeInt(quests.size());
-            data.writeCollection(quests, (buf, recipe) -> {
+            data.writeCollection(quests, (buf, q) -> {
                 ResourceLocation id;
-                if (recipe == null) {
+                if (q == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null);
+                    q = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
                 } else {
-                    id = recipe.getRecipeId();
+                    id = q.getRecipeId();
                 }
                 buf.writeResourceLocation(id);
-                ser.toNetwork(buf, recipe);
+                ser.toNetwork(buf, q);
             });
         });
         return InteractionResult.sidedSuccess(false);

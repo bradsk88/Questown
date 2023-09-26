@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -254,7 +255,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 ResourceLocation id;
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null);
+                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
                 } else {
                     id = recipe.getRecipeId();
                 }
@@ -696,7 +697,7 @@ public class VisitorMobEntity extends PathfinderMob {
             return InteractionResult.PASS;
         }
 
-        Collection<MCQuest> q4v = town.getQuestsForVillager(getUUID());
+        Map<MCQuest, MCReward> q4v = town.getQuestsWithRewardsForVillager(getUUID());
         Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
@@ -705,10 +706,12 @@ public class VisitorMobEntity extends PathfinderMob {
 
         Predicate<MCQuest> isComplete = Quest::isComplete;
         Set<MCQuest> finishedQuests = q4v
+                .keySet()
                 .stream()
                 .filter(isComplete)
                 .collect(Collectors.toSet());
         Set<MCQuest> unfinishedQuests = q4v
+                .keySet()
                 .stream()
                 .filter(isComplete.negate())
                 .collect(Collectors.toSet());
@@ -789,6 +792,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public Collection<? extends Quest<ResourceLocation, MCRoom>> getQuests() {
         return town.getQuestsForVillager(uuid);
+    }
+
+    public Map<MCQuest, MCReward> getQuestsWithRewards() {
+        return town.getQuestsWithRewardsForVillager(uuid);
     }
 
     public boolean canAcceptJob() {

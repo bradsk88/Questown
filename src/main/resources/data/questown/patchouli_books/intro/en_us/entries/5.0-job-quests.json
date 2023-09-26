@@ -1,0 +1,12 @@
+{
+  "name": "Entry 5: Changing Jobs",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:job_quest",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Visitors may want new jobs. To help them switch:$(br2)1. Listen to their request for a specific room.$(br2)2. Build the requested room; they'll change jobs."
+    }
+  ]
+}

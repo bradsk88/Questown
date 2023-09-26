@@ -9,6 +9,7 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.Random;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -82,6 +83,10 @@ public interface TownInterface {
     ResourceLocation getRandomNearbyBiome();
 
     boolean isInitialized();
+
+    ImmutableMap<MCQuest, MCReward> getAllQuestsWithRewards();
+
+    Map<MCQuest, MCReward> getQuestsWithRewardsForVillager(UUID uuid);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

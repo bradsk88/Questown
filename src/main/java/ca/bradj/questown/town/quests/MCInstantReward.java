@@ -3,11 +3,14 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 
-public class MCInstantReward extends MCReward {
+import java.util.Collection;
+
+public class MCInstantReward extends MCReward implements MCRewardContainer {
 
     public static final String ID = "instant";
     private static final String NBT_CHILD = "child";
@@ -51,5 +54,10 @@ public class MCInstantReward extends MCReward {
             throw new IllegalStateException("Already initialized");
         }
         this.child = MCReward.SERIALIZER.deserializeNBT(entity, tag.getCompound(NBT_CHILD));
+    }
+
+    @Override
+    public Collection<MCReward> getContainedRewards() {
+        return ImmutableList.of(child);
     }
 }

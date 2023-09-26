@@ -2,16 +2,13 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class QuestBatches<
         KEY,
@@ -77,7 +74,10 @@ public class QuestBatches<
         return ImmutableList.copyOf(this.batches.stream().flatMap(QuestBatch::stream).toList());
     }
 
-    public void markRecipeAsComplete(ROOM room, KEY recipeId) {
+    public void markRecipeAsComplete(
+            ROOM room,
+            KEY recipeId
+    ) {
         for (BATCH b : batches) {
             if (b.markRecipeAsComplete(room, recipeId)) {
                 break;
@@ -85,12 +85,29 @@ public class QuestBatches<
         }
     }
 
+    public ImmutableMap<QUEST, REWARD> getAllWithRewards() {
+        ImmutableMap.Builder<QUEST, REWARD> b = ImmutableMap.builder();
+        this.batches.forEach(v -> v.getAll().forEach(z -> b.put(z, v.reward)));
+        return b.build();
+    }
+
+    public Map<QUEST, REWARD> getAllForVillagerWithRewards(UUID uuid) {
+        ImmutableMap.Builder<QUEST, REWARD> b = ImmutableMap.builder();
+        this.batches.stream()
+                .filter(v -> v.getAll().stream().allMatch(z -> z.uuid.equals(uuid)))
+                .forEach(v -> v.getAll().forEach(z -> b.put(z, v.reward)));
+        return b.build();
+    }
+
     public interface ConversionFunc {
         void apply();
     }
 
     public void markRecipeAsConverted(
-            ROOM room, KEY oldRecipeID, KEY newRecipeID) {
+            ROOM room,
+            KEY oldRecipeID,
+            KEY newRecipeID
+    ) {
         ConversionFunc oldQuest = null;
         ConversionFunc newQuest = null;
 
@@ -114,7 +131,10 @@ public class QuestBatches<
         }
     }
 
-    public void markRecipeAsLost(ROOM oldRoom, KEY recipeID) {
+    public void markRecipeAsLost(
+            ROOM oldRoom,
+            KEY recipeID
+    ) {
         for (BATCH b : batches) {
             if (b.markRecipeAsLost(oldRoom, recipeID)) {
                 return;
@@ -122,7 +142,10 @@ public class QuestBatches<
         }
     }
 
-    public void changeRoomOnly(ROOM oldRoom, ROOM newRoom) {
+    public void changeRoomOnly(
+            ROOM oldRoom,
+            ROOM newRoom
+    ) {
         for (BATCH b : batches) {
             b.changeRoomOnly(oldRoom, newRoom);
         }

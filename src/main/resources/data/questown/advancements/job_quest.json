@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Employment Opportunities",
+      "color": "white"
+    },
+    "description": {
+      "text": "Unlock a job-changing quest"
+    },
+    "icon": {
+      "item": "minecraft:wheat"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:visitor_trigger",
+      "conditions": {
+        "context": "first_job_quest"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:first_visitor"
+}

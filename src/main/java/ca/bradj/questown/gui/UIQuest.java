@@ -1,7 +1,11 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.questown.town.quests.MCRewardContainer;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.rewards.ChangeJobReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
@@ -19,43 +23,87 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public class UIQuest implements Comparable<UIQuest> {
+
+    private static final String NBT_VILLAGER_UUID = "villager_uuid";
+    private static final String NBT_JOB_NAME = "job_name";
 
     public final Quest.QuestStatus status;
     private final RoomRecipe recipe;
     public final ResourceLocation fromRecipe;
+    private final String villagerUUID;
+    private final String jobName;
 
     public UIQuest(
             RoomRecipe recipe,
             Quest.QuestStatus status,
-            @Nullable ResourceLocation fromRecipe
+            @Nullable ResourceLocation fromRecipe,
+            @Nullable String jobRecipientUUID,
+            @Nullable String jobName
     ) {
         this.recipe = recipe;
         this.status = status;
         this.fromRecipe = fromRecipe;
+        this.villagerUUID = jobRecipientUUID;
+        this.jobName = jobName;
     }
 
     public static List<UIQuest> fromLevel(
             Level level,
-            Collection<? extends Quest<ResourceLocation, MCRoom>> aQ
+            Map<? extends Quest<ResourceLocation, MCRoom>, MCReward> aQ
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
-        return aQ.stream().map(v -> {
+        return aQ.entrySet().stream().map(z -> {
+            Quest<ResourceLocation, MCRoom> v = z.getKey();
             RoomRecipe q = rMap.get(v.getWantedId());
             if (q == null) {
                 return null;
             }
             int recipeStrength = 1; // TODO: Add getter to RoomRecipes
+
+            @Nullable String job = null;
+            MCReward value = z.getValue();
+            if (value instanceof ChangeJobReward cjr) {
+                job = cjr.getJobName();
+            }
+            if (job == null) {
+                job = findJob(value);
+            }
+
             return new UIQuest(
                     new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength),
-                    v.getStatus(), v.fromRecipeID().orElse(null)
+                    v.getStatus(), v.fromRecipeID().orElse(null),
+                    v.getUUID().toString(), job
             );
         }).toList();
+    }
+
+    @Nullable
+    private static String findJob(
+            MCReward value
+    ) {
+        String job = null;
+        if (value instanceof ChangeJobReward cjr) {
+            return cjr.getJobName();
+        }
+        if (value instanceof MCRewardContainer mrc) {
+            for (MCReward r : mrc.getContainedRewards()) {
+                @Nullable String j = findJob(r);
+                if (j != null) {
+                    if (job != null) {
+                        Questown.LOGGER.warn("Multiple job change rewards in a single villager quest batch.");
+                    }
+                    job = j;
+                }
+            }
+        }
+        return job;
     }
 
     @Override
@@ -82,6 +130,14 @@ public class UIQuest implements Comparable<UIQuest> {
         return RoomRecipes.getName(recipe.getId());
     }
 
+    public String jobName() {
+        return jobName;
+    }
+
+    public String villagerUUID() {
+        return villagerUUID;
+    }
+
     public static class Serializer {
 
         private final RoomRecipe.Serializer recipeSerializer;
@@ -103,7 +159,15 @@ public class UIQuest implements Comparable<UIQuest> {
             if (p_44104_.has("from_id")) {
                 fromID = new ResourceLocation(p_44104_.get("from_id").getAsString());
             }
-            return new UIQuest(recipe, Quest.QuestStatus.valueOf(status), fromID);
+            String villagerUUID = null;
+            if (p_44104_.has(NBT_VILLAGER_UUID)) {
+                villagerUUID = p_44104_.get(NBT_VILLAGER_UUID).getAsString();
+            }
+            String jobName = null;
+            if (p_44104_.has(NBT_JOB_NAME)) {
+                jobName = p_44104_.get(NBT_JOB_NAME).getAsString();
+            }
+            return new UIQuest(recipe, Quest.QuestStatus.valueOf(status), fromID, villagerUUID, jobName);
         }
 
         public void toNetwork(
@@ -117,6 +181,16 @@ public class UIQuest implements Comparable<UIQuest> {
                 fromStr = p_44102_.fromRecipe.toString();
             }
             buf.writeUtf(fromStr);
+            String villagerUUID = "";
+            if (p_44102_.villagerUUID != null) {
+                villagerUUID = p_44102_.villagerUUID.toString();
+            }
+            buf.writeUtf(villagerUUID);
+            String jobName = "";
+            if (p_44102_.jobName != null) {
+                jobName = p_44102_.jobName.toString();
+            }
+            buf.writeUtf(jobName);
         }
 
         @Nullable
@@ -131,7 +205,9 @@ public class UIQuest implements Comparable<UIQuest> {
             if (!fromStr.isEmpty()) {
                 from = new ResourceLocation(fromStr);
             }
-            return new UIQuest(rec, Quest.QuestStatus.fromString(status), from);
+            String villagerUUID = buf.readUtf();
+            String jobName = buf.readUtf();
+            return new UIQuest(rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
         }
     }
 }

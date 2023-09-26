@@ -10,14 +10,13 @@ import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.List;
 
-public class MCRewardList extends MCReward {
+public class MCRewardList extends MCReward implements MCRewardContainer {
 
     public static final String ID = "list";
     private static final String NBT_CHILDREN = "children";
 
-    private List<MCReward> children;
+    public ImmutableList<MCReward> children;
 
     public MCRewardList(
             RewardType<? extends MCReward> rType,
@@ -83,7 +82,12 @@ public class MCRewardList extends MCReward {
     protected void initializeChildren() {
     }
 
-    protected Collection<MCReward> getChildren() {
+    public Collection<MCReward> getChildren() {
         return children;
+    }
+
+    @Override
+    public Collection<MCReward> getContainedRewards() {
+        return ImmutableList.copyOf(children);
     }
 }

@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.ScheduledBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
@@ -24,6 +25,7 @@ import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,6 +45,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -480,6 +483,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public void addRandomJobQuestForVisitor(UUID visitorUUID) {
         TownQuests.addJobQuest(this, quests, visitorUUID);
         setChanged();
+        // TODO: Town should have owners?
+        BlockPos bp = getBlockPos();
+        ServerPlayer p = (ServerPlayer) level.getNearestPlayer(
+                bp.getX(),
+                bp.getY(),
+                bp.getZ(),
+                100.0,
+                false
+        );
+        AdvancementsInit.VISITOR_TRIGGER.trigger(
+                p, VisitorTrigger.Triggers.FirstJobQuest
+        );
     }
 
     @Override
@@ -533,6 +548,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
         return this.quests.getAllForVillager(uuid);
+    }
+
+    @Override
+    public Map<MCQuest, MCReward> getQuestsWithRewardsForVillager(UUID uuid) {
+        return this.quests.getAllForVillagerWithRewards(uuid);
     }
 
     @Override
@@ -633,6 +653,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public boolean isInitialized() {
         return isInitializedQuests && !nearbyBiomes.isEmpty();
     }
+
+    @Override
+    public ImmutableMap<MCQuest, MCReward> getAllQuestsWithRewards() {
+        return quests.questBatches.getAllWithRewards();
+    }
+
 
     private @Nullable Position getWanderTargetPosition() {
         Collection<MCRoom> all = roomsMap.getAllRooms();

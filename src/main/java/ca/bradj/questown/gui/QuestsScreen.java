@@ -17,11 +17,12 @@ import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
@@ -54,6 +55,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private final DrawableNineSliceTexture cardBackground;
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
+    private final List<ItemStack> heads;
 
     private int currentPage = 0;
 
@@ -80,6 +82,14 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         this.previousPage = new GuiIconButtonSmall(
                 0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
+        this.heads = quests.stream().map(v -> {
+            if (v.villagerUUID() == null) {
+                return null;
+            }
+            ItemStack head = new ItemStack(Items.PLAYER_HEAD);
+            head.getOrCreateTag().putString(PlayerHeadItem.TAG_SKULL_OWNER, v.villagerUUID());
+            return head;
+        }).toList();
 
     }
 
@@ -164,6 +174,18 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 int idX = x + PAGE_PADDING;
                 int idY = iconY - 10;
                 this.font.draw(poseStack, recipeName.getString(), idX, idY, TEXT_COLOR);
+                // TODO: Should we also render the owners head for non-job quests?
+                String vID = recipe.villagerUUID();
+                String jobName = recipe.jobName();
+                if (!vID.isEmpty() && !jobName.isEmpty()) {
+                    int headX = x + CARD_WIDTH - 19;
+                    int headY = idY - 6;
+                    this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
+                    if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
+                        fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
+                        renderTooltip(poseStack, new TranslatableComponent("quests.job_change", vID, jobName), mouseX, mouseY);
+                    }
+                }
             }
         }
         slots.clear();

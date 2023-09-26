@@ -285,7 +285,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ImmutableList.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableList.builder();
         for (TownPosition p : registeredDoors) {
             Position pz = new Position(p.x, p.z);
-            TownRooms rooms = activeRooms.get(p.scanLevel);
+            TownRooms rooms = getOrCreateRooms(p.scanLevel);
             Optional<MCRoom> room = rooms.getAll().stream().filter(v -> v.getDoorPos().equals(pz)).findFirst();
             if (room.isEmpty()) {
                 Questown.LOGGER.error("No active room found for registered door position {}", p);

@@ -12,9 +12,9 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -275,12 +275,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 .toList());
     }
 
+    public ImmutableMap<Quest<ResourceLocation, MCRoom>, MCReward> getAllWithRewards() {
+        ImmutableMap.Builder<Quest<ResourceLocation, MCRoom>, MCReward> b = ImmutableMap.builder();
+        questBatches.getAllWithRewards().forEach(b::put);
+        return b.build();
+    }
+
     public Collection<MCQuest> getAllForVillager(UUID uuid) {
         return this.questBatches.getAllBatches()
                 .stream()
                 .filter(b -> uuid.equals(b.getOwner()))
                 .flatMap(v -> v.getAll().stream())
                 .toList();
+    }
+
+    public Map<MCQuest, MCReward> getAllForVillagerWithRewards(UUID uuid) {
+        return this.questBatches.getAllForVillagerWithRewards(uuid);
     }
 
     public void addBatch(MCQuestBatch batch) {

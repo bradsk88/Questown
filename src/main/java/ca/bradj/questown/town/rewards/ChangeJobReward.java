@@ -63,4 +63,8 @@ public class ChangeJobReward extends MCReward {
             this.jobName = tag.getString(NBT_JOB_NAME);
         }
     }
+
+    public String getJobName() {
+        return jobName;
+    }
 }
