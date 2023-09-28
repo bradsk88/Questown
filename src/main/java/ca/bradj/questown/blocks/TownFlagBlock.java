@@ -125,6 +125,11 @@ public class TownFlagBlock extends BaseEntityBlock {
             }
         }
 
+        if (itemInHand.getItem().equals(Items.OAK_LOG)) {
+            Questown.LOGGER.debug("Quests: {}", entity.getAllQuests());
+            return InteractionResult.sidedSuccess(false);
+        }
+
         // TODO: Consider making a new recipe type so any item can be cnverted to
         //  any other item and with the parent NBT stored on the new item.
         ItemStack converted = null;

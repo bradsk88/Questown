@@ -19,6 +19,17 @@ public class Quest<KEY, ROOM extends Room> {
         this(null, null);
     }
 
+    @Override
+    public String toString() {
+        return "Quest{" +
+                "uuid=" + uuid +
+                ", recipeId=" + recipeId +
+                ", status=" + status +
+                ", completedOn=" + completedOn +
+                ", fromRecipeID=" + fromRecipeID +
+                '}';
+    }
+
     protected Quest(KEY recipe, @Nullable KEY oldRecipe) {
         this.uuid = UUID.randomUUID();
         this.recipeId = recipe;

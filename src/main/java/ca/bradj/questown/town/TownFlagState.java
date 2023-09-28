@@ -189,7 +189,7 @@ public class TownFlagState {
             MCTownState newState = TownFlagState.advanceTime(parent, level);
             if (newState != null) {
                 TownFlagState.recoverMobs(parent, level);
-                Questown.LOGGER.debug("Storing state on {}: {}", e.getUUID(), newState);
+                Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
                 e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             }
             // TODO: Make sure chests get filled/empty
@@ -264,14 +264,13 @@ public class TownFlagState {
         return itemNames.hashCode();
     }
 
-
     void putStateOnTile(CompoundTag flagTag, UUID uuid) {
         @Nullable MCTownState state = captureState();
         if (state == null) {
             Questown.LOGGER.warn("TownState was null. Will not store.");
             return;
         }
-        Questown.LOGGER.debug("[Tile] Storing state on {}: {}", uuid, state);
+        Questown.LOGGER.trace("[Tile] Storing state on {}: {}", uuid, state);
         CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
         flagTag.put(NBT_TOWN_STATE, cereal);
     }
