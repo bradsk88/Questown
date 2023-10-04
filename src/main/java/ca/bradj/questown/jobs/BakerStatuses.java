@@ -12,6 +12,8 @@ public class BakerStatuses {
         boolean inventoryFull();
 
         boolean hasNonSupplyItems();
+
+        boolean hasItems();
     }
 
     public interface TownStateProvider<ROOM extends Room> {
@@ -37,15 +39,18 @@ public class BakerStatuses {
 //        }
         switch (signal) {
 //            GathererJournal.Status status = null;
-            case MORNING, NIGHT, EVENING, NOON -> {
+            case MORNING, NOON -> {
                 // TODO: Different logic depending on time of day
-                return handleMorning(currentStatus, inventory, town, entity);
+                return getMorningStatus(currentStatus, inventory, town, entity);
+            }
+            case NIGHT, EVENING -> {
+                return getEveningStatus(currentStatus, inventory, town);
             }
             default -> throw new IllegalArgumentException(String.format("Unrecognized signal %s", signal));
         }
     }
 
-    private static <ROOM extends Room> GathererJournal.@Nullable Status handleMorning(
+    public static <ROOM extends Room> GathererJournal.@Nullable Status getMorningStatus(
             GathererJournal.Status currentStatus,
             InventoryStateProvider inventory,
             TownStateProvider<ROOM> town,
@@ -74,6 +79,23 @@ public class BakerStatuses {
         }
 
         return nullIfUnchanged(currentStatus, GathererJournal.Status.COLLECTING_SUPPLIES);
+    }
+
+    public static <ROOM extends Room> GathererJournal.@Nullable Status getEveningStatus(
+            GathererJournal.Status currentStatus,
+            InventoryStateProvider inventory,
+            TownStateProvider<ROOM> town
+    ) {
+        Collection<ROOM> breads = town.bakeriesWithBread();
+        if (!breads.isEmpty()) {
+            return GathererJournal.Status.COLLECTING_BREAD;
+        }
+
+        if (inventory.hasItems()) {
+            return nullIfUnchanged(currentStatus, GathererJournal.Status.DROPPING_LOOT);
+        }
+
+        return nullIfUnchanged(currentStatus, GathererJournal.Status.RELAXING);
     }
 
     private static GathererJournal.Status nullIfUnchanged(

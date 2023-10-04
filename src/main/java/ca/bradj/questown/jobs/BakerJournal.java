@@ -30,6 +30,11 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         return inventory.stream().filter(Predicates.not(GathererJournal.Item::isEmpty)).anyMatch(v -> !itemsToHold.shouldHoldForWork(status, v));
     }
 
+    @Override
+    public boolean hasItems() {
+        return inventory.stream().anyMatch(Predicates.not(GathererJournal.Item::isEmpty));
+    }
+
     public void addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
     }
