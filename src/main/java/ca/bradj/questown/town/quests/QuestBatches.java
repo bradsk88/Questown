@@ -4,12 +4,10 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class QuestBatches<
         KEY,
@@ -20,6 +18,7 @@ public class QuestBatches<
         > implements QuestBatch.ChangeListener<QUEST> {
 
     protected final List<BATCH> batches = new ArrayList<>();
+    private final Factory<BATCH, REWARD> factory;
     private QuestBatch.ChangeListener<QUEST> changeListener = new QuestBatch.ChangeListener<QUEST>() {
         @Override
         public void questCompleted(QUEST quest) {
@@ -37,14 +36,75 @@ public class QuestBatches<
         }
     };
 
-    public void initialize(ImmutableList<BATCH> bs) {
+    public interface Factory<BATCH, REWARD> {
+        BATCH getNew(UUID owner, REWARD r);
+    }
+
+    public interface VillagerProvider {
+        UUID getRandomVillager();
+        boolean isVillagerMissing(UUID uuid);
+    }
+
+
+    public QuestBatches(Factory<BATCH, REWARD> factory) {
+        this.factory = factory;
+    }
+
+    public void initialize(VillagerProvider villagers, ImmutableList<BATCH> bs) {
         if (!batches.isEmpty()) {
             Questown.LOGGER.error("QuestBatches were initialized twice :(");
         }
-        batches.addAll(bs);
+
+        ImmutableList<BATCH> list = filterOutDuplicateCompletion(villagers, bs);
+
+        batches.addAll(list);
         for (BATCH b : batches) {
             b.addChangeListener(this);
         }
+    }
+
+    private ImmutableList<BATCH> filterOutDuplicateCompletion(
+            VillagerProvider villagers,
+            ImmutableList<BATCH> bs) {
+        Set<QUEST> completedQuests = bs.stream()
+                .flatMap(v -> v.getAll().stream())
+                .filter(Quest::isComplete)
+                .peek(q -> q.uuid = coerceUUID(villagers, q.getUUID()))
+                .collect(Collectors.toSet());
+
+        ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
+        bs.forEach(v -> {
+            final UUID owner = coerceUUID(villagers, v.getUUID());
+            BATCH e = this.emptyBatch(owner, v.reward);
+            ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
+            v.getAll().forEach(q -> {
+                e.addNewQuest(owner, q.getWantedId());
+                if (completedQuests.contains(q)) {
+                    e.markRecipeAsComplete(q.completedOn, q.getWantedId());
+                    completedQuests.remove(q);
+                }
+                eqb.add(q);
+            });
+            bld.add(e);
+        });
+        return bld.build();
+    }
+
+    @Nullable
+    private static <KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward, BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>> UUID coerceUUID(
+            VillagerProvider villagers,
+            @Nullable UUID owner
+    ) {
+        if (owner != null && villagers.isVillagerMissing(owner)) {
+            UUID newOwner = villagers.getRandomVillager();
+            QT.LOGGER.warn("Replacing missing villager {} with {}", owner, newOwner);
+            owner = newOwner;
+        }
+        return owner;
+    }
+
+    private BATCH emptyBatch(UUID owner, REWARD reward) {
+        return this.factory.getNew(owner, reward);
     }
 
     @Override
@@ -96,17 +156,17 @@ public class QuestBatches<
         }
     }
 
-    public ImmutableMap<QUEST, REWARD> getAllWithRewards() {
-        ImmutableMap.Builder<QUEST, REWARD> b = ImmutableMap.builder();
-        this.batches.forEach(v -> v.getAll().forEach(z -> b.put(z, v.reward)));
+    public ImmutableList<HashMap.SimpleEntry<QUEST, REWARD>> getAllWithRewards() {
+        ImmutableList.Builder<HashMap.SimpleEntry<QUEST, REWARD>> b = ImmutableList.builder();
+        this.batches.forEach(v -> v.getAll().forEach(z -> b.add(new AbstractMap.SimpleEntry<>(z, v.reward))));
         return b.build();
     }
 
-    public Map<QUEST, REWARD> getAllForVillagerWithRewards(UUID uuid) {
-        ImmutableMap.Builder<QUEST, REWARD> b = ImmutableMap.builder();
+    public List<HashMap.SimpleEntry<QUEST, REWARD>> getAllForVillagerWithRewards(UUID uuid) {
+        ImmutableList.Builder<HashMap.SimpleEntry<QUEST, REWARD>> b = ImmutableList.builder();
         this.batches.stream()
                 .filter(v -> v.getAll().stream().allMatch(z -> z.uuid.equals(uuid)))
-                .forEach(v -> v.getAll().forEach(z -> b.put(z, v.reward)));
+                .forEach(v -> v.getAll().forEach(z -> new HashMap.SimpleEntry<>(z, v.reward)));
         return b.build();
     }
 

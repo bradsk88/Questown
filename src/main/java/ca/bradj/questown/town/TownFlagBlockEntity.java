@@ -25,7 +25,7 @@ import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -45,7 +45,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -524,6 +523,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public boolean isVillagerMissing(UUID uuid) {
+        return !getVillagers().contains(uuid);
+    }
+
+    @Override
     public Collection<UUID> getUnemployedVillagers() {
         return entities.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
@@ -554,7 +558,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public Map<MCQuest, MCReward> getQuestsWithRewardsForVillager(UUID uuid) {
+    public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid) {
         return this.quests.getAllForVillagerWithRewards(uuid);
     }
 
@@ -566,7 +570,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public Set<UUID> getVillagers() {
+    public ImmutableSet<UUID> getVillagers() {
         return TownQuests.getVillagers(quests);
     }
 
@@ -658,7 +662,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public ImmutableMap<MCQuest, MCReward> getAllQuestsWithRewards() {
+    public ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards() {
         return quests.questBatches.getAllWithRewards();
     }
 

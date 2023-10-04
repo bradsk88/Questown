@@ -697,7 +697,7 @@ public class VisitorMobEntity extends PathfinderMob {
             return InteractionResult.PASS;
         }
 
-        Map<MCQuest, MCReward> q4v = town.getQuestsWithRewardsForVillager(getUUID());
+        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestsWithRewardsForVillager(getUUID());
         Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
@@ -706,13 +706,13 @@ public class VisitorMobEntity extends PathfinderMob {
 
         Predicate<MCQuest> isComplete = Quest::isComplete;
         Set<MCQuest> finishedQuests = q4v
-                .keySet()
                 .stream()
+                .map(Map.Entry::getKey)
                 .filter(isComplete)
                 .collect(Collectors.toSet());
         Set<MCQuest> unfinishedQuests = q4v
-                .keySet()
                 .stream()
+                .map(Map.Entry::getKey)
                 .filter(isComplete.negate())
                 .collect(Collectors.toSet());
 
@@ -794,7 +794,7 @@ public class VisitorMobEntity extends PathfinderMob {
         return town.getQuestsForVillager(uuid);
     }
 
-    public Map<MCQuest, MCReward> getQuestsWithRewards() {
+    public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewards() {
         return town.getQuestsWithRewardsForVillager(uuid);
     }
 

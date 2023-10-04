@@ -1,9 +1,9 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,7 +16,7 @@ public class Quest<KEY, ROOM extends Room> {
     private @Nullable KEY fromRecipeID;
 
     Quest() {
-        this(null, null);
+        this(null, null, null);
     }
 
     @Override
@@ -30,8 +30,8 @@ public class Quest<KEY, ROOM extends Room> {
                 '}';
     }
 
-    protected Quest(KEY recipe, @Nullable KEY oldRecipe) {
-        this.uuid = UUID.randomUUID();
+    protected Quest(@Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {
+        this.uuid = ownerId;
         this.recipeId = recipe;
         this.status = QuestStatus.ACTIVE;
         this.fromRecipeID = oldRecipe;
@@ -100,10 +100,10 @@ public class Quest<KEY, ROOM extends Room> {
 
     interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
         QUEST newQuest(
-                KEY recipeId
+                @Nullable UUID ownerId, KEY recipeId
         );
         QUEST newUpgradeQuest(
-                KEY oldRecipeId, KEY newRecipeId
+                @Nullable UUID ownerId, KEY oldRecipeId, KEY newRecipeId
         );
         QUEST completed(
                 ROOM room,
@@ -113,5 +113,22 @@ public class Quest<KEY, ROOM extends Room> {
         QUEST lost(QUEST foundQuest);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Quest<?, ?> quest = (Quest<?, ?>) o;
+        return Objects.equals(uuid, quest.uuid) && Objects.equals(
+                recipeId,
+                quest.recipeId
+        ) && status == quest.status && Objects.equals(completedOn, quest.completedOn) && Objects.equals(
+                fromRecipeID,
+                quest.fromRecipeID
+        );
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(uuid, recipeId, status, completedOn, fromRecipeID);
+    }
 }

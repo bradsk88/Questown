@@ -12,6 +12,10 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCRoom, MCQue
 
     public static final Serializer SERIALIZER = new Serializer();
 
+    public MCQuestBatches(Factory<MCQuestBatch, MCReward> factory) {
+        super(factory);
+    }
+
     public ImmutableList<MCQuestBatch> getAllBatches() {
         return ImmutableList.copyOf(this.batches);
     }
@@ -42,7 +46,7 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCRoom, MCQue
                 MCQuestBatch q = MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag);
                 aqs.add(q);
             }
-            batches.initialize(aqs.build());
+            batches.initialize(entity, aqs.build());
         }
     }
 }

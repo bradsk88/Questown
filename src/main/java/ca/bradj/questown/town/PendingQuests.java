@@ -33,7 +33,7 @@ public class PendingQuests {
 
     public Optional<MCQuestBatch> grow(TownInterface town) {
         if (!hasBed && !town.hasEnoughBeds()) {
-            batch.addNewQuest(SpecialQuests.BEDROOM);
+            batch.addNewQuest(null, SpecialQuests.BEDROOM);
             hasBed = true;
         }
 
@@ -67,7 +67,7 @@ public class PendingQuests {
         if ((newCost > targetItemWeight / 2) || newCost > targetItemWeight - cost) {
             return Optional.empty();
         }
-        batch.addNewQuest(id);
+        batch.addNewQuest(this.batch.getUUID(), id);
         return Optional.empty();
     }
 

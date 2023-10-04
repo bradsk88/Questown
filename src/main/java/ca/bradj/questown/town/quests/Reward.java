@@ -1,6 +1,6 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.QT;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class Reward {
@@ -20,7 +20,7 @@ public abstract class Reward {
 
     void claim() {
         if (this.applied) {
-            Questown.LOGGER.error("Refusing to apply reward more than once: {}", this.getName());
+            QT.LOGGER.error("Refusing to apply reward more than once: {}", this.getName());
             return;
         }
         this.getApplier().apply();

@@ -7,9 +7,11 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.questown.town.quests.QuestBatches;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -18,11 +20,11 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
-public interface TownInterface {
+public interface TownInterface extends QuestBatches.VillagerProvider {
     @Nullable ServerLevel getServerLevel();
 
     BlockPos getTownFlagBasePos();
@@ -43,7 +45,7 @@ public interface TownInterface {
             MCQuestBatch batch
     );
 
-    Set<UUID> getVillagers();
+    ImmutableSet<UUID> getVillagers();
 
     @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
 
@@ -56,6 +58,9 @@ public interface TownInterface {
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 
     @Nullable UUID getRandomVillager();
+
+    @Override
+    boolean isVillagerMissing(UUID uuid);
 
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 
@@ -84,9 +89,9 @@ public interface TownInterface {
 
     boolean isInitialized();
 
-    ImmutableMap<MCQuest, MCReward> getAllQuestsWithRewards();
+    ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards();
 
-    Map<MCQuest, MCReward> getQuestsWithRewardsForVillager(UUID uuid);
+    List<HashMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

@@ -23,13 +23,13 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     public MCQuestBatch(@Nullable UUID owner, MCReward reward) {
         super(new Quest.QuestFactory<>() {
             @Override
-            public MCQuest newQuest(ResourceLocation recipeId) {
-                return MCQuest.standalone(recipeId);
+            public MCQuest newQuest(@Nullable UUID ownerID, ResourceLocation recipeId) {
+                return MCQuest.standalone(ownerID, recipeId);
             }
 
             @Override
-            public MCQuest newUpgradeQuest(ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
-                return MCQuest.upgrade(oldRecipeId, newRecipeId);
+            public MCQuest newUpgradeQuest(@Nullable UUID ownerID, ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
+                return MCQuest.upgrade(ownerID, oldRecipeId, newRecipeId);
             }
 
             @Override

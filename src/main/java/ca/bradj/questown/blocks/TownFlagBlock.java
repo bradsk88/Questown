@@ -15,7 +15,7 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -294,7 +294,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        ImmutableMap<MCQuest, MCReward> aQ = entity.getAllQuestsWithRewards();
+        ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = entity.getAllQuestsWithRewards();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
         NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {

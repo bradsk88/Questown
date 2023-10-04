@@ -13,6 +13,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     private final Stack<PendingQuests> pendingQuests = new Stack<>();
-    final MCQuestBatches questBatches = new MCQuestBatches();
+    final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private QuestBatch.ChangeListener<MCQuest> changeListener;
 
     TownQuests() {
@@ -42,7 +43,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
         MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(town, reward));
-        fireQuest.addNewQuest(SpecialQuests.CAMPFIRE);
+        fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
 
         quests.questBatches.add(fireQuest);
     }
@@ -118,7 +119,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         }
 
         MCQuestBatch upgradeQuest = new MCQuestBatch(visitorUUID, new MCDelayedReward(town, reward));
-        upgradeQuest.addNewUpgradeQuest(quest.getWantedId(), upgradeRecipe);
+        upgradeQuest.addNewUpgradeQuest(visitorUUID, quest.getWantedId(), upgradeRecipe);
 
         quests.questBatches.add(upgradeQuest);
     }
@@ -139,7 +140,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         );
 
         MCQuestBatch jobQuest = new MCQuestBatch(visitorUUID, new MCInstantReward(town, reward));
-        jobQuest.addNewQuest(Jobs.getRoomForJob(job));
+        jobQuest.addNewQuest(visitorUUID, Jobs.getRoomForJob(job));
 
         quests.questBatches.add(jobQuest);
     }
@@ -208,12 +209,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         quests.pendingQuests.push(theNewQuests);
     }
 
-    public static Set<UUID> getVillagers(TownQuests quests) {
-        return quests.questBatches.getAllBatches()
+    public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
+        return ImmutableSet.copyOf(quests.questBatches.getAllBatches()
                 .stream()
                 .map(MCQuestBatch::getOwner)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toSet())
+        );
     }
 
     public void tick(TownInterface town) {
@@ -289,7 +291,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 .toList();
     }
 
-    public Map<MCQuest, MCReward> getAllForVillagerWithRewards(UUID uuid) {
+    public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllForVillagerWithRewards(UUID uuid) {
         return this.questBatches.getAllForVillagerWithRewards(uuid);
     }
 

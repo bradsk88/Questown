@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,22 +32,22 @@ class QuestsTest {
     void setUp() {
         quests = new QuestBatch<>(new Quest.QuestFactory<>() {
             @Override
-            public TestQuest newQuest(Integer recipeId) {
-                return TestQuest.standalone(recipeId, Quest.QuestStatus.ACTIVE);
+            public TestQuest newQuest(@Nullable UUID ownerId, Integer recipeId) {
+                return TestQuest.standalone(ownerId, recipeId, Quest.QuestStatus.ACTIVE);
             }
 
             @Override
-            public TestQuest newUpgradeQuest(Integer oldRecipeId, Integer newRecipeId) {
-                return TestQuest.upgrade(newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
+            public TestQuest newUpgradeQuest(@Nullable UUID ownerId, Integer oldRecipeId, Integer newRecipeId) {
+                return TestQuest.upgrade(ownerId, newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
             }
 
             @Override
             public TestQuest completed(Room room, TestQuest input) {
                 TestQuest testQuest;
                 if (input.fromRecipeID().isPresent()) {
-                    testQuest = TestQuest.upgrade(input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.COMPLETED);
+                    testQuest = TestQuest.upgrade(null, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.COMPLETED);
                 } else {
-                    testQuest = TestQuest.standalone(input.recipeId, Quest.QuestStatus.COMPLETED);
+                    testQuest = TestQuest.standalone(null, input.recipeId, Quest.QuestStatus.COMPLETED);
                 }
                 testQuest.uuid = input.uuid;
                 return testQuest;
@@ -56,9 +57,9 @@ class QuestsTest {
             public TestQuest lost(TestQuest input) {
                 TestQuest testQuest;
                 if (input.fromRecipeID().isPresent()) {
-                    testQuest = TestQuest.upgrade(input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
+                    testQuest = TestQuest.upgrade(null, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
                 } else {
-                    testQuest = TestQuest.standalone(input.recipeId, Quest.QuestStatus.ACTIVE);
+                    testQuest = TestQuest.standalone(null, input.recipeId, Quest.QuestStatus.ACTIVE);
                 }
                 testQuest.uuid = input.uuid;
                 return testQuest;
@@ -79,16 +80,16 @@ class QuestsTest {
 
     @Test
     void getCompleted_returnsEmptyCollection_whenNoQuestsCompleted() {
-        quests.addNewQuest(1);
-        quests.addNewQuest(2);
+        quests.addNewQuest(null, 1);
+        quests.addNewQuest(null, 2);
 
         assertTrue(quests.getCompletedRecipeIDs().isEmpty());
     }
 
     @Test
     void getCompleted_returnsCollectionOfCompletedQuestIds() {
-        quests.addNewQuest(1);
-        quests.addNewQuest(2);
+        quests.addNewQuest(null, 1);
+        quests.addNewQuest(null, 2);
 
         quests.markRecipeAsComplete(testRoom1, 1);
         quests.markRecipeAsComplete(testRoom2, 2);
@@ -98,7 +99,7 @@ class QuestsTest {
 
     @Test
     void addNewQuest_addsNewQuestToQuests() {
-        quests.addNewQuest(1);
+        quests.addNewQuest(null, 1);
 
         assertEquals(1, quests.getAll().size());
         assertEquals(1, quests.getAll().get(0).getWantedId());
@@ -106,24 +107,24 @@ class QuestsTest {
 
     @Test
     void getAll_returnsImmutableList() {
-        quests.addNewQuest(1);
+        quests.addNewQuest(null, 1);
         ImmutableList<TestQuest> allQuests = quests.getAll();
 
         assertThrows(
                 UnsupportedOperationException.class,
-                () -> allQuests.add(TestQuest.standalone(2, Quest.QuestStatus.ACTIVE))
+                () -> allQuests.add(TestQuest.standalone(null, 2, Quest.QuestStatus.ACTIVE))
         );
     }
 
     @Test
     void initialize_throwsException_whenQuestsAlreadyInitialized() {
-        quests.addNewQuest(1);
+        quests.addNewQuest(null, 1);
         assertThrows(IllegalStateException.class, () -> quests.initialize(ImmutableList.of(), null));
     }
 
     @Test
     void markRecipeAsComplete_doesNothing_whenNoMatchingIncompleteQuests() {
-        quests.addNewQuest(1);
+        quests.addNewQuest(null, 1);
         quests.markRecipeAsComplete(testRoom1, 1);
 
         assertEquals(List.of(1), quests.getCompletedRecipeIDs());
@@ -131,8 +132,8 @@ class QuestsTest {
 
     @Test
     void markRecipeAsComplete_marksMatchingIncompleteQuestAsCompleted() {
-        quests.addNewQuest(1);
-        quests.addNewQuest(2);
+        quests.addNewQuest(null, 1);
+        quests.addNewQuest(null, 2);
 
         quests.markRecipeAsComplete(testRoom1, 1);
 
@@ -144,8 +145,8 @@ class QuestsTest {
 
     @Test
     void markRecipeAsComplete_removesMatchingCompletedQuestWhenCompletingUpgradeQuest() {
-        quests.addNewQuest(1);
-        quests.addNewUpgradeQuest(1, 2);
+        quests.addNewQuest(null, 1);
+        quests.addNewUpgradeQuest(null, 1, 2);
 
         quests.markRecipeAsComplete(testRoom1, 1);
         quests.markRecipeAsConverted(testRoom1, 1, 2);
@@ -161,7 +162,7 @@ class QuestsTest {
 
     @Test
     void markRecipeAsComplete_notifiesChangeListener() {
-        quests.addNewQuest(1);
+        quests.addNewQuest(null, 1);
 
         TestQuest completedQuest = quests.getAll().get(0);
         QuestBatch.ChangeListener<TestQuest> listener = new QuestBatch.ChangeListener<TestQuest>() {
@@ -192,18 +193,18 @@ class QuestsTest {
 
 class TestQuest extends Quest<Integer, Room> {
 
-    TestQuest(Integer id, @Nullable Integer from) {
-        super(id, from);
+    TestQuest(UUID ownerId, Integer id, @Nullable Integer from) {
+        super(ownerId, id, from);
     }
 
-    public static TestQuest standalone(Integer id, QuestStatus status) {
-        TestQuest testQuest = new TestQuest(id, null);
+    public static TestQuest standalone(UUID ownerId, Integer id, QuestStatus status) {
+        TestQuest testQuest = new TestQuest(ownerId, id, null);
         testQuest.status = status;
         return testQuest;
     }
 
-    public static TestQuest upgrade(Integer id, Integer from, QuestStatus status) {
-        TestQuest testQuest = new TestQuest(id, from);
+    public static TestQuest upgrade(UUID ownerId, Integer id, Integer from, QuestStatus status) {
+        TestQuest testQuest = new TestQuest(ownerId, id, from);
         testQuest.status = status;
         return testQuest;
     }
@@ -218,4 +219,7 @@ class TestQuest extends Quest<Integer, Room> {
                 ", from=" + fromRecipeID() +
                 '}';
     }
+
+
+
 }

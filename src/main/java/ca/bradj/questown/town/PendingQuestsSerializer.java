@@ -28,7 +28,7 @@ public class PendingQuestsSerializer {
         ListTag aq = new ListTag();
         for (PendingQuests q : batches) {
             MCQuestBatch asBatch = new MCQuestBatch(q.batch.getOwner(), q.batch.getReward());
-            q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getWantedId()));
+            q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getUUID(), v.getWantedId()));
             CompoundTag tag = MCQuestBatch.SERIALIZER.serializeNBT(asBatch);
             tag.putInt(NBT_WEIGHT_THRESHOLD, q.targetItemWeight);
             aq.add(tag);
@@ -51,7 +51,7 @@ public class PendingQuestsSerializer {
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
             PendingQuests pendingQuests = new PendingQuests(threshold, b.getOwner(), b.getReward());
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
-                pendingQuests.batch.addNewQuest(q.getWantedId());
+                pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }
             aqs.add(pendingQuests);
         }

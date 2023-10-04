@@ -6,10 +6,7 @@ import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -62,12 +59,12 @@ public class QuestBatch<
         return this.quests.stream().filter(Quest::isComplete).map(Quest::getWantedId).toList();
     }
 
-    public void addNewQuest(KEY id) {
-        this.quests.add(this.questFactory.newQuest(id));
+    public void addNewQuest(@Nullable UUID ownerId, KEY id) {
+        this.quests.add(this.questFactory.newQuest(ownerId, id));
     }
 
-    public void addNewUpgradeQuest(KEY fromID, KEY toID) {
-        this.quests.add(this.questFactory.newUpgradeQuest(fromID, toID));
+    public void addNewUpgradeQuest(@Nullable UUID ownerId, KEY fromID, KEY toID) {
+        this.quests.add(this.questFactory.newUpgradeQuest(ownerId, fromID, toID));
     }
 
     public ImmutableList<QUEST> getAll() {
@@ -204,6 +201,17 @@ public class QuestBatch<
             return true;
         }
         return false;
+    }
+
+    public QuestBatch<KEY, ROOM, QUEST, REWARD> withoutCompletion() {
+        return new QuestBatch<>(questFactory, reward);
+    }
+
+    public @Nullable UUID getUUID() {
+        if (quests.isEmpty()) {
+            return null;
+        }
+        return quests.get(0).getUUID();
     }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {

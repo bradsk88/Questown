@@ -52,14 +52,14 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public static List<UIQuest> fromLevel(
             Level level,
-            Map<? extends Quest<ResourceLocation, MCRoom>, MCReward> aQ
+            List<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
-        return aQ.entrySet().stream().map(z -> {
+        return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();
             RoomRecipe q = rMap.get(v.getWantedId());
             if (q == null) {
@@ -76,10 +76,14 @@ public class UIQuest implements Comparable<UIQuest> {
                 job = findJob(value);
             }
 
+            String jobRecipientUUID = null;
+            if (v.getUUID() != null) {
+                jobRecipientUUID = v.getUUID().toString();
+            }
             return new UIQuest(
                     new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength),
                     v.getStatus(), v.fromRecipeID().orElse(null),
-                    v.getUUID().toString(), job
+                    jobRecipientUUID, job
             );
         }).toList();
     }
