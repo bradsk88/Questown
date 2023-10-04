@@ -6,6 +6,7 @@ import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -14,12 +15,12 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     public static final String ID = "add_random_batch_of_quests";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
     private final TownInterface town;
-    private UUID visitorUUID;
+    private @Nullable UUID visitorUUID;
 
     public AddBatchOfRandomQuestsForVisitorReward(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
-            @NotNull UUID visitorUUID
+            @Nullable UUID visitorUUID
     ) {
         super(rType);
         this.visitorUUID = visitorUUID;
@@ -28,7 +29,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
 
     public AddBatchOfRandomQuestsForVisitorReward(
             @NotNull TownInterface entity,
-            @NotNull UUID visitorUUID
+            @Nullable UUID visitorUUID
     ) {
         this(RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get(), entity, visitorUUID);
     }
@@ -41,7 +42,9 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     @Override
     protected Tag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
+        if (this.visitorUUID != null) {
+            compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
+        }
         return compoundTag;
     }
 

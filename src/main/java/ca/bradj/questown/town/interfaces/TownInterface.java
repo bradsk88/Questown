@@ -31,7 +31,7 @@ public interface TownInterface {
 
     void addMorningReward(MCReward ev);
 
-    void addBatchOfRandomQuestsForVisitor(UUID visitorUUID);
+    void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID);
 
     Vec3 getVisitorJoinPos();
 
@@ -55,7 +55,7 @@ public interface TownInterface {
 
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 
-    UUID getRandomVillager();
+    @Nullable UUID getRandomVillager();
 
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 

@@ -21,7 +21,6 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -30,7 +29,10 @@ public class Questown {
     public static final String MODID = "questown";
 
     // Directly reference a log4j logger.
-    public static final Logger LOGGER = LogManager.getLogger();
+    /**
+     * @deprecated Use QT.LOGGER
+     */
+    public static final Logger LOGGER = QT.LOGGER;
     public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
 

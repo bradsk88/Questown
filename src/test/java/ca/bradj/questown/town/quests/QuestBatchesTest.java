@@ -3,6 +3,7 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
@@ -98,5 +99,48 @@ class QuestBatchesTest {
         Assertions.assertEquals(1, quests.size());
         Assertions.assertEquals(2, quests.get(0).getWantedId());
         Assertions.assertTrue(quests.get(0).isComplete());
+    }
+
+    @Test
+    void markRecipeAsComplete_ShouldHaveNoEffect_IfRoomAndRecipeAreAlreadyPresent() {
+        QuestBatches<
+                Integer, Room, TestQuest, Reward,
+                QuestBatch<Integer, Room, TestQuest, Reward>
+                > qbs = new QuestBatches<>();
+
+        Room sameRoom = new Room(
+                new Position(1, 2),
+                new InclusiveSpace(
+                        new Position(3, 4),
+                        new Position(5, 6)
+                )
+        );
+
+        TestQuestBatch incompleteBatch = new TestQuestBatch();
+        incompleteBatch.addNewQuest(1);
+
+        TestQuestBatch completeBatch = new TestQuestBatch();
+        completeBatch.addNewQuest(1);
+        completeBatch.markRecipeAsComplete(sameRoom, 1);
+
+        qbs.add(incompleteBatch);
+        qbs.add(completeBatch);
+
+        qbs.markRecipeAsComplete(sameRoom, 1);
+
+        ImmutableList<TestQuest> quests = qbs.getAll();
+        Assertions.assertEquals(2, quests.size());
+        Assertions.assertEquals(1, quests.stream()
+                .filter(Quest::isComplete)
+                .filter(v -> v.getWantedId().equals(1))
+                .filter(v -> sameRoom.equals(v.completedOn))
+                .count()
+        );
+        Assertions.assertEquals(1, quests.stream()
+                .filter(Predicates.not(Quest::isComplete))
+                .filter(v -> v.getWantedId().equals(1))
+                .filter(v -> v.completedOn == null)
+                .count()
+        );
     }
 }

@@ -70,6 +70,11 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
                 scanAroundPos, ars, registeredDoors
         );
+
+        if (rooms.isEmpty()) {
+            return;
+        }
+
         List<AbstractMap.SimpleEntry<Position, Optional<MCRoom>>> array = rooms.entrySet()
                 .stream()
                 .map(v -> new AbstractMap.SimpleEntry<>(
@@ -86,7 +91,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     room,
                     ars
             );
-            activeRecipes.get(scanLevel).update(room, room, recipe.orElse(null));
+            ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> rs = activeRecipes.get(scanLevel);
+            rs.update(room, room, recipe.orElse(null));
         });
     }
 

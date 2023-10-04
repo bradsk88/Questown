@@ -11,6 +11,7 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -76,30 +77,30 @@ public class TownFlagBlock extends BaseEntityBlock {
             ServerLevel level,
             ItemStack itemInHand
     ) {
-            if (itemInHand.getTag() == null) {
-                return null;
-            }
-            int x, y, z;
-            String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-            if (!itemInHand.getTag().contains(xTag)) {
-                return null;
-            }
-            String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-            if (!itemInHand.getTag().contains(yTag)) {
-                return null;
-            }
-            String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-            if (!itemInHand.getTag().contains(zTag)) {
-                return null;
-            }
-            x = itemInHand.getOrCreateTag().getInt(xTag);
-            y = itemInHand.getOrCreateTag().getInt(yTag);
-            z = itemInHand.getOrCreateTag().getInt(zTag);
+        if (itemInHand.getTag() == null) {
+            return null;
+        }
+        int x, y, z;
+        String xTag = String.format("%s.parent_pos_x", Questown.MODID);
+        if (!itemInHand.getTag().contains(xTag)) {
+            return null;
+        }
+        String yTag = String.format("%s.parent_pos_y", Questown.MODID);
+        if (!itemInHand.getTag().contains(yTag)) {
+            return null;
+        }
+        String zTag = String.format("%s.parent_pos_z", Questown.MODID);
+        if (!itemInHand.getTag().contains(zTag)) {
+            return null;
+        }
+        x = itemInHand.getOrCreateTag().getInt(xTag);
+        y = itemInHand.getOrCreateTag().getInt(yTag);
+        z = itemInHand.getOrCreateTag().getInt(zTag);
 
 
-            BlockPos bp = new BlockPos(x, y, z);
-            Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(bp, TilesInit.TOWN_FLAG.get());
-            return oEntity.orElse(null);
+        BlockPos bp = new BlockPos(x, y, z);
+        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(bp, TilesInit.TOWN_FLAG.get());
+        return oEntity.orElse(null);
 
     }
 
@@ -123,6 +124,15 @@ public class TownFlagBlock extends BaseEntityBlock {
                 );
                 return InteractionResult.sidedSuccess(false);
             }
+        }
+
+
+        if (itemInHand.getItem().equals(Items.GOLD_BLOCK)) {
+            UUID randomVillager = entity.getRandomVillager();
+            entity.addImmediateReward(
+                    new AddBatchOfRandomQuestsForVisitorReward(entity, randomVillager)
+            );
+            return InteractionResult.sidedSuccess(false);
         }
 
         if (itemInHand.getItem().equals(Items.OAK_LOG)) {
@@ -160,7 +170,11 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (converted != null) {
             StoreFlagInputOnOutputNBT(itemInHand, converted);
             player.setItemInHand(hand, converted);
-            Questown.LOGGER.debug("{} created at {}", converted.getItem().getRegistryName(), entity.getTownFlagBasePos());
+            Questown.LOGGER.debug(
+                    "{} created at {}",
+                    converted.getItem().getRegistryName(),
+                    entity.getTownFlagBasePos()
+            );
             ItemStack toDrop = null;
             if (itemInHand.getCount() > 1) {
                 toDrop = itemInHand.copy();
@@ -209,7 +223,12 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void attack(BlockState p_60499_, Level level, BlockPos p_60501_, Player player) {
+    public void attack(
+            BlockState p_60499_,
+            Level level,
+            BlockPos p_60501_,
+            Player player
+    ) {
         super.attack(p_60499_, level, p_60501_, player);
         if (level.isClientSide()) {
             return;

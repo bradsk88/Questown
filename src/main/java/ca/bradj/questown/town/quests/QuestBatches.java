@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
@@ -78,6 +79,16 @@ public class QuestBatches<
             ROOM room,
             KEY recipeId
     ) {
+        for (BATCH b : batches) {
+            if (b.getAll().stream()
+                    .filter(Quest::isComplete)
+                    .filter(v -> recipeId.equals(v.getWantedId()))
+                    .anyMatch(v -> room.equals(v.completedOn))
+            ) {
+                QT.LOGGER.debug("Quest was already marked complete: {} for door {}", recipeId, room.doorPos);
+                return;
+            }
+        }
         for (BATCH b : batches) {
             if (b.markRecipeAsComplete(room, recipeId)) {
                 break;

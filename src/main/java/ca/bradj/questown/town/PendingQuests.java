@@ -10,6 +10,7 @@ import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,7 @@ public class PendingQuests {
 
     MCQuestBatch batch;
 
-    public PendingQuests(int targetItemWeight, UUID ownerUUID, MCReward reward) {
+    public PendingQuests(int targetItemWeight, @Nullable UUID ownerUUID, MCReward reward) {
         this.targetItemWeight = targetItemWeight;
         this.batch = new MCQuestBatch(ownerUUID, reward);
     }

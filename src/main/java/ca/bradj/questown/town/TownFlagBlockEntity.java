@@ -468,7 +468,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public void addBatchOfRandomQuestsForVisitor(UUID visitorUUID) {
+    public void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID) {
         TownQuests.addRandomBatchForVisitor(this, quests, visitorUUID);
         setChanged();
     }
@@ -515,7 +515,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public UUID getRandomVillager() {
+    public @Nullable UUID getRandomVillager() {
+        if (getVillagers().isEmpty()) {
+            return null;
+        }
         List<UUID> villagers = ImmutableList.copyOf(getVillagers());
         return villagers.get(getServerLevel().getRandom().nextInt(villagers.size()));
     }

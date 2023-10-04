@@ -193,7 +193,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     public static void addRandomBatchForVisitor(
             TownInterface town,
             TownQuests quests,
-            UUID visitorUUID
+            @Nullable UUID visitorUUID
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
         int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
