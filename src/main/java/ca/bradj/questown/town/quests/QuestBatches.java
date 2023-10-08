@@ -97,8 +97,13 @@ public class QuestBatches<
     ) {
         if (owner != null && villagers.isVillagerMissing(owner)) {
             UUID newOwner = villagers.getRandomVillager();
-            QT.LOGGER.warn("Replacing missing villager {} with {}", owner, newOwner);
-            owner = newOwner;
+            if (newOwner == null) {
+                // FIXME: This will alway happen because the flag gets initialized before entities
+                QT.LOGGER.warn("Could not repair quest belonging to {} because no other villagers exist", owner);
+            } else {
+                QT.LOGGER.warn("Replacing missing villager {} with {}", owner, newOwner);
+                owner = newOwner;
+            }
         }
         return owner;
     }
@@ -165,7 +170,7 @@ public class QuestBatches<
     public List<HashMap.SimpleEntry<QUEST, REWARD>> getAllForVillagerWithRewards(UUID uuid) {
         ImmutableList.Builder<HashMap.SimpleEntry<QUEST, REWARD>> b = ImmutableList.builder();
         this.batches.stream()
-                .filter(v -> v.getAll().stream().allMatch(z -> z.uuid.equals(uuid)))
+                .filter(v -> v.getAll().stream().allMatch(z -> uuid.equals(z.uuid)))
                 .forEach(v -> v.getAll().forEach(z -> new HashMap.SimpleEntry<>(z, v.reward)));
         return b.build();
     }

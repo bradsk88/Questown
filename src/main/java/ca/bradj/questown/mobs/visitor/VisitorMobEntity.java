@@ -1,10 +1,12 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -686,7 +688,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public InteractionResult interactAt(
             Player player,
             Vec3 p_19981_,
-            InteractionHand p_19982_
+            InteractionHand hand
     ) {
         boolean isClientSide = player.level.isClientSide();
         if (!(player instanceof ServerPlayer sp)) {
@@ -717,7 +719,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 .collect(Collectors.toSet());
 
         VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
-                town.getVillagers().stream().filter(Objects::nonNull).toList().size() == 1,
+                town.getVillagersWithQuests().stream().filter(Objects::nonNull).toList().size() == 1,
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
@@ -879,5 +881,10 @@ public class VisitorMobEntity extends PathfinderMob {
             this.take(p_21471_, itemstack.getCount());
             p_21471_.discard();
         }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s [%s]", super.toString(), getUUID());
     }
 }

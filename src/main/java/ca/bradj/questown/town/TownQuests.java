@@ -59,7 +59,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 new SpawnVisitorReward(town, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
         );
-        if (town.getVillagers().isEmpty()) {
+        if (town.getVillagersWithQuests().isEmpty()) {
             // Spawn a villager with a set of quests
             return newVisitor;
 //        } else if (rand.nextBoolean()) {

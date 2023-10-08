@@ -45,6 +45,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider {
             MCQuestBatch batch
     );
 
+    ImmutableSet<UUID> getVillagersWithQuests();
+
     ImmutableSet<UUID> getVillagers();
 
     @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);

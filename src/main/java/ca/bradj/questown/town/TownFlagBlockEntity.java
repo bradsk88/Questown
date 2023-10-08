@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.ScheduledBlock;
 import ca.bradj.questown.core.Config;
@@ -63,6 +64,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
@@ -571,6 +573,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public ImmutableSet<UUID> getVillagers() {
+        return ImmutableSet.copyOf(this.entities.stream().map(Entity::getUUID).collect(Collectors.toSet()));
+    }
+
+    @Override
+    public ImmutableSet<UUID> getVillagersWithQuests() {
         return TownQuests.getVillagers(quests);
     }
 
@@ -581,6 +588,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void registerEntity(VisitorMobEntity vEntity) {
+        QT.LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
         this.entities.add(vEntity);
         vEntity.addChangeListener(() -> {
             Questown.LOGGER.debug("Setting changed");
@@ -760,7 +768,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (entities.contains(visitorMobEntity)) {
             return;
         }
-        Questown.LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        QT.LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
         visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
+    }
+
+    public void recallVillagers() {
+        entities.forEach(v -> {
+            Vec3 visitorJoinPos = getVisitorJoinPos();
+            QT.LOGGER.debug("Moving {} to {}", v, visitorJoinPos);
+            v.setPos(visitorJoinPos);
+        });
     }
 }

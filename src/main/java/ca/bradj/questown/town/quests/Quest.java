@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public class Quest<KEY, ROOM extends Room> {
 
-    protected UUID uuid;
+    @Nullable protected UUID uuid;
     protected KEY recipeId;
     protected QuestStatus status;
     protected @Nullable ROOM completedOn;

@@ -43,6 +43,7 @@
   "quests.upgrade": "%s -> %s",
   "quests.completed_suffix": "%s ✓",
   "quests.job_change": "%s will become a %s",
+  "quests.job_owner": "Quest belongs to %s",
   "room.no_recipe": "Room",
   "room.crafting_room": "Crafting Room",
   "room.workshop": "Workshop",
@@ -144,8 +145,4 @@
   "jobs.farmer": "Farmer",
   "jobs.gatherer": "Gatherer",
   "menu.quests": "Quests"
-
-
-
-
 }

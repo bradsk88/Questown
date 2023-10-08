@@ -118,7 +118,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
-            for (UUID uuid : entity.getVillagers()) {
+            for (UUID uuid : entity.getVillagersWithQuests()) {
                 entity.addImmediateReward(
                         new AddRandomUpgradeQuest(entity, uuid)
                 );
@@ -136,7 +136,14 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.OAK_LOG)) {
+            Questown.LOGGER.debug("Town UUID: {}", entity.getUUID());
             Questown.LOGGER.debug("Quests: {}", entity.getAllQuests());
+            Questown.LOGGER.debug("Villagers: {}", entity.getVillagers());
+            return InteractionResult.sidedSuccess(false);
+        }
+
+        if (itemInHand.getItem().equals(Items.POTATO)) {
+            entity.recallVillagers();
             return InteractionResult.sidedSuccess(false);
         }
 

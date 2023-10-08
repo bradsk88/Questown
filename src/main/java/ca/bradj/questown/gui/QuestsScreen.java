@@ -177,13 +177,30 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 // TODO: Should we also render the owners head for non-job quests?
                 String vID = recipe.villagerUUID();
                 String jobName = recipe.jobName();
-                if (!vID.isEmpty() && !jobName.isEmpty()) {
+
+                Component tooltip = new TranslatableComponent("quests.job_owner", vID);
+
+                if (vID.isEmpty()) {
+                    continue;
+                }
+
+                boolean hasJob = jobName.isEmpty();
+                if (!hasJob) {
+                    tooltip = new TranslatableComponent("quests.job_change", vID, jobName);
+                }
+
+                boolean showHead = !hasJob;
+                if (mouseX >= x && mouseY >= cardY && mouseX < x + CARD_WIDTH && mouseY < cardY + CARD_HEIGHT) {
+                    showHead = true;
+                }
+
+                if (showHead) {
                     int headX = x + CARD_WIDTH - 19;
                     int headY = idY - 6;
                     this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
                     if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
                         fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
-                        renderTooltip(poseStack, new TranslatableComponent("quests.job_change", vID, jobName), mouseX, mouseY);
+                        renderTooltip(poseStack, tooltip, mouseX, mouseY);
                     }
                 }
             }
