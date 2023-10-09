@@ -96,6 +96,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
+    private final MCRoom flagMetaRoom = new MCRoom(
+            Positions.FromBlockPos(getBlockPos().offset(1, 0, 0)),
+            ImmutableList.of(new InclusiveSpace(
+                    // TODO: Add 2 to config?
+                    Positions.FromBlockPos(getBlockPos()).offset(-2, -2),
+                    Positions.FromBlockPos(getBlockPos()).offset(2, 2)
+            )),
+            getBlockPos().getY()
+    );
 
 
     public TownFlagBlockEntity(
@@ -545,13 +554,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public BlockPos getRandomWanderTarget() {
-        Position wt = getWanderTargetPosition();
-        BlockPos bp = getBlockPos();
-        if (wt != null) {
-            bp = Positions.ToBlock(wt, getBlockPos().getY());
-        }
-        return bp;
+    public BlockPos getRandomWanderTarget(BlockPos avoiding) {
+        Collection<MCRoom> all = roomsMap.getAllRooms();
+        ImmutableList.Builder<MCRoom> b = ImmutableList.builder();
+        b.addAll(roomsMap.getAllRooms());
+        b.add(flagMetaRoom);
+
+        return pois.getWanderTarget(getServerLevel(), b.build(), (p, r) -> {
+            BlockPos pos = Positions.ToBlock(p, r.yCoord);
+            double dist = pos.distSqr(avoiding);
+            if (dist > 5) {
+                QT.LOGGER.debug("Target is {} blocks away from {}", dist, avoiding);
+                return true;
+            }
+            return false;
+        }, (p, r) -> Positions.ToBlock(p, r.yCoord));
     }
 
     @Override
@@ -607,7 +624,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 Direction.Plane.HORIZONTAL.getRandomDirection(level.random),
                 10
         );
-        Questown.LOGGER.debug("No welcome mats found, falling back to {}", fallback);
+        QT.LOGGER.debug("No welcome mats found, falling back to {}", fallback);
         return fallback;
     }
 
@@ -672,12 +689,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards() {
         return quests.questBatches.getAllWithRewards();
-    }
-
-
-    private @Nullable Position getWanderTargetPosition() {
-        Collection<MCRoom> all = roomsMap.getAllRooms();
-        return pois.getWanderTarget(getServerLevel(), all);
     }
 
     void onMorning(long newTime) {

@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
@@ -16,7 +17,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
     private static final int REPEAT_BUFFER = 20;
     private static final int PAUSE_TICKS = 100;
 
-    final float speedModifier;
+    final float walkSpeed;
     private long nextUpdate;
     private BlockPos target;
 
@@ -28,7 +29,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
                 MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM, MemoryStatus.VALUE_PRESENT,
                 MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryStatus.REGISTERED
         ));
-        this.speedModifier = speedModifier;
+        this.walkSpeed = speedModifier;
     }
 
     @Override
@@ -58,19 +59,17 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
 
     @Override
     protected boolean canStillUse(ServerLevel level, VisitorMobEntity entity, long p_22547_) {
-        boolean b = super.canStillUse(level, entity, p_22547_);
-        if (!b) {
-            return b;
-        }
         Optional<Long> since = entity.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         if (since.isEmpty()) {
             entity.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, level.getDayTime());
-            return b;
+            return true;
         }
         long trying = level.getDayTime() - since.get();
-        Questown.LOGGER.debug("Trying to reach target for {}", trying);
-        // TODO: Give up
-        return b;
+        if (trying > PAUSE_TICKS) {
+            QT.LOGGER.debug("Giving up on target because it took too long to get there");
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -84,8 +83,13 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         // DO NOT CHANGE THIS. It makes path finding way less reliable.
         // If you need the entity to stand nearby a block rather than on it, YOU need to do that math.
         int dist = 0;
-        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, this.speedModifier, dist));
+        float speed = this.walkSpeed;
+        double distToTarget = e.blockPosition().distSqr(bp);
+        if (distToTarget > 500) { // TODO: Use navigation distance to account for complex paths
+            speed = speed * 1.5f; // TODO: Define this as a field on the class?
+        }
+        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
-        Questown.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
+        QT.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
     }
 }

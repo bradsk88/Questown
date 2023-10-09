@@ -182,7 +182,9 @@ public class VisitorMobEntity extends PathfinderMob {
                 Pair.of(0, new LookAtWalkTarget()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
-                Pair.of(1, new MoveToTargetSink()),
+                // TODO: Make this config?
+                // TODO: Audit this timeout. Too much, too little?
+                Pair.of(1, new MoveToTargetSink(360, 360)),
                 Pair.of(3, new TendCrops(200)),
                 Pair.of(4, new Admire(100)),
                 Pair.of(5, new CoerceWalk()),
@@ -649,7 +651,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (target != null) {
             this.setWanderTarget(target);
         } else {
-            this.setWanderTarget(town.getRandomWanderTarget());
+            this.setWanderTarget(town.getRandomWanderTarget(blockPosition()));
         }
         return this.getWanderTarget();
     }

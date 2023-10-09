@@ -318,11 +318,11 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     ) {
         BlockPos enterExitPos = getEnterExitPos(town); // TODO: Smarter logic? Town gate?
         return switch (journal.getStatus()) {
-            case NO_FOOD -> handleNoFoodStatus(town);
+            case NO_FOOD -> handleNoFoodStatus(entityBlockPos, town);
             case NO_GATE -> handleNoGateStatus(entityBlockPos, town);
             case UNSET, IDLE, STAYING, RELAXING -> null;
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
-            case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(town);
+            case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(entityBlockPos, town);
             case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
             case FARMING, WALKING_TO_FARM
                     -> throw new IllegalArgumentException("Gatherer was given farmer status");
@@ -336,7 +336,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             TownInterface town
     ) {
         if (journal.hasAnyLootToDrop()) {
-            return setupForDropLoot(town);
+            return setupForDropLoot(entityPos, town);
         }
 
         Questown.LOGGER.debug("Visitor is searching for gate");
@@ -351,13 +351,15 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             return this.gateTarget;
         } else {
             Questown.LOGGER.debug("No gate exists in town");
-            return town.getRandomWanderTarget();
+            return town.getRandomWanderTarget(entityPos);
         }
     }
 
-    private BlockPos handleNoFoodStatus(TownInterface town) {
+    private BlockPos handleNoFoodStatus(
+            BlockPos entityBlockPos,
+            TownInterface town) {
         if (journal.hasAnyLootToDrop()) {
-            return setupForDropLoot(town);
+            return setupForDropLoot(entityBlockPos, town);
         }
 
         Questown.LOGGER.debug("Visitor is searching for food");
@@ -373,16 +375,18 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             return Positions.ToBlock(this.foodTarget.getInteractPosition(), this.foodTarget.getYPosition());
         } else {
             Questown.LOGGER.debug("No food exists in town");
-            return town.getRandomWanderTarget();
+            return town.getRandomWanderTarget(entityBlockPos);
         }
     }
 
-    private BlockPos setupForDropLoot(TownInterface town) {
+    private BlockPos setupForDropLoot(
+            BlockPos entityPos,
+            TownInterface town) {
         this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
         if (this.successTarget != null) {
             return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
         }
-        return town.getRandomWanderTarget();
+        return town.getRandomWanderTarget(entityPos);
     }
 
     private BlockPos setupForLeaveTown(TownInterface town) {

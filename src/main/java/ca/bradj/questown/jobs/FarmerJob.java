@@ -2,9 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.gui.InventoryAndStatusMenu;
-import ca.bradj.questown.gui.TownQuestsContainer;
-import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -21,16 +18,11 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -46,8 +38,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ToolActions;
-import net.minecraftforge.network.NetworkHooks;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -321,7 +311,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 if (areAllPartsOfEntityInFarm(entityPos)) {
                     return getGateInteractionSpot(town, selectedFarm);
                 }
-                return setupForDropLoot(town);
+                return setupForDropLoot(entityBlockPos, town);
             }
             return Positions.ToBlock(
                     InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
@@ -332,12 +322,14 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return null;
     }
 
-    private BlockPos setupForDropLoot(TownInterface town) {
+    private BlockPos setupForDropLoot(
+            BlockPos entityBlockPos,
+            TownInterface town) {
         this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
         if (this.successTarget != null) {
             return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
         }
-        return town.getRandomWanderTarget();
+        return town.getRandomWanderTarget(entityBlockPos);
     }
 
     private void setupForGetSupplies(

@@ -5,8 +5,6 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.interfaces.WallDetector;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,10 +14,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class TownPois {
 
@@ -41,25 +36,49 @@ public class TownPois {
         return new Vec3(vs.getX(), vs.getY(), vs.getZ());
     }
 
-    public Position getWanderTarget(ServerLevel level, Collection<? extends Room> all) {
+    public interface Filter<R extends Room> {
+        boolean include(Position positionIn, R containingRoom);
+    }
+
+    public interface PositionFactory<P, R extends Room> {
+        P make(Position p, R containingRoom);
+    }
+
+    public <R extends Room, P> P getWanderTarget(
+            ServerLevel level,
+            Collection<R> all,
+            Filter<R> filter,
+            PositionFactory<P, R> pFact
+    ) {
         // TODO: Put these on a stack each tick. Don't iterate every room on every tick.
-        for (Room r : all) {
-            if (level.getRandom().nextInt(all.size()) == 0) {
-                Position ac = r.getSpace().getCornerA();
-                Position bc = r.getSpace().getCornerB();
-                if (level.getRandom().nextBoolean()) {
-                    return new Position((ac.x + bc.x) / 2, (ac.z + bc.z) / 2);
-                }
-                if (level.getRandom().nextBoolean()) {
-                    return ac.offset(1, 1);
-                }
-                if (level.getRandom().nextBoolean()) {
-                    return bc.offset(-1, -1);
-                }
-                return r.getDoorPos();
-            }
+        R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
+        Position ac = r.getSpace().getCornerA();
+        Position bc = r.getSpace().getCornerB();
+
+        ImmutableList.Builder<P> b = ImmutableList.builder();
+
+        Position center = new Position((ac.x + bc.x) / 2, (ac.z + bc.z) / 2);
+        if (filter.include(center, r)) {
+            b.add(pFact.make(center, r));
         }
-        return null;
+        Position aCorner = ac.offset(1, 1); // TODO: These offsets still needed?
+        if (filter.include(aCorner, r)) {
+            b.add(pFact.make(aCorner, r));
+        }
+        Position bCorner = bc.offset(-1, -1);
+        if (filter.include(bCorner, r)) {
+            b.add(pFact.make(bCorner, r));
+        }
+        Position doorPos = r.getDoorPos();
+        if (filter.include(doorPos, r)) {
+            b.add(pFact.make(doorPos, r));
+        }
+
+        ImmutableList<P> positions = b.build();
+        if (positions.isEmpty()) {
+            return null;
+        }
+        return positions.get(level.getRandom().nextInt(positions.size()));
     }
 
     public @Nullable BlockPos getWelcomeMatPos(@NotNull ServerLevel level) {

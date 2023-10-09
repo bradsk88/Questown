@@ -8,8 +8,6 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 
-import java.util.Optional;
-
 public class Admire extends Behavior<VisitorMobEntity> {
 
     private final int maxAdmireTicks;
@@ -29,12 +27,12 @@ public class Admire extends Behavior<VisitorMobEntity> {
     @Override
     protected boolean checkExtraStartConditions(
             ServerLevel p_22538_,
-            VisitorMobEntity p_22539_
+            VisitorMobEntity entity
     ) {
-        if (!super.checkExtraStartConditions(p_22538_, p_22539_)) {
+        if (!super.checkExtraStartConditions(p_22538_, entity)) {
             return false;
         }
-        GathererJournal.Status s = p_22539_.getStatus();
+        GathererJournal.Status s = entity.getStatus();
         return !s.isWorking() && !s.isPreparing();
     }
 
@@ -89,7 +87,9 @@ public class Admire extends Behavior<VisitorMobEntity> {
             long p_22553_
     ) {
         super.tick(p_22551_, e, p_22553_);
-        e.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
+            e.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        }
         e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
         this.admireTicks++;
     }

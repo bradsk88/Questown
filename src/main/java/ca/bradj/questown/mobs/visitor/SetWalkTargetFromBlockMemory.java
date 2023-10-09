@@ -56,22 +56,22 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
 
     protected void start(
             ServerLevel p_24059_,
-            VisitorMobEntity p_24060_,
+            VisitorMobEntity ent,
             long p_24061_
     ) {
-        Brain<?> brain = p_24060_.getBrain();
+        Brain<?> brain = ent.getBrain();
         brain.getMemory(this.memoryType).ifPresent((p_24067_) -> {
-            if (!this.wrongDimension(p_24059_, p_24067_) && !this.tiredOfTryingToFindTarget(p_24059_, p_24060_)) {
-                if (this.tooFar(p_24060_, p_24067_)) {
+            if (!this.wrongDimension(p_24059_, p_24067_) && !this.tiredOfTryingToFindTarget(p_24059_, ent)) {
+                if (this.tooFar(ent, p_24067_)) {
                     Vec3 vec3 = null;
                     int i = 0;
 
                     for (int j = 1000; i < 1000 && (vec3 == null || this.tooFar(
-                            p_24060_,
+                            ent,
                             GlobalPos.of(p_24059_.dimension(), new BlockPos(vec3))
                     )); ++i) {
                         vec3 = DefaultRandomPos.getPosTowards(
-                                p_24060_,
+                                ent,
                                 15,
                                 7,
                                 Vec3.atBottomCenterOf(p_24067_.pos()),
@@ -80,7 +80,7 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
                     }
 
                     if (i == 1000) {
-                        this.dropPOI(p_24060_, p_24061_);
+                        this.dropPOI(ent, p_24061_);
                         return;
                     }
 
@@ -88,18 +88,18 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
                             MemoryModuleType.WALK_TARGET,
                             new WalkTarget(vec3, this.speedModifier, this.closeEnoughDist)
                     );
-                } else if (!this.closeEnough(p_24059_, p_24060_, p_24067_)) {
+                } else if (!this.closeEnough(p_24059_, ent, p_24067_)) {
                     brain.setMemory(
                             MemoryModuleType.WALK_TARGET,
                             new WalkTarget(p_24067_.pos(), this.speedModifier, this.closeEnoughDist)
                     );
                 }
             } else {
-                if (p_24060_.town == null) {
+                if (ent.town == null) {
                     Questown.LOGGER.error("No town exists. Cannot start.");
                     return;
                 }
-                p_24060_.setWanderTarget(p_24060_.town.getRandomWanderTarget());
+                ent.setWanderTarget(ent.town.getRandomWanderTarget(ent.blockPosition()));
             }
 
         });

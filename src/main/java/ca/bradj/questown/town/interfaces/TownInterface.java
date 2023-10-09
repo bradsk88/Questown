@@ -37,7 +37,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider {
 
     Vec3 getVisitorJoinPos();
 
-    BlockPos getRandomWanderTarget();
+    BlockPos getRandomWanderTarget(BlockPos avoiding);
 
     Collection<MCQuest> getQuestsForVillager(UUID uuid);
 
