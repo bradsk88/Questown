@@ -1,12 +1,10 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -83,9 +81,9 @@ import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -122,25 +120,17 @@ public class VisitorMobEntity extends PathfinderMob {
     private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSOR_TYPES = ImmutableList.of(
             SensorType.NEAREST_BED
     );
-
-    Job<MCHeldItem, ? extends Snapshot> job = getJob();
     private static final int inventoryCapacity = 6;
-    private final AABB defaultBB;
-
-    // TODO: Make this abstract or injectable
-    @NotNull
-    private GathererJob getJob() {
-        return new GathererJob(town, inventoryCapacity, uuid);
-    }
-
-    boolean sitting = true;
-    TownInterface town;
-    private BlockPos wanderTarget;
-    private boolean initializedItems;
-    private List<ChangeListener> changeListeners = new ArrayList<>();
-    private boolean initialized;
+    private static final float walkSpeed = 0.3f;
+    private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
+    boolean sitting = true;
+    TownInterface town;
+    Job<MCHeldItem, ? extends Snapshot<?>> job = getInitialJob();
+    private BlockPos wanderTarget;
+    private List<ChangeListener> changeListeners = new ArrayList<>();
+    private boolean initialized;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -149,7 +139,6 @@ public class VisitorMobEntity extends PathfinderMob {
     ) {
         super(ownType, level);
         this.setCanPickUpLoot(true);
-        this.defaultBB = getBoundingBox();
         this.town = town;
         if (town != null) {
             initBrain();
@@ -169,13 +158,12 @@ public class VisitorMobEntity extends PathfinderMob {
     public static AttributeSupplier setAttributes() {
         return PathfinderMob
                 .createMobAttributes()
-                .add(Attributes.FOLLOW_RANGE, 48.0)
+                .add(Attributes.FOLLOW_RANGE, 100)
                 .build();
     }
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getCorePackage(
     ) {
-        Integer giveUp = Config.WANDER_GIVEUP_TICKS.get();
         return ImmutableList.of(
                 Pair.of(0, new Swim(0.8F)),
 //                Pair.of(0, new InteractWithDoor()),
@@ -183,7 +171,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 Pair.of(0, new LookAtWalkTarget()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
-                Pair.of(1, new MoveToTargetSink(giveUp, giveUp)),
+                Pair.of(1, new MoveToTownTargetSink()),
                 Pair.of(3, new TendCrops(200)),
                 Pair.of(4, new Admire(100)),
                 Pair.of(5, new CoerceWalk()),
@@ -210,7 +198,7 @@ public class VisitorMobEntity extends PathfinderMob {
                         new RunOne<>(
                                 ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
                                 ImmutableList.of(
-                                        Pair.of(new TownWalk(0.4f), 1),
+                                        Pair.of(new TownWalk(runSpeed), 1),
                                         Pair.of(new SetClosestHomeAsWalkTarget(0.5f), 1),
                                         Pair.of(new InsideBrownianWalk(0.5f), 4),
                                         Pair.of(new DoNothing(20, 40), 2)
@@ -226,8 +214,8 @@ public class VisitorMobEntity extends PathfinderMob {
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
 //        b.add(Pair.of(2, new DoNothing(30, 60)));
-        b.add(Pair.of(3, new TownWalk(0.3f)));
-        b.add(Pair.of(10, new TownWalk(0.40f)));
+        b.add(Pair.of(3, new TownWalk(walkSpeed)));
+        b.add(Pair.of(10, new TownWalk(runSpeed)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
         return b.build();
     }
@@ -258,7 +246,13 @@ public class VisitorMobEntity extends PathfinderMob {
                 ResourceLocation id;
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
+                    recipe = new UIQuest(
+                            SpecialQuests.SPECIAL_QUESTS.get(id),
+                            Quest.QuestStatus.ACTIVE,
+                            null,
+                            null,
+                            null
+                    );
                 } else {
                     id = recipe.getRecipeId();
                 }
@@ -269,6 +263,21 @@ public class VisitorMobEntity extends PathfinderMob {
             data.writeInt(ctx.finishedQuests);
             data.writeInt(ctx.unfinishedQuests);
         });
+    }
+
+    public static boolean debuggerReleaseControl() {
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        return true;
+    }
+
+    // TODO: Make this abstract or injectable
+    @NotNull
+    private Job<MCHeldItem, ? extends Snapshot<?>> getInitialJob() {
+        return new GathererJob(town, inventoryCapacity, uuid);
+    }
+
+    public void setJob(Job<MCHeldItem, ? extends Snapshot<?>> initializedJob) {
+        job = initializedJob;
     }
 
     @Override
@@ -312,7 +321,10 @@ public class VisitorMobEntity extends PathfinderMob {
         tickTimes.add((int) (end - start));
 
         if (Config.TICK_SAMPLING_RATE.get() != 0 && tickTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
-            Questown.LOGGER.debug("VME Average tick length: {}", tickTimes.stream().mapToInt(Integer::intValue).average());
+            Questown.LOGGER.debug(
+                    "VME Average tick length: {}",
+                    tickTimes.stream().mapToInt(Integer::intValue).average()
+            );
             tickTimes.clear();
         }
     }
@@ -393,7 +405,13 @@ public class VisitorMobEntity extends PathfinderMob {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
-                level.addFreshEntity(new ItemEntity(level, position().x, position().y, position().z, getInventory().getItem(i)));
+                level.addFreshEntity(new ItemEntity(
+                        level,
+                        position().x,
+                        position().y,
+                        position().z,
+                        getInventory().getItem(i)
+                ));
             }
         }
     }
@@ -426,7 +444,11 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     @Override
-    public void push(double p_20286_, double p_20287_, double p_20288_) {
+    public void push(
+            double p_20286_,
+            double p_20287_,
+            double p_20288_
+    ) {
         if (this.job.shouldBeNoClip(town, blockPosition())) {
             return;
         }
@@ -521,10 +543,17 @@ public class VisitorMobEntity extends PathfinderMob {
             protected PathFinder createPathFinder(int p_26453_) {
                 this.nodeEvaluator = new WalkNodeEvaluator() {
                     @Override
-                    protected BlockPathTypes evaluateBlockPathType(BlockGetter p_77614_, boolean p_77615_, boolean p_77616_, BlockPos p_77617_, BlockPathTypes p_77618_) {
+                    protected BlockPathTypes evaluateBlockPathType(
+                            BlockGetter p_77614_,
+                            boolean p_77615_,
+                            boolean p_77616_,
+                            BlockPos p_77617_,
+                            BlockPathTypes p_77618_
+                    ) {
                         p_77618_ = super.evaluateBlockPathType(p_77614_, p_77615_, p_77616_, p_77617_, p_77618_);
 
-                        if (p_77618_ == BlockPathTypes.FENCE && (p_77614_.getBlockState(p_77617_).getBlock() instanceof FenceGateBlock)) {
+                        if (p_77618_ == BlockPathTypes.FENCE && (p_77614_.getBlockState(p_77617_)
+                                .getBlock() instanceof FenceGateBlock)) {
                             p_77618_ = BlockPathTypes.DOOR_OPEN;
                         }
                         return p_77618_;
@@ -608,6 +637,29 @@ public class VisitorMobEntity extends PathfinderMob {
         brain1.tick((ServerLevel) this.level, this);
         this.level.getProfiler().pop();
         super.customServerAiStep();
+
+        runLongPaths(brain1);
+
+    }
+
+    private void runLongPaths(Brain<VisitorMobEntity> brain1) {
+        if (!brain1.hasMemoryValue(MemoryModuleType.PATH)) {
+            return;
+        }
+        Optional<Path> path = brain1.getMemory(MemoryModuleType.PATH);
+        if (!path.isPresent()) {
+            return;
+        }
+        Path vPath = path.get();
+        int nodeCount = vPath.getNodeCount();
+        if (nodeCount < 10) {
+            return;
+        }
+        if (vPath.getNextNodeIndex() > nodeCount * 0.75f) {
+            getNavigation().setSpeedModifier(walkSpeed);
+            return;
+        }
+        getNavigation().setSpeedModifier(runSpeed);
     }
 
     public boolean isSitting() {
@@ -643,7 +695,10 @@ public class VisitorMobEntity extends PathfinderMob {
         targetTimes.add((int) (end - start));
 
         if (Config.TICK_SAMPLING_RATE.get() != 0 && targetTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
-            Questown.LOGGER.debug("VME Average target acquisition length: {}", targetTimes.stream().mapToInt(Integer::intValue).average());
+            Questown.LOGGER.debug(
+                    "VME Average target acquisition length: {}",
+                    targetTimes.stream().mapToInt(Integer::intValue).average()
+            );
             targetTimes.clear();
         }
 
@@ -731,6 +786,12 @@ public class VisitorMobEntity extends PathfinderMob {
         return InteractionResult.sidedSuccess(isClientSide);
     }
 
+//    // If all else fails, we can use this
+//    @Override
+//    public boolean removeWhenFarAway(double p_21542_) {
+//        return false;
+//    }
+
     public Container getInventory() {
         return job.getInventory();
     }
@@ -742,12 +803,6 @@ public class VisitorMobEntity extends PathfinderMob {
         }
         return GathererJournal.Status.from(s);
     }
-
-//    // If all else fails, we can use this
-//    @Override
-//    public boolean removeWhenFarAway(double p_21542_) {
-//        return false;
-//    }
 
     public void setStatusListener(StatusListener l) {
         job.addStatusListener(l);
@@ -770,11 +825,6 @@ public class VisitorMobEntity extends PathfinderMob {
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;
-    }
-
-    public static boolean debuggerReleaseControl() {
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        return true;
     }
 
     public boolean isInitialized() {
@@ -803,15 +853,6 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public boolean canAcceptJob() {
         return job instanceof GathererJob;
-    }
-
-    public void setJob(Job<MCHeldItem, ? extends Snapshot> initializedJob) {
-        job = initializedJob;
-    }
-
-    public interface ChangeListener {
-        void Changed();
-
     }
 
     public void addChangeListener(ChangeListener cl) {
@@ -846,7 +887,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot> job1 = new FarmerJob(uuid, 6);
+        Job<MCHeldItem, ? extends Snapshot<?>> job1 = new FarmerJob(uuid, 6);
         this.job = job1;
     }
 
@@ -854,7 +895,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot> job1 = new BakerJob(uuid, 6);
+        Job<MCHeldItem, ? extends Snapshot<?>> job1 = new BakerJob(uuid, 6);
         this.job = job1;
     }
 
@@ -887,5 +928,10 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public String toString() {
         return String.format("%s [%s]", super.toString(), getUUID());
+    }
+
+    public interface ChangeListener {
+        void Changed();
+
     }
 }

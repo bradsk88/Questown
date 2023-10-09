@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -14,7 +15,10 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 public class TownPois {
 
@@ -50,28 +54,15 @@ public class TownPois {
             Filter<R> filter,
             PositionFactory<P, R> pFact
     ) {
-        // TODO: Put these on a stack each tick. Don't iterate every room on every tick.
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
-        Position ac = r.getSpace().getCornerA();
-        Position bc = r.getSpace().getCornerB();
+
+        Collection<Position> allEnclosed = InclusiveSpaces.getAllEnclosedPositions(r.getSpace());
 
         ImmutableList.Builder<P> b = ImmutableList.builder();
-
-        Position center = new Position((ac.x + bc.x) / 2, (ac.z + bc.z) / 2);
-        if (filter.include(center, r)) {
-            b.add(pFact.make(center, r));
-        }
-        Position aCorner = ac.offset(1, 1); // TODO: These offsets still needed?
-        if (filter.include(aCorner, r)) {
-            b.add(pFact.make(aCorner, r));
-        }
-        Position bCorner = bc.offset(-1, -1);
-        if (filter.include(bCorner, r)) {
-            b.add(pFact.make(bCorner, r));
-        }
-        Position doorPos = r.getDoorPos();
-        if (filter.include(doorPos, r)) {
-            b.add(pFact.make(doorPos, r));
+        for (Position p : allEnclosed) {
+            if (filter.include(p, r)) {
+                b.add(pFact.make(p, r));
+            }
         }
 
         ImmutableList<P> positions = b.build();

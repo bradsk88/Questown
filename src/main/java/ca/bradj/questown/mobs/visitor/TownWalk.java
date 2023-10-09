@@ -80,7 +80,8 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         this.nextUpdate = lvl.getGameTime() + (long) lvl.getRandom().nextInt(REPEAT_BUFFER);
         BlockPos bp = this.target;
         // DO NOT CHANGE THIS. It makes path finding way less reliable.
-        // If you need the entity to stand nearby a block rather than on it, YOU need to do that math.
+        // If you need the entity to stand nearby a block rather than on it,
+        // YOU need to do that math when choosing a target.
         int dist = 0;
         float speed = this.walkSpeed;
         double distToTarget = e.blockPosition().distSqr(bp);

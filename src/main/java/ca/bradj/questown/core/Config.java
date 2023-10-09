@@ -65,7 +65,7 @@ public class Config {
         ).defineInRange("BakingTime", 6000, 1000, 24000);
         TICK_SAMPLING_RATE = BUILDER.comment(
                 "Advanced setting. For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
-        ).defineInRange("TickSamplingRate", 100, 0, 500);
+        ).defineInRange("TickSamplingRate", 0, 0, 24000);
         MIN_WEIGHT_PER_QUEST_BATCH = BUILDER.comment(
                 "Minimum weight of quests in a batch. Quests are weighted by the items in the room. See questown-item-weights-server.toml"
         ).defineInRange("MinWeightPerQuestBatch", 100, 0, 500);
@@ -77,7 +77,7 @@ public class Config {
         ).defineInRange("BiomeScanRadius", 5, 0, 100);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
-        ).defineInRange("WanderGiveUpTicks", 500, 1, 2000);
+        ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

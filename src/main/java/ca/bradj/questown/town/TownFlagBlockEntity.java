@@ -564,7 +564,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockPos pos = Positions.ToBlock(p, r.yCoord);
             double dist = pos.distSqr(avoiding);
             if (dist > 5) {
-                QT.LOGGER.debug("Target is {} blocks away from {}", dist, avoiding);
+                QT.LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
                 return true;
             }
             return false;
@@ -624,7 +624,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 Direction.Plane.HORIZONTAL.getRandomDirection(level.random),
                 10
         );
-        QT.LOGGER.debug("No welcome mats found, falling back to {}", fallback);
+        QT.LOGGER.trace("No welcome mats found, falling back to {}", fallback);
         return fallback;
     }
 

@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public class JobsRegistry {
 
-    public static Job<MCHeldItem, ? extends Snapshot> getInitializedJob(
+    public static Job<MCHeldItem, ? extends Snapshot<?>> getInitializedJob(
             TownInterface town,
             String jobName,
             @Nullable Snapshot journal,
