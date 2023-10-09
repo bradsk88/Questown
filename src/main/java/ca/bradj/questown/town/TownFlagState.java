@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
@@ -87,10 +88,10 @@ public class TownFlagState {
                     e.getTileData().getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
-            Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
+            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
         } else {
             storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
-            Questown.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
+            QT.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
         ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
@@ -159,7 +160,7 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }
-            Questown.LOGGER.debug("Loaded state from NBT: {}", storedState);
+            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
         }
     }
 

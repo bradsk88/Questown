@@ -1,5 +1,6 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
@@ -136,9 +137,10 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.OAK_LOG)) {
-            Questown.LOGGER.debug("Town UUID: {}", entity.getUUID());
-            Questown.LOGGER.debug("Quests: {}", entity.getAllQuests());
-            Questown.LOGGER.debug("Villagers: {}", entity.getVillagers());
+            QT.LOGGER.debug("Town UUID: {}", entity.getUUID());
+            QT.LOGGER.debug("Quests: {}", entity.getAllQuests());
+            QT.LOGGER.debug("Villagers: {}", entity.getVillagers());
+            QT.LOGGER.debug("Room Recipes: {}", entity.getMatches());
             return InteractionResult.sidedSuccess(false);
         }
 

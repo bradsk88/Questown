@@ -80,6 +80,7 @@ import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
@@ -542,20 +543,44 @@ public class VisitorMobEntity extends PathfinderMob {
             @Override
             protected PathFinder createPathFinder(int p_26453_) {
                 this.nodeEvaluator = new WalkNodeEvaluator() {
+
+                    @Override
+                    public BlockPathTypes getBlockPathType(
+                            BlockGetter getr,
+                            int x,
+                            int y,
+                            int z
+                    ) {
+                        BlockPos pos = new BlockPos(x, y, z);
+                        FluidState fs = getr.getFluidState(pos);
+                        if (!fs.isEmpty()) {
+                            BlockState above = getr.getBlockState(pos.above());
+                            if (above.isAir()) {
+                                BlockState roof = getr.getBlockState(pos.above().above());
+                                if (!roof.isAir()) {
+                                    return BlockPathTypes.BLOCKED;
+                                }
+                            }
+                        }
+
+                        return super.getBlockPathType(getr, x, y, z);
+                    }
+
                     @Override
                     protected BlockPathTypes evaluateBlockPathType(
-                            BlockGetter p_77614_,
+                            BlockGetter getr,
                             boolean p_77615_,
                             boolean p_77616_,
-                            BlockPos p_77617_,
+                            BlockPos pos,
                             BlockPathTypes p_77618_
                     ) {
-                        p_77618_ = super.evaluateBlockPathType(p_77614_, p_77615_, p_77616_, p_77617_, p_77618_);
+                        p_77618_ = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, p_77618_);
 
-                        if (p_77618_ == BlockPathTypes.FENCE && (p_77614_.getBlockState(p_77617_)
+                        if (p_77618_ == BlockPathTypes.FENCE && (getr.getBlockState(pos)
                                 .getBlock() instanceof FenceGateBlock)) {
                             p_77618_ = BlockPathTypes.DOOR_OPEN;
                         }
+
                         return p_77618_;
                     }
                 };
