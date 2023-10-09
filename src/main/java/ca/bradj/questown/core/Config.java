@@ -33,6 +33,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -73,6 +75,9 @@ public class Config {
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
         ).defineInRange("BiomeScanRadius", 5, 0, 100);
+        WANDER_GIVEUP_TICKS = BUILDER.comment(
+                "The limit of time that villagers will spend trying to reach their next destination"
+        ).defineInRange("WanderGiveUpTicks", 500, 1, 2000);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

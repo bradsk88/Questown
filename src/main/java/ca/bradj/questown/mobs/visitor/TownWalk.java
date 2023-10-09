@@ -1,7 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -34,7 +33,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
 
     @Override
     protected boolean checkExtraStartConditions(
-            ServerLevel p_23879_,
+            ServerLevel level,
             VisitorMobEntity e
     ) {
         if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
@@ -43,7 +42,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (e.getBrain().getMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM).orElse(false)) {
             return false;
         }
-        if (p_23879_.getGameTime() - this.nextUpdate < REPEAT_BUFFER) {
+        if (level.getGameTime() - this.nextUpdate < REPEAT_BUFFER) {
             return false;
         }
         this.target = e.newWanderTarget();
@@ -53,7 +52,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (e.getStatus() == GathererJournal.Status.GATHERING) {
             return true;
         }
-        Questown.LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
+        QT.LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;
     }
 
@@ -91,5 +90,6 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
         QT.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
+        e.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, lvl.getDayTime());
     }
 }
