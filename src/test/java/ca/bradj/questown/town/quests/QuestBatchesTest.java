@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.UUID;
 
 class QuestBatchesTest {
@@ -173,7 +174,7 @@ class QuestBatchesTest {
         ImmutableList.Builder<QuestBatch<Integer, Room, TestQuest, Reward>> iqb = ImmutableList.builder();
         iqb.add(batch);
 
-        qbs.initialize(new QuestBatches.VillagerProvider() {
+        qbs.initialize(new QuestBatches.VillagerProvider<>() {
             @Override
             public UUID getRandomVillager() {
                 return UUID.randomUUID();
@@ -182,6 +183,16 @@ class QuestBatchesTest {
             @Override
             public boolean isVillagerMissing(UUID uuid) {
                 return false;
+            }
+
+            @Override
+            public Optional<Room> assignToFarm(UUID ownerUUID) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<Room> getBiggestFarm() {
+                return Optional.empty();
             }
         }, iqb.build());
 

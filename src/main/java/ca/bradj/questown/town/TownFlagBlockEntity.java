@@ -22,6 +22,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -94,6 +95,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean everScanned = false;
     private boolean changed = false;
     private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
+    private final ArrayList<UUID> assignedFarmers = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
     private final MCRoom flagMetaRoom = new MCRoom(
@@ -649,6 +651,33 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public Optional<MCRoom> assignToFarm(UUID ownerUUID) {
+        int idx = this.assignedFarmers.indexOf(ownerUUID);
+        List<MCRoom> farms = ImmutableList.copyOf(roomsMap.getFarms());
+        if (idx >= 0) {
+            return Optional.of(farms.get(this.assignedFarmers.indexOf(ownerUUID)));
+        }
+
+        if (this.assignedFarmers.size() < farms.size()) {
+            this.assignedFarmers.add(ownerUUID);
+            return Optional.of(farms.get(this.assignedFarmers.indexOf(ownerUUID)));
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<MCRoom> getBiggestFarm() {
+        return roomsMap.getFarms().stream().max(Comparator.comparingInt(
+                v -> v.getSpaces()
+                        .stream()
+                        .map(InclusiveSpaces::calculateArea)
+                        .mapToInt(Double::intValue)
+                        .sum()
+        ));
+    }
+
+    @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch<MCRoom> i : roomsMap.getAllMatches()) {
@@ -692,6 +721,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     void onMorning(long newTime) {
+        this.assignedFarmers.clear();
         for (MCReward r : this.morningRewards.getChildren()) {
             this.asapRewards.push(r);
         }

@@ -50,6 +50,7 @@ import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.network.NetworkHooks;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,6 +68,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         super(
                 BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
                         .strength(10.0F, 1200.0F)
+                        .noOcclusion()
         );
     }
 
@@ -127,7 +129,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             }
         }
 
-
         if (itemInHand.getItem().equals(Items.GOLD_BLOCK)) {
             UUID randomVillager = entity.getRandomVillager();
             entity.addImmediateReward(
@@ -138,9 +139,9 @@ public class TownFlagBlock extends BaseEntityBlock {
 
         if (itemInHand.getItem().equals(Items.OAK_LOG)) {
             QT.LOGGER.debug("Town UUID: {}", entity.getUUID());
-            QT.LOGGER.debug("Quests: {}", entity.getAllQuests());
-            QT.LOGGER.debug("Villagers: {}", entity.getVillagers());
-            QT.LOGGER.debug("Room Recipes: {}", entity.getMatches());
+            QT.LOGGER.debug("Quests: {}", Strings.join(entity.getAllQuests(), '\n'));
+            QT.LOGGER.debug("Villagers: {}", Strings.join(entity.getVillagers(), '\n'));
+            QT.LOGGER.debug("Room Recipes: {}", Strings.join(entity.getMatches(), '\n'));
             return InteractionResult.sidedSuccess(false);
         }
 

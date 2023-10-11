@@ -40,9 +40,13 @@ public class QuestBatches<
         BATCH getNew(UUID owner, REWARD r);
     }
 
-    public interface VillagerProvider {
+    public interface VillagerProvider<R extends Room> {
         UUID getRandomVillager();
         boolean isVillagerMissing(UUID uuid);
+
+        Optional<R> assignToFarm(UUID ownerUUID);
+
+        Optional<R> getBiggestFarm();
     }
 
 
@@ -50,7 +54,7 @@ public class QuestBatches<
         this.factory = factory;
     }
 
-    public void initialize(VillagerProvider villagers, ImmutableList<BATCH> bs) {
+    public void initialize(VillagerProvider<ROOM> villagers, ImmutableList<BATCH> bs) {
         if (!batches.isEmpty()) {
             Questown.LOGGER.error("QuestBatches were initialized twice :(");
         }

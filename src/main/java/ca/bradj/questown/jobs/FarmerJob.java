@@ -66,6 +66,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     );
 
     private final UUID ownerUUID;
+    private boolean reverse;
 
     public FarmerJob(
             UUID ownerUUID,
@@ -241,10 +242,14 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         Collection<MCRoom> rooms = farms;
-        Optional<MCRoom> room = rooms.stream().findFirst();
+        Optional<MCRoom> room = town.assignToFarm(ownerUUID);
         this.selectedFarm = room.orElse(null);
         if (selectedFarm == null) {
-            return null;
+            this.selectedFarm = town.getBiggestFarm().orElse(null);
+            if (this.selectedFarm == null) {
+                return null;
+            }
+            this.reverse = true;
         }
 
         if (journal.getStatus() == GathererJournal.Status.WALKING_TO_FARM) {
@@ -366,9 +371,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 // For now, we'll just go to the first block who can be actioned
                 return spot;
             }
-            // FIXME: When the farmer is holding wheat seeds, this logic causes
-            //  them to prefer composting over planting. That means they will
-            //  almost NEVER plant seeds when a composter is present.
             if (!actionsForHeldItems.isEmpty()) {
                 if (actionsForHeldItems.get(0) == blockAction && blockAction != FarmerAction.UNDEFINED) {
                     return spot;
@@ -403,7 +405,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                         }))
                 .sorted(Comparator.comparingInt(WorkSpot::getScore))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
-                    Collections.reverse(list);
+                    if (!this.reverse) {
+                        Collections.reverse(list);
+                    }
                     return list;
                 }));
     }

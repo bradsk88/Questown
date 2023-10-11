@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public interface TownInterface extends QuestBatches.VillagerProvider {
+public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Nullable ServerLevel getServerLevel();
 
     BlockPos getTownFlagBasePos();
