@@ -180,7 +180,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             e.times.add((int) (end - start));
 
             if (e.times.size() > Config.TICK_SAMPLING_RATE.get()) {
-                Questown.LOGGER.debug(
+                QT.PROFILE_LOGGER.debug(
                         "Average tick length: {}",
                         e.times.stream().mapToInt(Integer::intValue).average()
                 );
@@ -345,7 +345,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                         this.worldPosition.getY() + 0.5D,
                         this.worldPosition.getZ() + 0.5D
                 );
-                Questown.LOGGER.trace("Distance {}", v);
                 if (v < 100) {
                     AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
                             sp, ApproachTownTrigger.Triggers.FirstVisit
@@ -362,7 +361,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     void broadcastMessage(TranslatableComponent msg) {
-        Questown.LOGGER.info("Broadcasting message: {} {}", msg.getKey(), msg.getArgs());
+        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", msg.getKey(), msg.getArgs());
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             p.sendMessage(msg, ChatType.CHAT, p.getUUID());
         }
@@ -520,7 +519,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .filter(v -> v.getUUID().equals(visitorUUID))
                 .findFirst();
         if (f.isEmpty()) {
-            Questown.LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
+            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
         } else {
             f.get().setJob(JobsRegistry.getInitializedJob(this, jobName, null, visitorUUID));
         }
@@ -566,7 +565,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockPos pos = Positions.ToBlock(p, r.yCoord);
             double dist = pos.distSqr(avoiding);
             if (dist > 5) {
-                QT.LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
+                QT.FLAG_LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
                 return true;
             }
             return false;
@@ -607,10 +606,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void registerEntity(VisitorMobEntity vEntity) {
-        QT.LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
+        QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
         this.entities.add(vEntity);
         vEntity.addChangeListener(() -> {
-            Questown.LOGGER.debug("Setting changed");
+            QT.FLAG_LOGGER.debug("Setting changed");
             this.setChanged();
         });
         this.setChanged();
@@ -626,7 +625,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 Direction.Plane.HORIZONTAL.getRandomDirection(level.random),
                 10
         );
-        QT.LOGGER.trace("No welcome mats found, falling back to {}", fallback);
+        QT.FLAG_LOGGER.trace("No welcome mats found, falling back to {}", fallback);
         return fallback;
     }
 
@@ -755,7 +754,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             ServerLevel sl
     ) {
         if (!getTileData().contains(NBT_TOWN_STATE)) {
-            Questown.LOGGER.error(
+            QT.FLAG_LOGGER.error(
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
@@ -767,7 +766,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
                 .findFirst();
         if (match.isEmpty()) {
-            Questown.LOGGER.error(
+            QT.FLAG_LOGGER.error(
                     "Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
             return;
         }
@@ -810,15 +809,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (entities.contains(visitorMobEntity)) {
             return;
         }
-        QT.LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
         visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
     }
 
     public void recallVillagers() {
         entities.forEach(v -> {
-            Vec3 visitorJoinPos = getVisitorJoinPos();
-            QT.LOGGER.debug("Moving {} to {}", v, visitorJoinPos);
-            v.setPos(visitorJoinPos);
+            BlockPos visitorJoinPos = getTownFlagBasePos();
+            QT.FLAG_LOGGER.debug("Moving {} to {}", v, visitorJoinPos);
+            v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
+            v.setHealth(v.getMaxHealth());
         });
     }
 }
