@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.Jobs;
@@ -200,7 +201,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
                 Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(quests).size() + 1)
         ) / 2;
-        Questown.LOGGER.debug("Adding batch of quests with target weight sum: {}", targetItemWeight);
+        QT.QUESTS_LOGGER.debug("Adding batch of quests with target weight sum: {}", targetItemWeight);
         PendingQuests theNewQuests = new PendingQuests(
                 targetItemWeight,
                 visitorUUID,

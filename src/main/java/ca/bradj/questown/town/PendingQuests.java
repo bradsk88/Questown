@@ -79,4 +79,13 @@ public class PendingQuests {
         return RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
     }
 
+    @Override
+    public String toString() {
+        return "PendingQuests{" +
+                "batch=" + batch +
+                ", targetItemWeight=" + targetItemWeight +
+                ", attempts=" + attempts +
+                ", hasBed=" + hasBed +
+                '}';
+    }
 }

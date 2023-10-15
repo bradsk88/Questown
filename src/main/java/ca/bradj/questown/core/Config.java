@@ -74,7 +74,7 @@ public class Config {
         ).defineInRange("QuestBatchVillagerBoostFactor", 50, 0, 500);
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
-        ).defineInRange("BiomeScanRadius", 5, 0, 100);
+        ).defineInRange("BiomeScanRadius", 20, 0, 100);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);

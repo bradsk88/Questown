@@ -95,6 +95,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     List<HashMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid);
 
+    UUID getUUID();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

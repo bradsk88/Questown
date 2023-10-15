@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.rewards;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -79,7 +80,15 @@ public class SpawnVisitorReward extends MCReward {
         vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, EMPTY);
         entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
-        Questown.LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
+        QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
+    }
+
+    @Override
+    public String toString() {
+        return "SpawnVisitorReward{" +
+                "town=" + town +
+                ", visitorUUID=" + visitorUUID +
+                '}';
     }
 
     @Override

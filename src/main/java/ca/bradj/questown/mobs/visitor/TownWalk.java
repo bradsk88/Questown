@@ -52,7 +52,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (e.getStatus() == GathererJournal.Status.GATHERING) {
             return true;
         }
-        QT.LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
+        QT.VILLAGER_LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;
     }
 
@@ -65,7 +65,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         }
         long trying = level.getDayTime() - since.get();
         if (trying > PAUSE_TICKS) {
-            QT.LOGGER.debug("Giving up on target because it took too long to get there");
+            QT.VILLAGER_LOGGER.debug("Giving up on target because it took too long to get there");
             return false;
         }
         return true;
@@ -90,7 +90,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         }
         e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
-        QT.LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
+        QT.VILLAGER_LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
         e.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, lvl.getDayTime());
     }
 }

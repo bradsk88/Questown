@@ -3,6 +3,7 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.questown.Questown;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -212,6 +213,16 @@ public class QuestBatch<
             return null;
         }
         return quests.get(0).getUUID();
+    }
+
+    @Override
+    public String toString() {
+        return "QuestBatch{" +
+                "quests=" + Strings.join(quests, '\n') +
+                ", reward=" + reward +
+                ", questFactory=" + questFactory +
+                ", changeListener=" + changeListener +
+                '}';
     }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {

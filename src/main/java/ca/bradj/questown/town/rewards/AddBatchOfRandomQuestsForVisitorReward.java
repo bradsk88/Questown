@@ -57,4 +57,12 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
             this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
         }
     }
+
+    @Override
+    public String toString() {
+        return "AddBatchOfRandomQuestsForVisitorReward{" +
+                "town=" + town.getUUID() +
+                ", visitorUUID=" + visitorUUID +
+                '}';
+    }
 }

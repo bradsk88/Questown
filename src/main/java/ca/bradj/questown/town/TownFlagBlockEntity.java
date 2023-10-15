@@ -780,6 +780,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         );
     }
 
+    @Override
     public UUID getUUID() {
         return uuid;
     }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
@@ -7,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -44,6 +46,7 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
     @Override
     protected @NotNull RewardApplier getApplier() {
         return () -> {
+            QT.QUESTS_LOGGER.debug("Applying quests: {}", getChildren());
             for (Reward r : getChildren()) {
                 r.claim();
             }
@@ -89,5 +92,12 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
     @Override
     public Collection<MCReward> getContainedRewards() {
         return ImmutableList.copyOf(children);
+    }
+
+    @Override
+    public String toString() {
+        return "MCRewardList{" +
+                "children=" + Strings.join(children,'\n') +
+                '}';
     }
 }
