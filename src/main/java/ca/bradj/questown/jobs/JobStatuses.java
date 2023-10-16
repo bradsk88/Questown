@@ -7,7 +7,7 @@ import java.util.Map;
 public class JobStatuses {
 
     public interface Job {
-        @Nullable GathererJournal.Status tryDoingSpecializedWork();
+        @Nullable GathererJournal.Status tryDoingItemlessWork();
         @Nullable GathererJournal.Status tryUsingSupplies(Map<GathererJournal.Status, Boolean> supplyItemStatus);
     }
 
@@ -23,11 +23,14 @@ public class JobStatuses {
                 return nullIfUnchanged(currentStatus, useStatus);
             }
             if (inventory.inventoryFull()) {
-                return nullIfUnchanged(currentStatus, GathererJournal.Status.DROPPING_LOOT);
+                if (town.hasSpace()) {
+                    return nullIfUnchanged(currentStatus, GathererJournal.Status.DROPPING_LOOT);
+                }
+                return nullIfUnchanged(currentStatus, GathererJournal.Status.NO_SPACE);
             }
         }
 
-        @Nullable GathererJournal.Status workStatus = job.tryDoingSpecializedWork();
+        @Nullable GathererJournal.Status workStatus = job.tryDoingItemlessWork();
         if (workStatus != null) {
             return nullIfUnchanged(currentStatus, workStatus);
         }

@@ -172,6 +172,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             }
 
             @Override
+            public boolean hasSpace() {
+                return town.findMatchingContainer(MCTownItem::isEmpty) != null;
+            }
+
+            @Override
             public boolean isBakeryFull(RoomRecipeMatch<MCRoom> mcRoom) {
                 return _isBakeryFull.apply(mcRoom);
             }
@@ -233,16 +238,18 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
             @Override
             public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
-                boolean hasWheat = town.findMatchingContainer(v -> Items.WHEAT.equals(v.get().asItem())) != null;
+                boolean hasWheat = journal.getItems().stream().anyMatch(v -> Items.WHEAT.equals(v.get().get()));
+                boolean hasCoal = journal.getItems().stream().anyMatch(v -> Items.COAL.equals(v.get().get()));
                 return ImmutableMap.of(
-                        GathererJournal.Status.BAKING, hasWheat,
-                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat
+                        // FIXME: More statuses to make sure both wheat and coal get to bakery
+                        GathererJournal.Status.BAKING, hasWheat && hasCoal,
+                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat && hasCoal
                 );
             }
 
             @Override
             public boolean hasItems() {
-                return false;
+                return !inventory.isEmpty();
             }
         });
 

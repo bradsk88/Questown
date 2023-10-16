@@ -2,8 +2,11 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -16,6 +19,8 @@ public class QuestBatches<
         REWARD extends Reward,
         BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>
         > implements QuestBatch.ChangeListener<QUEST> {
+
+    private static final Marker marker = MarkerManager.getMarker("Batches");
 
     protected final List<BATCH> batches = new ArrayList<>();
     private final Factory<BATCH, REWARD> factory;
@@ -151,10 +156,11 @@ public class QuestBatches<
         for (BATCH b : batches) {
             if (b.getAll().stream()
                     .filter(Quest::isComplete)
+                    .filter(v -> !SpecialQuests.CAMPFIRE.equals(v.getWantedId()))
                     .filter(v -> recipeId.equals(v.getWantedId()))
                     .anyMatch(v -> room.equals(v.completedOn))
             ) {
-                QT.LOGGER.debug("Quest was already marked complete: {} for door {}", recipeId, room.doorPos);
+                QT.QUESTS_LOGGER.debug(marker, "Quest was already marked complete: {} for door {}", recipeId, room.doorPos);
                 return;
             }
         }
@@ -175,7 +181,7 @@ public class QuestBatches<
         ImmutableList.Builder<HashMap.SimpleEntry<QUEST, REWARD>> b = ImmutableList.builder();
         this.batches.stream()
                 .filter(v -> v.getAll().stream().allMatch(z -> uuid.equals(z.uuid)))
-                .forEach(v -> v.getAll().forEach(z -> new HashMap.SimpleEntry<>(z, v.reward)));
+                .forEach(v -> v.getAll().forEach(z -> b.add(new HashMap.SimpleEntry<>(z, v.reward))));
         return b.build();
     }
 

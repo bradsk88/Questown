@@ -274,7 +274,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         // TODO: Move to farmer-specific status
         WALKING_TO_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
-        COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD;
+        COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM;
 
         public static Status from(String s) {
             return switch (s) {
@@ -295,7 +295,12 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "RELAXING" -> RELAXING;
                 case "FARMING_RANDOM_TEND" -> FARMING_RANDOM_TEND;
                 case "FARMING_HARVESTING" -> FARMING_HARVESTING;
+                case "FARMING_PLANTING" -> FARMING_PLANTING;
+                case "FARMING_TILLING" -> FARMING_TILLING;
+                case "FARMING_COMPOSTING" -> FARMING_COMPOSTING;
+                case "FARMING_BONING" -> FARMING_BONING;
                 case "WALKING_TO_FARM" -> WALKING_TO_FARM;
+                case "LEAVING_FARM" -> LEAVING_FARM;
                 case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
                 case "GOING_TO_BAKERY" -> GOING_TO_BAKERY;
                 case "NO_SUPPLIES" -> NO_SUPPLIES;
@@ -311,13 +316,16 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         public boolean isWorking() {
-            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY).contains(this) || isFarming();
+            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY).contains(this) || isFarmingWork();
         }
 
-        public boolean isFarming() {
+        public boolean isFarmingWork() {
             return ImmutableList.of(
                     FARMING_HARVESTING,
-                    FARMING_RANDOM_TEND
+                    FARMING_BONING,
+                    FARMING_PLANTING,
+                    FARMING_TILLING,
+                    FARMING_COMPOSTING
             ).contains(this);
         }
 

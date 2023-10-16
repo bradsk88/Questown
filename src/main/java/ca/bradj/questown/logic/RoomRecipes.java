@@ -1,6 +1,6 @@
 package ca.bradj.questown.logic;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
@@ -92,7 +92,7 @@ public class RoomRecipes {
                     weight += allWeights.getInt(id);
                     foundWeight = true;
                 } else {
-                    Questown.LOGGER.error(
+                    QT.QUESTS_LOGGER.error(
                             "No weight specified for tag. Default of 100 will be used. [{}]", id
                     );
                 }
@@ -104,7 +104,7 @@ public class RoomRecipes {
                     weight += allWeights.getInt(tID);
                     foundWeight = true;
                 } else {
-                    Questown.LOGGER.error(
+                    QT.QUESTS_LOGGER.error(
                             "No weight specified for item. Default of 100 will be used. [{}]", id
                     );
                 }

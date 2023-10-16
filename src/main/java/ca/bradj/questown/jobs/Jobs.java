@@ -105,7 +105,6 @@ public class Jobs {
             TownInterface town,
             ContainerTarget<MCContainer, MCTownItem> currentTarget
     ) {
-        Questown.LOGGER.debug("Visitor is searching for chest space");
         if (currentTarget != null) {
             if (!currentTarget.hasItem(MCTownItem::isEmpty)) {
                 currentTarget = town.findMatchingContainer(MCTownItem::isEmpty);
@@ -114,10 +113,8 @@ public class Jobs {
             currentTarget = town.findMatchingContainer(MCTownItem::isEmpty);
         }
         if (currentTarget != null) {
-            Questown.LOGGER.debug("Located chest at {}", currentTarget.getPosition());
             return currentTarget;
         } else {
-            Questown.LOGGER.debug("No chests exist in town");
             return null;
         }
     }

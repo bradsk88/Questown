@@ -138,8 +138,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.OAK_LOG)) {
+            List<String> qss = entity.getAllQuests().stream().map(Quest::toShortString).toList();
             QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
-            QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(entity.getAllQuests(), '\n'));
+            QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
             QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
             QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getMatches(), '\n'));
             return InteractionResult.sidedSuccess(false);

@@ -19,7 +19,8 @@ class FarmerStatusesTest {
     );
 
     private record ConstTown(
-            boolean hasSupplies
+            boolean hasSupplies,
+            boolean hasSpace
     ) implements TownStateProvider {
     }
 
@@ -46,7 +47,7 @@ class FarmerStatusesTest {
         boolean inside = false;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(true),
+                new ConstTown(true, true),
                 new ConstFarm(ALL_WORK_POSSIBLE),
                 new ConstEntity(false, false, false, ImmutableMap.of()),
                 inside
@@ -59,7 +60,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, true),
                 new ConstFarm(ALL_WORK_POSSIBLE),
                 new ConstEntity(false, false, false, ImmutableMap.of()),
                 inside
@@ -72,7 +73,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, true),
                 new ConstFarm(ALL_WORK_POSSIBLE),
                 new ConstEntity(false, true, true, ImmutableMap.of()),
                 inside
@@ -81,11 +82,24 @@ class FarmerStatusesTest {
     }
 
     @Test
-    void inMorning_shouldBe_DROPPING_LOOT_IfMatureCropsPresentInFarm_ButInventoryIsFullOfNonSupplies() {
+    void inMorning_shouldBe_LEAVING_FARM_IfMatureCropsPresentInFarm_ButInventoryIsFullOfNonSupplies_AndIsInFarm() {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, true),
+                new ConstFarm(ALL_WORK_POSSIBLE),
+                new ConstEntity(true, true, true, ImmutableMap.of()),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.LEAVING_FARM, s);
+    }
+
+    @Test
+    void inMorning_shouldBe_DROPPING_LOOT_IfMatureCropsPresentInFarm_ButInventoryIsFullOfNonSupplies() {
+        boolean inside = false;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(false, true),
                 new ConstFarm(ALL_WORK_POSSIBLE),
                 new ConstEntity(true, true, true, ImmutableMap.of()),
                 inside
@@ -98,7 +112,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, true),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.HARVEST,
                         FarmerJob.FarmerAction.PLANT,
@@ -117,7 +131,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, true),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.HARVEST,
                         FarmerJob.FarmerAction.PLANT,
@@ -132,11 +146,29 @@ class FarmerStatusesTest {
     }
 
     @Test
+    void inMorning_shouldBe_NO_SPACE_IfTownHasNoSpace() {
+        boolean inside = true;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(false, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.HARVEST,
+                        FarmerJob.FarmerAction.PLANT,
+                        FarmerJob.FarmerAction.TILL
+                )),
+                new ConstEntity(true, true, true, ImmutableMap.of(
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, s);
+    }
+
+    @Test
     void inMorning_shouldPrefer_PLANTING_over_TILLING() {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         // FarmerJob.FarmerAction.HARVEST, <All crops immature>
                         FarmerJob.FarmerAction.PLANT,
@@ -155,7 +187,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         // FarmerJob.FarmerAction.HARVEST, <All crops immature>
                         FarmerJob.FarmerAction.BONE,
@@ -177,7 +209,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.HARVEST,
                         FarmerJob.FarmerAction.BONE,
@@ -198,7 +230,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.HARVEST,
                         FarmerJob.FarmerAction.BONE,
@@ -220,7 +252,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.COMPOST,
                         FarmerJob.FarmerAction.PLANT
@@ -238,7 +270,7 @@ class FarmerStatusesTest {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
                 GathererJournal.Status.IDLE,
-                new ConstTown(false),
+                new ConstTown(false, false),
                 new ConstFarm(ImmutableList.of(
                         FarmerJob.FarmerAction.COMPOST,
                         FarmerJob.FarmerAction.TILL
@@ -250,5 +282,23 @@ class FarmerStatusesTest {
                 inside
         );
         Assertions.assertEquals(GathererJournal.Status.FARMING_TILLING, s);
+    }
+    @Test
+    void inMorning_should_COMPOST_ifCant_TILL_OR_PLANT() {
+        boolean inside = true;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(false, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.COMPOST
+                )),
+                new ConstEntity(true, false, true, ImmutableMap.of(
+                        GathererJournal.Status.FARMING_TILLING, true,
+                        GathererJournal.Status.FARMING_PLANTING, true,
+                        GathererJournal.Status.FARMING_COMPOSTING, true
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.FARMING_COMPOSTING, s);
     }
 }

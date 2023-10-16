@@ -38,6 +38,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -187,9 +188,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
         }
 
-        processSignal(sl, town, this, isInFarm);
-
         setupForDropLoot(entityBlockPos, town);
+        processSignal(sl, town, this, isInFarm);
 
         WorkSpot<BlockPos> workSpot = switch (getStatus()) {
             case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST);
@@ -203,7 +203,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             setupForGetSupplies(town, workSpot);
 
             world.tryFarming(town, entityBlockPos, workSpot);
-        } else if (getStatus().isFarming()) {
+        } else if (getStatus().isFarmingWork()) {
             QT.JOB_LOGGER.error("Workspot is null but status is {}. This is a bug.", getStatus());
         }
 
@@ -216,11 +216,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         Position p2 = new Position((int) (entityPos.x + 0.5), (int) (entityPos.z - 0.5));
         Position p3 = new Position((int) (entityPos.x - 0.5), (int) (entityPos.z + 0.5));
         Position p4 = new Position((int) (entityPos.x - 0.5), (int) (entityPos.z - 0.5));
-        boolean corner1 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p1);
-        boolean corner2 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p2);
-        boolean corner3 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p3);
-        boolean corner4 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p4);
-        return corner1 && corner2 && corner3 && corner4;
+        int corner1 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p1) ? 1 : 0;
+        int corner2 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p2) ? 1 : 0;
+        int corner3 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p3) ? 1 : 0;
+        int corner4 = InclusiveSpaces.contains(selectedFarm.getSpaces(), p4) ? 1 : 0;
+        return corner1 + corner2 + corner3 + corner4 >= 2;
     }
 
     private void tryDropLoot(
@@ -257,19 +257,29 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             return null;
         }
 
+        // FIXME: why are these targets null sometimes? NO_SPACE and NO_SUPPLIES statuses should protect us.
+
+        BlockPos supplies = suppliesTarget != null ? Positions.ToBlock(
+                suppliesTarget.getInteractPosition(),
+                suppliesTarget.getYPosition()
+        ) : null;
+
+        BlockPos blockPos = successTarget != null ? Positions.ToBlock(
+                successTarget.getInteractPosition(),
+                successTarget.getYPosition()
+        ) : null;
+
         BlockPos out = switch (getStatus()) {
-            case WALKING_TO_FARM -> getGateInteractionSpot(town, selectedFarm);
+            case WALKING_TO_FARM, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm);
             case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position;
             case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position;
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position;
             case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position;
             case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position;
-            case FARMING_RANDOM_TEND -> Positions.ToBlock(
-                    InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
-                    selectedFarm.yCoord
-            );
-            case COLLECTING_SUPPLIES -> Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
-            case DROPPING_LOOT -> Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
+            case FARMING_RANDOM_TEND -> getRandomFarmSpot(sl);
+            case COLLECTING_SUPPLIES -> supplies;
+            case DROPPING_LOOT -> blockPos;
+            case RELAXING, IDLE, NO_SUPPLIES, NO_SPACE -> null;
             default -> throw new IllegalStateException(String.format("Unexpected status %s", getStatus()));
         };
         if (out == null) {
@@ -278,10 +288,19 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return out;
     }
 
+    @NotNull
+    private BlockPos getRandomFarmSpot(@NotNull ServerLevel sl) {
+        return Positions.ToBlock(
+                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
+                selectedFarm.yCoord
+        );
+    }
+
     private BlockPos setupForDropLoot(
             BlockPos entityBlockPos,
             TownInterface town
     ) {
+        ContainerTarget<MCContainer, MCTownItem> in = this.successTarget;
         this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
         if (this.successTarget != null) {
             return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
@@ -293,13 +312,13 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             TownInterface town,
             WorkSpot<BlockPos> workSpot
     ) {
+        ContainerTarget<MCContainer, MCTownItem> in = this.suppliesTarget;
         final Set<Item> suppliesNeeded = switch (workSpot.action) {
             case TILL, PLANT, COMPOST -> ImmutableSet.of(Items.WHEAT_SEEDS);
             case BONE -> ImmutableSet.of(Items.BONE_MEAL);
             default -> ImmutableSet.of();
         };
 
-        QT.JOB_LOGGER.debug(marker, "Farmer is searching for supplies");
         if (this.suppliesTarget != null) {
             if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
                 this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
@@ -307,7 +326,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         } else {
             this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
         }
-        if (this.suppliesTarget != null) {
+        if ((in == null && this.suppliesTarget != null) || (in != null && this.suppliesTarget != null && !in.equals(suppliesTarget))) {
             QT.JOB_LOGGER.debug(marker, "Farmer located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
@@ -427,6 +446,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                         boolean hasSeeds = town.findMatchingContainer(c -> Items.WHEAT_SEEDS.equals(c.get())) != null;
                         boolean hasBoneMeal = town.findMatchingContainer(c -> Items.BONE_MEAL.equals(c.get())) != null;
                         return hasSeeds || hasBoneMeal;
+                    }
+
+                    @Override
+                    public boolean hasSpace() {
+                        return town.findMatchingContainer(MCTownItem::isEmpty) != null;
                     }
                 },
                 new FarmerStatuses.FarmStateProvider() {

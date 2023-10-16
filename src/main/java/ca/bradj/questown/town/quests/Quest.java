@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.Position;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -28,6 +29,14 @@ public class Quest<KEY, ROOM extends Room> {
                 ", completedOn=" + completedOn +
                 ", fromRecipeID=" + fromRecipeID +
                 '}';
+    }
+
+    public String toShortString() {
+        Position doorPos = null;
+        if (completedOn != null) {
+            doorPos = completedOn.doorPos;
+        }
+        return String.format("Quest{id=%s, owner=%s, on=%s, from=%s", recipeId, uuid, doorPos, fromRecipeID);
     }
 
     protected Quest(@Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {

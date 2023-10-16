@@ -89,7 +89,7 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
             case RELAXING -> RELAXING;
-            case WALKING_TO_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND,
+            case WALKING_TO_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND, LEAVING_FARM,
                     FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
                     COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES,
                     BAKING, COLLECTING_BREAD -> throw new IllegalArgumentException(

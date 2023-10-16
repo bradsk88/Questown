@@ -71,7 +71,7 @@ public class Config {
         ).defineInRange("MinWeightPerQuestBatch", 100, 0, 500);
         QUEST_BATCH_VILLAGER_BOOST_FACTOR = BUILDER.comment(
                 "The minimum weight for a quest batch includes this factor, which is multiplied by the number of villagers. This causes a village to have an exponential difficulty curve as it grows."
-        ).defineInRange("QuestBatchVillagerBoostFactor", 50, 0, 500);
+        ).defineInRange("QuestBatchVillagerBoostFactor", 100, 0, 500);
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
         ).defineInRange("BiomeScanRadius", 20, 0, 100);

@@ -39,6 +39,7 @@ class BakerStatusesTest {
 
     private record ConstTown(
             boolean hasSupplies,
+            boolean hasSpace,
             boolean hasBakerySpace,
             Collection<RoomRecipeMatch<Room>> fullBakeries,
             Collection<Room> bakeriesWithBread
@@ -64,7 +65,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, true, false, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.COLLECTING_SUPPLIES, s);
@@ -76,7 +77,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(false, true, ImmutableList.of(), ImmutableList.of(arbitraryRoom.room)),
+                new ConstTown(false, true, false, ImmutableList.of(), ImmutableList.of(arbitraryRoom.room)),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.COLLECTING_BREAD, s);
@@ -88,7 +89,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(false, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(false, true, true, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.GOING_TO_BAKERY, s);
@@ -100,7 +101,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(false, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(false, true, true, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.NO_SUPPLIES, s);
@@ -112,10 +113,10 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, false, false, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
-        Assertions.assertEquals(GathererJournal.Status.GOING_TO_BAKERY, s);
+        Assertions.assertEquals(GathererJournal.Status.NO_SPACE, s);
     }
 
     @Test
@@ -124,7 +125,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(false, true, true, ImmutableMap.of()),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, true, true, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, s);
@@ -136,7 +137,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.GOING_TO_BAKERY,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, true, true, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertNull(s); // Null means "unchanged"
@@ -149,7 +150,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.GOING_TO_BAKERY,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, true, true, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(arbitraryRoom)
         );
         Assertions.assertEquals(GathererJournal.Status.BAKING, s);
@@ -170,7 +171,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.GOING_TO_BAKERY,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, true, ImmutableList.of(currentRoom), ImmutableList.of()),
+                new ConstTown(true, true, true, ImmutableList.of(currentRoom), ImmutableList.of()),
                 new ConstEntity(currentRoom)
         );
         Assertions.assertEquals(GathererJournal.Status.BAKING, s);
@@ -191,7 +192,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.GOING_TO_BAKERY,
                 Signals.MORNING,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(true, false, ImmutableList.of(currentRoom), ImmutableList.of()),
+                new ConstTown(true, false, true, ImmutableList.of(currentRoom), ImmutableList.of()),
                 new ConstEntity(currentRoom)
         );
         Assertions.assertEquals(GathererJournal.Status.COLLECTING_SUPPLIES, s);
@@ -204,7 +205,7 @@ class BakerStatusesTest {
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
                 new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, false, ImmutableList.of(), ImmutableList.of()),
+                new ConstTown(true, true, false, ImmutableList.of(), ImmutableList.of()),
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, s);
@@ -215,7 +216,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getEveningStatus(
                 GathererJournal.Status.IDLE,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(true, false, ImmutableList.of(), ImmutableList.of())
+                new ConstTown(true, false, true, ImmutableList.of(), ImmutableList.of())
         );
         Assertions.assertEquals(GathererJournal.Status.RELAXING, s);
     }
@@ -225,7 +226,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getEveningStatus(
                 GathererJournal.Status.IDLE,
                 new ConstInventory(false, true, true, ImmutableMap.of()),
-                new ConstTown(true, false, ImmutableList.of(), ImmutableList.of())
+                new ConstTown(true, false, true, ImmutableList.of(), ImmutableList.of())
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, s);
     }
@@ -235,7 +236,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getEveningStatus(
                 GathererJournal.Status.IDLE,
                 new ConstInventory(false, true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, false, ImmutableList.of(), ImmutableList.of())
+                new ConstTown(true, false, true, ImmutableList.of(), ImmutableList.of())
         );
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, s);
     }
@@ -245,7 +246,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getEveningStatus(
                 GathererJournal.Status.IDLE,
                 new ConstInventory(false, false, false, ImmutableMap.of()),
-                new ConstTown(true, true, ImmutableList.of(), ImmutableList.of(
+                new ConstTown(true, true, true, ImmutableList.of(), ImmutableList.of(
                         arbitraryRoom.room
                 ))
         );

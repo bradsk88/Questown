@@ -20,14 +20,8 @@ public class FarmerStatuses {
 //        }
         switch (signal) {
 //            GathererJournal.Status status = null;
-            case MORNING -> {
+            case MORNING, NOON, EVENING -> {
                 return handleMorning(currentStatus, town, farm, entity, isInFarm);
-            }
-            case NOON -> {
-                return handleNoon(currentStatus, isInFarm);
-            }
-            case EVENING -> {
-                return handleEvening(currentStatus, isInFarm);
             }
             case NIGHT -> {
                 if (currentStatus == GathererJournal.Status.STAYING || currentStatus == GathererJournal.Status.RETURNED_FAILURE || currentStatus == GathererJournal.Status.RETURNED_SUCCESS) {
@@ -52,20 +46,14 @@ public class FarmerStatuses {
             EntityStateProvider inventory,
             boolean isInFarm
     ) {
-        return JobStatuses.usualRoutine(
+        GathererJournal.Status status = JobStatuses.usualRoutine(
                 currentStatus, inventory, town,
                 new JobStatuses.Job() {
                     @Override
-                    public GathererJournal.@Nullable Status tryDoingSpecializedWork() {
+                    public GathererJournal.@Nullable Status tryDoingItemlessWork() {
                         // Order is important here
                         if (farm.isWorkPossible(FarmerJob.FarmerAction.HARVEST)) {
                             return doOrGoTo(GathererJournal.Status.FARMING_HARVESTING, isInFarm);
-                        }
-                        if (farm.isWorkPossible(FarmerJob.FarmerAction.BONE)) {
-                            return doOrGoTo(GathererJournal.Status.FARMING_BONING, isInFarm);
-                        }
-                        if (farm.isWorkPossible(FarmerJob.FarmerAction.PLANT)) {
-                            return doOrGoTo(GathererJournal.Status.FARMING_PLANTING, isInFarm);
                         }
                         if (farm.isWorkPossible(FarmerJob.FarmerAction.TILL)) {
                             return doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
@@ -93,10 +81,19 @@ public class FarmerStatuses {
                                 return doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
                             }
                         }
+                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_COMPOSTING, false)) {
+                            if (farm.isWorkPossible(FarmerJob.FarmerAction.COMPOST)) {
+                                return doOrGoTo(GathererJournal.Status.FARMING_COMPOSTING, isInFarm);
+                            }
+                        }
                         return null;
                     }
                 }
         );
+        if (status == GathererJournal.Status.DROPPING_LOOT && isInFarm) {
+            return nullIfUnchanged(currentStatus, GathererJournal.Status.LEAVING_FARM);
+        }
+        return status;
     }
 
     private static GathererJournal.Status doOrGoTo(

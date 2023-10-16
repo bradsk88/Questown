@@ -34,7 +34,7 @@ public class TendCrops extends Behavior<VisitorMobEntity> {
             return false;
         }
         GathererJournal.Status s = p_22539_.getStatus();
-        return s.isFarming();
+        return s.isFarmingWork();
     }
 
     @Override

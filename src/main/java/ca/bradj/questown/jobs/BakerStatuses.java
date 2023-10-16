@@ -53,7 +53,7 @@ public class BakerStatuses {
         GathererJournal.Status newStatus = JobStatuses.usualRoutine(currentStatus, inventory, town,
                 new JobStatuses.Job() {
                     @Override
-                    public GathererJournal.@Nullable Status tryDoingSpecializedWork() {
+                    public GathererJournal.@Nullable Status tryDoingItemlessWork() {
                         Collection<ROOM> breads = town.bakeriesWithBread();
                         if (!breads.isEmpty()) {
                             return GathererJournal.Status.COLLECTING_BREAD;

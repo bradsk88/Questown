@@ -63,9 +63,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         if (town.getVillagersWithQuests().isEmpty()) {
             // Spawn a villager with a set of quests
             return newVisitor;
-//        } else if (rand.nextBoolean()) {
-            // TODO: Random chance instead of guarantee?
-        } else {
+        } else if (rand.nextBoolean()) {
             List<UUID> unemployed = ImmutableList.copyOf(town.getUnemployedVillagers());
             if (!unemployed.isEmpty()) {
                 UUID villager = unemployed.get(rand.nextInt(unemployed.size()));
@@ -73,9 +71,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             }
         }
 
-        if (rand.nextBoolean()) {
+        UUID randomVillager = town.getRandomVillager();
+        if (rand.nextBoolean() && randomVillager != null) {
             // Add upgrades for an existing villager's quests
-            return new MCRewardList(town, new AddRandomUpgradeQuest(town, town.getRandomVillager()));
+            return new MCRewardList(town, new AddRandomUpgradeQuest(town, randomVillager));
         }
 
         return newVisitor;
