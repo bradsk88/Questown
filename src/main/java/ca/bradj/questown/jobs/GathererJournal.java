@@ -272,8 +272,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
         // TODO: Move to farmer-specific status
-        WALKING_TO_FARM,
-        FARMING,
+        WALKING_TO_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
         COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD;
 
@@ -294,7 +293,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "RETURNING_AT_NIGHT" -> RETURNING_AT_NIGHT;
                 case "CAPTURED" -> CAPTURED;
                 case "RELAXING" -> RELAXING;
-                case "FARMING" -> FARMING;
+                case "FARMING_RANDOM_TEND" -> FARMING_RANDOM_TEND;
+                case "FARMING_HARVESTING" -> FARMING_HARVESTING;
                 case "WALKING_TO_FARM" -> WALKING_TO_FARM;
                 case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
                 case "GOING_TO_BAKERY" -> GOING_TO_BAKERY;
@@ -311,7 +311,14 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         public boolean isWorking() {
-            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY, FARMING).contains(this);
+            return ImmutableList.of(GATHERING, GATHERING_HUNGRY, GATHERING_HUNGRY).contains(this) || isFarming();
+        }
+
+        public boolean isFarming() {
+            return ImmutableList.of(
+                    FARMING_HARVESTING,
+                    FARMING_RANDOM_TEND
+            ).contains(this);
         }
 
         public boolean isPreparing() {

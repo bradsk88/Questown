@@ -87,13 +87,18 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         return capacity;
     }
 
-    public void tick(FarmerJob e, boolean isInFarm) {
+    public void tick(
+            TownStateProvider town,
+            FarmerStatuses.FarmStateProvider farm,
+            EntityStateProvider entity,
+            boolean isInFarm
+    ) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
         @Nullable GathererJournal.Status newStatus = FarmerStatuses.getNewStatusFromSignal(
-                status, sig, isInFarm
+                status, town, farm, entity, sig, isInFarm
         );
         if (newStatus != null) {
             changeStatus(newStatus);

@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import org.jetbrains.annotations.NotNull;
 
-class WorkSpot<P> {
+public class WorkSpot<P> {
     public final int score;
 
     public WorkSpot(

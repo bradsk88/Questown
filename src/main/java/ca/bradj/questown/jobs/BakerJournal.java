@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -7,9 +8,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>, ROOM> implements BakerStatuses.InventoryStateProvider {
+public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
     private final JournalItemList<H> inventory;
     private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
@@ -19,21 +21,6 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
     private ArrayList<StatusListener> statusListeners = new ArrayList<>();
-
-    @Override
-    public boolean inventoryFull() {
-        return invState.inventoryIsFull();
-    }
-
-    @Override
-    public boolean hasNonSupplyItems() {
-        return inventory.stream().filter(Predicates.not(GathererJournal.Item::isEmpty)).anyMatch(v -> !itemsToHold.shouldHoldForWork(status, v));
-    }
-
-    @Override
-    public boolean hasItems() {
-        return inventory.stream().anyMatch(Predicates.not(GathererJournal.Item::isEmpty));
-    }
 
     public void addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
@@ -106,14 +93,15 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
 
     public void tick(
             BakerStatuses.TownStateProvider<MCRoom> townState,
-            BakerStatuses.EntityStateProvider<MCRoom> entityState
+            BakerStatuses.EntityStateProvider<MCRoom> entityState,
+            EntityStateProvider inventory
     ) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
         @Nullable GathererJournal.Status newStatus = BakerStatuses.getNewStatusFromSignal(
-                status, sig, this, townState, entityState
+                status, sig, inventory, townState, entityState
         );
         if (newStatus != null) {
             changeStatus(newStatus);

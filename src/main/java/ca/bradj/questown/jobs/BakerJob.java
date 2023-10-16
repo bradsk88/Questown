@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.core.Config;
@@ -14,6 +15,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -35,23 +37,28 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
 
 public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+
+    private final Marker marker = MarkerManager.getMarker("Baker");
+
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     private final Container inventory;
     private Signals signal;
-    private BakerJournal<MCTownItem, MCHeldItem, RoomRecipeMatch> journal;
+    private final BakerJournal<MCTownItem, MCHeldItem> journal;
     private int ticksSinceLastFarmAction;
     private RoomRecipeMatch<MCRoom> selectedBakery;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
-    private ImmutableSet<Item> holdItems = ImmutableSet.of(
+    private final ImmutableSet<Item> holdItems = ImmutableSet.of(
             Items.WHEAT,
             Items.COAL
     );
@@ -156,7 +163,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     .noneMatch(BreadOvenBlock::canAddIngredients);
         };
 
-        processSignal(sl, this, new BakerStatuses.TownStateProvider<>() {
+        processSignal(sl, this, new BakerStatuses.TownStateProvider<MCRoom>() {
+
             @Override
             public boolean hasSupplies() {
                 // TODO: Use tags?
@@ -209,6 +217,32 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                         ))
                         .findFirst()
                         .orElse(null);
+            }
+        }, new EntityStateProvider() {
+            @Override
+            public boolean inventoryFull() {
+                return journal.isInventoryFull();
+            }
+
+            @Override
+            public boolean hasNonSupplyItems() {
+                return journal.getItems().stream()
+                        .filter(Predicates.not(GathererJournal.Item::isEmpty))
+                        .anyMatch(Predicates.not(v -> holdItems.contains(v.get().get())));
+            }
+
+            @Override
+            public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
+                boolean hasWheat = town.findMatchingContainer(v -> Items.WHEAT.equals(v.get().asItem())) != null;
+                return ImmutableMap.of(
+                        GathererJournal.Status.BAKING, hasWheat,
+                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat
+                );
+            }
+
+            @Override
+            public boolean hasItems() {
+                return false;
             }
         });
 
@@ -376,7 +410,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     return false;
                 }
                 sl.setBlockAndUpdate(oven.block, blockstate);
-                Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                QT.JOB_LOGGER.debug(marker, "{} is removing {} from {}", this.getJobName(), item, inventory);
                 inventory.setChanged();
                 return true;
             }
@@ -387,7 +421,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     return false;
                 }
                 sl.setBlockAndUpdate(oven.block, blockstate);
-                Questown.LOGGER.debug("{} is removing {} from {}", this.getJobName(), item, inventory);
+                QT.JOB_LOGGER.debug(marker, "{} is removing {} from {}", this.getJobName(), item, inventory);
                 inventory.setChanged();
                 return true;
             }
@@ -399,7 +433,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             Level level,
             BakerJob e,
             BakerStatuses.TownStateProvider<MCRoom> townState,
-            BakerStatuses.EntityStateProvider<MCRoom> entityState
+            BakerStatuses.EntityStateProvider<MCRoom> entityState,
+            EntityStateProvider inventoryState
     ) {
         if (level.isClientSide()) {
             return;
@@ -413,7 +448,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
          */
 
         e.signal = Signals.fromGameTime(level.getDayTime());
-        e.journal.tick(townState, entityState);
+        e.journal.tick(townState, entityState, inventoryState);
     }
 
     @Override
@@ -430,7 +465,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-       return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
     }
 
     @Override

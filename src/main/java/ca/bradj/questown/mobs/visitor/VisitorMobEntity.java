@@ -756,9 +756,9 @@ public class VisitorMobEntity extends PathfinderMob {
 
     @Override
     protected void jumpFromGround() {
-        if (getStatus() == GathererJournal.Status.FARMING) {
-            // Jumping destroys crops
+        if (getStatus().isFarming()) {
             if (!level.getBlockState(blockPosition()).is(Blocks.COMPOSTER)) {
+                // Jumping destroys crops. Don't do it.
                 return;
             }
         }

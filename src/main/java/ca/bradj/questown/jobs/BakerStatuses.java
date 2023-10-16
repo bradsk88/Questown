@@ -5,21 +5,15 @@ import ca.bradj.roomrecipes.core.Room;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 
 public class BakerStatuses {
 
-    public interface InventoryStateProvider {
-        boolean inventoryFull();
-
-        boolean hasNonSupplyItems();
-
-        boolean hasItems();
-    }
-
-    public interface TownStateProvider<ROOM extends Room> {
-        boolean hasSupplies();
+    public interface TownStateProvider<ROOM extends Room> extends ca.bradj.questown.jobs.TownStateProvider {
         boolean isBakeryFull(RoomRecipeMatch<ROOM> room);
+
         boolean hasBakerySpace();
+
         Collection<ROOM> bakeriesWithBread();
     }
 
@@ -30,7 +24,7 @@ public class BakerStatuses {
     public static @Nullable <ROOM extends Room> GathererJournal.Status getNewStatusFromSignal(
             GathererJournal.Status currentStatus,
             Signals signal,
-            InventoryStateProvider inventory,
+            ca.bradj.questown.jobs.EntityStateProvider inventory,
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
@@ -52,38 +46,45 @@ public class BakerStatuses {
 
     public static <ROOM extends Room> GathererJournal.@Nullable Status getMorningStatus(
             GathererJournal.Status currentStatus,
-            InventoryStateProvider inventory,
+            ca.bradj.questown.jobs.EntityStateProvider inventory,
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
-        if (inventory.hasNonSupplyItems()) {
-            return nullIfUnchanged(currentStatus, GathererJournal.Status.DROPPING_LOOT);
-        }
-        if (inventory.inventoryFull()) {
-            if (entity.getEntityBakeryLocation() != null) {
-                return nullIfUnchanged(currentStatus, GathererJournal.Status.BAKING);
-            }
-            if (town.hasBakerySpace()) {
-                return nullIfUnchanged(currentStatus, GathererJournal.Status.GOING_TO_BAKERY);
-            }
-            return GathererJournal.Status.DROPPING_LOOT;
-        }
+        GathererJournal.Status newStatus = JobStatuses.usualRoutine(currentStatus, inventory, town,
+                new JobStatuses.Job() {
+                    @Override
+                    public GathererJournal.@Nullable Status tryDoingSpecializedWork() {
+                        Collection<ROOM> breads = town.bakeriesWithBread();
+                        if (!breads.isEmpty()) {
+                            return GathererJournal.Status.COLLECTING_BREAD;
+                        }
+                        return null;
+                    }
 
-        Collection<ROOM> breads = town.bakeriesWithBread();
-        if (!breads.isEmpty()) {
-            return GathererJournal.Status.COLLECTING_BREAD;
-        }
-
-        if (!town.hasSupplies()) {
-            return nullIfUnchanged(currentStatus, GathererJournal.Status.NO_SUPPLIES);
-        }
-
-        return nullIfUnchanged(currentStatus, GathererJournal.Status.COLLECTING_SUPPLIES);
+                    @Override
+                    public @Nullable GathererJournal.Status tryUsingSupplies(
+                            Map<GathererJournal.Status, Boolean> supplyItemStatus
+                    ) {
+                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.BAKING, false)) {
+                            if (entity.getEntityBakeryLocation() != null) {
+                                return GathererJournal.Status.BAKING;
+                            }
+                        }
+                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.GOING_TO_BAKERY, false)) {
+                            if (town.hasBakerySpace()) {
+                                return GathererJournal.Status.GOING_TO_BAKERY;
+                            }
+                        }
+                        return null;
+                    }
+                }
+        );
+        return nullIfUnchanged(currentStatus, newStatus);
     }
 
     public static <ROOM extends Room> GathererJournal.@Nullable Status getEveningStatus(
             GathererJournal.Status currentStatus,
-            InventoryStateProvider inventory,
+            ca.bradj.questown.jobs.EntityStateProvider inventory,
             TownStateProvider<ROOM> town
     ) {
         Collection<ROOM> breads = town.bakeriesWithBread();
