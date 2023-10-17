@@ -167,7 +167,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     }
 
     public boolean hasAnyLootToDrop() {
-        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked() && !itemsToHold.shouldHoldForWork(status, v));
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(

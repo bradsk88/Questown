@@ -18,21 +18,20 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.DataSlot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -58,9 +57,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
-    private final ImmutableSet<Item> holdItems = ImmutableSet.of(
-            Items.WHEAT,
-            Items.COAL
+    // TODO: Support more recipes
+    private final ImmutableList<JobsClean.TestFn<MCTownItem>> recipe = ImmutableList.of(
+            item -> Ingredient.of(Items.WHEAT).test(item.toItemStack()),
+            item -> Ingredient.of(Items.WHEAT).test(item.toItemStack()),
+            item -> Ingredient.of(ItemTags.COALS).test(item.toItemStack())
     );
 
     private final UUID ownerUUID;
@@ -86,7 +87,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
         this.journal = new BakerJournal<>(
                 () -> this.signal, inventoryCapacity,
-                (status, item) -> holdItems.contains(item.get().get()),
+                (status, item) -> recipe.stream().anyMatch(v -> v.test(item.get())),
                 MCHeldItem::Air
         );
         this.journal.addItemListener(this);
@@ -233,7 +234,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             public boolean hasNonSupplyItems() {
                 return journal.getItems().stream()
                         .filter(Predicates.not(GathererJournal.Item::isEmpty))
-                        .anyMatch(Predicates.not(v -> holdItems.contains(v.get().get())));
+                        .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
             }
 
             @Override
@@ -242,8 +243,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 boolean hasCoal = journal.getItems().stream().anyMatch(v -> Items.COAL.equals(v.get().get()));
                 return ImmutableMap.of(
                         // FIXME: More statuses to make sure both wheat and coal get to bakery
-                        GathererJournal.Status.BAKING, hasWheat && hasCoal,
-                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat && hasCoal
+                        GathererJournal.Status.BAKING, hasWheat || hasCoal,
+                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat || hasCoal
                 );
             }
 
@@ -280,12 +281,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     private void tryDropLoot(
             BlockPos entityPos
     ) {
-        // TODO: Introduce this status for farmer
-//        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
-//            return;
-//        }
+        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
+            return;
+        }
         if (this.dropping) {
-            Questown.LOGGER.debug("Trying to drop too quickly");
+            QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
     }
@@ -297,7 +297,10 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 //        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
 //            return;
 //        }
-        Jobs.tryTakeContainerItems(this, entityPos, suppliesTarget, (item) -> holdItems.contains(item.get()));
+        Jobs.tryTakeContainerItems(
+                this, entityPos, suppliesTarget,
+                item -> JobsClean.shouldTakeItem(journal.getCapacity(), recipe, journal.getItems(), item)
+        );
     }
 
     @Override
@@ -343,7 +346,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 }
             }
             case COLLECTING_SUPPLIES, NO_SUPPLIES -> {
-                setupForGetSupplies(town, holdItems);
+                setupForGetSupplies(town);
                 if (suppliesTarget != null) {
                     return suppliesTarget.getBlockPos();
                 }
@@ -353,19 +356,27 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     private void setupForGetSupplies(
-            TownInterface town,
-            Set<Item> suppliesNeeded
+            TownInterface town
     ) {
-        Questown.LOGGER.debug("Baker is searching for supplies");
+        QT.JOB_LOGGER.debug(marker, "Baker is searching for supplies");
+        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
+                journal.getCapacity(), recipe, journal.getItems(), item
+        );
         if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
-                this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
+            if (!this.suppliesTarget.hasItem(
+                    checkFn
+            )) {
+                this.suppliesTarget = town.findMatchingContainer(
+                        checkFn
+                );
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
+            this.suppliesTarget = town.findMatchingContainer(
+                    checkFn
+            );
         }
         if (this.suppliesTarget != null) {
-            Questown.LOGGER.debug("Baker located supplies at {}", this.suppliesTarget.getPosition());
+            QT.JOB_LOGGER.debug(marker, "Baker located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
 
@@ -584,8 +595,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
-    public Component getJobName() {
-        return new TranslatableComponent("jobs.farmer");
+    public TranslatableComponent getJobName() {
+        return new TranslatableComponent("jobs.baker");
     }
 
     @Override

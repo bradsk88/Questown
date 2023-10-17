@@ -534,7 +534,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     @Override
-    public Component getJobName() {
+    public TranslatableComponent getJobName() {
         return new TranslatableComponent("jobs.gatherer");
     }
 

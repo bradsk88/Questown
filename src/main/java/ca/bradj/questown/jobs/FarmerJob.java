@@ -582,7 +582,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public Component getJobName() {
+    public TranslatableComponent getJobName() {
         return new TranslatableComponent("jobs.farmer");
     }
 

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
@@ -188,11 +189,11 @@ public class Jobs {
     ) {
         UUID ownerUUID = dropper.UUID();
         if (!dropper.hasAnyLootToDrop()) {
-            Questown.LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
+            QT.JOB_LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
             return false;
         }
         if (!isCloseToChest(entityPos, target)) {
-            Questown.LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
+            QT.JOB_LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
             return false;
         }
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
@@ -202,10 +203,10 @@ public class Jobs {
             }
             // TODO: Unit tests of this logic!
             if (mct.isLocked()) {
-                Questown.LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
+                QT.JOB_LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
                 continue;
             }
-            Questown.LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, target.getBlockPos());
+            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, target.getBlockPos());
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {
@@ -219,7 +220,7 @@ public class Jobs {
                 }
             }
             if (!added) {
-                Questown.LOGGER.debug("Nope. No space for {}", mct);
+                QT.JOB_LOGGER.debug("Nope. No space for {}", mct);
             }
         }
         return true;
@@ -247,7 +248,7 @@ public class Jobs {
         for (int i = 0; i < suppliesTarget.size(); i++) {
             MCTownItem mcTownItem = suppliesTarget.getItem(i);
             if (check.Matches(mcTownItem)) {
-                Questown.LOGGER.debug("Villager is taking {} from {}", mcTownItem, suppliesTarget);
+                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, suppliesTarget);
                 farmerJob.addItem(new MCHeldItem(mcTownItem));
                 suppliesTarget.getContainer().removeItem(i, 1);
                 break;

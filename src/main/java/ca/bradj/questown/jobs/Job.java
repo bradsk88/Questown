@@ -5,8 +5,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Position;
-import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.DataSlot;
@@ -59,7 +58,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
 
     boolean shouldBeNoClip(TownInterface town, BlockPos blockPos);
 
-    Component getJobName();
+    TranslatableComponent getJobName();
 
     boolean addToEmptySlot(MCTownItem mcTownItem);
 }

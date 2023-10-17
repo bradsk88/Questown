@@ -114,6 +114,9 @@ public class VisitorMobEntity extends PathfinderMob {
     private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
+    private static final EntityDataAccessor<String> jobName = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
 
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
@@ -279,6 +282,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public void setJob(Job<MCHeldItem, ? extends Snapshot<?>> initializedJob) {
         job = initializedJob;
+        entityData.set(jobName, job.getJobName().getKey());
     }
 
     @Override
@@ -286,6 +290,7 @@ public class VisitorMobEntity extends PathfinderMob {
         super.defineSynchedData();
         this.entityData.define(visible, true);
         this.entityData.define(status, GathererJournal.Status.IDLE.name());
+        this.entityData.define(jobName, "jobs.gatherer");
     }
 
     @NotNull
@@ -845,7 +850,7 @@ public class VisitorMobEntity extends PathfinderMob {
             double zPos,
             Snapshot journal
     ) {
-        job = JobsRegistry.getInitializedJob(town, journal.jobStringValue(), journal, uuid);
+        setJob(JobsRegistry.getInitializedJob(town, journal.jobStringValue(), journal, uuid));
         this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
@@ -913,7 +918,7 @@ public class VisitorMobEntity extends PathfinderMob {
             return;
         }
         Job<MCHeldItem, ? extends Snapshot<?>> job1 = new FarmerJob(uuid, 6);
-        this.job = job1;
+        this.setJob(job1);
     }
 
     public void convertToBaker() {
@@ -921,7 +926,7 @@ public class VisitorMobEntity extends PathfinderMob {
             return;
         }
         Job<MCHeldItem, ? extends Snapshot<?>> job1 = new BakerJob(uuid, 6);
-        this.job = job1;
+        this.setJob(job1);
     }
 
     @Override
