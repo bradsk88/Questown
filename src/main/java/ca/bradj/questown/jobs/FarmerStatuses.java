@@ -47,7 +47,7 @@ public class FarmerStatuses {
             boolean isInFarm
     ) {
         GathererJournal.Status status = JobStatuses.usualRoutine(
-                currentStatus, inventory, town,
+                currentStatus, inventory, town, false,
                 new JobStatuses.Job() {
                     @Override
                     public GathererJournal.@Nullable Status tryDoingItemlessWork() {

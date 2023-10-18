@@ -335,6 +335,82 @@ class BakerStatusesTest {
     }
 
     @Test
+    void InMorning_StatusShouldPreferCollectingSupplies_OverBakingOrFueling_IfInventoryIsNotFull_AndNotInBakery() {
+        boolean inventoryFull = false;
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE,
+                Signals.MORNING,
+                new ConstInventory(inventoryFull, true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room), // <- A room needs coal
+                        ImmutableList.of()
+                ),
+                new ConstEntity(null)
+        );
+        Assertions.assertEquals(GathererJournal.Status.COLLECTING_SUPPLIES, s);
+    }
+
+    @Test
+    void InMorning_StatusShouldPrefer_Fueling_OverCollectingSupplies_IfInventoryIsNotFull_AndInBakery() {
+        boolean inventoryFull = false;
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE,
+                Signals.MORNING,
+                new ConstInventory(inventoryFull, true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room), // <- A room needs coal
+                        ImmutableList.of()
+                ),
+                new ConstEntity(arbitraryRoom)
+        );
+        Assertions.assertEquals(GathererJournal.Status.BAKING_FUELING, s);
+    }
+
+    @Test
+    void InMorning_StatusShouldPrefer_Baking_OverCollectingSupplies_IfInventoryIsNotFull_AndInBakery() {
+        boolean inventoryFull = false;
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE,
+                Signals.MORNING,
+                new ConstInventory(inventoryFull, true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room) // <- A room needs wheat
+                ),
+                new ConstEntity(arbitraryRoom)
+        );
+        Assertions.assertEquals(GathererJournal.Status.BAKING_FUELING, s);
+    }
+
+    @Test
+    void InMorning_StatusShouldPreferCollectingBread_OverCollectingSuppliesAndBakingOrFueling_IfInventoryIsNotFull_AndNotInBakery() {
+        boolean inventoryFull = false;
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE,
+                Signals.MORNING,
+                new ConstInventory(inventoryFull, true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room), // <- A room has bread
+                        ImmutableList.of(arbitraryRoom.room), // <- A room needs coal
+                        ImmutableList.of(arbitraryRoom.room) // <- A room needs wheat
+                ),
+                new ConstEntity(null)
+        );
+        Assertions.assertEquals(GathererJournal.Status.COLLECTING_BREAD, s);
+    }
+
+    @Test
     void InEvening_StatusShouldBe_Relaxing_IfInventoryEmpty() {
         GathererJournal.Status s = BakerStatuses.getEveningStatus(
                 GathererJournal.Status.IDLE,

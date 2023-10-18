@@ -48,7 +48,8 @@ public class BakerStatuses {
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
-        GathererJournal.Status newStatus = JobStatuses.usualRoutine(currentStatus, inventory, town,
+        GathererJournal.Status newStatus = JobStatuses.usualRoutine(
+                currentStatus, inventory, town, true,
                 new JobStatuses.Job() {
                     @Override
                     public GathererJournal.@Nullable Status tryDoingItemlessWork() {

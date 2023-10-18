@@ -15,6 +15,7 @@ public class JobStatuses {
             GathererJournal.Status currentStatus,
             EntityStateProvider inventory,
             TownStateProvider town,
+            boolean fillBeforeWorking,
             Job job
     ) {
         if (inventory.hasItems()) {
