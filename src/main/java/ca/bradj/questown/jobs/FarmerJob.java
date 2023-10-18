@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
@@ -192,21 +192,27 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         processSignal(sl, town, this, isInFarm);
 
         WorkSpot<BlockPos> workSpot = switch (getStatus()) {
-            case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST);
-            case FARMING_BONING -> workSpots.get(FarmerAction.BONE);
-            case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT);
-            case FARMING_TILLING -> workSpots.get(FarmerAction.TILL);
-            case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST);
+            case FARMING_HARVESTING -> workSpots.getOrDefault(FarmerAction.HARVEST, null);
+            case FARMING_BONING -> workSpots.getOrDefault(FarmerAction.BONE, null);
+            case FARMING_PLANTING -> workSpots.getOrDefault(FarmerAction.PLANT, null);
+            case FARMING_TILLING -> workSpots.getOrDefault(FarmerAction.TILL, null);
+            case FARMING_COMPOSTING -> workSpots.getOrDefault(FarmerAction.COMPOST, null);
             default -> null;
         };
-        if (workSpot != null) {
-            setupForGetSupplies(town, workSpot);
 
+        setupForGetSupplies(town, Arrays.asList(
+                workSpots.getOrDefault(FarmerAction.HARVEST, null),
+                workSpots.getOrDefault(FarmerAction.BONE, null),
+                workSpots.getOrDefault(FarmerAction.PLANT, null),
+                workSpots.getOrDefault(FarmerAction.TILL, null),
+                workSpots.getOrDefault(FarmerAction.COMPOST, null)
+        ).stream().filter(v -> v != null).toList());
+
+        if (workSpot != null) {
             world.tryFarming(town, entityBlockPos, workSpot);
         } else if (getStatus().isFarmingWork()) {
             QT.JOB_LOGGER.error("Workspot is null but status is {}. This is a bug.", getStatus());
         }
-
         tryDropLoot(entityBlockPos);
         tryGetSupplies(entityBlockPos);
     }
@@ -310,24 +316,30 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     private void setupForGetSupplies(
             TownInterface town,
-            WorkSpot<BlockPos> workSpot
+            List<WorkSpot<BlockPos>> workSpot
     ) {
         ContainerTarget<MCContainer, MCTownItem> in = this.suppliesTarget;
-        final Set<Item> suppliesNeeded = switch (workSpot.action) {
-            case TILL, PLANT, COMPOST -> ImmutableSet.of(Items.WHEAT_SEEDS);
-            case BONE -> ImmutableSet.of(Items.BONE_MEAL);
-            default -> ImmutableSet.of();
-        };
 
-        if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
+        List<ImmutableSet<Item>> supplies = workSpot.stream().map(
+                v -> switch (v.action) {
+                    case TILL, PLANT, COMPOST -> ImmutableSet.of(Items.WHEAT_SEEDS);
+                    case BONE -> ImmutableSet.of(Items.BONE_MEAL);
+                    default -> ImmutableSet.<Item>of();
+                }
+        ).toList();
+
+        for (ImmutableSet<Item> suppliesNeeded : supplies) {
+            if (this.suppliesTarget != null) {
+                if (!this.suppliesTarget.hasItem(item -> suppliesNeeded.contains(item.get()))) {
+                    this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
+                }
+            } else {
                 this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
             }
-        } else {
-            this.suppliesTarget = town.findMatchingContainer(item -> suppliesNeeded.contains(item.get()));
-        }
-        if ((in == null && this.suppliesTarget != null) || (in != null && this.suppliesTarget != null && !in.equals(suppliesTarget))) {
-            QT.JOB_LOGGER.debug(marker, "Farmer located supplies at {}", this.suppliesTarget.getPosition());
+            if ((in == null && this.suppliesTarget != null) || (in != null && this.suppliesTarget != null && !in.equals(
+                    suppliesTarget))) {
+                return;
+            }
         }
     }
 
@@ -477,7 +489,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                         return ImmutableMap.of(
                                 GathererJournal.Status.FARMING_TILLING, hasSeeds,
                                 GathererJournal.Status.FARMING_PLANTING, hasSeeds,
-                                GathererJournal.Status.FARMING_BONING, hasBoneMeal
+                                GathererJournal.Status.FARMING_BONING, hasBoneMeal,
+                                GathererJournal.Status.FARMING_COMPOSTING, hasSeeds
                         );
                     }
 

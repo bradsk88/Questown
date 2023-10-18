@@ -35,7 +35,7 @@
   "tooltips.villagers.job.gatherer.status_2.RETURNED_FAILURE": "",
   "tooltips.villagers.job.gatherer.status_1.RELAXING": "%s has finished",
   "tooltips.villagers.job.gatherer.status_2.RELAXING": "their work for the day",
-  "tooltips.villagers.job.gatherer.status_1.NO_SUPPLIES": "%s is looking for wheat and coal.",
+  "tooltips.villagers.job.gatherer.status_1.NO_SUPPLIES": "%s is looking for supplies.",
   "tooltips.villagers.job.gatherer.status_2.NO_SUPPLIES": "They will search in room chests.",
   "tooltips.villagers.job.gatherer.status_1.FARMING": "%s is tending to their crops.",
   "tooltips.villagers.job.gatherer.status_2.FARMING": "Make sure they can find seeds.",
