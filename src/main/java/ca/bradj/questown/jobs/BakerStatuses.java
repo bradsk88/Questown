@@ -10,11 +10,9 @@ import java.util.Map;
 public class BakerStatuses {
 
     public interface TownStateProvider<ROOM extends Room> extends ca.bradj.questown.jobs.TownStateProvider {
-        boolean isBakeryFull(RoomRecipeMatch<ROOM> room);
-
-        boolean hasBakerySpace();
-
         Collection<ROOM> bakeriesWithBread();
+        Collection<ROOM> bakeriesNeedingWheat();
+        Collection<ROOM> bakeriesNeedingCoal();
     }
 
     public interface EntityStateProvider<ROOM extends Room> {
@@ -65,14 +63,23 @@ public class BakerStatuses {
                     public @Nullable GathererJournal.Status tryUsingSupplies(
                             Map<GathererJournal.Status, Boolean> supplyItemStatus
                     ) {
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.BAKING, false)) {
-                            if (entity.getEntityBakeryLocation() != null) {
-                                return GathererJournal.Status.BAKING;
+                        RoomRecipeMatch<ROOM> location = entity.getEntityBakeryLocation();
+                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.BAKING_FUELING, false)) {
+                            if (!town.bakeriesNeedingCoal().isEmpty()) {
+                                boolean inSite = false;
+                                if (location != null) {
+                                    inSite = town.bakeriesNeedingCoal().contains(location.room);
+                                }
+                                return JobsClean.doOrGoTo(GathererJournal.Status.BAKING_FUELING, inSite);
                             }
                         }
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.GOING_TO_BAKERY, false)) {
-                            if (town.hasBakerySpace()) {
-                                return GathererJournal.Status.GOING_TO_BAKERY;
+                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.BAKING, false)) {
+                            if (!town.bakeriesNeedingWheat().isEmpty()) {
+                                boolean inSite = false;
+                                if (location != null) {
+                                    inSite = town.bakeriesNeedingWheat().contains(location.room);
+                                }
+                                return JobsClean.doOrGoTo(GathererJournal.Status.BAKING, inSite);
                             }
                         }
                         return null;

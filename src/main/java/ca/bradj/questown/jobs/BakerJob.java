@@ -156,20 +156,15 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return;
         }
 
-        Function<RoomRecipeMatch<MCRoom>, Boolean> _isBakeryFull = (RoomRecipeMatch<MCRoom> mcRoom) -> {
-            ImmutableMap<BlockPos, Block> containedBlocks = mcRoom.getContainedBlocks();
-            return containedBlocks.entrySet().stream()
-                    .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
-                    .map(v -> sl.getBlockState(v.getKey()))
-                    .noneMatch(BreadOvenBlock::canAddIngredients);
-        };
+        BakerJob bj = this;
 
-        processSignal(sl, this, new BakerStatuses.TownStateProvider<MCRoom>() {
+        processSignal(sl, this, new BakerStatuses.TownStateProvider<>() {
 
             @Override
             public boolean hasSupplies() {
-                // TODO: Use tags?
-                return town.findMatchingContainer(v -> v.get().equals(Items.WHEAT)) != null;
+                return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
+                        journal.getCapacity(), recipe, journal.getItems(), item
+                )) != null;
             }
 
             @Override
@@ -178,20 +173,25 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             }
 
             @Override
-            public boolean isBakeryFull(RoomRecipeMatch<MCRoom> mcRoom) {
-                return _isBakeryFull.apply(mcRoom);
-            }
-
-            @Override
-            public boolean hasBakerySpace() {
-                // TODO: Use tags to match different bakery tiers?
-                ResourceLocation id = new ResourceLocation(Questown.MODID, "bakery");
-                Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
-                return rooms.stream().anyMatch(v -> !_isBakeryFull.apply(v));
-            }
-
-            @Override
             public Collection<MCRoom> bakeriesWithBread() {
+                return bakeriesWithState(BreadOvenBlock::hasBread);
+            }
+
+            @Override
+            public Collection<MCRoom> bakeriesNeedingCoal() {
+                return bakeriesWithState(BreadOvenBlock::canAcceptCoal);
+            }
+
+            @Override
+            public Collection<MCRoom> bakeriesNeedingWheat() {
+                return bakeriesWithState(BreadOvenBlock::canAcceptWheat);
+            }
+
+            private interface StateCheck {
+                boolean Check(BlockState bs);
+            }
+
+            private Collection<MCRoom> bakeriesWithState(StateCheck check) {
                 ResourceLocation id = new ResourceLocation(Questown.MODID, "bakery");
                 Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
                 return rooms.stream()
@@ -200,7 +200,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                                 if (!(e.getValue() instanceof BreadOvenBlock)) {
                                     continue;
                                 }
-                                if (BreadOvenBlock.hasBread(sl.getBlockState(e.getKey()))) {
+                                if (check.Check(sl.getBlockState(e.getKey()))) {
                                     return true;
                                 }
                             }
@@ -239,13 +239,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
             @Override
             public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
-                boolean hasWheat = journal.getItems().stream().anyMatch(v -> Items.WHEAT.equals(v.get().get()));
-                boolean hasCoal = journal.getItems().stream().anyMatch(v -> Items.COAL.equals(v.get().get()));
-                return ImmutableMap.of(
-                        // FIXME: More statuses to make sure both wheat and coal get to bakery
-                        GathererJournal.Status.BAKING, hasWheat || hasCoal,
-                        GathererJournal.Status.GOING_TO_BAKERY, hasWheat || hasCoal
-                );
+                return bj.getSupplyItemStatus();
             }
 
             @Override
@@ -278,6 +272,16 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 //        tryTakeFood(entityPos);
     }
 
+    private Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
+        boolean hasWheat = journal.getItems().stream().anyMatch(v -> Items.WHEAT.equals(v.get().get()));
+        boolean hasCoal = journal.getItems().stream().anyMatch(v -> Items.COAL.equals(v.get().get()));
+        return ImmutableMap.of(
+                // FIXME: More statuses to make sure both wheat and coal get to bakery
+                GathererJournal.Status.BAKING, hasWheat,
+                GathererJournal.Status.BAKING_FUELING, hasCoal
+        );
+    }
+
     private void tryDropLoot(
             BlockPos entityPos
     ) {
@@ -294,9 +298,9 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             BlockPos entityPos
     ) {
         // TODO: Introduce this status for farmer
-//        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
-//            return;
-//        }
+        if (journal.getStatus() != GathererJournal.Status.COLLECTING_SUPPLIES) {
+            return;
+        }
         Jobs.tryTakeContainerItems(
                 this, entityPos, suppliesTarget,
                 item -> JobsClean.shouldTakeItem(journal.getCapacity(), recipe, journal.getItems(), item)
@@ -319,10 +323,20 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 new ResourceLocation(Questown.MODID, "bakery")
         );
 
+        Map<GathererJournal.Status, Boolean> statuses = getSupplyItemStatus();
+
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
                 BlockState blockState = sl.getBlockState(blocks.getKey());
-                if (BreadOvenBlock.canAddIngredients(blockState) || BreadOvenBlock.hasBread(blockState)) {
+                if (statuses.getOrDefault(GathererJournal.Status.BAKING_FUELING, false) && BreadOvenBlock.canAcceptCoal(blockState)) {
+                    selectedBakery = match;
+                    break;
+                }
+                if (statuses.getOrDefault(GathererJournal.Status.BAKING, false) && BreadOvenBlock.canAcceptWheat(blockState)) {
+                    selectedBakery = match;
+                    break;
+                }
+                if (BreadOvenBlock.hasBread(blockState)) {
                     selectedBakery = match;
                     break;
                 }
@@ -333,8 +347,14 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         }
 
         switch (journal.getStatus()) {
-            case GOING_TO_BAKERY, BAKING, COLLECTING_BREAD -> {
-                WorkSpot ovenInteractionSpot = getOvenInteractionSpot(town, selectedBakery);
+            case GOING_TO_JOBSITE -> {
+                return selectedBakery.getContainedBlocks().entrySet().stream()
+                        .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
+                        .findFirst().map(Map.Entry::getKey).orElse(null);
+            }
+            case BAKING, BAKING_FUELING, COLLECTING_BREAD -> {
+                boolean fuel = journal.getStatus() == GathererJournal.Status.BAKING_FUELING;
+                WorkSpot ovenInteractionSpot = getOvenInteractionSpot(town, selectedBakery, fuel);
                 if (ovenInteractionSpot != null) {
                     return ovenInteractionSpot.interactionSpot;
                 }
@@ -399,7 +419,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return false;
         }
 
-        WorkSpot oven = getOvenInteractionSpot(town, selectedBakery);
+        boolean fuel = journal.getStatus() == GathererJournal.Status.BAKING_FUELING;
+        WorkSpot oven = getOvenInteractionSpot(town, selectedBakery, fuel);
         if (oven == null) {
             return false;
         }
@@ -537,17 +558,25 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     @Nullable
     private static WorkSpot getOvenInteractionSpot(
             TownInterface town,
-            @Nullable RoomRecipeMatch<MCRoom> foundRoom
+            @Nullable RoomRecipeMatch<MCRoom> foundRoom,
+            boolean fuel
     ) {
         if (foundRoom == null) {
             return null;
         }
 
+        Optional<Map.Entry<BlockPos, Block>> fuelableOven = foundRoom.getContainedBlocks().entrySet().stream()
+                .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
+                .filter(v -> {
+                    BlockState bs = town.getServerLevel().getBlockState(v.getKey());
+                    return BreadOvenBlock.canAcceptCoal(bs);
+                })
+                .findFirst();
         Optional<Map.Entry<BlockPos, Block>> fillableOven = foundRoom.getContainedBlocks().entrySet().stream()
                 .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
                 .filter(v -> {
                     BlockState bs = town.getServerLevel().getBlockState(v.getKey());
-                    return BreadOvenBlock.canAddIngredients(bs);
+                    return BreadOvenBlock.canAcceptWheat(bs);
                 })
                 .findFirst();
         Optional<Map.Entry<BlockPos, Block>> ovenWithBread = foundRoom.getContainedBlocks().entrySet().stream()
@@ -557,7 +586,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     return BreadOvenBlock.hasBread(bs);
                 })
                 .findFirst();
-        if (fillableOven.isEmpty() && ovenWithBread.isEmpty()) {
+        if (fuelableOven.isEmpty() && fillableOven.isEmpty() && ovenWithBread.isEmpty()) {
             return null;
         }
 
@@ -571,13 +600,22 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                     ovenPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()))
             );
         }
-        BlockPos ovenPos = fillableOven.get().getKey();
+        BlockPos pos = null;
+        if (fuel && fuelableOven.isPresent()) {
+            pos = fuelableOven.get().getKey();
+        }
+        if (!fuel && fillableOven.isPresent()) {
+            pos = fillableOven.get().getKey();
+        }
 
+        if (pos == null) {
+            return null;
+        }
         // TODO: Make oven horizontal block and get direction property
 
         return new WorkSpot(
-                ovenPos,
-                ovenPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()))
+                pos,
+                pos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()))
         );
     }
 

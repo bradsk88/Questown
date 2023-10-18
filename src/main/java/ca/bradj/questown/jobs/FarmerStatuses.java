@@ -53,10 +53,10 @@ public class FarmerStatuses {
                     public GathererJournal.@Nullable Status tryDoingItemlessWork() {
                         // Order is important here
                         if (farm.isWorkPossible(FarmerJob.FarmerAction.HARVEST)) {
-                            return doOrGoTo(GathererJournal.Status.FARMING_HARVESTING, isInFarm);
+                            return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_HARVESTING, isInFarm);
                         }
                         if (farm.isWorkPossible(FarmerJob.FarmerAction.TILL)) {
-                            return doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
+                            return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
                         }
                         return null;
                     }
@@ -68,22 +68,22 @@ public class FarmerStatuses {
                         // Order of work type is important here
                         if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_BONING, false)) {
                             if (farm.isWorkPossible(FarmerJob.FarmerAction.BONE)) {
-                                return doOrGoTo(GathererJournal.Status.FARMING_BONING, isInFarm);
+                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_BONING, isInFarm);
                             }
                         }
                         if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_PLANTING, false)) {
                             if (farm.isWorkPossible(FarmerJob.FarmerAction.PLANT)) {
-                                return doOrGoTo(GathererJournal.Status.FARMING_PLANTING, isInFarm);
+                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_PLANTING, isInFarm);
                             }
                         }
                         if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_TILLING, false)) {
                             if (farm.isWorkPossible(FarmerJob.FarmerAction.TILL)) {
-                                return doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
+                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
                             }
                         }
                         if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_COMPOSTING, false)) {
                             if (farm.isWorkPossible(FarmerJob.FarmerAction.COMPOST)) {
-                                return doOrGoTo(GathererJournal.Status.FARMING_COMPOSTING, isInFarm);
+                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_COMPOSTING, isInFarm);
                             }
                         }
                         return null;
@@ -96,16 +96,6 @@ public class FarmerStatuses {
         return status;
     }
 
-    private static GathererJournal.Status doOrGoTo(
-            GathererJournal.Status status,
-            boolean isInFarm
-    ) {
-        if (isInFarm) {
-            return status;
-        }
-        return GathererJournal.Status.WALKING_TO_FARM;
-    }
-
     private static GathererJournal.@Nullable Status handleNoon(
             GathererJournal.Status currentStatus,
             boolean isInFarm
@@ -116,10 +106,10 @@ public class FarmerStatuses {
             }
             return GathererJournal.Status.FARMING_RANDOM_TEND;
         }
-        if (currentStatus == GathererJournal.Status.WALKING_TO_FARM) {
+        if (currentStatus == GathererJournal.Status.GOING_TO_JOBSITE) {
             return null;
         }
-        return GathererJournal.Status.WALKING_TO_FARM;
+        return GathererJournal.Status.GOING_TO_JOBSITE;
     }
 
     private static GathererJournal.@Nullable Status handleEvening(
@@ -132,10 +122,10 @@ public class FarmerStatuses {
             }
             return GathererJournal.Status.FARMING_RANDOM_TEND;
         }
-        if (currentStatus == GathererJournal.Status.WALKING_TO_FARM) {
+        if (currentStatus == GathererJournal.Status.GOING_TO_JOBSITE) {
             return null;
         }
-        return GathererJournal.Status.WALKING_TO_FARM;
+        return GathererJournal.Status.GOING_TO_JOBSITE;
     }
 
     private static GathererJournal.Status nullIfUnchanged(

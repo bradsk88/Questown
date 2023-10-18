@@ -6,6 +6,16 @@ import java.util.*;
 
 public class JobsClean {
 
+    public static GathererJournal.Status doOrGoTo(
+            GathererJournal.Status status,
+            boolean isAtJobSite
+    ) {
+        if (isAtJobSite) {
+            return status;
+        }
+        return GathererJournal.Status.GOING_TO_JOBSITE;
+    }
+
     public interface TestFn<I extends GathererJournal.Item<I>> {
         boolean test(I item);
     }

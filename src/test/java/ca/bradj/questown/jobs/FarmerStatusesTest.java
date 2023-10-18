@@ -52,7 +52,7 @@ class FarmerStatusesTest {
                 new ConstEntity(false, false, false, ImmutableMap.of()),
                 inside
         );
-        Assertions.assertEquals(GathererJournal.Status.WALKING_TO_FARM, s);
+        Assertions.assertEquals(GathererJournal.Status.GOING_TO_JOBSITE, s);
     }
 
     @Test

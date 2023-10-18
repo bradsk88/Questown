@@ -271,10 +271,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     public enum Status {
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
+        GOING_TO_JOBSITE,
         // TODO: Move to farmer-specific status
-        WALKING_TO_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
+        FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
-        COLLECTING_SUPPLIES, GOING_TO_BAKERY, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM;
+        COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING;
 
         public static Status from(String s) {
             return switch (s) {
@@ -299,12 +300,12 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "FARMING_TILLING" -> FARMING_TILLING;
                 case "FARMING_COMPOSTING" -> FARMING_COMPOSTING;
                 case "FARMING_BONING" -> FARMING_BONING;
-                case "WALKING_TO_FARM" -> WALKING_TO_FARM;
+                case "GOING_TO_JOBSITE" -> GOING_TO_JOBSITE;
                 case "LEAVING_FARM" -> LEAVING_FARM;
                 case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
-                case "GOING_TO_BAKERY" -> GOING_TO_BAKERY;
                 case "NO_SUPPLIES" -> NO_SUPPLIES;
                 case "BAKING" -> BAKING;
+                case "BAKING_FUELING" -> BAKING_FUELING;
                 case "COLLECTING_BREAD" -> COLLECTING_BREAD;
                 // TODO: Can this be protected by a compiler check?
                 default -> throw new IllegalArgumentException("Unexpected status " + s);
@@ -330,7 +331,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         public boolean isPreparing() {
-            return ImmutableList.of(NO_GATE, NO_FOOD, WALKING_TO_FARM).contains(this);
+            return ImmutableList.of(NO_GATE, NO_FOOD, GOING_TO_JOBSITE).contains(this);
         }
 
         public boolean isFinishingUp() {

@@ -270,7 +270,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         ) : null;
 
         BlockPos out = switch (getStatus()) {
-            case WALKING_TO_FARM, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm);
+            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm);
             case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position;
             case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position;
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position;

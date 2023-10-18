@@ -1,5 +1,6 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
@@ -84,7 +85,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             BlockState blockState = oldState.setValue(BAKE_STATE, val);
             if (val == BAKE_STATE_BAKING) {
                 int dayHour = (int) (level.getDayTime() % 24000) / 1000;
-                blockState = blockState.setValue(STARTED_BAKING_AT, dayHour);
+                blockState = setBakingHour(blockState, dayHour);
             }
             return blockState;
         }
@@ -232,7 +233,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
 
         if (!blockState.hasProperty(STARTED_BAKING_AT)) {
             if (isBaking(blockState)) {
-                blockState = blockState.setValue(STARTED_BAKING_AT, calculateCurrentHour(sl));
+                blockState = setBakingHour(blockState, calculateCurrentHour(sl));
                 level.setBlock(pos, blockState, 11);
             } else {
                 return InteractionResult.sidedSuccess(level.isClientSide);
@@ -258,7 +259,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         int hour = calculateCurrentHour(level);
         if (!blockState.hasProperty(STARTED_BAKING_AT)) {
             if (isBaking(blockState)) {
-                return blockState.setValue(STARTED_BAKING_AT, hour);
+                return setBakingHour(blockState, hour);
             }
         }
 
@@ -266,7 +267,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
 
         if (isBaking(blockState)) {
             if (started == 0) {
-                return blockState.setValue(STARTED_BAKING_AT, hour);
+                return setBakingHour(blockState, hour);
             }
 
             int plus = Config.BAKING_TIME.get() / 1000;
@@ -277,6 +278,11 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         }
 
         return null;
+    }
+
+    private static BlockState setBakingHour(BlockState bs, int hour) {
+        QT.BLOCK_LOGGER.debug("Set baking hour to {}", hour);
+        return bs.setValue(STARTED_BAKING_AT, hour);
     }
 
     private static int calculateCurrentHour(ServerLevel level) {
