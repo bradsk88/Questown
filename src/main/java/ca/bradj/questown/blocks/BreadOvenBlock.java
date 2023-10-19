@@ -120,22 +120,31 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKED;
     }
 
+    public interface TakeFn {
+        boolean Take(ItemStack is);
+    }
+
     public static BlockState extractBread(
             BlockState oldState,
             ServerLevel sl,
-            BlockPos block
+            BlockPos block,
+            @Nullable TakeFn takeFn
     ) {
         BlockState bs = oldState.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
         sl.setBlock(block, bs, 11);
-        moveBreadToWorld(sl, block);
+        moveBreadToWorld(sl, block, takeFn);
         return bs;
     }
 
     private static void moveBreadToWorld(
             ServerLevel level,
-            BlockPos b
+            BlockPos b,
+            @Nullable TakeFn takeFn
     ) {
-        level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), new ItemStack(Items.BREAD, 1)));
+        ItemStack is = new ItemStack(Items.BREAD, 1);
+        if (takeFn == null || !takeFn.Take(is)) {
+            level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+        }
         level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
 
@@ -211,7 +220,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         }
 
         if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos);
+            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 

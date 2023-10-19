@@ -438,7 +438,9 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         BlockState oldState = sl.getBlockState(oven.block);
 
         if (BreadOvenBlock.hasBread(oldState)) {
-            BlockState blockState = BreadOvenBlock.extractBread(oldState, sl, oven.block);
+            BlockState blockState = BreadOvenBlock.extractBread(oldState, sl, oven.block,
+                    is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
+            );
             return !oldState.equals(blockState);
         }
 
