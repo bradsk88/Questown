@@ -65,7 +65,10 @@ class BakerStatusesTest {
                 new ConstInventory(false, false, false, ImmutableMap.of()),
                 new ConstTown(
                         true, true,
-                        ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of()
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room), // <- Needs coal
+                        ImmutableList.of(arbitraryRoom.room) // <- Needs wheat
                 ),
                 new ConstEntity(null)
         );
@@ -80,8 +83,10 @@ class BakerStatusesTest {
                 new ConstInventory(false, false, false, ImmutableMap.of()),
                 new ConstTown(
                         false, true,
-                        ImmutableList.of(), ImmutableList.of(arbitraryRoom.room),
-                        ImmutableList.of(), ImmutableList.of()
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room), // < - Room has bread
+                        ImmutableList.of(),
+                        ImmutableList.of()
                 ),
                 new ConstEntity(null)
         );
@@ -119,6 +124,23 @@ class BakerStatusesTest {
                 new ConstEntity(null)
         );
         Assertions.assertEquals(GathererJournal.Status.NO_SUPPLIES, s);
+    }
+    @Test
+    void InMorning_StatusShouldBe_GoingToJobSite_WhenInvHasSupplies_AndTownEmpty() {
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.IDLE,
+                Signals.MORNING,
+                new ConstInventory(false, true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(
+                        false, true,
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room),
+                        ImmutableList.of(arbitraryRoom.room)
+                ),
+                new ConstEntity(null)
+        );
+        Assertions.assertEquals(GathererJournal.Status.GOING_TO_JOBSITE, s);
     }
 
     @Test
@@ -169,6 +191,42 @@ class BakerStatusesTest {
                 new ConstEntity(null)
         );
         Assertions.assertNull(s); // Null means "unchanged"
+    }
+
+    @Test
+    void InMorning_StatusBe_Relaxing_WhenAllBakeriesFull_AndInBakery() {
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.BAKING,
+                Signals.MORNING,
+                new ConstInventory(false, true, false, ImmutableMap.of()),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(arbitraryRoom),
+                        ImmutableList.of(), // <- None have bread
+                        ImmutableList.of(), // <- Nothing needs coal
+                        ImmutableList.of() // <- Nothing needs wheat
+                ),
+                new ConstEntity(arbitraryRoom)
+        );
+        Assertions.assertEquals(GathererJournal.Status.IDLE, s);
+    }
+
+    @Test
+    void InMorning_StatusBe_Relaxing_WhenAllBakeriesFull_AndOutOfBakery() {
+        GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
+                GathererJournal.Status.BAKING,
+                Signals.MORNING,
+                new ConstInventory(false, true, false, ImmutableMap.of()),
+                new ConstTown(
+                        true, true,
+                        ImmutableList.of(arbitraryRoom),
+                        ImmutableList.of(), // <- None have bread
+                        ImmutableList.of(), // <- Nothing needs coal
+                        ImmutableList.of() // <- Nothing needs wheat
+                ),
+                new ConstEntity(null)
+        );
+        Assertions.assertEquals(GathererJournal.Status.IDLE, s);
     }
 
     @Test
@@ -253,7 +311,7 @@ class BakerStatusesTest {
     }
 
     @Test
-    void InMorning_StatusShouldBe_CollectingSupplies_WhenCurrentBakeryIsFull_AndNoEmptyBakeriesExist_AndTownHasSupplies_AndInventoryIsEmpty() {
+    void InMorning_StatusShouldBe_Relaxing_WhenCurrentBakeryIsFull_AndNoEmptyBakeriesExist_AndTownHasSupplies_AndInventoryIsEmpty() {
         RoomRecipeMatch<Room> currentRoom = new RoomRecipeMatch<>(
                 new Room(
                         new Position(0, 1),
@@ -276,7 +334,7 @@ class BakerStatusesTest {
                 ),
                 new ConstEntity(currentRoom)
         );
-        Assertions.assertEquals(GathererJournal.Status.COLLECTING_SUPPLIES, s);
+        Assertions.assertEquals(GathererJournal.Status.IDLE, s);
     }
 
     // TODO: Should also work if inventory is not FULL
@@ -388,7 +446,7 @@ class BakerStatusesTest {
                 ),
                 new ConstEntity(arbitraryRoom)
         );
-        Assertions.assertEquals(GathererJournal.Status.BAKING_FUELING, s);
+        Assertions.assertEquals(GathererJournal.Status.BAKING, s);
     }
 
     @Test

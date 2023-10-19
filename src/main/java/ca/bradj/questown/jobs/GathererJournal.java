@@ -330,6 +330,14 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
             ).contains(this);
         }
 
+        public boolean isBakingWork() {
+            return ImmutableList.of(
+                    BAKING,
+                    BAKING_FUELING,
+                    COLLECTING_BREAD
+            ).contains(this);
+        }
+
         public boolean isPreparing() {
             return ImmutableList.of(NO_GATE, NO_FOOD, GOING_TO_JOBSITE).contains(this);
         }
@@ -337,7 +345,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         public boolean isFinishingUp() {
             return ImmutableList.of(RETURNED_SUCCESS, DROPPING_LOOT).contains(this);
         }
-
     }
 
     public interface ItemsListener<I> {

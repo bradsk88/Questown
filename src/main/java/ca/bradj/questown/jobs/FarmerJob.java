@@ -452,7 +452,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         e.signal = Signals.fromGameTime(level.getDayTime());
         e.journal.tick(
-                new TownStateProvider() {
+                new FarmerStatuses.TownProvider() {
                     @Override
                     public boolean hasSupplies() {
                         boolean hasSeeds = town.findMatchingContainer(c -> Items.WHEAT_SEEDS.equals(c.get())) != null;

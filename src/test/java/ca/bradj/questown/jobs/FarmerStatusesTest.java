@@ -21,7 +21,7 @@ class FarmerStatusesTest {
     private record ConstTown(
             boolean hasSupplies,
             boolean hasSpace
-    ) implements TownStateProvider {
+    ) implements FarmerStatuses.TownProvider {
     }
 
 

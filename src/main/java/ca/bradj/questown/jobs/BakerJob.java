@@ -41,7 +41,6 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Function;
 
 public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
@@ -328,11 +327,15 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
                 BlockState blockState = sl.getBlockState(blocks.getKey());
-                if (statuses.getOrDefault(GathererJournal.Status.BAKING_FUELING, false) && BreadOvenBlock.canAcceptCoal(blockState)) {
+                if (statuses.getOrDefault(
+                        GathererJournal.Status.BAKING_FUELING,
+                        false
+                ) && BreadOvenBlock.canAcceptCoal(blockState)) {
                     selectedBakery = match;
                     break;
                 }
-                if (statuses.getOrDefault(GathererJournal.Status.BAKING, false) && BreadOvenBlock.canAcceptWheat(blockState)) {
+                if (statuses.getOrDefault(GathererJournal.Status.BAKING, false) && BreadOvenBlock.canAcceptWheat(
+                        blockState)) {
                     selectedBakery = match;
                     break;
                 }
@@ -342,17 +345,20 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
                 }
             }
         }
-        if (selectedBakery == null) {
-            return null;
-        }
 
         switch (journal.getStatus()) {
             case GOING_TO_JOBSITE -> {
+                if (selectedBakery == null) {
+                    return null;
+                }
                 return selectedBakery.getContainedBlocks().entrySet().stream()
                         .filter(v -> v.getValue().equals(BlocksInit.BREAD_OVEN_BLOCK.get()))
                         .findFirst().map(Map.Entry::getKey).orElse(null);
             }
             case BAKING, BAKING_FUELING, COLLECTING_BREAD -> {
+                if (selectedBakery == null) {
+                    return null;
+                }
                 boolean fuel = journal.getStatus() == GathererJournal.Status.BAKING_FUELING;
                 WorkSpot ovenInteractionSpot = getOvenInteractionSpot(town, selectedBakery, fuel);
                 if (ovenInteractionSpot != null) {

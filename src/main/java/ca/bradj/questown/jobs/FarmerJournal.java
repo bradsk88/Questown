@@ -88,7 +88,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     }
 
     public void tick(
-            TownStateProvider town,
+            FarmerStatuses.TownProvider town,
             FarmerStatuses.FarmStateProvider farm,
             EntityStateProvider entity,
             boolean isInFarm

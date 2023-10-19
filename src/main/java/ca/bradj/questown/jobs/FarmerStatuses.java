@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -9,7 +9,7 @@ public class FarmerStatuses {
 
     public static @Nullable GathererJournal.Status getNewStatusFromSignal(
             GathererJournal.Status currentStatus,
-            TownStateProvider town,
+            TownProvider town,
             FarmStateProvider farm,
             EntityStateProvider entity,
             Signals signal,
@@ -39,18 +39,47 @@ public class FarmerStatuses {
         boolean isWorkPossible(FarmerJob.FarmerAction action);
     }
 
+    public interface TownProvider {
+        boolean hasSupplies();
+
+        boolean hasSpace();
+    }
+
+    private static final ImmutableMap<FarmerJob.FarmerAction, GathererJournal.Status> ITEM_WORK = ImmutableMap.of(
+            // Order here implies preference - which is important.
+            FarmerJob.FarmerAction.BONE, GathererJournal.Status.FARMING_BONING,
+            FarmerJob.FarmerAction.PLANT, GathererJournal.Status.FARMING_PLANTING,
+            FarmerJob.FarmerAction.TILL, GathererJournal.Status.FARMING_TILLING,
+            FarmerJob.FarmerAction.COMPOST, GathererJournal.Status.FARMING_COMPOSTING
+    );
+
     public static GathererJournal.@Nullable Status handleMorning(
             GathererJournal.Status currentStatus,
-            TownStateProvider town,
+            TownProvider town,
             FarmStateProvider farm,
             EntityStateProvider inventory,
             boolean isInFarm
     ) {
         GathererJournal.Status status = JobStatuses.usualRoutine(
-                currentStatus, inventory, town, false,
+                currentStatus, inventory, new TownStateProvider() {
+                    @Override
+                    public boolean hasSupplies() {
+                        return town.hasSupplies();
+                    }
+
+                    @Override
+                    public boolean hasSpace() {
+                        return town.hasSpace();
+                    }
+
+                    @Override
+                    public boolean canUseMoreSupplies() {
+                        return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
+                    }
+                }, false,
                 new JobStatuses.Job() {
                     @Override
-                    public GathererJournal.@Nullable Status tryDoingItemlessWork() {
+                    public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
                         // Order is important here
                         if (farm.isWorkPossible(FarmerJob.FarmerAction.HARVEST)) {
                             return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_HARVESTING, isInFarm);
@@ -65,25 +94,11 @@ public class FarmerStatuses {
                     public @Nullable GathererJournal.Status tryUsingSupplies(
                             Map<GathererJournal.Status, Boolean> supplyItemStatus
                     ) {
-                        // Order of work type is important here
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_BONING, false)) {
-                            if (farm.isWorkPossible(FarmerJob.FarmerAction.BONE)) {
-                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_BONING, isInFarm);
-                            }
-                        }
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_PLANTING, false)) {
-                            if (farm.isWorkPossible(FarmerJob.FarmerAction.PLANT)) {
-                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_PLANTING, isInFarm);
-                            }
-                        }
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_TILLING, false)) {
-                            if (farm.isWorkPossible(FarmerJob.FarmerAction.TILL)) {
-                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
-                            }
-                        }
-                        if (supplyItemStatus.getOrDefault(GathererJournal.Status.FARMING_COMPOSTING, false)) {
-                            if (farm.isWorkPossible(FarmerJob.FarmerAction.COMPOST)) {
-                                return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_COMPOSTING, isInFarm);
+                        for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : ITEM_WORK.entrySet()) {
+                            if (supplyItemStatus.getOrDefault(s.getValue(), false)) {
+                                if (farm.isWorkPossible(s.getKey())) {
+                                    return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                                }
                             }
                         }
                         return null;

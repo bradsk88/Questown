@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class BakerStatuses {
 
-    public interface TownStateProvider<ROOM extends Room> extends ca.bradj.questown.jobs.TownStateProvider {
+    public interface TownStateProvider<ROOM extends Room> extends FarmerStatuses.TownProvider {
         Collection<ROOM> bakeriesWithBread();
         Collection<ROOM> bakeriesNeedingWheat();
         Collection<ROOM> bakeriesNeedingCoal();
@@ -49,10 +49,25 @@ public class BakerStatuses {
             EntityStateProvider<ROOM> entity
     ) {
         GathererJournal.Status newStatus = JobStatuses.usualRoutine(
-                currentStatus, inventory, town, true,
+                currentStatus, inventory, new ca.bradj.questown.jobs.TownStateProvider() {
+                    @Override
+                    public boolean hasSupplies() {
+                        return town.hasSupplies();
+                    }
+
+                    @Override
+                    public boolean hasSpace() {
+                        return town.hasSpace();
+                    }
+
+                    @Override
+                    public boolean canUseMoreSupplies() {
+                        return !town.bakeriesNeedingCoal().isEmpty() || !town.bakeriesNeedingWheat().isEmpty();
+                    }
+                }, entity.getEntityBakeryLocation() == null,
                 new JobStatuses.Job() {
                     @Override
-                    public GathererJournal.@Nullable Status tryDoingItemlessWork() {
+                    public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
                         Collection<ROOM> breads = town.bakeriesWithBread();
                         if (!breads.isEmpty()) {
                             return GathererJournal.Status.COLLECTING_BREAD;
