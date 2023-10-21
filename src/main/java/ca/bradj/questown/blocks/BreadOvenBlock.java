@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.jobs.Jobs;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -13,7 +14,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -142,9 +142,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             @Nullable TakeFn takeFn
     ) {
         ItemStack is = new ItemStack(Items.BREAD, 1);
-        if (takeFn == null || !takeFn.Take(is)) {
-            level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
-        }
+        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
         level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
 

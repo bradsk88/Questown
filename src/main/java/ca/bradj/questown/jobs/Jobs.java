@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -19,9 +20,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -170,6 +173,17 @@ public class Jobs {
             case "farmer" -> SpecialQuests.FARM;
             default -> throw new IllegalArgumentException("Unhandled job type: '" + job + "'");
         };
+    }
+
+    public static void getOrCreateItemFromBlock(
+            ServerLevel level,
+            BlockPos b,
+            BreadOvenBlock.TakeFn takeFn,
+            ItemStack is
+    ) {
+        if (takeFn == null || !takeFn.Take(is)) {
+            level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+        }
     }
 
     public interface LootDropper<I> {

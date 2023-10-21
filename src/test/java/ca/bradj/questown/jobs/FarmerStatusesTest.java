@@ -284,6 +284,23 @@ class FarmerStatusesTest {
         Assertions.assertEquals(GathererJournal.Status.FARMING_TILLING, s);
     }
     @Test
+    void inMorning_shouldPrefer_COMPOSTING_over_WEEDING() {
+        boolean inside = true;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(false, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.COMPOST,
+                        FarmerJob.FarmerAction.WEED
+                )),
+                new ConstEntity(false, false, true, ImmutableMap.of(
+                        GathererJournal.Status.FARMING_COMPOSTING, true
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.FARMING_COMPOSTING, s);
+    }
+    @Test
     void inMorning_should_COMPOST_ifCant_TILL_OR_PLANT() {
         boolean inside = true;
         GathererJournal.Status s = FarmerStatuses.handleMorning(
@@ -300,5 +317,62 @@ class FarmerStatusesTest {
                 inside
         );
         Assertions.assertEquals(GathererJournal.Status.FARMING_COMPOSTING, s);
+    }
+    @Test
+    void inMorning_should_WEED_ifTownHasWeeds_AndCantTillPlantOrCompost() {
+        boolean inside = true;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(false, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.WEED,
+                        FarmerJob.FarmerAction.BONE
+                )),
+                new ConstEntity(false, false, true, ImmutableMap.of(
+                        GathererJournal.Status.FARMING_TILLING, false,
+                        GathererJournal.Status.FARMING_PLANTING, false,
+                        GathererJournal.Status.FARMING_COMPOSTING, false
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.FARMING_WEEDING, s);
+    }
+    @Test
+    void inMorning_should_GET_SUPPLIES_ifTownHasSeeds_AndWeeds_WhileOutOfFarm() {
+        boolean inside = false;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(true, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.WEED,
+                        FarmerJob.FarmerAction.PLANT
+                )),
+                new ConstEntity(false, false, true, ImmutableMap.of(
+                        GathererJournal.Status.FARMING_TILLING, false,
+                        GathererJournal.Status.FARMING_PLANTING, false,
+                        GathererJournal.Status.FARMING_COMPOSTING, false
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.COLLECTING_SUPPLIES, s);
+    }
+    @Test
+    void inMorning_should_LEAVE_FARM_ifTownHasSeeds_AndWeeds_WhileInFarm() {
+        boolean inside = true;
+        GathererJournal.Status s = FarmerStatuses.handleMorning(
+                GathererJournal.Status.IDLE,
+                new ConstTown(true, false),
+                new ConstFarm(ImmutableList.of(
+                        FarmerJob.FarmerAction.WEED,
+                        FarmerJob.FarmerAction.PLANT
+                )),
+                new ConstEntity(false, false, true, ImmutableMap.of(
+                        GathererJournal.Status.FARMING_TILLING, false,
+                        GathererJournal.Status.FARMING_PLANTING, false,
+                        GathererJournal.Status.FARMING_COMPOSTING, false
+                )),
+                inside
+        );
+        Assertions.assertEquals(GathererJournal.Status.LEAVING_FARM, s);
     }
 }

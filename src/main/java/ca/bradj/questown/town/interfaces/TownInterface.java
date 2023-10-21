@@ -97,6 +97,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     UUID getUUID();
 
+    void markBlockWeeded(BlockPos p);
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

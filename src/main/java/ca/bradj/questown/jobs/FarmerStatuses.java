@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,6 +54,19 @@ public class FarmerStatuses {
             FarmerJob.FarmerAction.COMPOST, GathererJournal.Status.FARMING_COMPOSTING
     );
 
+    // Itemless work is done before collecting supplies
+    private static final ImmutableMap<FarmerJob.FarmerAction, GathererJournal.Status> PRIORITY_ITEMLESS_WORK = ImmutableMap.of(
+            // Order here implies preference - which is important.
+            FarmerJob.FarmerAction.HARVEST, GathererJournal.Status.FARMING_HARVESTING
+    );
+
+    // Fallback work is done if there is no other work and no supplies available
+    private static final ImmutableMap<FarmerJob.FarmerAction, GathererJournal.Status> FALLBACK_ITEMLESS_WORK = ImmutableMap.of(
+            // Order here implies preference - which is important.
+            FarmerJob.FarmerAction.WEED, GathererJournal.Status.FARMING_WEEDING,
+            FarmerJob.FarmerAction.TILL, GathererJournal.Status.FARMING_TILLING
+    );
+
     public static GathererJournal.@Nullable Status handleMorning(
             GathererJournal.Status currentStatus,
             TownProvider town,
@@ -80,12 +94,18 @@ public class FarmerStatuses {
                 new JobStatuses.Job() {
                     @Override
                     public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
-                        // Order is important here
-                        if (farm.isWorkPossible(FarmerJob.FarmerAction.HARVEST)) {
-                            return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_HARVESTING, isInFarm);
+                        for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : PRIORITY_ITEMLESS_WORK.entrySet()) {
+                            if (farm.isWorkPossible(s.getKey())) {
+                                return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                            }
                         }
-                        if (farm.isWorkPossible(FarmerJob.FarmerAction.TILL)) {
-                            return JobsClean.doOrGoTo(GathererJournal.Status.FARMING_TILLING, isInFarm);
+                        if (town.hasSupplies()) {
+                            return null;
+                        }
+                        for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : FALLBACK_ITEMLESS_WORK.entrySet()) {
+                            if (farm.isWorkPossible(s.getKey())) {
+                                return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                            }
                         }
                         return null;
                     }
@@ -105,7 +125,10 @@ public class FarmerStatuses {
                     }
                 }
         );
-        if (status == GathererJournal.Status.DROPPING_LOOT && isInFarm) {
+        if (isInFarm && ImmutableList.of(
+                GathererJournal.Status.DROPPING_LOOT,
+                GathererJournal.Status.COLLECTING_SUPPLIES
+        ).contains(status)) {
             return nullIfUnchanged(currentStatus, GathererJournal.Status.LEAVING_FARM);
         }
         return status;

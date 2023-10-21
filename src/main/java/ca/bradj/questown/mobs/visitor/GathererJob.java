@@ -325,7 +325,9 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(entityBlockPos, town);
             case RETURNED_FAILURE -> new BlockPos(town.getVisitorJoinPos());
             case GOING_TO_JOBSITE -> throw new IllegalArgumentException("Gatherer was job status");
-            case LEAVING_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING
+            case LEAVING_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND,
+                    FARMING_TILLING, FARMING_PLANTING, FARMING_BONING,
+                    FARMING_COMPOSTING, FARMING_WEEDING
                     -> throw new IllegalArgumentException("Gatherer was given farmer status");
             case COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, BAKING_FUELING, COLLECTING_BREAD
                     -> throw new IllegalArgumentException("Gatherer was given baker status");

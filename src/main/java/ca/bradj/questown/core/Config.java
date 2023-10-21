@@ -35,6 +35,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -78,6 +80,9 @@ public class Config {
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
+        FARMER_WEEDS_RARITY = BUILDER.comment(
+                "The chance that a farmer will find weeds (actually grass, for composting) on a still-growing crop block. 1 means \"constantly\"."
+        ).defineInRange("FarmerWeedsRarity", 10, 1, 9999);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

@@ -275,7 +275,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         // TODO: Move to farmer-specific status
         FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
-        COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING;
+        COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING, FARMING_WEEDING;
 
         public static Status from(String s) {
             return switch (s) {
@@ -300,6 +300,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                 case "FARMING_TILLING" -> FARMING_TILLING;
                 case "FARMING_COMPOSTING" -> FARMING_COMPOSTING;
                 case "FARMING_BONING" -> FARMING_BONING;
+                case "FARMING_WEEDING" -> FARMING_WEEDING;
                 case "GOING_TO_JOBSITE" -> GOING_TO_JOBSITE;
                 case "LEAVING_FARM" -> LEAVING_FARM;
                 case "COLLECTING_SUPPLIES" -> COLLECTING_SUPPLIES;
@@ -326,7 +327,8 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
                     FARMING_BONING,
                     FARMING_PLANTING,
                     FARMING_TILLING,
-                    FARMING_COMPOSTING
+                    FARMING_COMPOSTING,
+                    FARMING_WEEDING
             ).contains(this);
         }
 

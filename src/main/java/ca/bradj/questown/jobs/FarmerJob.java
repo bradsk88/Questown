@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -23,6 +25,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.*;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
@@ -69,6 +72,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             FarmerAction.HARVEST,
             FarmerAction.TILL
     );
+
+    // TODO: Move this to the town flag
+    private final List<BlockPos> blockWithWeeds = new ArrayList<>();
 
     private final UUID ownerUUID;
     private boolean reverse;
@@ -197,6 +203,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case FARMING_PLANTING -> workSpots.getOrDefault(FarmerAction.PLANT, null);
             case FARMING_TILLING -> workSpots.getOrDefault(FarmerAction.TILL, null);
             case FARMING_COMPOSTING -> workSpots.getOrDefault(FarmerAction.COMPOST, null);
+            case FARMING_WEEDING -> workSpots.getOrDefault(FarmerAction.WEED, null);
+            // FIXME: Define a custom FarmerStatus class so we can remove this default case and benefit from compiler checks
             default -> null;
         };
 
@@ -263,8 +271,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             return null;
         }
 
-        // FIXME: why are these targets null sometimes? NO_SPACE and NO_SUPPLIES statuses should protect us.
-
         BlockPos supplies = suppliesTarget != null ? Positions.ToBlock(
                 suppliesTarget.getInteractPosition(),
                 suppliesTarget.getYPosition()
@@ -282,6 +288,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position;
             case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position;
             case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position;
+            case FARMING_WEEDING-> workSpots.get(FarmerAction.WEED).position;
             case FARMING_RANDOM_TEND -> getRandomFarmSpot(sl);
             case COLLECTING_SUPPLIES -> supplies;
             case DROPPING_LOOT -> blockPos;
@@ -392,7 +399,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                             BlockState cropBlock = level.getBlockState(bp);
                             BlockPos gp = bp.below();
                             BlockState groundBlock = level.getBlockState(gp);
-                            FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock);
+                            if (level.getRandom().nextInt(Config.FARMER_WEEDS_RARITY.get()) == 0) {
+                                blockWithWeeds.add(gp);
+                            }
+                            FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock, blockWithWeeds);
                             int score = score(groundBlock, cropBlock);
                             return new WorkSpot<>(gp, blockAction, score);
                         }))
@@ -437,7 +447,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         workSpots.clear();
         Collection<WorkSpot<BlockPos>> spots = listAllWorkspots(level, selectedFarm);
 
-        // TODO: Perhaps store work spots for target acquisition
         ImmutableMap.Builder<FarmerAction, Boolean> b = ImmutableMap.builder();
         ImmutableList.copyOf(FarmerAction.values()).forEach(
                 v -> {
@@ -485,12 +494,14 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     @Override
                     public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
                         boolean hasSeeds = journal.getItems().stream().anyMatch(v -> Items.WHEAT_SEEDS.equals(v.get().get()));
+                        boolean hasCompostable = journal.getItems().stream().anyMatch(
+                                v -> Ingredient.of(TagsInit.Items.COMPOSTABLE).test(v.get().toItemStack()));
                         boolean hasBoneMeal = journal.getItems().stream().anyMatch(v -> Items.BONE_MEAL.equals(v.get().get()));
                         return ImmutableMap.of(
                                 GathererJournal.Status.FARMING_TILLING, hasSeeds,
                                 GathererJournal.Status.FARMING_PLANTING, hasSeeds,
                                 GathererJournal.Status.FARMING_BONING, hasBoneMeal,
-                                GathererJournal.Status.FARMING_COMPOSTING, hasSeeds
+                                GathererJournal.Status.FARMING_COMPOSTING, hasCompostable
                         );
                     }
 
@@ -603,6 +614,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     public boolean addToEmptySlot(MCTownItem mcTownItem) {
         boolean isAllowedToPickUp = ImmutableList.of(
                 Items.WHEAT_SEEDS,
+                Items.GRASS,
                 Items.BONE_MEAL,
                 Items.WHEAT
         ).contains(mcTownItem.get());
@@ -633,7 +645,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         BONE,
         HARVEST,
         COMPOST,
-        UNDEFINED;
+        UNDEFINED, WEED;
 
         public boolean isPreferableTo(FarmerAction action) {
             return switch (this) {
@@ -641,6 +653,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 case PLANT -> true;
                 case BONE -> true;
                 case HARVEST -> true;
+                case WEED -> true;
                 case COMPOST -> ImmutableList.of(UNDEFINED).contains(action);
                 case UNDEFINED -> false;
             };
@@ -653,7 +666,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerLevel level,
             BlockPos groundPos,
             BlockState groundState,
-            BlockState cropState
+            BlockState cropState,
+            List<BlockPos> blocksWithWeeds
     ) {
         if (getTilledState(level, groundPos) != null) {
             if (cropState.isAir()) {
@@ -669,6 +683,13 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             if (cb.isMaxAge(cropState)) {
                 return FarmerAction.HARVEST;
             }
+            if (blocksWithWeeds.contains(groundPos)) {
+                return FarmerAction.WEED;
+            }
+            if (level.getRandom().nextInt(Config.FARMER_WEEDS_RARITY.get()) == 0) {
+                blocksWithWeeds.add(groundPos);
+                return FarmerAction.WEED;
+            }
             return FarmerAction.BONE;
         }
         if (cropState.getBlock() instanceof ComposterBlock) {
@@ -678,15 +699,5 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             return FarmerAction.COMPOST;
         }
         return FarmerAction.UNDEFINED;
-    }
-
-    public static List<FarmerAction> fromItem(MCHeldItem stack) {
-        if (Ingredient.of(Items.BONE_MEAL).test(stack.toItem().toItemStack())) {
-            return ImmutableList.of(FarmerAction.BONE);
-        }
-        if (Ingredient.of(Items.WHEAT_SEEDS).test(stack.toItem().toItemStack())) {
-            return FarmerActions.forWheatSeeds();
-        }
-        return ImmutableList.of();
     }
 }

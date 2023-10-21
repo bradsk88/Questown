@@ -95,7 +95,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private boolean everScanned = false;
     private boolean changed = false;
     private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
+
+    // Farmer specific stuff
     private final ArrayList<UUID> assignedFarmers = new ArrayList<>();
+    private final ArrayList<BlockPos> blocksWithWeeds = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
     private final MCRoom flagMetaRoom = new MCRoom(
@@ -160,7 +163,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.roomsMap.tick(sl, blockPos);
 
-        advanceScheduledBlocks(sl, e.roomsMap);
+        advanceScheduledBlocks(sl, e.roomsMap, e.blocksWithWeeds);
 
         e.asapRewards.tick();
 
@@ -191,7 +194,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     private static void advanceScheduledBlocks(
             ServerLevel level,
-            TownRoomsMap roomsMap
+            TownRoomsMap roomsMap,
+            List<BlockPos> blocksWithWeeds
     ) {
         for (RoomRecipeMatch<MCRoom> r : roomsMap.getAllMatches()) {
             for (Map.Entry<BlockPos, Block> b : r.getContainedBlocks().entrySet()) {
@@ -200,6 +204,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     if (bs != null) {
                         level.setBlock(b.getKey(), bs, 11);
                     }
+                }
+            }
+        }
+
+        for (MCRoom r : roomsMap.getFarms()) {
+            // TODO: Handle rooms with multiple spaces
+            for (Position p : InclusiveSpaces.getAllEnclosedPositions(r.getSpace())) {
+                BlockPos bp = Positions.ToBlock(p, r.yCoord);
+                BlockPos gp = bp.below();
+                if (blocksWithWeeds.contains(gp)) {
+                    continue;
+                }
+                if (level.getRandom().nextInt(Config.FARMER_WEEDS_RARITY.get()) == 0) {
+                    blocksWithWeeds.add(gp);
                 }
             }
         }
@@ -647,6 +665,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Collection<MCRoom> getFarms() {
         return roomsMap.getFarms();
+    }
+
+    @Override
+    public void markBlockWeeded(BlockPos p) {
+        this.blocksWithWeeds.remove(p);
     }
 
     @Override
