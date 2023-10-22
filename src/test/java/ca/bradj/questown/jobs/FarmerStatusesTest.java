@@ -21,7 +21,7 @@ class FarmerStatusesTest {
     private record ConstTown(
             boolean hasSupplies,
             boolean hasSpace
-    ) implements FarmerStatuses.TownProvider {
+    ) implements TownProvider {
     }
 
 
@@ -39,7 +39,7 @@ class FarmerStatusesTest {
             boolean hasNonSupplyItems,
             boolean hasItems,
             Map<GathererJournal.Status, Boolean> getSupplyItemStatus
-    ) implements EntityStateProvider {
+    ) implements EntityInvStateProvider {
     }
 
     @Test
@@ -347,7 +347,7 @@ class FarmerStatusesTest {
                         FarmerJob.FarmerAction.WEED,
                         FarmerJob.FarmerAction.PLANT
                 )),
-                new ConstEntity(false, false, true, ImmutableMap.of(
+                new ConstEntity(false, false, false, ImmutableMap.of(
                         GathererJournal.Status.FARMING_TILLING, false,
                         GathererJournal.Status.FARMING_PLANTING, false,
                         GathererJournal.Status.FARMING_COMPOSTING, false

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -7,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
     private final JournalItemList<H> inventory;
     private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
@@ -29,7 +30,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         );
     }
 
-    public FarmerJournal(
+    public SmelterJournal(
             GathererJournal.SignalSource sigs,
             int capacity,
             ItemChecker<H> itemsToHold,
@@ -45,7 +46,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         this.emptyFactory = ef;
     }
 
-    public void initialize(FarmerJournal.Snapshot<H> journal) {
+    public void initialize(SmelterJournal.Snapshot<H> journal) {
         this.setItems(journal.items());
         this.initializeStatus(journal.status());
     }
@@ -88,17 +89,16 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     }
 
     public void tick(
-            TownProvider town,
-            FarmerStatuses.FarmStateProvider farm,
-            EntityInvStateProvider entity,
-            boolean isInFarm
+            BakerStatuses.TownStateProvider<MCRoom> townState,
+            BakerStatuses.EntityStateProvider<MCRoom> entityState,
+            EntityInvStateProvider inventory
     ) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
-        @Nullable GathererJournal.Status newStatus = FarmerStatuses.getNewStatusFromSignal(
-                status, town, farm, entity, sig, isInFarm
+        @Nullable GathererJournal.Status newStatus = BakerStatuses.getNewStatusFromSignal(
+                status, sig, inventory, townState, entityState
         );
         if (newStatus != null) {
             changeStatus(newStatus);
@@ -164,7 +164,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
     }
 
     public boolean hasAnyLootToDrop() {
-        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked() && !itemsToHold.shouldHoldForWork(status, v));
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
@@ -177,12 +177,12 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
 
         @Override
         public String jobStringValue() {
-            return "farmer";
+            return "baker";
         }
 
         @Override
         public String toString() {
-            return "FarmerJournal.Snapshot{" +
+            return "BakerJournal.Snapshot{" +
                     "status=" + status +
                     ", items=" + items +
                     '}';

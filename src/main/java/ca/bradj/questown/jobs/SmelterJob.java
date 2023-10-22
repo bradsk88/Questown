@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+public class SmelterJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
     private final Marker marker = MarkerManager.getMarker("Baker");
 
@@ -65,7 +65,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
     private final UUID ownerUUID;
 
-    public BakerJob(
+    public SmelterJob(
             UUID ownerUUID,
             int inventoryCapacity
     ) {
@@ -155,7 +155,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             return;
         }
 
-        BakerJob bj = this;
+        SmelterJob bj = this;
 
         processSignal(sl, this, new BakerStatuses.TownStateProvider<>() {
 
@@ -478,7 +478,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
     private static void processSignal(
             Level level,
-            BakerJob e,
+            SmelterJob e,
             BakerStatuses.TownStateProvider<MCRoom> townState,
             BakerStatuses.EntityStateProvider<MCRoom> entityState,
             EntityInvStateProvider inventoryState

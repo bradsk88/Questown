@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class BakerStatuses {
 
-    public interface TownStateProvider<ROOM extends Room> extends FarmerStatuses.TownProvider {
+    public interface TownStateProvider<ROOM extends Room> extends TownProvider {
         Collection<ROOM> bakeriesWithBread();
         Collection<ROOM> bakeriesNeedingWheat();
         Collection<ROOM> bakeriesNeedingCoal();
@@ -22,7 +22,7 @@ public class BakerStatuses {
     public static @Nullable <ROOM extends Room> GathererJournal.Status getNewStatusFromSignal(
             GathererJournal.Status currentStatus,
             Signals signal,
-            ca.bradj.questown.jobs.EntityStateProvider inventory,
+            EntityInvStateProvider<GathererJournal.Status> inventory,
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
@@ -44,7 +44,7 @@ public class BakerStatuses {
 
     public static <ROOM extends Room> GathererJournal.@Nullable Status getMorningStatus(
             GathererJournal.Status currentStatus,
-            ca.bradj.questown.jobs.EntityStateProvider inventory,
+            EntityInvStateProvider<GathererJournal.Status> inventory,
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
@@ -64,8 +64,8 @@ public class BakerStatuses {
                     public boolean canUseMoreSupplies() {
                         return !town.bakeriesNeedingCoal().isEmpty() || !town.bakeriesNeedingWheat().isEmpty();
                     }
-                }, entity.getEntityBakeryLocation() == null,
-                new JobStatuses.Job() {
+                },
+                new JobStatuses.Job<>() {
                     @Override
                     public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
                         Collection<ROOM> breads = town.bakeriesWithBread();
@@ -86,7 +86,11 @@ public class BakerStatuses {
                                 if (location != null) {
                                     inSite = town.bakeriesNeedingCoal().contains(location.room);
                                 }
-                                return JobsClean.doOrGoTo(GathererJournal.Status.BAKING_FUELING, inSite);
+                                return JobsClean.doOrGoTo(
+                                        GathererJournal.Status.BAKING_FUELING,
+                                        inSite,
+                                        GathererJournal.Status.GOING_TO_JOBSITE
+                                );
                             }
                         }
                         if (supplyItemStatus.getOrDefault(GathererJournal.Status.BAKING, false)) {
@@ -95,19 +99,22 @@ public class BakerStatuses {
                                 if (location != null) {
                                     inSite = town.bakeriesNeedingWheat().contains(location.room);
                                 }
-                                return JobsClean.doOrGoTo(GathererJournal.Status.BAKING, inSite);
+                                return JobsClean.doOrGoTo(
+                                        GathererJournal.Status.BAKING, inSite, GathererJournal.Status.GOING_TO_JOBSITE
+                                );
                             }
                         }
                         return null;
                     }
-                }
+                },
+                GathererJournal.Status.FACTORY
         );
         return nullIfUnchanged(currentStatus, newStatus);
     }
 
     public static <ROOM extends Room> GathererJournal.@Nullable Status getEveningStatus(
             GathererJournal.Status currentStatus,
-            ca.bradj.questown.jobs.EntityStateProvider inventory,
+            EntityInvStateProvider<GathererJournal.Status> inventory,
             TownStateProvider<ROOM> town
     ) {
         Collection<ROOM> breads = town.bakeriesWithBread();

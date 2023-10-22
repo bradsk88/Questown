@@ -25,7 +25,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.*;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
@@ -45,7 +44,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
@@ -461,7 +459,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         e.signal = Signals.fromGameTime(level.getDayTime());
         e.journal.tick(
-                new FarmerStatuses.TownProvider() {
+                new TownProvider() {
                     @Override
                     public boolean hasSupplies() {
                         boolean hasSeeds = town.findMatchingContainer(c -> Items.WHEAT_SEEDS.equals(c.get())) != null;
@@ -480,7 +478,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                         return Boolean.TRUE.equals(possibleWork.getOrDefault(action, false));
                     }
                 },
-                new EntityStateProvider() {
+                new EntityInvStateProvider() {
                     @Override
                     public boolean inventoryFull() {
                         return journal.isInventoryFull();

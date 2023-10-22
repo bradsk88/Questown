@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class StatusesTest {
+class GathererStatusesTest {
 
     @Test
     public void test_should_change_to_returning_if_currently_returned_success_and_signal_is_noon() {

@@ -2,12 +2,12 @@ package ca.bradj.questown.jobs;
 
 import java.util.Map;
 
-public interface EntityStateProvider {
+public interface EntityInvStateProvider<STATUS> {
     boolean inventoryFull();
 
     boolean hasNonSupplyItems();
 
-    Map<GathererJournal.Status, Boolean> getSupplyItemStatus();
+    Map<STATUS, Boolean> getSupplyItemStatus();
 
     boolean hasItems();
 }

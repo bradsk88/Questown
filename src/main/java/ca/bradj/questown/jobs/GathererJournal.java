@@ -268,7 +268,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
     // TODO: Add state for LEAVING and add signal for "left town"
     //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
-    public enum Status {
+    public enum Status implements IStatus<Status> {
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
         GOING_TO_JOBSITE,
@@ -276,6 +276,43 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
         COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING, FARMING_WEEDING;
+
+        public static final IStatusFactory<Status> FACTORY = new IStatusFactory<>() {
+            @Override
+            public Status droppingLoot() {
+                return DROPPING_LOOT;
+            }
+
+            @Override
+            public Status noSpace() {
+                return NO_SPACE;
+            }
+
+            @Override
+            public Status goingToJobSite() {
+                return GOING_TO_JOBSITE;
+            }
+
+            @Override
+            public Status noSupplies() {
+                return NO_SUPPLIES;
+            }
+
+            @Override
+            public Status collectingSupplies() {
+                return COLLECTING_SUPPLIES;
+            }
+
+            @Override
+            public Status idle() {
+                return IDLE;
+            }
+
+            @Override
+            public Status collectingFinishedProduct() {
+                throw new UnsupportedOperationException("Gatherers do not generate products");
+            }
+        };
 
         public static Status from(String s) {
             return switch (s) {
@@ -346,6 +383,11 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
         public boolean isFinishingUp() {
             return ImmutableList.of(RETURNED_SUCCESS, DROPPING_LOOT).contains(this);
+        }
+
+        @Override
+        public IStatusFactory<Status> getFactory() {
+            return FACTORY;
         }
     }
 

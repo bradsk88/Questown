@@ -12,7 +12,7 @@ public class FarmerStatuses {
             GathererJournal.Status currentStatus,
             TownProvider town,
             FarmStateProvider farm,
-            EntityStateProvider entity,
+            EntityInvStateProvider entity,
             Signals signal,
             boolean isInFarm
     ) {
@@ -40,12 +40,6 @@ public class FarmerStatuses {
         boolean isWorkPossible(FarmerJob.FarmerAction action);
     }
 
-    public interface TownProvider {
-        boolean hasSupplies();
-
-        boolean hasSpace();
-    }
-
     private static final ImmutableMap<FarmerJob.FarmerAction, GathererJournal.Status> ITEM_WORK = ImmutableMap.of(
             // Order here implies preference - which is important.
             FarmerJob.FarmerAction.BONE, GathererJournal.Status.FARMING_BONING,
@@ -71,7 +65,7 @@ public class FarmerStatuses {
             GathererJournal.Status currentStatus,
             TownProvider town,
             FarmStateProvider farm,
-            EntityStateProvider inventory,
+            EntityInvStateProvider inventory,
             boolean isInFarm
     ) {
         GathererJournal.Status status = JobStatuses.usualRoutine(
@@ -90,13 +84,15 @@ public class FarmerStatuses {
                     public boolean canUseMoreSupplies() {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
                     }
-                }, false,
-                new JobStatuses.Job() {
+                },
+                new JobStatuses.Job<>() {
                     @Override
                     public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : PRIORITY_ITEMLESS_WORK.entrySet()) {
                             if (farm.isWorkPossible(s.getKey())) {
-                                return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                                return JobsClean.doOrGoTo(
+                                        s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
+                                );
                             }
                         }
                         if (town.hasSupplies()) {
@@ -104,7 +100,9 @@ public class FarmerStatuses {
                         }
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : FALLBACK_ITEMLESS_WORK.entrySet()) {
                             if (farm.isWorkPossible(s.getKey())) {
-                                return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                                return JobsClean.doOrGoTo(
+                                        s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
+                                );
                             }
                         }
                         return null;
@@ -117,13 +115,16 @@ public class FarmerStatuses {
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : ITEM_WORK.entrySet()) {
                             if (supplyItemStatus.getOrDefault(s.getValue(), false)) {
                                 if (farm.isWorkPossible(s.getKey())) {
-                                    return JobsClean.doOrGoTo(s.getValue(), isInFarm);
+                                    return JobsClean.doOrGoTo(
+                                            s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
+                                    );
                                 }
                             }
                         }
                         return null;
                     }
-                }
+                },
+                GathererJournal.Status.FACTORY
         );
         if (isInFarm && ImmutableList.of(
                 GathererJournal.Status.DROPPING_LOOT,

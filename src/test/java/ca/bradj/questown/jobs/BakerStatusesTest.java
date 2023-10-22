@@ -35,7 +35,7 @@ class BakerStatusesTest {
             boolean hasItems,
             boolean hasNonSupplyItems,
             Map<GathererJournal.Status, Boolean> getSupplyItemStatus
-    ) implements EntityStateProvider {
+    ) implements EntityInvStateProvider {
     }
 
     private record ConstTown(
@@ -118,8 +118,10 @@ class BakerStatusesTest {
                 new ConstInventory(false, false, false, ImmutableMap.of()),
                 new ConstTown(
                         false, true,
-                        ImmutableList.of(), ImmutableList.of(),
-                        ImmutableList.of(), ImmutableList.of()
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        ImmutableList.of(arbitraryRoom.room),
+                        ImmutableList.of(arbitraryRoom.room)
                 ),
                 new ConstEntity(null)
         );
@@ -198,7 +200,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.BAKING,
                 Signals.MORNING,
-                new ConstInventory(false, true, false, ImmutableMap.of()),
+                new ConstInventory(false, false, false, ImmutableMap.of()),
                 new ConstTown(
                         true, true,
                         ImmutableList.of(arbitraryRoom),
@@ -216,7 +218,7 @@ class BakerStatusesTest {
         GathererJournal.Status s = BakerStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.BAKING,
                 Signals.MORNING,
-                new ConstInventory(false, true, false, ImmutableMap.of()),
+                new ConstInventory(false, false, false, ImmutableMap.of()),
                 new ConstTown(
                         true, true,
                         ImmutableList.of(arbitraryRoom),

@@ -1,14 +1,11 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
 public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
@@ -94,7 +91,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     public void tick(
             BakerStatuses.TownStateProvider<MCRoom> townState,
             BakerStatuses.EntityStateProvider<MCRoom> entityState,
-            EntityStateProvider inventory
+            EntityInvStateProvider inventory
     ) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");

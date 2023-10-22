@@ -6,58 +6,70 @@ import java.util.Map;
 
 public class JobStatuses {
 
-    public interface Job {
-        @Nullable GathererJournal.Status tryChoosingItemlessWork();
+    public interface Job<STATUS> {
+        @Nullable STATUS tryChoosingItemlessWork();
 
-        @Nullable GathererJournal.Status tryUsingSupplies(Map<GathererJournal.Status, Boolean> supplyItemStatus);
+        @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus);
     }
 
-    public static GathererJournal.Status usualRoutine(
-            GathererJournal.Status currentStatus,
-            EntityStateProvider inventory,
+    public static <STATUS extends IStatus<STATUS>> STATUS usualRoutine(
+            STATUS currentStatus,
+            EntityInvStateProvider<STATUS> inventory,
             TownStateProvider town,
-            boolean fillBeforeWorking,
-            Job job
+            Job<STATUS> job,
+            IStatusFactory<STATUS> factory
     ) {
-        GathererJournal.Status s = null;
-        if (inventory.hasItems()) {
-            GathererJournal.Status useStatus = job.tryUsingSupplies(inventory.getSupplyItemStatus());
+        STATUS s = null;
+        Map<STATUS, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
+        boolean hasWorkItems = supplyItemStatus.values().stream().findAny().orElse(false);
+        if (hasWorkItems) {
+            STATUS useStatus = job.tryUsingSupplies(supplyItemStatus);
             if (useStatus != null) {
                 s = useStatus;
-            } else if (inventory.inventoryFull()) {
-                if (town.hasSpace()) {
-                    s = GathererJournal.Status.DROPPING_LOOT;
-                } else {
-                    s = GathererJournal.Status.NO_SPACE;
-                }
+            } else {
+                hasWorkItems = false;
+            }
+        }
+        if (s == null && inventory.inventoryFull()) {
+            if (town.hasSpace()) {
+                s = factory.droppingLoot();
+            } else {
+                s = factory.noSpace();
             }
         }
 
         if (s != null) {
             s = nullIfUnchanged(currentStatus, s);
-            if (s != GathererJournal.Status.GOING_TO_JOBSITE) {
+            if (s != factory.goingToJobSite()) {
                 return s;
             } else if (inventory.inventoryFull() || (inventory.hasItems() && !town.hasSupplies())) {
                 return s;
             }
         }
 
-        @Nullable GathererJournal.Status s2 = job.tryChoosingItemlessWork();
+        @Nullable STATUS s2 = job.tryChoosingItemlessWork();
         if (s2 != null) {
             return nullIfUnchanged(currentStatus, s2);
         } else if (inventory.hasNonSupplyItems()) {
-            s2 = GathererJournal.Status.DROPPING_LOOT;
+            s2 = factory.droppingLoot();
         } else if (!town.hasSupplies()) {
-            s2 = nullIfUnchanged(currentStatus, GathererJournal.Status.NO_SUPPLIES);
-        } else {
             if (town.canUseMoreSupplies()) {
-                s2 = nullIfUnchanged(currentStatus, GathererJournal.Status.COLLECTING_SUPPLIES);
+                s2 = nullIfUnchanged(currentStatus, factory.noSupplies());
             } else {
-                return GathererJournal.Status.IDLE;
+                s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
+            }
+        } else {
+            if (inventory.hasItems() && !hasWorkItems) {
+                s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
+            }
+            else if (town.canUseMoreSupplies()) {
+                s2 = nullIfUnchanged(currentStatus, factory.collectingSupplies());
+            } else {
+                return factory.idle();
             }
         }
 
-        if (s2 != GathererJournal.Status.COLLECTING_SUPPLIES && s != null) {
+        if (s2 != factory.collectingSupplies() && s != null) {
             return s;
         }
 
@@ -65,9 +77,9 @@ public class JobStatuses {
     }
 
 
-    private static GathererJournal.Status nullIfUnchanged(
-            GathererJournal.Status oldStatus,
-            GathererJournal.Status newStatus
+    private static <S> S nullIfUnchanged(
+            S oldStatus,
+            S newStatus
     ) {
         if (oldStatus == newStatus) {
             return null;
