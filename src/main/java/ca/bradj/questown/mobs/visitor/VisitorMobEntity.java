@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
@@ -75,7 +76,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -88,6 +88,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -131,7 +132,7 @@ public class VisitorMobEntity extends PathfinderMob {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Job<MCHeldItem, ? extends Snapshot<?>> job = getInitialJob();
+    Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job = getInitialJob();
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
@@ -276,11 +277,11 @@ public class VisitorMobEntity extends PathfinderMob {
 
     // TODO: Make this abstract or injectable
     @NotNull
-    private Job<MCHeldItem, ? extends Snapshot<?>> getInitialJob() {
+    private Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitialJob() {
         return new GathererJob(town, inventoryCapacity, uuid);
     }
 
-    public void setJob(Job<MCHeldItem, ? extends Snapshot<?>> initializedJob) {
+    public void setJob(Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> initializedJob) {
         job = initializedJob;
         entityData.set(jobName, job.getJobName().getKey());
     }
@@ -327,7 +328,7 @@ public class VisitorMobEntity extends PathfinderMob {
         tickTimes.add((int) (end - start));
 
         if (Config.TICK_SAMPLING_RATE.get() != 0 && tickTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
-            Questown.LOGGER.debug(
+            QT.VILLAGER_LOGGER.debug(
                     "VME Average tick length: {}",
                     tickTimes.stream().mapToInt(Integer::intValue).average()
             );
@@ -338,21 +339,18 @@ public class VisitorMobEntity extends PathfinderMob {
     private void visitorTick() {
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
-            Questown.LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
+            QT.VILLAGER_LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
             moveTo(nudged);
         }
 
         if (job.getStatus() == GathererJournal.Status.UNSET) {
-            GathererJournal.Status s = getStatus();
-            if (s == GathererJournal.Status.UNSET) {
-                s = GathererJournal.Status.IDLE;
-            }
-            job.initializeStatus(s);
+            @Nullable String s = getStatusForClient();
+            job.initializeStatusFromEntityData(s);
         }
         job.tick(town, blockPosition(), position(), getDirection());
         if (!level.isClientSide()) {
             if (town == null) {
-                Questown.LOGGER.error("Visitor mob's parent could not be determined. Removing");
+                QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
                 remove(RemovalReason.DISCARDED);
             } else {
                 town.validateEntity(this);
@@ -360,7 +358,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
-            entityData.set(status, job.getStatus().name());
+            entityData.set(status, job.getStatusToSyncToClient());
         }
 
         this.openNearbyGates();
@@ -514,7 +512,7 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public boolean save(CompoundTag p_20224_) {
         if (town == null) {
-            Questown.LOGGER.error("Town is null. This is a bug.");
+            QT.VILLAGER_LOGGER.error("Town is null. This is a bug.");
             return super.save(p_20224_);
         }
         BlockPos bp = this.town.getTownFlagBasePos();
@@ -532,7 +530,7 @@ public class VisitorMobEntity extends PathfinderMob {
             if (this.level instanceof ServerLevel sl) {
                 BlockEntity entity = sl.getBlockEntity(bp);
                 if (!(entity instanceof TownFlagBlockEntity flag)) {
-                    Questown.LOGGER.error("Entity at {} was not a TownFlag", bp);
+                    QT.VILLAGER_LOGGER.error("Entity at {} was not a TownFlag", bp);
                     return;
                 }
                 this.town = flag;
@@ -725,7 +723,7 @@ public class VisitorMobEntity extends PathfinderMob {
         targetTimes.add((int) (end - start));
 
         if (Config.TICK_SAMPLING_RATE.get() != 0 && targetTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
-            Questown.LOGGER.debug(
+            QT.PROFILE_LOGGER.debug(
                     "VME Average target acquisition length: {}",
                     targetTimes.stream().mapToInt(Integer::intValue).average()
             );
@@ -761,11 +759,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     @Override
     protected void jumpFromGround() {
-        if (getStatus().isFarmingWork()) {
-            if (!level.getBlockState(blockPosition()).is(Blocks.COMPOSTER)) {
-                // Jumping destroys crops. Don't do it.
-                return;
-            }
+        BlockState onBlock = level.getBlockState(blockPosition());
+        if (job.isJumpingAllowed(onBlock)) {
+            // Jumping destroys crops. Don't do it when we don't have to
+            return;
         }
         super.jumpFromGround();
     }
@@ -826,12 +823,16 @@ public class VisitorMobEntity extends PathfinderMob {
         return job.getInventory();
     }
 
-    public GathererJournal.Status getStatus() {
+    public @Nullable String getStatusForClient() {
         String s = entityData.get(status);
         if (s.isEmpty()) {
-            return GathererJournal.Status.UNSET;
+            return null;
         }
-        return GathererJournal.Status.from(s);
+        return s;
+    }
+
+    public IStatus<?> getStatusForServer() {
+        return job.getStatus();
     }
 
     public void setStatusListener(StatusListener l) {
@@ -903,6 +904,9 @@ public class VisitorMobEntity extends PathfinderMob {
             if (itemInHand.is(Items.BREAD)) {
                 convertToBaker();
             }
+            if (itemInHand.is(Items.IRON_INGOT)) {
+                convertToSmelter();
+            }
         }
 
         if (this.job.shouldBeNoClip(town, blockPosition())) {
@@ -917,7 +921,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot<?>> job1 = new FarmerJob(uuid, 6);
+        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new FarmerJob(uuid, 6);
         this.setJob(job1);
     }
 
@@ -925,7 +929,15 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot<?>> job1 = new BakerJob(uuid, 6);
+        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new BakerJob(uuid, 6);
+        this.setJob(job1);
+    }
+
+    public void convertToSmelter() {
+        if (level.isClientSide()) {
+            return;
+        }
+        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new SmelterJob(uuid, 6);
         this.setJob(job1);
     }
 
@@ -958,6 +970,10 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public String toString() {
         return String.format("%s [%s]", super.toString(), getUUID());
+    }
+
+    public int getStatusOrdinal() {
+        return job.getStatusOrdinal();
     }
 
     public interface ChangeListener {

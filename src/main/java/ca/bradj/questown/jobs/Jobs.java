@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class Jobs {
-    public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?> job) {
+    public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
         Container inventory = job.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -123,7 +123,7 @@ public class Jobs {
         }
     }
 
-    public static boolean openInventoryAndStatusScreen(
+    public static <S extends IStatus<S>> boolean openInventoryAndStatusScreen(
             int capacity,
             Collection<MCHeldItem> items,
             ServerPlayer sp,
@@ -156,7 +156,13 @@ public class Jobs {
                 ResourceLocation id;
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
+                    recipe = new UIQuest(
+                            SpecialQuests.SPECIAL_QUESTS.get(id),
+                            Quest.QuestStatus.ACTIVE,
+                            null,
+                            null,
+                            null
+                    );
                 } else {
                     id = recipe.getRecipeId();
                 }
@@ -189,6 +195,7 @@ public class Jobs {
     public interface LootDropper<I> {
 
         UUID UUID();
+
         boolean hasAnyLootToDrop();
 
         Iterable<I> getItems();
@@ -196,6 +203,7 @@ public class Jobs {
         boolean removeItem(I mct);
 
     }
+
     public static boolean tryDropLoot(
             LootDropper<MCHeldItem> dropper,
             BlockPos entityPos,

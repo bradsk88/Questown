@@ -9,17 +9,16 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
-    void addStatusListener(StatusListener o);
+public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
+    void addStatusListener(StatusListener<STATUS> o);
 
-    GathererJournal.Status getStatus();
-
-    void initializeStatus(GathererJournal.Status s);
+    STATUS getStatus();
 
     void tick(
             TownInterface town,
@@ -61,4 +60,12 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT> {
     TranslatableComponent getJobName();
 
     boolean addToEmptySlot(MCTownItem mcTownItem);
+
+    void initializeStatusFromEntityData(@Nullable String s);
+
+    String getStatusToSyncToClient();
+
+    boolean isJumpingAllowed(BlockState onBlock);
+
+    int getStatusOrdinal();
 }

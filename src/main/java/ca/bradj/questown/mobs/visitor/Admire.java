@@ -1,6 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.IStatus;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -32,8 +32,8 @@ public class Admire extends Behavior<VisitorMobEntity> {
         if (!super.checkExtraStartConditions(p_22538_, entity)) {
             return false;
         }
-        GathererJournal.Status s = entity.getStatus();
-        return !s.isWorking() && !s.isPreparing();
+        IStatus<?> s = entity.getStatusForServer();
+        return !s.isAllowedToTakeBreaks();
     }
 
     @Override

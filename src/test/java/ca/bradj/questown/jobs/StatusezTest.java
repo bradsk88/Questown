@@ -1,13 +1,7 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -19,17 +13,18 @@ class StatusezTest {
 
     static class TestStatus implements IStatus<TestStatus> {
 
-        private static final TestStatus DROPPING_LOOT = new TestStatus("dropping_loot");
-        private static final TestStatus NO_SPACE = new TestStatus("no_space");
-        private static final TestStatus GOING_TO_JOB = new TestStatus("going_to_job");
-        private static final TestStatus NO_SUPPLIES = new TestStatus("no_supplies");
-        private static final TestStatus COLLECTING_SUPPLIES = new TestStatus("collecting_supplies");
-        private static final TestStatus IDLE = new TestStatus("idle");
-        private static final TestStatus ITEMLESS_WORK = new TestStatus("itemless_work");
-        private static final TestStatus ITEM_WORK = new TestStatus("item_work");
-        private static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
+        static final TestStatus DROPPING_LOOT = new TestStatus("dropping_loot");
+        static final TestStatus NO_SPACE = new TestStatus("no_space");
+        static final TestStatus GOING_TO_JOB = new TestStatus("going_to_job");
+        static final TestStatus NO_SUPPLIES = new TestStatus("no_supplies");
+        static final TestStatus COLLECTING_SUPPLIES = new TestStatus("collecting_supplies");
+        static final TestStatus IDLE = new TestStatus("idle");
+        static final TestStatus ITEMLESS_WORK = new TestStatus("itemless_work");
+        static final TestStatus ITEM_WORK = new TestStatus("item_work");
+        static final TestStatus ITEM_WORK_2 = new TestStatus("item_work_2");
+        static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
 
-        private static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
+        static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
             @Override
             public TestStatus droppingLoot() {
                 return DROPPING_LOOT;
@@ -78,6 +73,45 @@ class StatusezTest {
         }
 
         @Override
+        public boolean isGoingToJobsite() {
+            return this == GOING_TO_JOB;
+        }
+
+        @Override
+        public boolean isWorkingOnProduction() {
+            return ImmutableList.of(
+                    ITEM_WORK,
+                    ITEM_WORK_2,
+                    ITEMLESS_WORK
+            ).contains(this);
+        }
+
+        @Override
+        public boolean isDroppingLoot() {
+            return this == DROPPING_LOOT;
+        }
+
+        @Override
+        public boolean isCollectingSupplies() {
+            return this == COLLECTING_SUPPLIES;
+        }
+
+        @Override
+        public String name() {
+            return inner;
+        }
+
+        @Override
+        public boolean isUnset() {
+            return false;
+        }
+
+        @Override
+        public boolean isAllowedToTakeBreaks() {
+            return false;
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -100,31 +134,22 @@ class StatusezTest {
             TestStatus.GOING_TO_JOB, true,
             TestStatus.ITEM_WORK, true
     );
-    RoomRecipeMatch<Room> arbitraryRoom = new RoomRecipeMatch<>(
-            new Room(
-                    new Position(0, 0),
-                    new InclusiveSpace(new Position(0, 0), new Position(1, 1))
-            ),
-            new ResourceLocation(Questown.MODID, "bakery"),
-            ImmutableList.of()
-    );
 
-    private record ConstInventory(
+    record ConstInventory(
             boolean inventoryFull,
-            boolean hasItems,
             boolean hasNonSupplyItems,
             Map<TestStatus, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<TestStatus> {
     }
 
-    private record ConstTown(
+    record ConstTown(
             boolean hasSupplies,
             boolean hasSpace,
             boolean canUseMoreSupplies
     ) implements TownStateProvider {
     }
 
-    private static class NoOpJob implements JobStatuses.Job<TestStatus> {
+    static class NoOpJob implements JobStatuses.Job<TestStatus> {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return null;
@@ -133,6 +158,18 @@ class StatusezTest {
         @Override
         public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             return null;
+        }
+    }
+
+    static class FailJob implements JobStatuses.Job<TestStatus> {
+        @Override
+        public @Nullable TestStatus tryChoosingItemlessWork() {
+            throw new AssertionError("Itemless work is not allowed when using FailJob");
+        }
+
+        @Override
+        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+            throw new AssertionError("Itemless work is not allowed when using FailJob");
         }
     }
 
@@ -164,7 +201,8 @@ class StatusezTest {
     void StatusShouldBe_CollectingSupplies_WhenInvEmptyTownFull() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(false, false, false, ImmutableMap.of()),
+                true,
+                new ConstInventory(false, false, ImmutableMap.of()),
                 new ConstTown(true, true, true),
                 new NoOpJob(),
                 TestStatus.FACTORY
@@ -176,7 +214,8 @@ class StatusezTest {
     void StatusShouldDo_ItemlessWork_WhenInvEmpty() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(false, false, false, ImmutableMap.of()),
+                true,
+                new ConstInventory(false, false, ImmutableMap.of()),
                 new ConstTown(true, true, true),
                 jobWithItemlessWork,
                 TestStatus.FACTORY
@@ -188,9 +227,10 @@ class StatusezTest {
     void StatusShouldBe_ItemWork_WhenInvFullOfSuppliesTownEmpty() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
+                true,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
                 new ConstTown(false, true, true),
-                jobWithItemlessWork,
+                jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.ITEM_WORK, s);
@@ -200,7 +240,8 @@ class StatusezTest {
     void StatusShouldBe_NoSupplies_WhenInvEmptyTownEmpty() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(false, false, false, ImmutableMap.of()),
+                true,
+                new ConstInventory(false, false, ImmutableMap.of()),
                 new ConstTown(false, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -212,9 +253,10 @@ class StatusezTest {
     void StatusShouldDo_ItemWork_WhenInvHasSupplies_AndTownEmpty() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(false, true, true, HAS_ALL_SUPPLIES),
+                true,
+                new ConstInventory(false, true, HAS_ALL_SUPPLIES),
                 new ConstTown(false, true, true),
-                jobWithItemlessWork,
+                jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.ITEM_WORK, s);
@@ -224,9 +266,60 @@ class StatusezTest {
     void StatusShouldBe_ItemWork_WhenInvFullTownFull() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(true, true, false, HAS_ALL_SUPPLIES),
+                true,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(true, false, true),
+                jobWithItemWorkOnly,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+    }
+
+    @Test
+    void StatusShouldPrefer_ItemlessWork_OverItemWork_WhenInvFullTownFull() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
                 new ConstTown(true, false, true),
                 jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.ITEMLESS_WORK, s);
+    }
+
+    @Test
+    void StatusShouldPrefer_ItemWork_OverItemlessWork_WhenInvFullTownFull_AndPrioritizeIsSetToFalse() {
+        boolean prioritizeCollection = false;
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                prioritizeCollection,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(true, false, true),
+                jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+    }
+
+    @Test
+    void StatusShouldPrefer_ItemWork_OverItemlessWork_IfItemlessWorkIsInAnotherLocation_WhenInvFullTownFull() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(true, false, true),
+                new JobStatuses.Job<>() {
+                    @Override
+                    public @Nullable TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.GOING_TO_JOB;
+                    }
+
+                    @Override
+                    public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+                        return TestStatus.ITEM_WORK;
+                    }
+                },
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.ITEM_WORK, s);
@@ -236,7 +329,8 @@ class StatusezTest {
     void StatusShouldBe_DroppingLoot_WhenInvHasNonSuppliesOnly() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(true, true, true, ImmutableMap.of()),
+                true,
+                new ConstInventory(true, true, ImmutableMap.of()),
                 new ConstTown(true, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -248,7 +342,8 @@ class StatusezTest {
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
-                new ConstInventory(false, true, false, ImmutableMap.of()),
+                true,
+                new ConstInventory(false, false, ImmutableMap.of()),
                 new ConstTown(false, true, false),
                 new NoOpJob(),
                 TestStatus.FACTORY

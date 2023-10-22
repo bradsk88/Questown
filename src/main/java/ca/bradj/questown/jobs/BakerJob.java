@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
     private final Marker marker = MarkerManager.getMarker("Baker");
 
@@ -103,9 +103,24 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
-    public void initializeStatus(GathererJournal.Status s) {
-        Questown.LOGGER.debug("Initialized journal to state {}", s);
-        this.journal.initializeStatus(s);
+    public int getStatusOrdinal() {
+        return getStatus().ordinal();
+    }
+
+    @Override
+    public void initializeStatusFromEntityData(@Nullable String s) {
+        GathererJournal.Status z = GathererJournal.getStatusFromEntityData(s);
+        journal.initializeStatus(z);
+    }
+
+    @Override
+    public String getStatusToSyncToClient() {
+        return journal.getStatus().name();
+    }
+
+    @Override
+    public boolean isJumpingAllowed(BlockState onBlock) {
+        return true;
     }
 
     @Override
@@ -239,11 +254,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             @Override
             public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
                 return bj.getSupplyItemStatus();
-            }
-
-            @Override
-            public boolean hasItems() {
-                return !inventory.isEmpty();
             }
         });
 

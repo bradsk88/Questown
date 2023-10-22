@@ -25,7 +25,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.*;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerListener;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -47,7 +49,7 @@ import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
-public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>>, LockSlotHaver, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
     private final Marker marker = MarkerManager.getMarker("Farmer");
 
@@ -118,9 +120,24 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public void initializeStatus(GathererJournal.Status s) {
-        QT.JOB_LOGGER.debug(marker, "Initialized journal to state {}", s);
-        this.journal.initializeStatus(s);
+    public int getStatusOrdinal() {
+        return getStatus().ordinal();
+    }
+
+    @Override
+    public void initializeStatusFromEntityData(@Nullable String s) {
+        GathererJournal.Status z = GathererJournal.getStatusFromEntityData(s);
+        journal.initializeStatus(z);
+    }
+
+    @Override
+    public String getStatusToSyncToClient() {
+        return journal.getStatus().name();
+    }
+
+    @Override
+    public boolean isJumpingAllowed(BlockState onBlock) {
+        return onBlock.is(Blocks.COMPOSTER);
     }
 
     @Override
@@ -501,11 +518,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                                 GathererJournal.Status.FARMING_BONING, hasBoneMeal,
                                 GathererJournal.Status.FARMING_COMPOSTING, hasCompostable
                         );
-                    }
-
-                    @Override
-                    public boolean hasItems() {
-                        return !journal.isInventoryEmpty();
                     }
                 },
                 isInFarm

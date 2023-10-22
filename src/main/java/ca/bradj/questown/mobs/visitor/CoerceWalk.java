@@ -1,6 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.IStatus;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
@@ -25,8 +25,8 @@ public class CoerceWalk extends Behavior<VisitorMobEntity> {
         if (!super.checkExtraStartConditions(p_22538_, p_22539_)) {
             return false;
         }
-        GathererJournal.Status s = p_22539_.getStatus();
-        return s.isPreparing() || s.isWorking() || s.isReturning() || s.isFinishingUp();
+        IStatus<?> s = p_22539_.getStatusForServer();
+        return s.isAllowedToTakeBreaks();
     }
 
     @Override

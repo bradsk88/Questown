@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
+public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener<GathererJournal.Status> {
 
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
@@ -75,7 +75,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
-        this.statusSlot.set(gatherer.getStatus().ordinal());
+        this.statusSlot.set(gatherer.getStatusOrdinal());
 
         int i = 0;
         for (boolean locked : gatherer.getSlotLocks()) {
@@ -267,5 +267,8 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
 
     public Component getJobName() {
         return this.jobName;
+    }
+
+    public interface OrdinalConverter<S> {
     }
 }

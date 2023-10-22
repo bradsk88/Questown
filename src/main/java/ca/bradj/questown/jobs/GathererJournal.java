@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -19,11 +21,18 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
     private final Converter<I, H> converter;
     private JournalItemList<H> inventory;
     private boolean ate = false;
-    private List<ItemsListener<H>> listeners = new ArrayList<>();
+    private List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private List<StatusListener> statusListeners = new ArrayList<>();
     private Status status = Status.UNSET;
     private DefaultInventoryStateProvider<H> invState = new DefaultInventoryStateProvider<>(() -> ImmutableList.copyOf(
             this.inventory));
+
+    public static Status getStatusFromEntityData(String s) {
+        if (s == null || s.isEmpty()) {
+            return Status.UNSET;
+        }
+        return Status.from(s);
+    }
 
     public interface ToolsChecker<H extends HeldItem<H, ?>> {
         Tools computeTools(Iterable<H> items);
@@ -154,7 +163,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         this.statusListeners.add(l);
     }
 
-    public void addItemsListener(ItemsListener<H> l) {
+    public void addItemsListener(JournalItemsListener<H> l) {
         this.listeners.add(l);
     }
 
@@ -386,13 +395,61 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
 
         @Override
+        public boolean isAllowedToTakeBreaks() {
+            if (isFarmingWork()) {
+                return true;
+            }
+            if (isBakingWork()) {
+                return true;
+            }
+            if (isFinishingUp()) {
+                return true;
+            }
+            if (isWorking()) {
+                return true;
+            }
+            if (isReturning()) {
+                return true;
+            }
+            return false;
+        }
+
+        @Override
         public IStatusFactory<Status> getFactory() {
             return FACTORY;
         }
-    }
 
-    public interface ItemsListener<I> {
-        void itemsChanged(ImmutableList<I> items);
+        @Override
+        public boolean isGoingToJobsite() {
+            return ImmutableList.of(
+                    GOING_TO_JOBSITE
+            ).contains(this);
+        }
+
+        @Override
+        public boolean isWorkingOnProduction() {
+            return ImmutableList.of(
+            ).contains(this);
+        }
+
+        @Override
+        public boolean isDroppingLoot() {
+            return ImmutableList.of(
+                    DROPPING_LOOT
+            ).contains(this);
+        }
+
+        @Override
+        public boolean isCollectingSupplies() {
+            return ImmutableList.of(
+                    COLLECTING_SUPPLIES
+            ).contains(this);
+        }
+
+        @Override
+        public boolean isUnset() {
+            return this == UNSET;
+        }
     }
 
     public interface Item<I extends Item<I>> {
@@ -401,10 +458,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         boolean isFood();
 
         I shrink();
-    }
-
-    public interface SignalSource {
-        Signals getSignal();
     }
 
     public record Tools(boolean hasAxe, boolean hasPick, boolean hasShovel, boolean hasRod) {

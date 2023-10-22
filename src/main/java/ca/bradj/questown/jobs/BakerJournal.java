@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> implements Journal<GathererJournal.Status, H> {
     private final JournalItemList<H> inventory;
     private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
-    private final GathererJournal.SignalSource sigs;
+    private final SignalSource sigs;
     private GathererJournal.Status status;
-    private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
+    private List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
     private ArrayList<StatusListener> statusListeners = new ArrayList<>();
@@ -31,7 +31,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     }
 
     public BakerJournal(
-            GathererJournal.SignalSource sigs,
+            SignalSource sigs,
             int capacity,
             ItemChecker<H> itemsToHold,
             EmptyFactory<H> ef
@@ -129,7 +129,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         return false;
     }
 
-    public void addItemListener(GathererJournal.ItemsListener<H> l) {
+    public void addItemListener(JournalItemsListener<H> l) {
         this.listeners.add(l);
     }
 

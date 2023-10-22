@@ -11,7 +11,6 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -23,6 +22,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootTables;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>>, GathererJournal.SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, GathererJournal.ItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
+public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
     private @Nullable TownInterface town;
     private final Container inventory;
@@ -51,7 +51,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     private boolean closeToGate;
 
     public GathererJob(
-            TownInterface town, // null on client side
+            TownInterface town,
+            // null on client side
             int inventoryCapacity,
             UUID ownerUUID
     ) {
@@ -142,7 +143,9 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     public void tick(
             TownInterface town,
             BlockPos entityPos,
-            Vec3 position, Direction relative) {
+            Vec3 position,
+            Direction relative
+    ) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
@@ -306,9 +309,15 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return list;
     }
 
-    public void initializeStatus(GathererJournal.Status status) {
-        Questown.LOGGER.debug("Initialized journal to state {}", status);
-        this.journal.initializeStatus(status);
+    @Override
+    public void initializeStatusFromEntityData(@Nullable String s) {
+        GathererJournal.Status z = GathererJournal.getStatusFromEntityData(s);
+        this.journal.initializeStatus(z);
+    }
+
+    @Override
+    public String getStatusToSyncToClient() {
+        return getStatus().name();
     }
 
     public BlockPos getTarget(
@@ -327,10 +336,10 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             case GOING_TO_JOBSITE -> throw new IllegalArgumentException("Gatherer was job status");
             case LEAVING_FARM, FARMING_HARVESTING, FARMING_RANDOM_TEND,
                     FARMING_TILLING, FARMING_PLANTING, FARMING_BONING,
-                    FARMING_COMPOSTING, FARMING_WEEDING
-                    -> throw new IllegalArgumentException("Gatherer was given farmer status");
-            case COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, BAKING_FUELING, COLLECTING_BREAD
-                    -> throw new IllegalArgumentException("Gatherer was given baker status");
+                    FARMING_COMPOSTING, FARMING_WEEDING ->
+                    throw new IllegalArgumentException("Gatherer was given farmer status");
+            case COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, BAKING_FUELING, COLLECTING_BREAD ->
+                    throw new IllegalArgumentException("Gatherer was given baker status");
         };
     }
 
@@ -360,7 +369,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     private BlockPos handleNoFoodStatus(
             BlockPos entityBlockPos,
-            TownInterface town) {
+            TownInterface town
+    ) {
         if (journal.hasAnyLootToDrop()) {
             return setupForDropLoot(entityBlockPos, town);
         }
@@ -384,7 +394,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     private BlockPos setupForDropLoot(
             BlockPos entityPos,
-            TownInterface town) {
+            TownInterface town
+    ) {
         this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
         if (this.successTarget != null) {
             return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
@@ -498,8 +509,18 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return journal.getStatus();
     }
 
-    public void addStatusListener(StatusListener l) {
+    @Override
+    public int getStatusOrdinal() {
+        return getStatus().ordinal();
+    }
+
+    public void addStatusListener(StatusListener<GathererJournal.Status> l) {
         journal.addStatusListener(l);
+    }
+
+    @Override
+    public boolean isJumpingAllowed(BlockState onBlock) {
+        return true;
     }
 
     @Override
@@ -532,7 +553,10 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return this.locks.get(i);
     }
 
-    public boolean shouldBeNoClip(TownInterface town, BlockPos position) {
+    public boolean shouldBeNoClip(
+            TownInterface town,
+            BlockPos position
+    ) {
         return this.closeToGate;
     }
 

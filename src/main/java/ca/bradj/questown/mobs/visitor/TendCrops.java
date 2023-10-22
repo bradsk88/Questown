@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.IStatus;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,8 +34,11 @@ public class TendCrops extends Behavior<VisitorMobEntity> {
         if (!super.checkExtraStartConditions(p_22538_, p_22539_)) {
             return false;
         }
-        GathererJournal.Status s = p_22539_.getStatus();
-        return s.isFarmingWork();
+        IStatus<?> s = p_22539_.getStatusForServer();
+        if (s instanceof GathererJournal.Status gs) {
+            return gs.isFarmingWork();
+        }
+        return false;
     }
 
     @Override

@@ -48,8 +48,8 @@ public class BakerStatuses {
             TownStateProvider<ROOM> town,
             EntityStateProvider<ROOM> entity
     ) {
-        GathererJournal.Status newStatus = JobStatuses.usualRoutine(
-                currentStatus, inventory, new ca.bradj.questown.jobs.TownStateProvider() {
+        GathererJournal.Status newStatus = JobStatuses.usualRoutine( // TODO: Use productionRoutine instead
+                currentStatus, true, inventory, new ca.bradj.questown.jobs.TownStateProvider() {
                     @Override
                     public boolean hasSupplies() {
                         return town.hasSupplies();
@@ -122,7 +122,7 @@ public class BakerStatuses {
             return GathererJournal.Status.COLLECTING_BREAD;
         }
 
-        if (inventory.hasItems()) {
+        if (JobStatuses.hasItems(inventory)) {
             return nullIfUnchanged(currentStatus, GathererJournal.Status.DROPPING_LOOT);
         }
 

@@ -8,6 +8,4 @@ public interface EntityInvStateProvider<STATUS> {
     boolean hasNonSupplyItems();
 
     Map<STATUS, Boolean> getSupplyItemStatus();
-
-    boolean hasItems();
 }

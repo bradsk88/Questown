@@ -391,7 +391,7 @@ class BakerStatusesTest {
                 ),
                 new ConstEntity(arbitraryRoom)
         );
-        Assertions.assertEquals(GathererJournal.Status.BAKING_FUELING, s);
+        Assertions.assertEquals(GathererJournal.Status.COLLECTING_BREAD, s);
     }
 
     @Test

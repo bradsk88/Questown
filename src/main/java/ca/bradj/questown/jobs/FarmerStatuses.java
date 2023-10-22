@@ -69,7 +69,7 @@ public class FarmerStatuses {
             boolean isInFarm
     ) {
         GathererJournal.Status status = JobStatuses.usualRoutine(
-                currentStatus, inventory, new TownStateProvider() {
+                currentStatus, false, inventory, new TownStateProvider() {
                     @Override
                     public boolean hasSupplies() {
                         return town.hasSupplies();

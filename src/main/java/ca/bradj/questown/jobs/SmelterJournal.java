@@ -8,36 +8,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> implements Journal<SmelterStatus, H> {
     private final JournalItemList<H> inventory;
-    private DefaultInventoryStateProvider<H> invState;
+    private final DefaultInventoryStateProvider<H> invState;
     private final int capacity;
-    private final GathererJournal.SignalSource sigs;
-    private GathererJournal.Status status;
-    private List<GathererJournal.ItemsListener<H>> listeners = new ArrayList<>();
-    private EmptyFactory<H> emptyFactory;
-    private final ItemChecker<H> itemsToHold;
-    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
+    private final SignalSource sigs;
+    private SmelterStatus status;
+    private final List<JournalItemsListener<H>> listeners = new ArrayList<>();
+    private final EmptyFactory<H> emptyFactory;
+    private final ArrayList<StatusListener<SmelterStatus>> statusListeners = new ArrayList<>();
 
-    public void addStatusListener(StatusListener o) {
+    public void addStatusListener(StatusListener<SmelterStatus> o) {
         this.statusListeners.add(o);
     }
 
-    public interface ItemChecker<H> {
-        boolean shouldHoldForWork(
-                GathererJournal.Status status,
-                H item
-        );
-    }
-
     public SmelterJournal(
-            GathererJournal.SignalSource sigs,
+            SignalSource sigs,
             int capacity,
-            ItemChecker<H> itemsToHold,
             EmptyFactory<H> ef
     ) {
         this.sigs = sigs;
-        this.itemsToHold = itemsToHold;
         this.inventory = new JournalItemList<>(capacity, ef);
         this.capacity = capacity;
         this.invState = new DefaultInventoryStateProvider<>(
@@ -72,10 +62,10 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
     public void setItemsNoUpdateNoCheck(ImmutableList<H> build) {
         inventory.clear();
         inventory.addAll(build);
-        changeStatus(GathererJournal.Status.IDLE);
+        changeStatus(SmelterStatus.IDLE);
     }
 
-    protected void changeStatus(GathererJournal.Status s) {
+    protected void changeStatus(SmelterStatus s) {
         this.status = s;
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
@@ -89,15 +79,15 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
     }
 
     public void tick(
-            BakerStatuses.TownStateProvider<MCRoom> townState,
-            BakerStatuses.EntityStateProvider<MCRoom> entityState,
-            EntityInvStateProvider inventory
+            JobTownProvider<SmelterStatus, MCRoom> townState,
+            EntityLocStateProvider<MCRoom> entityState,
+            EntityInvStateProvider<SmelterStatus> inventory
     ) {
-        if (status == GathererJournal.Status.UNSET) {
+        if (status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
-        @Nullable GathererJournal.Status newStatus = BakerStatuses.getNewStatusFromSignal(
+        @Nullable SmelterStatus newStatus = SmelterStatuses.getNewStatusFromSignal(
                 status, sig, inventory, townState, entityState
         );
         if (newStatus != null) {
@@ -105,7 +95,7 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         }
     }
 
-    public GathererJournal.Status getStatus() {
+    public SmelterStatus getStatus() {
         return status;
     }
 
@@ -116,9 +106,6 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
-        if (status == GathererJournal.Status.NO_FOOD && item.isFood()) { // TODO: Test
-            changeStatus(GathererJournal.Status.IDLE);
-        }
     }
 
     public boolean addItemIfSlotAvailable(H item) {
@@ -129,11 +116,11 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         return false;
     }
 
-    public void addItemListener(GathererJournal.ItemsListener<H> l) {
+    public void addItemListener(JournalItemsListener<H> l) {
         this.listeners.add(l);
     }
 
-    public void initializeStatus(GathererJournal.Status s) {
+    public void initializeStatus(SmelterStatus s) {
         this.status = s;
     }
 
@@ -155,11 +142,11 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         inventory.set(index, emptyFactory.makeEmptyItem());
         updateItemListeners();
         // TODO: Add FARMER_EATING status
-//        if (status == GathererJournal.Status.GATHERING_EATING) {
-//            changeStatus(GathererJournal.Status.GATHERING);
+//        if (status == SmelterStatus.GATHERING_EATING) {
+//            changeStatus(SmelterStatus.GATHERING);
 //        }
         // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
-        changeStatus(GathererJournal.Status.IDLE);
+        changeStatus(SmelterStatus.IDLE);
         return true;
     }
 
@@ -168,7 +155,7 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
-            GathererJournal.Status status, ImmutableList<H> items
+            SmelterStatus status, ImmutableList<H> items
     ) implements ca.bradj.questown.jobs.Snapshot<H> {
         @Override
         public String statusStringValue() {

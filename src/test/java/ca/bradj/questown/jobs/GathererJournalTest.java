@@ -98,7 +98,7 @@ public class GathererJournalTest {
         }
     }
 
-    static class TestSignals implements GathererJournal.SignalSource {
+    static class TestSignals implements SignalSource {
 
         Signals currentSignal = Signals.UNDEFINED;
 
