@@ -1,5 +1,7 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.smelter;
 
+import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
 
 public enum SmelterStatus implements IStatus<SmelterStatus> {
@@ -11,7 +13,10 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
     COLLECTING_SUPPLIES,
     IDLE,
     NO_SPACE,
-    RELAXING, WORK_COLLECTING_ORE, PROCESSING_ORE, WORK_INSERTING_ORE, WORK_INSERTING_COAL;
+    RELAXING,
+    WORK_COLLECTING_RAW_PRODUCT,
+    WORK_INSERTING_ORE,
+    WORK_PROCESSING_ORE;
 
     static final IStatusFactory<SmelterStatus> FACTORY = new IStatusFactory<>() {
 
@@ -47,9 +52,18 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
 
         @Override
         public SmelterStatus collectingFinishedProduct() {
-            return WORK_COLLECTING_ORE;
+            return WORK_COLLECTING_RAW_PRODUCT;
         }
     };
+
+    public static SmelterStatus from(String s) {
+        for (SmelterStatus ss : values()) {
+            if (ss.name().equals(s)) {
+                return ss;
+            }
+        }
+        return SmelterStatus.UNSET;
+    }
 
     @Override
     public IStatusFactory<SmelterStatus> getFactory() {
@@ -64,9 +78,9 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
     @Override
     public boolean isWorkingOnProduction() {
         return ImmutableList.of(
-                WORK_COLLECTING_ORE,
+                WORK_COLLECTING_RAW_PRODUCT,
                 WORK_INSERTING_ORE,
-                WORK_INSERTING_COAL
+                WORK_PROCESSING_ORE
         ).contains(this);
     }
 

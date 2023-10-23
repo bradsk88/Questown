@@ -14,7 +14,7 @@ import java.util.Objects;
 
 public class GathererJournalTest {
 
-    public static class TestItem implements GathererJournal.Item<TestItem>, HeldItem<TestItem, TestItem> {
+    public static class TestItem implements Item<TestItem>, HeldItem<TestItem, TestItem> {
         protected final String value;
 
         public TestItem(String value) {
@@ -870,7 +870,7 @@ public class GathererJournalTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
                 Signals.EVENING,
-                new InventoryStateProvider<GathererJournal.Item>() {
+                new InventoryStateProvider<Item>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;
@@ -903,7 +903,7 @@ public class GathererJournalTest {
         newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE, // Happens when you remove an item
                 Signals.EVENING,
-                new InventoryStateProvider<GathererJournal.Item>() {
+                new InventoryStateProvider<Item>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return false;

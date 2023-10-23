@@ -33,7 +33,7 @@ public class JobStatuses {
     ) {
         STATUS s = null;
         Map<STATUS, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
-        boolean hasWorkItems = supplyItemStatus.values().stream().findAny().orElse(false);
+        boolean hasWorkItems = supplyItemStatus.containsValue(true);
         boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems();
         if (hasWorkItems) {
             STATUS useStatus = job.tryUsingSupplies(supplyItemStatus);
@@ -72,8 +72,10 @@ public class JobStatuses {
         } else if (!town.hasSupplies()) {
             if (town.canUseMoreSupplies()) {
                 s2 = nullIfUnchanged(currentStatus, factory.noSupplies());
-            } else {
+            } else if (hasItems) {
                 s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
+            } else {
+                s2 = factory.idle();
             }
         } else {
             if (hasItems && !hasWorkItems) {
@@ -159,7 +161,7 @@ public class JobStatuses {
                                 .toList();
 
                         for (STATUS s : orderedWithSupplies) {
-                            if (roomNeedsMap.containsKey(s)) {
+                            if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s).isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
                                     if (roomNeedsMap.get(s).contains(location.room)) {

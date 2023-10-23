@@ -23,8 +23,8 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
             throw new IllegalStateException("Inventory must be size 6");
         }
         return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.and(
-                Predicates.not(GathererJournal.Item::isFood),
-                Predicates.not(GathererJournal.Item::isEmpty),
+                Predicates.not(Item::isFood),
+                Predicates.not(Item::isEmpty),
                 Predicates.not(HeldItem::isLocked)
         ));
     }
@@ -35,7 +35,7 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
         if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
-        return this.itemsSource.GetCurrentItems().stream().noneMatch(GathererJournal.Item::isEmpty);
+        return this.itemsSource.GetCurrentItems().stream().noneMatch(Item::isEmpty);
     }
 
 
@@ -43,7 +43,7 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
         if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
-        return this.itemsSource.GetCurrentItems().stream().allMatch(GathererJournal.Item::isEmpty);
+        return this.itemsSource.GetCurrentItems().stream().allMatch(Item::isEmpty);
     }
 
 
@@ -52,7 +52,7 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
         if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
-        return this.itemsSource.GetCurrentItems().stream().anyMatch(GathererJournal.Item::isFood);
+        return this.itemsSource.GetCurrentItems().stream().anyMatch(Item::isFood);
     }
 
 
@@ -61,7 +61,7 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
         if (!this.isValid()) {
             throw new IllegalStateException("Inventory must be size 6");
         }
-        return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.not(GathererJournal.Item::isEmpty));
+        return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.not(Item::isEmpty));
     }
 
     @Override

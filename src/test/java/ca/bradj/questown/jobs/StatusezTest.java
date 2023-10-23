@@ -193,7 +193,13 @@ class StatusezTest {
 
         @Override
         public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-            return TestStatus.ITEM_WORK;
+            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK, false)) {
+                return TestStatus.ITEM_WORK;
+            }
+            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK_2, false)) {
+                return TestStatus.ITEM_WORK_2;
+            }
+            return null;
         }
     };
 
@@ -260,6 +266,22 @@ class StatusezTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+    }
+
+    @Test
+    void StatusShouldDo_ItemWork2_WhenInvHasWork2Supplies_AndTownEmpty() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, false,
+                        TestStatus.ITEM_WORK_2, true
+                )),
+                new ConstTown(false, true, true),
+                jobWithItemWorkOnly,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.ITEM_WORK_2, s);
     }
 
     @Test
@@ -343,11 +365,33 @@ class StatusezTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of()),
+                new ConstInventory(false, false, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, true // Some supplies
+                )),
                 new ConstTown(false, true, false),
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
+    @Test
+    void StatusShouldBe_Idle_WhenInvHasNoItems_AndTownHasNoSupplies_AndCannotDoWork() {
+        boolean canDoWork = false;
+        boolean hasSupplies = false;
+        boolean suppliesInInventory = false;
+
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, suppliesInInventory,
+                        TestStatus.ITEM_WORK_2, suppliesInInventory
+                )),
+                new ConstTown(hasSupplies, true, canDoWork),
+                new NoOpJob(),
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.IDLE, s);
     }
 }

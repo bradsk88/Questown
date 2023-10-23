@@ -11,7 +11,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.RETURNED_SUCCESS,
                 Signals.NOON,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;
@@ -61,7 +61,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.DROPPING_LOOT,
                 Signals.EVENING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;
@@ -119,7 +119,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.DROPPING_LOOT,
                 Signals.MORNING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;
@@ -177,7 +177,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_SPACE,
                 Signals.MORNING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;
@@ -228,7 +228,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.IDLE,
                 Signals.MORNING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return false;
@@ -281,7 +281,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_GATE,
                 Signals.MORNING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return false;
@@ -334,7 +334,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.UNSET,
                 Signals.NOON,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return false;
@@ -387,7 +387,7 @@ class GathererStatusesTest {
         GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                 GathererJournal.Status.NO_SPACE,
                 Signals.EVENING,
-                new InventoryStateProvider<GathererJournal.Item<?>>() {
+                new InventoryStateProvider<Item<?>>() {
                     @Override
                     public boolean hasAnyDroppableLoot() {
                         return true;

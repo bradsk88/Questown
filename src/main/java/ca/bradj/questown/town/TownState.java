@@ -1,9 +1,6 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererTimeWarper;
-import ca.bradj.questown.jobs.HeldItem;
-import ca.bradj.questown.jobs.Snapshot;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -16,8 +13,8 @@ import java.util.UUID;
 
 public class TownState<
         C extends ContainerTarget.Container<I>,
-        I extends GathererJournal.Item<I>,
-        H extends HeldItem<H, I> & GathererJournal.Item<H>
+        I extends Item<I>,
+        H extends HeldItem<H, I> & Item<H>
         > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
@@ -111,7 +108,7 @@ public class TownState<
         return !gates.isEmpty();
     }
 
-    public static final class VillagerData<I extends HeldItem<I, ? extends GathererJournal.Item<?>>> {
+    public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
         public final Snapshot<I> journal;

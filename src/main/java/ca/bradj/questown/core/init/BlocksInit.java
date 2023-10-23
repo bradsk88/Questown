@@ -2,6 +2,7 @@ package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
+import ca.bradj.questown.blocks.SmeltingOvenBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.materials.WallType;
@@ -26,5 +27,8 @@ public class BlocksInit {
     );
     public static final RegistryObject<Block> BREAD_OVEN_BLOCK = BLOCKS.register(
             BreadOvenBlock.ITEM_ID, BreadOvenBlock::new
+    );
+    public static final RegistryObject<Block> SMELTING_OVEN_BLOCK = BLOCKS.register(
+            SmeltingOvenBlock.ITEM_ID, SmeltingOvenBlock::new
     );
 }

@@ -11,11 +11,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -176,14 +173,12 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
             @Override
             public boolean hasSupplies() {
-                return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
-                        journal.getCapacity(), recipe, journal.getItems(), item
-                )) != null;
+                return Jobs.townHasSupplies(town, journal, recipe);
             }
 
             @Override
             public boolean hasSpace() {
-                return town.findMatchingContainer(MCTownItem::isEmpty) != null;
+                return Jobs.townHasSpace(town);
             }
 
             @Override
@@ -228,17 +223,9 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             public @Nullable RoomRecipeMatch<MCRoom> getEntityBakeryLocation() {
                 // TODO: Use tags to match different bakery tiers?
                 ResourceLocation id = new ResourceLocation(Questown.MODID, "bakery");
-                return town.getRoomsMatching(id).stream()
-                        .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
-                        .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                        .filter(v -> InclusiveSpaces.contains(
-                                v.room.getSpaces(),
-                                Positions.FromBlockPos(entityBlockPos)
-                        ))
-                        .findFirst()
-                        .orElse(null);
+                return Jobs.getEntityCurrentJobSite(town, id, entityBlockPos);
             }
-        }, new EntityInvStateProvider() {
+        }, new EntityInvStateProvider<GathererJournal.Status>() {
             @Override
             public boolean inventoryFull() {
                 return journal.isInventoryFull();
@@ -246,9 +233,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
             @Override
             public boolean hasNonSupplyItems() {
-                return journal.getItems().stream()
-                        .filter(Predicates.not(GathererJournal.Item::isEmpty))
-                        .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                return Jobs.hasNonSupplyItems(journal, recipe);
             }
 
             @Override
@@ -285,7 +270,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
         boolean hasWheat = journal.getItems().stream().anyMatch(v -> Items.WHEAT.equals(v.get().get()));
         boolean hasCoal = journal.getItems().stream().anyMatch(v -> Items.COAL.equals(v.get().get()));
         return ImmutableMap.of(
-                // FIXME: More statuses to make sure both wheat and coal get to bakery
                 GathererJournal.Status.BAKING, hasWheat,
                 GathererJournal.Status.BAKING_FUELING, hasCoal
         );
@@ -532,7 +516,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
     @Override
     public BakerJournal.Snapshot<MCHeldItem> getJournalSnapshot() {
-        return journal.getSnapshot(MCHeldItem::Air);
+        return journal.getSnapshot();
     }
 
     @Override

@@ -99,7 +99,7 @@ public class WorldInteraction {
     public boolean tryFarming(
             TownInterface town,
             BlockPos entityPos,
-            WorkSpot<BlockPos> workSpot
+            WorkSpot<FarmerJob.FarmerAction, BlockPos> workSpot
     ) {
         ServerLevel sl = town.getServerLevel();
         if (sl == null) {

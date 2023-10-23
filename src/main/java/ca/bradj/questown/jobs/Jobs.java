@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.BreadOvenBlock;
+import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -14,6 +14,11 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
@@ -29,6 +34,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -36,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class Jobs {
@@ -100,7 +107,7 @@ public class Jobs {
         if (invState.inventoryIsFull()) {
             return false;
         }
-        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         return true;
     }
@@ -184,12 +191,73 @@ public class Jobs {
     public static void getOrCreateItemFromBlock(
             ServerLevel level,
             BlockPos b,
-            BreadOvenBlock.TakeFn takeFn,
+            TakeFn takeFn,
             ItemStack is
     ) {
         if (takeFn == null || !takeFn.Take(is)) {
             level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
         }
+    }
+
+    public static boolean townHasSupplies(
+            TownInterface town,
+            ItemsHolder<MCHeldItem> journal,
+            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
+    ) {
+        return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
+                journal.getCapacity(), recipe, journal.getItems(), item
+        )) != null;
+    }
+
+    public static boolean townHasSpace(TownInterface town) {
+        return town.findMatchingContainer(MCTownItem::isEmpty) != null;
+    }
+
+    public static RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
+            TownInterface town,
+            ResourceLocation id,
+            BlockPos entityBlockPos
+    ) {
+        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
+        return town.getRoomsMatching(id).stream()
+                .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
+                .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
+                .filter(v -> InclusiveSpaces.contains(
+                        v.room.getSpaces(),
+                        Positions.FromBlockPos(entityBlockPos)
+                ))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static boolean hasNonSupplyItems(
+            ItemsHolder<MCHeldItem> journal,
+            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
+    ) {
+        return journal.getItems().stream()
+                .filter(Predicates.not(Item::isEmpty))
+                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+    }
+
+    public interface StateCheck {
+        boolean Check(ServerLevel sl, BlockPos bp);
+    }
+
+    public static Collection<MCRoom> roomsWithState(TownInterface town, StateCheck check) {
+        // TODO: Take a map of status:checker and return a map of status:roomlist
+        ResourceLocation id = new ResourceLocation(Questown.MODID, "smeltery");
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
+        return rooms.stream()
+                .filter(v -> {
+                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                        if (check.Check(town.getServerLevel(), e.getKey())) {
+                            return true;
+                        }
+                    }
+                    return false;
+                })
+                .map(v -> v.room)
+                .toList();
     }
 
     public interface LootDropper<I> {
@@ -280,7 +348,7 @@ public class Jobs {
 
     private static boolean isCloseToChest(
             BlockPos entityPos,
-            ContainerTarget<?, ? extends GathererJournal.Item<?>> chest
+            ContainerTarget<?, ? extends Item<?>> chest
     ) {
         if (chest == null) {
             return false;

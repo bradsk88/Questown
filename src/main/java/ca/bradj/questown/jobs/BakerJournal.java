@@ -7,8 +7,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> implements Journal<GathererJournal.Status, H> {
+// TODO: This is almost entirely copy-pasted. Reduce duplication? (Extend ProductionJob)
+public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implements Journal<GathererJournal.Status, H, BakerJournal.Snapshot<H>> {
     private final JournalItemList<H> inventory;
     private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
@@ -17,7 +17,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
     private List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
-    private ArrayList<StatusListener> statusListeners = new ArrayList<>();
+    private ArrayList<StatusListener<GathererJournal.Status>> statusListeners = new ArrayList<>();
 
     public void addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
@@ -80,7 +80,8 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
-    public Snapshot<H> getSnapshot(EmptyFactory<H> air) {
+    @Override
+    public BakerJournal.Snapshot<H> getSnapshot() {
         return new Snapshot<>(status, ImmutableList.copyOf(inventory));
     }
 
@@ -113,7 +114,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         if (this.invState.inventoryIsFull()) {
             throw new IllegalStateException("Inventory is full");
         }
-        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
         if (status == GathererJournal.Status.NO_FOOD && item.isFood()) { // TODO: Test
@@ -167,7 +168,7 @@ public class BakerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<
         return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
     }
 
-    public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(
             GathererJournal.Status status, ImmutableList<H> items
     ) implements ca.bradj.questown.jobs.Snapshot<H> {
         @Override

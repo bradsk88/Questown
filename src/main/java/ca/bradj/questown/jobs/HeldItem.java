@@ -1,9 +1,9 @@
 package ca.bradj.questown.jobs;
 
 public interface HeldItem<
-        SELF extends GathererJournal.Item<SELF>,
-        INNER extends GathererJournal.Item<INNER>
-> extends GathererJournal.Item<SELF> {
+        SELF extends Item<SELF>,
+        INNER extends Item<INNER>
+> extends Item<SELF> {
     boolean isLocked();
 
     INNER get();

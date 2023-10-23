@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
     private final JournalItemList<H> inventory;
     private DefaultInventoryStateProvider<H> invState;
     private final int capacity;
@@ -113,7 +113,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         if (this.invState.inventoryIsFull()) {
             throw new IllegalStateException("Inventory is full");
         }
-        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
         if (status == GathererJournal.Status.NO_FOOD && item.isFood()) { // TODO: Test
@@ -167,7 +167,7 @@ public class FarmerJournal<I extends GathererJournal.Item<I>, H extends HeldItem
         return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked() && !itemsToHold.shouldHoldForWork(status, v));
     }
 
-    public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(
             GathererJournal.Status status, ImmutableList<H> items
     ) implements ca.bradj.questown.jobs.Snapshot<H> {
         @Override

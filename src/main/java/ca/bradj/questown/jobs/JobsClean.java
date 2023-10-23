@@ -17,12 +17,12 @@ public class JobsClean {
         return goStatus;
     }
 
-    public interface TestFn<I extends GathererJournal.Item<I>> {
+    public interface TestFn<I extends Item<I>> {
         boolean test(I item);
     }
 
     public static <
-            I extends GathererJournal.Item<I>,
+            I extends Item<I>,
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
@@ -31,7 +31,7 @@ public class JobsClean {
             I item
     ) {
         // Check if all items in the inventory are empty
-        if (currentHeldItems.stream().noneMatch(GathererJournal.Item::isEmpty)) {
+        if (currentHeldItems.stream().noneMatch(Item::isEmpty)) {
             return false;
         }
 

@@ -2,6 +2,9 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.smelter.SmelterJob;
+import ca.bradj.questown.jobs.smelter.SmelterStatus;
+import ca.bradj.questown.jobs.smelter.SmelterJournal;
 import ca.bradj.questown.mobs.visitor.GathererJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +32,12 @@ public class JobsRegistry {
                     bj.initialize((BakerJournal.Snapshot<MCHeldItem>) journal);
                 }
                 return bj;
+            case SmelterJournal.NAME:
+                SmelterJob sj = new SmelterJob(ownerUUID, 6);
+                if (journal != null) {
+                    sj.initialize((SimpleSnapshot<SmelterStatus, MCHeldItem>) journal);
+                }
+                return sj;
             case GathererJournal.Snapshot.NAME: {
                 GathererJob gj = new GathererJob(town, 6, ownerUUID); // TODO: Capacity
                 if (journal != null) {

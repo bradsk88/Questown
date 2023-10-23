@@ -1,5 +1,5 @@
 package ca.bradj.questown.jobs;
 
-public interface EmptyFactory<I extends GathererJournal.Item<I>> {
+public interface EmptyFactory<I extends Item<I>> {
     I makeEmptyItem();
 }

@@ -1,6 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.Item;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends GathererJournal.Item<I>> {
+public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends Item<I>> {
 
     public static net.minecraft.world.Container REMOVED = new net.minecraft.world.Container() {
         @Override
@@ -87,7 +87,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
         return Positions.ToBlock(getPosition(), getYPosition());
     }
 
-    public interface Container<I extends GathererJournal.Item<I>> {
+    public interface Container<I extends Item<I>> {
 
         int size();
 
@@ -165,7 +165,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends G
         return container.hasAnyOf(items);
     }
 
-    public interface CheckFn<I extends GathererJournal.Item> {
+    public interface CheckFn<I extends Item> {
         boolean Matches(I item);
     }
 

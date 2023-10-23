@@ -1,5 +1,6 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.smelter;
 
+import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -8,7 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> implements Journal<SmelterStatus, H> {
+public class SmelterJournal<
+        I extends Item<I>,
+        H extends HeldItem<H, I>
+> implements Journal<SmelterStatus, H, SimpleSnapshot<SmelterStatus, H>> {
+    public static final String NAME = "smelter";
     private final JournalItemList<H> inventory;
     private final DefaultInventoryStateProvider<H> invState;
     private final int capacity;
@@ -36,7 +41,7 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         this.emptyFactory = ef;
     }
 
-    public void initialize(SmelterJournal.Snapshot<H> journal) {
+    public void initialize(SimpleSnapshot<SmelterStatus, H> journal) {
         this.setItems(journal.items());
         this.initializeStatus(journal.status());
     }
@@ -70,8 +75,8 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
-    public Snapshot<H> getSnapshot(EmptyFactory<H> air) {
-        return new Snapshot<>(status, ImmutableList.copyOf(inventory));
+    public SimpleSnapshot<SmelterStatus, H> getSnapshot() {
+        return new SimpleSnapshot<>(NAME, status, ImmutableList.copyOf(inventory));
     }
 
     public int getCapacity() {
@@ -103,7 +108,7 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         if (this.invState.inventoryIsFull()) {
             throw new IllegalStateException("Inventory is full");
         }
-        H emptySlot = inventory.stream().filter(GathererJournal.Item::isEmpty).findFirst().get();
+        H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         updateItemListeners();
     }
@@ -128,10 +133,6 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
         return this.invState.inventoryIsFull();
     }
 
-    public boolean isInventoryEmpty() {
-        return invState.inventoryIsEmpty();
-    }
-
     public boolean removeItem(H mct) {
         int index = inventory.lastIndexOf(mct);
         if (index < 0) {
@@ -152,27 +153,5 @@ public class SmelterJournal<I extends GathererJournal.Item<I>, H extends HeldIte
 
     public boolean hasAnyLootToDrop() {
         return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
-    }
-
-    public record Snapshot<H extends HeldItem<H, ?> & GathererJournal.Item<H>>(
-            SmelterStatus status, ImmutableList<H> items
-    ) implements ca.bradj.questown.jobs.Snapshot<H> {
-        @Override
-        public String statusStringValue() {
-            return this.status().name();
-        }
-
-        @Override
-        public String jobStringValue() {
-            return "baker";
-        }
-
-        @Override
-        public String toString() {
-            return "BakerJournal.Snapshot{" +
-                    "status=" + status +
-                    ", items=" + items +
-                    '}';
-        }
     }
 }

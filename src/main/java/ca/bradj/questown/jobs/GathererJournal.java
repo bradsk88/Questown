@@ -1,8 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -14,7 +12,7 @@ import java.util.stream.IntStream;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
-public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldItem<H, I> & GathererJournal.Item<H>> {
+public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> {
     private final SignalSource sigs;
     private final EmptyFactory<H> emptyFactory;
     private final GathererStatuses.TownStateProvider storageCheck;
@@ -29,9 +27,13 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
 
     public static Status getStatusFromEntityData(String s) {
         if (s == null || s.isEmpty()) {
-            return Status.UNSET;
+            return Status.IDLE;
         }
-        return Status.from(s);
+        Status from = Status.from(s);
+        if (from == Status.UNSET) {
+            return Status.IDLE;
+        }
+        return from;
     }
 
     public interface ToolsChecker<H extends HeldItem<H, ?>> {
@@ -452,14 +454,6 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
     }
 
-    public interface Item<I extends Item<I>> {
-        boolean isEmpty();
-
-        boolean isFood();
-
-        I shrink();
-    }
-
     public record Tools(boolean hasAxe, boolean hasPick, boolean hasShovel, boolean hasRod) {
         public Tools withAxe() {
             return new Tools(true, hasPick, hasShovel, hasRod);
@@ -478,7 +472,7 @@ public class GathererJournal<I extends GathererJournal.Item<I>, H extends HeldIt
         }
     }
 
-    public interface LootProvider<I extends GathererJournal.Item<I>> {
+    public interface LootProvider<I extends Item<I>> {
         Collection<I> getLoot(Tools tools);
     }
 

@@ -78,7 +78,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     private final UUID ownerUUID;
     private boolean reverse;
-    private Map<FarmerAction, WorkSpot<BlockPos>> workSpots = new HashMap<>();
+    private Map<FarmerAction, WorkSpot<FarmerAction, BlockPos>> workSpots = new HashMap<>();
 
     public FarmerJob(
             UUID ownerUUID,
@@ -212,7 +212,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         setupForDropLoot(entityBlockPos, town);
         processSignal(sl, town, this, isInFarm);
 
-        WorkSpot<BlockPos> workSpot = switch (getStatus()) {
+        WorkSpot<FarmerAction, BlockPos> workSpot = switch (getStatus()) {
             case FARMING_HARVESTING -> workSpots.getOrDefault(FarmerAction.HARVEST, null);
             case FARMING_BONING -> workSpots.getOrDefault(FarmerAction.BONE, null);
             case FARMING_PLANTING -> workSpots.getOrDefault(FarmerAction.PLANT, null);
@@ -338,7 +338,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     private void setupForGetSupplies(
             TownInterface town,
-            List<WorkSpot<BlockPos>> workSpot
+            List<WorkSpot<FarmerAction, BlockPos>> workSpot
     ) {
         ContainerTarget<MCContainer, MCTownItem> in = this.suppliesTarget;
 
@@ -367,7 +367,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     // TODO: Should this go on the town? (or a town helper)
 
-    public static <W extends WorkSpot<?>> @Nullable W getWorkSpot(
+    public static <W extends WorkSpot<FarmerAction, ?>> @Nullable W getWorkSpot(
             Iterable<W> spots,
             List<FarmerAction> actionsForHeldItems
     ) {
@@ -399,7 +399,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return secondChoice;
     }
 
-    Collection<WorkSpot<BlockPos>> listAllWorkspots(
+    Collection<WorkSpot<FarmerAction, BlockPos>> listAllWorkspots(
             ServerLevel level,
             @Nullable MCRoom farm
     ) {
@@ -460,12 +460,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
          */
 
         workSpots.clear();
-        Collection<WorkSpot<BlockPos>> spots = listAllWorkspots(level, selectedFarm);
+        Collection<WorkSpot<FarmerAction, BlockPos>> spots = listAllWorkspots(level, selectedFarm);
 
         ImmutableMap.Builder<FarmerAction, Boolean> b = ImmutableMap.builder();
         ImmutableList.copyOf(FarmerAction.values()).forEach(
                 v -> {
-                    WorkSpot<BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
+                    WorkSpot<FarmerAction, BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
                     b.put(v, ws != null);
                     if (ws != null) {
                         workSpots.put(v, ws);

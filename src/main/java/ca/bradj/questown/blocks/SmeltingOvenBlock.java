@@ -33,113 +33,154 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Random;
 
-public class BreadOvenBlock extends HorizontalDirectionalBlock implements ScheduledBlock {
-    public static final String ITEM_ID = "bread_oven_block";
+public class SmeltingOvenBlock extends HorizontalDirectionalBlock {
+    public static final String ITEM_ID = "smelting_oven_block";
 
-    public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
-            "bake_state", 0, 4
+    public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
+            "processing_state", 0, 4
+    );
+
+    public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
+            "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
     );
 
     private static final int BAKE_STATE_EMPTY = 0;
-    private static final int BAKE_STATE_HALF_FILLED = 1;
-    private static final int BAKE_STATE_FILLED = 2;
-    private static final int BAKE_STATE_BAKING = 3;
-    private static final int BAKE_STATE_BAKED = 4;
+    private static final int BAKE_STATE_FILLED = 1;
+    private static final int BAKE_STATE_HAS_ORE = 2;
 
-    public static final IntegerProperty STARTED_BAKING_AT = IntegerProperty.create(
-            "stared_baking_at", 0, 24
-    );
-
-    public BreadOvenBlock(
+    public SmeltingOvenBlock(
     ) {
         super(
                 Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .lightLevel((BlockState bs) -> bs.getValue(BAKE_STATE) == BAKE_STATE_BAKING ? 10 : 0)
                         .strength(1.0F, 10.0F)
         );
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BAKE_STATE, 0)
+                .setValue(PROCESSING_STATE, 0)
                 .setValue(FACING, Direction.NORTH)
-                .setValue(STARTED_BAKING_AT, 0)
+                .setValue(WORK_LEFT, 0)
         );
-    }
-
-    public static boolean canAddIngredients(BlockState blockState) {
-        return canAcceptWheat(blockState) || canAcceptCoal(blockState);
     }
 
     public static BlockState insertItem(
             ServerLevel level,
-            BlockState oldState,
+            BlockPos bp,
             ItemStack item
     ) {
+        BlockState oldState = level.getBlockState(bp);
+
         // FIXME: Check item type and state
-        int curValue = oldState.getValue(BAKE_STATE);
+        int curValue = oldState.getValue(PROCESSING_STATE);
         if (
-                canAcceptWheat(oldState) && item.is(Items.WHEAT) ||
-                        canAcceptCoal(oldState) && item.is(Items.COAL)
+                canAcceptOre(level, bp) && item.is(Items.IRON_ORE) // TODO: Support more ores
         ) {
             item.shrink(1);
             int val = curValue + 1;
-            BlockState blockState = oldState.setValue(BAKE_STATE, val);
-            if (val == BAKE_STATE_BAKING) {
-                int dayHour = (int) (level.getDayTime() % 24000) / 1000;
-                blockState = setBakingHour(blockState, dayHour);
+            BlockState blockState = setProcessingState(oldState, val);
+            if (val == BAKE_STATE_FILLED) {
+                blockState = blockState.setValue(WORK_LEFT, Config.SMELTER_WORK_REQUIRED.get());
             }
+            level.setBlockAndUpdate(bp, blockState);
             return blockState;
         }
         return oldState;
     }
 
-    public static boolean canAcceptWheat(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
+    public static boolean canAcceptOre(ServerLevel sl, BlockPos bp) {
+        BlockState oldState = sl.getBlockState(bp);
+        if (!oldState.hasProperty(PROCESSING_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) < BAKE_STATE_FILLED;
+        return oldState.getValue(PROCESSING_STATE) < BAKE_STATE_FILLED;
     }
 
-    public static boolean canAcceptCoal(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
+    public static boolean canAcceptWork(ServerLevel sl, BlockPos bp) {
+        BlockState oldState = sl.getBlockState(bp);
+        if (!oldState.hasProperty(PROCESSING_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_FILLED;
+        return oldState.getValue(PROCESSING_STATE) == BAKE_STATE_FILLED;
     }
 
-    public static boolean isBaking(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
+    public static boolean hasOreToCollect(
+            ServerLevel sl,
+            BlockPos bp) {
+        BlockState oldState = sl.getBlockState(bp);
+        if (!oldState.hasProperty(PROCESSING_STATE)) {
             return false;
         }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKING;
+        return oldState.getValue(PROCESSING_STATE) == BAKE_STATE_HAS_ORE;
     }
 
-    public static boolean hasBread(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
-            return false;
+    public static BlockState applyWork(
+            ServerLevel sl,
+            BlockPos bp
+    ) {
+        if (!canAcceptWork(sl, bp)) {
+            throw new IllegalStateException("Cannot apply work at " + bp);
         }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKED;
+
+        BlockState oldState = sl.getBlockState(bp);
+        int workLeft = oldState.getValue(WORK_LEFT);
+        BlockState bs;
+        if (workLeft <= 0) {
+            bs = setProcessingState(oldState, BAKE_STATE_HAS_ORE);
+        } else {
+            bs = reduceWorkLeft(oldState);
+        }
+        if (oldState.equals(bs)) {
+            return null;
+        }
+        sl.setBlockAndUpdate(bp, bs);
+        return bs;
     }
 
-    public static BlockState extractBread(
+    private static BlockState reduceWorkLeft(BlockState oldState) {
+        int l = oldState.getValue(WORK_LEFT);
+        int newVal = l - 1;
+        QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
+        return oldState.setValue(WORK_LEFT, newVal);
+    }
+
+    private static BlockState setProcessingState(
             BlockState oldState,
+            int s
+    ) {
+        BlockState newState = oldState.setValue(PROCESSING_STATE, s);
+        QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
+        return newState;
+    }
+
+    public static @Nullable BlockState extractRawProduct(
             ServerLevel sl,
             BlockPos block,
             @Nullable TakeFn takeFn
     ) {
-        BlockState bs = oldState.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
+        BlockState oldState = sl.getBlockState(block);
+        BlockState bs = oldState.setValue(PROCESSING_STATE, BAKE_STATE_EMPTY);
         sl.setBlock(block, bs, 11);
-        moveBreadToWorld(sl, block, takeFn);
+        moveOreToWorld(sl, block, takeFn);
+        if (oldState.equals(bs)) {
+            return null;
+        }
         return bs;
     }
 
-    private static void moveBreadToWorld(
+    private static void moveOreToWorld(
             ServerLevel level,
             BlockPos b,
             @Nullable TakeFn takeFn
     ) {
-        ItemStack is = new ItemStack(Items.BREAD, 1);
+        ItemStack is = new ItemStack(Items.RAW_IRON, 2);
         Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
-        level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
+        level.setBlock(b, level.getBlockState(b).setValue(PROCESSING_STATE, BAKE_STATE_EMPTY), 11);
+    }
+
+    public static int getProcessStateAsScore(BlockState oldState) {
+        if (!oldState.hasProperty(PROCESSING_STATE)) {
+            return 0;
+        }
+        return oldState.getValue(PROCESSING_STATE);
     }
 
     @Override
@@ -148,21 +189,21 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             LootContext.Builder p_60538_
     ) {
         // FIXME: Also drop stuff inside
-        return ImmutableList.of(ItemsInit.BREAD_OVEN_BLOCK.get().getDefaultInstance());
+        return ImmutableList.of(ItemsInit.SMELTING_OVEN_BLOCK.get().getDefaultInstance());
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        BlockState blockState = this.defaultBlockState().setValue(BAKE_STATE, 0);
+        BlockState blockState = this.defaultBlockState().setValue(PROCESSING_STATE, 0);
         if (!(ctx.getLevel() instanceof ServerLevel sl)) {
             return blockState;
         }
         return blockState
                 .setValue(FACING, ctx.getHorizontalDirection().getOpposite())
-                .setValue(STARTED_BAKING_AT, 0);
+                .setValue(WORK_LEFT, 0);
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(BAKE_STATE, FACING, STARTED_BAKING_AT);
+        p_51385_.add(PROCESSING_STATE, FACING, WORK_LEFT);
     }
 
 
@@ -172,9 +213,9 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             BlockPos p_53637_,
             Random p_53638_
     ) {
-        if (p_53635_.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
+        if (p_53635_.getValue(PROCESSING_STATE) == BAKE_STATE_FILLED) {
             double d0 = (double) p_53637_.getX() + 0.5D;
-            double d1 = (double) p_53637_.getY();
+            double d1 = (double) p_53637_.getY() + 1;
             double d2 = (double) p_53637_.getZ() + 0.5D;
             if (p_53638_.nextDouble() < 0.1D) {
                 p_53636_.playSound(
@@ -182,7 +223,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
                         d0,
                         d1,
                         d2,
-                        SoundEvents.FURNACE_FIRE_CRACKLE,
+                        SoundEvents.VILLAGER_WORK_TOOLSMITH,
                         SoundSource.BLOCKS,
                         1.0F,
                         1.0F
@@ -196,8 +237,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             double d5 = direction$axis == Direction.Axis.X ? (double) direction.getStepX() * 0.52D : d4;
             double d6 = p_53638_.nextDouble() * 6.0D / 16.0D;
             double d7 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
+            p_53636_.addParticle(ParticleTypes.WHITE_ASH, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
             p_53636_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-            p_53636_.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
         }
     }
 
@@ -214,82 +255,31 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is));
+        if (hasOreToCollect(sl, pos)) {
+            moveOreToWorld(sl, pos, is -> player.getInventory().add(is));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        if (canAcceptWheat(blockState)) {
+        if (canAcceptOre(sl, pos)) {
             player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_wheat"),
+                    new TranslatableComponent("message.smelter.villagers_will_add_ore"),
                     player.getUUID()
             );
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        if (canAcceptCoal(blockState)) {
+        if (canAcceptWork(sl, pos)) {
             player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_coal"),
+                    new TranslatableComponent("message.smelter.villagers_will_process"),
                     player.getUUID()
             );
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
-
-        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
-            if (isBaking(blockState)) {
-                blockState = setBakingHour(blockState, calculateCurrentHour(sl));
-                level.setBlock(pos, blockState, 11);
-            } else {
-                return InteractionResult.sidedSuccess(level.isClientSide);
-            }
-        }
-
-        int startTick = blockState.getValue(STARTED_BAKING_AT) * 1000;
-        int endTick = startTick + Config.BAKING_TIME.get();
-        long ticksLeft = endTick - (level.getDayTime() % 24000);
 
         player.sendMessage(
-                new TranslatableComponent("message.baker.bread_still_baking", ticksLeft),
+                new TranslatableComponent("message.smelter.processing"),
                 player.getUUID()
         );
         return InteractionResult.sidedSuccess(level.isClientSide);
-    }
-
-    @Override
-    public @Nullable BlockState tryAdvance(
-            ServerLevel level,
-            BlockState blockState
-    ) {
-        int hour = calculateCurrentHour(level);
-        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
-            if (isBaking(blockState)) {
-                return setBakingHour(blockState, hour);
-            }
-        }
-
-        Integer started = blockState.getValue(STARTED_BAKING_AT);
-
-        if (isBaking(blockState)) {
-            if (started == 0) {
-                return setBakingHour(blockState, hour);
-            }
-
-            int plus = Config.BAKING_TIME.get() / 1000;
-            int doneHour = started + plus;
-            if (hour >= doneHour) {
-                return blockState.setValue(BAKE_STATE, BAKE_STATE_BAKED);
-            }
-        }
-
-        return null;
-    }
-
-    private static BlockState setBakingHour(BlockState bs, int hour) {
-        QT.BLOCK_LOGGER.debug("Set baking hour to {}", hour);
-        return bs.setValue(STARTED_BAKING_AT, hour);
-    }
-
-    private static int calculateCurrentHour(ServerLevel level) {
-        return (int) (level.getDayTime() % 24000) / 1000;
     }
 }

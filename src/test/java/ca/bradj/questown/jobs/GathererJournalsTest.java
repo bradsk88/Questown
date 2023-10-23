@@ -408,7 +408,7 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
-        Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
+        Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container);
     }
 
@@ -463,7 +463,7 @@ class GathererJournalsTest {
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
         Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
-        Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
+        Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }
 
@@ -602,7 +602,7 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
-        Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
+        Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container); // From the first day
     }
 
@@ -651,7 +651,7 @@ class GathererJournalsTest {
         );
 
         Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
-        Assertions.assertTrue(result.items().stream().allMatch(GathererJournal.Item::isEmpty));
+        Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz()), infiniteStorage.container); // From the first day
     }
 

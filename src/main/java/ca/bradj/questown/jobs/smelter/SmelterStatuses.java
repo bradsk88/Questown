@@ -1,5 +1,6 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.smelter;
 
+import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -33,8 +34,8 @@ public class SmelterStatuses {
         SmelterStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, true, inventory, entity, town,
                 new TypicalProductionJob<>(ImmutableList.of(
-                        SmelterStatus.WORK_COLLECTING_ORE,
-                        SmelterStatus.WORK_INSERTING_COAL,
+                        SmelterStatus.WORK_COLLECTING_RAW_PRODUCT,
+                        SmelterStatus.WORK_PROCESSING_ORE,
                         SmelterStatus.WORK_INSERTING_ORE
                 )),
                 SmelterStatus.FACTORY

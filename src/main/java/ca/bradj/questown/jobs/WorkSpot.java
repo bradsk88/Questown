@@ -2,12 +2,12 @@ package ca.bradj.questown.jobs;
 
 import org.jetbrains.annotations.NotNull;
 
-public class WorkSpot<P> {
+public class WorkSpot<A, P> {
     public final int score;
 
     public WorkSpot(
             @NotNull P position,
-            @NotNull FarmerJob.FarmerAction action,
+            @NotNull A action,
             int score
     ) {
         this.position = position;
@@ -16,7 +16,7 @@ public class WorkSpot<P> {
     }
 
     public final P position;
-    public final FarmerJob.FarmerAction action;
+    public final A action;
 
     @Override
     public String toString() {

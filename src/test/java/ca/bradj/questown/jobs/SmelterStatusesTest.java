@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.smelter.SmelterStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -9,8 +10,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Map;
@@ -18,7 +17,7 @@ import java.util.Map;
 class SmelterStatusesTest {
     public static final ImmutableMap<SmelterStatus, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
             SmelterStatus.GOING_TO_JOBSITE, true,
-            SmelterStatus.WORK_INSERTING_COAL, true,
+            SmelterStatus.WORK_PROCESSING_ORE, true,
             SmelterStatus.WORK_INSERTING_ORE, true
     );
     RoomRecipeMatch<Room> arbitraryRoom = new RoomRecipeMatch<>(

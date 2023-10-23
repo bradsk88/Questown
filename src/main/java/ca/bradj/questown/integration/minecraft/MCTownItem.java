@@ -1,9 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.jobs.GathererJournal;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -11,7 +9,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Objects;
 
-public class MCTownItem implements GathererJournal.Item<MCTownItem> {
+public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
 
     // TODO: Add "given by" field to prevent villager from dumping user-given items back into chests
 

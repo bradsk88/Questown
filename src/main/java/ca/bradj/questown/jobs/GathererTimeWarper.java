@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends HeldItem<H, I> & GathererJournal.Item<H>> {
+public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> {
 
     private final FoodRemover<I> remover;
     private final LootGiver<I> lootGiver;
@@ -35,17 +35,17 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         this.toolChecker = toolChecker;
     }
 
-    public interface FoodRemover<I extends GathererJournal.Item<I>> {
+    public interface FoodRemover<I extends Item<I>> {
         // Return null if there is no food
         @Nullable I removeFood();
     }
 
-    public interface LootGiver<I extends GathererJournal.Item<I>> {
+    public interface LootGiver<I extends Item<I>> {
         // Return null if there is no food
         @NotNull Iterable<I> giveLoot(int max, GathererJournal.Tools tools);
     }
 
-    public interface Town<I extends GathererJournal.Item<I>> extends GathererStatuses.TownStateProvider {
+    public interface Town<I extends Item<I>> extends GathererStatuses.TownStateProvider {
 
         // Returns any items that were NOT deposited
         ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit);
@@ -114,7 +114,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     }
 
     @NotNull
-    public static <I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> List<H> dropLoot(
+    public static <I extends Item<I>, H extends HeldItem<H, I>> List<H> dropLoot(
             List<H> outItems,
             Town<I> town,
             ItemToEntityMover<I, H> converter,
@@ -128,7 +128,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         );
         Iterator<I> undeposited = town.depositItems(itemsToDeposit)
                 .stream()
-                .filter(Predicate.not(GathererJournal.Item::isEmpty))
+                .filter(Predicate.not(Item::isEmpty))
                 .iterator();
         ImmutableList.Builder<H> b = ImmutableList.builder();
         for (H item : outItems) {
@@ -146,11 +146,11 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
         return outItems;
     }
 
-    public interface ItemToEntityMover<I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> {
+    public interface ItemToEntityMover<I extends Item<I>, H extends HeldItem<H, I>> {
         H convert(I item);
     }
 
-    private static <I extends GathererJournal.Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
+    private static <I extends Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
             List<H> outItems,
             I food,
             Signals signal,
@@ -158,7 +158,7 @@ public class GathererTimeWarper<I extends GathererJournal.Item<I>, H extends Hel
     ) {
         // TODO: More efficient way to do this?
         Optional<H> foundEmpty = outItems.stream()
-                .filter(GathererJournal.Item::isEmpty)
+                .filter(Item::isEmpty)
                 .findFirst();
         if (foundEmpty.isPresent()) {
             // TODO: This is suspiciously similar to the logic in VisitorMobJob

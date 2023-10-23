@@ -37,6 +37,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> SMELTER_WORK_REQUIRED;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -83,6 +85,9 @@ public class Config {
         FARMER_WEEDS_RARITY = BUILDER.comment(
                 "The chance that a farmer will find weeds (actually grass, for composting) on a still-growing crop block. 1 means \"constantly\"."
         ).defineInRange("FarmerWeedsRarity", 10, 1, 9999);
+        SMELTER_WORK_REQUIRED = BUILDER.comment(
+                "The number of times a smelter must work on a block of ore to extract the raw materials inside"
+        ).defineInRange("SmelterWorkRequired", 10, 1, 10);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

@@ -11,6 +11,7 @@ import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -343,7 +344,7 @@ public class VisitorMobEntity extends PathfinderMob {
             moveTo(nudged);
         }
 
-        if (job.getStatus() == GathererJournal.Status.UNSET) {
+        if (job.getStatus() == null || job.getStatus() == GathererJournal.Status.UNSET) {
             @Nullable String s = getStatusForClient();
             job.initializeStatusFromEntityData(s);
         }
@@ -760,7 +761,7 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     protected void jumpFromGround() {
         BlockState onBlock = level.getBlockState(blockPosition());
-        if (job.isJumpingAllowed(onBlock)) {
+        if (!job.isJumpingAllowed(onBlock)) {
             // Jumping destroys crops. Don't do it when we don't have to
             return;
         }
