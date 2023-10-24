@@ -25,6 +25,7 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -153,8 +154,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     @Override
     public void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos
     ) {
         ServerLevel sl = town.getServerLevel();
@@ -164,6 +164,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
 
         BakerJob bj = this;
 
+        BlockPos entityBlockPos = entity.blockPosition();
         processSignal(sl, this, new BakerStatuses.TownStateProvider<>() {
 
             @Override

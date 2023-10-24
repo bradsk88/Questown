@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -242,18 +243,16 @@ public abstract class ProductionJob<
     @Override
     public void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos
     ) {
         this.roomsNeedingIngredients = roomsNeedingIngredients(town);
-        this.tick(town, entityBlockPos, entityPos, facingPos, roomsNeedingIngredients);
+        this.tick(town, entity, facingPos, roomsNeedingIngredients);
     }
 
     protected abstract void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos,
             Map<STATUS,? extends Collection<MCRoom>> roomsNeedingIngredients
     );

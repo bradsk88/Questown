@@ -8,6 +8,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -22,8 +23,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos
     );
 

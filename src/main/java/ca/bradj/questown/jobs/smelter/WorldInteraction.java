@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.smelter;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.SmeltingOvenBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
@@ -12,12 +13,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 public class WorldInteraction {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
@@ -36,7 +41,7 @@ public class WorldInteraction {
 
     public boolean tryWorking(
             TownInterface town,
-            BlockPos entityPos,
+            LivingEntity entity,
             WorkSpot<SmelterAction, BlockPos> workSpot
     ) {
         if (town.getServerLevel() == null) {
@@ -54,14 +59,14 @@ public class WorldInteraction {
             return false;
         }
 
-        if (!Jobs.isCloseTo(entityPos, workSpot.position)) {
+        if (!Jobs.isCloseTo(entity.blockPosition(), workSpot.position)) {
             return false;
         }
 
 
         return switch (workSpot.action) {
             case COLLECT_RAW_PRODUCT -> tryExtractOre(sl, workSpot.position);
-            case PROCESSS_ORE -> tryProcessOre(sl, workSpot.position);
+            case PROCESSS_ORE -> tryProcessOre(sl, entity, workSpot.position);
             case INSERT_ORE -> tryInsertIngredients(sl, workSpot.position);
             case UNDEFINED -> false;
         };
@@ -83,13 +88,31 @@ public class WorldInteraction {
 
     private boolean tryProcessOre(
             ServerLevel sl,
+            LivingEntity entity,
             BlockPos bp
     ) {
         if (SmeltingOvenBlock.canAcceptWork(sl, bp)) {
             BlockState blockState = SmeltingOvenBlock.applyWork(sl, bp);
-            return blockState != null;
+            boolean didWork = blockState != null;
+            if (didWork) {
+                degradeTool(entity);
+            }
+            return didWork;
         }
         return false;
+    }
+
+    private void degradeTool(LivingEntity entity) {
+        Optional<MCHeldItem> axe = journal.getItems()
+                .stream()
+                .filter(v -> Ingredient.of(TagsInit.Items.PICKAXES).test(v.get().toItemStack()))
+                .findFirst();
+        if (axe.isPresent()) {
+            int idx = journal.getItems().indexOf(axe.get());
+            ItemStack is = axe.get().get().toItemStack();
+            is.hurtAndBreak(1, entity, (x) -> {});
+            journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
+        }
     }
 
     private boolean tryInsertIngredients(ServerLevel sl, BlockPos bp) {

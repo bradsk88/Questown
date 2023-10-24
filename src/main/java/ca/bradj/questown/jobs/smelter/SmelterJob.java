@@ -21,6 +21,7 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -107,8 +108,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
     @Override
     protected void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos,
             Map<SmelterStatus, ? extends Collection<MCRoom>> roomsNeedingIngredients
     ) {
@@ -135,6 +135,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
                 return Jobs.townHasSpace(town);
             }
         };
+        BlockPos entityBlockPos = entity.blockPosition();
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, WORKSITE_ID, entityBlockPos);
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
@@ -146,7 +147,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
         this.journal.tick(jtp, elp, super.defaultEntityInvProvider());
 
         if (entityCurrentJobSite != null) {
-            tryWorking(town, entityBlockPos, entityCurrentJobSite);
+            tryWorking(town, entity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
         tryGetSupplies(jtp, entityBlockPos);
@@ -154,7 +155,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
 
     private void tryWorking(
             TownInterface town,
-            BlockPos entityBlockPos,
+            LivingEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         Map<SmelterAction, WorkSpot<SmelterAction, BlockPos>> workSpots = listAllWorkspots(
@@ -171,7 +172,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
         };
 
 
-        this.world.tryWorking(town, entityBlockPos, workSpot);
+        this.world.tryWorking(town, entity, workSpot);
     }
 
     Map<SmelterAction, WorkSpot<SmelterAction, BlockPos>> listAllWorkspots(

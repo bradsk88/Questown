@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -142,8 +143,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
     public void tick(
             TownInterface town,
-            BlockPos entityPos,
-            Vec3 position,
+            LivingEntity entity,
             Direction relative
     ) {
         if (town == null || town.getServerLevel() == null) {
@@ -152,6 +152,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         processSignal(town.getServerLevel(), this);
 
         this.closeToGate = false;
+        BlockPos entityPos = entity.blockPosition();
         BlockPos welcomeMat = town.getClosestWelcomeMatPos(entityPos);
         if (signal == Signals.MORNING && welcomeMat != null) {
             this.closeToGate = Jobs.isCloseTo(entityPos, welcomeMat);

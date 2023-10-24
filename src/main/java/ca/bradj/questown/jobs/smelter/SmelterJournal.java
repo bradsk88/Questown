@@ -139,19 +139,21 @@ public class SmelterJournal<
             // Item must have already been removed by a different thread.
             return false;
         }
-
-        inventory.set(index, emptyFactory.makeEmptyItem());
-        updateItemListeners();
-        // TODO: Add FARMER_EATING status
-//        if (status == SmelterStatus.GATHERING_EATING) {
-//            changeStatus(SmelterStatus.GATHERING);
-//        }
-        // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
-        changeStatus(SmelterStatus.IDLE);
+        setItem(index, emptyFactory.makeEmptyItem());
         return true;
     }
 
     public boolean hasAnyLootToDrop() {
         return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
+    }
+
+    public void setItem(
+            int idx,
+            H mcHeldItem
+    ) {
+        inventory.set(idx, mcHeldItem);
+        updateItemListeners();
+        // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
+        changeStatus(SmelterStatus.IDLE);
     }
 }

@@ -349,7 +349,7 @@ public class VisitorMobEntity extends PathfinderMob {
             @Nullable String s = getStatusForClient();
             job.initializeStatusFromEntityData(s);
         }
-        job.tick(town, blockPosition(), position(), getDirection());
+        job.tick(town, this, getDirection());
         if (!level.isClientSide()) {
             if (town == null) {
                 QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");

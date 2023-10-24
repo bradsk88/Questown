@@ -28,6 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -173,8 +174,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public void tick(
             TownInterface town,
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
+            LivingEntity entity,
             Direction facingPos
     ) {
         ServerLevel sl = town.getServerLevel();
@@ -197,10 +197,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
         }
 
+        BlockPos entityBlockPos = entity.blockPosition();
         if (selectedFarm != null) {
             isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm));
             if (!isInFarm) {
-                isInFarm = areAllPartsOfEntityInFarm(entityPos);
+                isInFarm = areAllPartsOfEntityInFarm(entity.position());
             }
         }
 
