@@ -15,4 +15,9 @@ public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
     SNAPSHOT getSnapshot();
 
     void initialize(SNAPSHOT journal);
+
+    void setItem(
+            int idx,
+            I mcHeldItem
+    );
 }

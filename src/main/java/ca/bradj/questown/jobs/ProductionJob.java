@@ -24,10 +24,7 @@ import org.apache.logging.log4j.Marker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class ProductionJob<
         STATUS extends IStatus<STATUS>,
@@ -45,17 +42,21 @@ public abstract class ProductionJob<
     private boolean dropping;
 
     // TODO: Support more recipes
-    private final ImmutableList<TestFn<STATUS, MCTownItem>> recipe;
+    protected final RecipeProvider<STATUS> recipe;
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     private final UUID ownerUUID;
-    private Map<STATUS,? extends Collection<MCRoom>> roomsNeedingIngredients;
+    private Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients;
+
+    public interface RecipeProvider<STATUS> {
+        ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(STATUS s);
+    }
 
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
             ImmutableList<MCTownItem> allowedToPickUp,
-            ImmutableList<TestFn<STATUS, MCTownItem>> recipe,
+            RecipeProvider<STATUS> recipe,
             Marker logMarker
     ) {
         // TODO: This is copy pasted. Reduce duplication.
@@ -161,13 +162,11 @@ public abstract class ProductionJob<
             return;
         }
 
-        Map<STATUS, ? extends Collection<MCRoom>> statusMap = town.roomsNeedingIngredients();
-        ImmutableList<JobsClean.TestFn<MCTownItem>> neededItems = convertToCleanFns(statusMap);
         Jobs.tryTakeContainerItems(
                 this, entityPos, suppliesTarget,
                 item -> JobsClean.shouldTakeItem(
                         journal.getCapacity(),
-                        neededItems,
+                        recipe.getRecipe(status),
                         journal.getItems(), item
                 )
         );
@@ -177,18 +176,18 @@ public abstract class ProductionJob<
     protected ImmutableList<JobsClean.TestFn<MCTownItem>> convertToCleanFns(
             Map<STATUS, ? extends Collection<MCRoom>> statusMap
     ) {
-        ImmutableMap.Builder<STATUS, Boolean> b = ImmutableMap.builder();
-        statusMap.forEach(
-                (key, value) -> b.put(key, !value.isEmpty())
-        );
-
-        ImmutableMap<STATUS, Boolean> needsMap = b.build();
-
-        return ImmutableList.copyOf(recipe
+        // TODO: Be smarter? We're just finding the first room that needs stuff.
+        Optional<STATUS> first = statusMap.entrySet()
                 .stream()
-                .map(v -> (JobsClean.TestFn<MCTownItem>) item1 -> v.test(needsMap, item1))
-                .toList()
-        );
+                .filter(v -> !v.getValue().isEmpty())
+                .map(Map.Entry::getKey)
+                .findFirst();
+
+        if (first.isEmpty()) {
+            return ImmutableList.of();
+        }
+
+        return recipe.getRecipe(first.get());
     }
 
     @Override
@@ -254,7 +253,7 @@ public abstract class ProductionJob<
             TownInterface town,
             LivingEntity entity,
             Direction facingPos,
-            Map<STATUS,? extends Collection<MCRoom>> roomsNeedingIngredients
+            Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients
     );
 
     private void setupForGetSupplies(
@@ -375,7 +374,7 @@ public abstract class ProductionJob<
             @Override
             public boolean hasNonSupplyItems() {
                 return Jobs.hasNonSupplyItems(journal, ImmutableList.copyOf(
-                        recipe.stream().map(v -> (JobsClean.TestFn<MCTownItem>) v::testAssumeNeeded).toList()
+                        recipe.getRecipe(journal.getStatus())
                 ));
             }
 
