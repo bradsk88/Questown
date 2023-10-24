@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener<GathererJournal.Status> {
+public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
 
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
@@ -30,7 +30,6 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     private static final int inventoryLeftX = 8;
     private static final int boxHeight = 18, boxWidth = 18;
     private static final int margin = 4;
-    private final VisitorMobEntity entity;
     private final DataSlot statusSlot;
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
@@ -69,23 +68,22 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         this.questMenu = questMenu;
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
-        this.entity = gatherer;
         this.jobName = gatherer.getJobName();
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
-        this.statusSlot.set(gatherer.getStatusOrdinal());
+        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(gatherer.getStatusForServer()));
 
         int i = 0;
         for (boolean locked : gatherer.getSlotLocks()) {
             DataSlot lockedSlot = this.addDataSlot(DataSlot.standalone());
             lockedSlot.set(locked ? 1 : 0);
-            this.lockedSlots.add(this.addDataSlot(entity.getLockSlot(i)));
+            this.lockedSlots.add(this.addDataSlot(gatherer.getLockSlot(i)));
             i++;
         }
 
-        gatherer.setStatusListener(this);
+        gatherer.addStatusListener(this);
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -256,19 +254,16 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         return flag;
     }
 
-    public GathererJournal.Status getStatus() {
-        return GathererJournal.Status.values()[this.statusSlot.get()];
+    public IStatus<?> getStatus() {
+        return SessionUniqueOrdinals.getStatus(this.statusSlot.get());
     }
 
     @Override
-    public void statusChanged(GathererJournal.Status newStatus) {
-        this.statusSlot.set(newStatus.ordinal());
+    public void statusChanged(IStatus<?> newStatus) {
+        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(newStatus));
     }
 
     public Component getJobName() {
         return this.jobName;
-    }
-
-    public interface OrdinalConverter<S> {
     }
 }

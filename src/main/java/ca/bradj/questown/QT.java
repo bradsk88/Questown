@@ -15,4 +15,5 @@ public class QT {
     public static final Logger FLAG_LOGGER = LogManager.getLogger("Questown:Flag");
     public static final Logger QUESTS_LOGGER = LogManager.getLogger("Questown:Quests");
     public static final Logger PROFILE_LOGGER = LogManager.getLogger("Questown:Profiling");
+    public static final Logger GUI_LOGGER = LogManager.getLogger("Questown:GUI");
 }

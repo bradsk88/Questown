@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -65,44 +64,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
     private void openQuestsScreen() {
         this.minecraft.setScreen(questScreen);
-    }
-
-    @NotNull
-    private static ResourceLocation getStatusTexture(GathererJournal.Status status) {
-        return switch (status) {
-            case UNSET -> new ResourceLocation("questown", "textures/error.png");
-            case IDLE -> new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            case NO_SPACE -> new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
-            case NO_FOOD -> new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
-            case NO_GATE -> new ResourceLocation("questown", "textures/menu/gatherer/no_gate.png");
-            case STAYING ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
-            case GATHERING -> new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
-            case RETURNED_SUCCESS -> new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
-            case RETURNED_FAILURE ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/error.png");
-            case RETURNING ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/error.png");
-            case CAPTURED ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/error.png");
-            case RELAXING ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/menu/gatherer/relaxing.png");
-            case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/error.png");
-            case GOING_TO_JOBSITE, FARMING_HARVESTING, FARMING_RANDOM_TEND, LEAVING_FARM,
-                    FARMING_PLANTING, FARMING_TILLING, FARMING_BONING,
-                    FARMING_COMPOSTING, FARMING_WEEDING,
-                    COLLECTING_SUPPLIES,
-                    NO_SUPPLIES, BAKING, BAKING_FUELING, COLLECTING_BREAD ->
-                // TODO: Icon for this
-                    new ResourceLocation("questown", "textures/error.png");
-        };
     }
 
     @Override
@@ -170,7 +131,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, getStatusTexture(menu.getStatus()));
+        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.getStatus()));
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;

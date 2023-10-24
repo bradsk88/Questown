@@ -100,11 +100,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
-    public int getStatusOrdinal() {
-        return getStatus().ordinal();
-    }
-
-    @Override
     public void initializeStatusFromEntityData(@Nullable String s) {
         GathererJournal.Status z = GathererJournal.getStatusFromEntityData(s);
         journal.initializeStatus(z);
@@ -506,7 +501,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
     }
 
     @Override

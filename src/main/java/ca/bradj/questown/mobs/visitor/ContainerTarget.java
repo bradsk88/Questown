@@ -87,6 +87,10 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return Positions.ToBlock(getPosition(), getYPosition());
     }
 
+    public String toShortString() {
+        return container.toShortString();
+    }
+
     public interface Container<I extends Item<I>> {
 
         int size();
@@ -108,6 +112,8 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         );
 
         boolean isFull();
+
+        String toShortString();
     }
 
     private final ValidCheck check;

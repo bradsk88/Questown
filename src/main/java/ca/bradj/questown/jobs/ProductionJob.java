@@ -10,6 +10,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
@@ -47,6 +48,7 @@ public abstract class ProductionJob<
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     private final UUID ownerUUID;
+    private Map<STATUS,? extends Collection<MCRoom>> roomsNeedingIngredients;
 
     public ProductionJob(
             UUID ownerUUID,
@@ -80,7 +82,7 @@ public abstract class ProductionJob<
     protected abstract JOURNAL getInitializedJournal(int inventoryCapacity);
 
     @Override
-    public void addStatusListener(StatusListener<STATUS> o) {
+    public void addStatusListener(StatusListener o) {
         this.journal.addStatusListener(o);
     }
 
@@ -235,17 +237,34 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findJobSite(TownInterface town);
 
+    protected abstract Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients(TownInterface town);
+
+    @Override
+    public void tick(
+            TownInterface town,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
+            Direction facingPos
+    ) {
+        this.roomsNeedingIngredients = roomsNeedingIngredients(town);
+        this.tick(town, entityBlockPos, entityPos, facingPos, roomsNeedingIngredients);
+    }
+
+    protected abstract void tick(
+            TownInterface town,
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
+            Direction facingPos,
+            Map<STATUS,? extends Collection<MCRoom>> roomsNeedingIngredients
+    );
+
     private void setupForGetSupplies(
             TownInterface town
     ) {
         QT.JOB_LOGGER.debug(marker, "Searching for supplies");
-        Collection<JobsClean.TestFn<MCTownItem>> fns = ImmutableList.copyOf(recipe
-                .stream()
-                .map(v -> (JobsClean.TestFn<MCTownItem>) v::testAssumeNeeded)
-                .toList()
-        );
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), fns, journal.getItems(), item
+                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredients),
+                journal.getItems(), item
         );
         if (this.suppliesTarget != null) {
             if (!this.suppliesTarget.hasItem(

@@ -21,9 +21,9 @@ public class SmelterJournal<
     private SmelterStatus status;
     private final List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private final EmptyFactory<H> emptyFactory;
-    private final ArrayList<StatusListener<SmelterStatus>> statusListeners = new ArrayList<>();
+    private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
-    public void addStatusListener(StatusListener<SmelterStatus> o) {
+    public void addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
     }
 

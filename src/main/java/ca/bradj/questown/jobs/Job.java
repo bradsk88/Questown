@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
-    void addStatusListener(StatusListener<STATUS> o);
+    void addStatusListener(StatusListener o);
 
     STATUS getStatus();
 
@@ -67,5 +67,4 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     boolean isJumpingAllowed(BlockState onBlock);
 
-    int getStatusOrdinal();
 }

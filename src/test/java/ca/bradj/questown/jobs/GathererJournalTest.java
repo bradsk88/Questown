@@ -15,7 +15,7 @@ import java.util.Objects;
 public class GathererJournalTest {
 
     public static class TestItem implements Item<TestItem>, HeldItem<TestItem, TestItem> {
-        protected final String value;
+        public final String value;
 
         public TestItem(String value) {
             this.value = value;

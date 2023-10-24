@@ -120,11 +120,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public int getStatusOrdinal() {
-        return getStatus().ordinal();
-    }
-
-    @Override
     public void initializeStatusFromEntityData(@Nullable String s) {
         GathererJournal.Status z = GathererJournal.getStatusFromEntityData(s);
         journal.initializeStatus(z);
@@ -538,7 +533,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
     }
 
     @Override

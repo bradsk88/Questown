@@ -285,6 +285,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public void setJob(Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> initializedJob) {
         job = initializedJob;
         entityData.set(jobName, job.getJobName().getKey());
+        QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", job.getJobName().getKey(), uuid);
     }
 
     @Override
@@ -836,7 +837,7 @@ public class VisitorMobEntity extends PathfinderMob {
         return job.getStatus();
     }
 
-    public void setStatusListener(StatusListener l) {
+    public void addStatusListener(StatusListener l) {
         job.addStatusListener(l);
     }
 
@@ -971,10 +972,6 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public String toString() {
         return String.format("%s [%s]", super.toString(), getUUID());
-    }
-
-    public int getStatusOrdinal() {
-        return job.getStatusOrdinal();
     }
 
     public interface ChangeListener {

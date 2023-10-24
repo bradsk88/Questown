@@ -6,7 +6,7 @@ public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
 
     STATUS getStatus();
 
-    void addStatusListener(StatusListener<STATUS> o);
+    void addStatusListener(StatusListener o);
 
     void initializeStatus(STATUS s);
 

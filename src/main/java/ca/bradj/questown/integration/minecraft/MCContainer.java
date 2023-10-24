@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -66,6 +67,18 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
             }
         }
         return true;
+    }
+
+    @Override
+    public String toShortString() {
+        ImmutableList.Builder<String> names = ImmutableList.builder();
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (container.getItem(i).getItem().getRegistryName() == null) {
+                names.add("<No ID>");
+            }
+            names.add(container.getItem(i).getItem().getRegistryName().getPath());
+        }
+        return String.join(", ", names.build());
     }
 
     @Override

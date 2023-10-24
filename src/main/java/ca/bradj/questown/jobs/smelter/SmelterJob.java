@@ -105,11 +105,12 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
     }
 
     @Override
-    public void tick(
+    protected void tick(
             TownInterface town,
             BlockPos entityBlockPos,
             Vec3 entityPos,
-            Direction facingPos
+            Direction facingPos,
+            Map<SmelterStatus, ? extends Collection<MCRoom>> roomsNeedingIngredients
     ) {
         this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
         JobTownProvider<SmelterStatus, MCRoom> jtp = new JobTownProvider<>() {
@@ -120,11 +121,7 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
 
             @Override
             public Map<SmelterStatus, ? extends Collection<MCRoom>> roomsNeedingIngredients() {
-                // FIXME: Smelter should also find a furnace and smelt the raw iron
-                return ImmutableMap.of(
-                        SmelterStatus.WORK_PROCESSING_ORE, Jobs.roomsWithState(town, SmeltingOvenBlock::canAcceptWork),
-                        SmelterStatus.WORK_INSERTING_ORE, Jobs.roomsWithState(town, SmeltingOvenBlock::canAcceptOre)
-                );
+                return roomsNeedingIngredients;
             }
 
             @Override
@@ -282,8 +279,11 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
     }
 
     @Override
-    public int getStatusOrdinal() {
-        return getStatus().ordinal();
+    protected Map<SmelterStatus, ? extends Collection<MCRoom>> roomsNeedingIngredients(TownInterface town) {
+        return ImmutableMap.of(
+                SmelterStatus.WORK_PROCESSING_ORE, Jobs.roomsWithState(town, SmeltingOvenBlock::canAcceptWork),
+                SmelterStatus.WORK_INSERTING_ORE, Jobs.roomsWithState(town, SmeltingOvenBlock::canAcceptOre)
+        );
     }
 
     @Override
@@ -298,14 +298,9 @@ public class SmelterJob extends ProductionJob<SmelterStatus, SimpleSnapshot<Smel
     @Override
     public boolean openScreen(
             ServerPlayer sp,
-            VisitorMobEntity visitorMobEntity
+            VisitorMobEntity e
     ) {
-        // FIXME: Implement screen
-        QT.JOB_LOGGER.error(
-                "No screen has been implemented for smelters. [Status: {}]",
-                visitorMobEntity.getStatusForServer().name()
-        );
-        return false;
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
     }
 
     @Override

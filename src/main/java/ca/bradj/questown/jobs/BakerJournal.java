@@ -14,10 +14,10 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
     private final int capacity;
     private final SignalSource sigs;
     private GathererJournal.Status status;
-    private List<JournalItemsListener<H>> listeners = new ArrayList<>();
+    private final List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private EmptyFactory<H> emptyFactory;
     private final ItemChecker<H> itemsToHold;
-    private ArrayList<StatusListener<GathererJournal.Status>> statusListeners = new ArrayList<>();
+    private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
     public void addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
@@ -92,7 +92,7 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
     public void tick(
             BakerStatuses.TownStateProvider<MCRoom> townState,
             BakerStatuses.EntityStateProvider<MCRoom> entityState,
-            EntityInvStateProvider inventory
+            EntityInvStateProvider<GathererJournal.Status> inventory
     ) {
         if (status == GathererJournal.Status.UNSET) {
             throw new IllegalStateException("Must initialize status");

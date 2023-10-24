@@ -130,9 +130,8 @@ public class Jobs {
         }
     }
 
-    public static <S extends IStatus<S>> boolean openInventoryAndStatusScreen(
+    public static boolean openInventoryAndStatusScreen(
             int capacity,
-            Collection<MCHeldItem> items,
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
@@ -335,10 +334,11 @@ public class Jobs {
         if (farmerJob.isInventoryFull()) {
             return;
         }
+        String start = suppliesTarget.toShortString();
         for (int i = 0; i < suppliesTarget.size(); i++) {
             MCTownItem mcTownItem = suppliesTarget.getItem(i);
             if (check.Matches(mcTownItem)) {
-                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, suppliesTarget);
+                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
                 farmerJob.addItem(new MCHeldItem(mcTownItem));
                 suppliesTarget.getContainer().removeItem(i, 1);
                 break;

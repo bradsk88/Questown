@@ -73,6 +73,11 @@ class TownStateTest {
         public boolean isFull() {
             return items.stream().noneMatch(TestItem::isEmpty);
         }
+
+        @Override
+        public String toShortString() {
+            return String.join(", ", items.stream().map(v -> v.value).toList());
+        }
     }
 
     private TownState<Container, TestItem, TestItem> townState;

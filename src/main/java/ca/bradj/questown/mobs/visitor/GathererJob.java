@@ -478,7 +478,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), journal.getItems(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
     }
 
     @Override
@@ -509,12 +509,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return journal.getStatus();
     }
 
-    @Override
-    public int getStatusOrdinal() {
-        return getStatus().ordinal();
-    }
-
-    public void addStatusListener(StatusListener<GathererJournal.Status> l) {
+    public void addStatusListener(StatusListener l) {
         journal.addStatusListener(l);
     }
 

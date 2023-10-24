@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -287,6 +288,12 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
         COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING, FARMING_WEEDING;
+
+        static {
+            for (Status s : values()) {
+                SessionUniqueOrdinals.register(s);
+            }
+        }
 
         public static final IStatusFactory<Status> FACTORY = new IStatusFactory<>() {
             @Override

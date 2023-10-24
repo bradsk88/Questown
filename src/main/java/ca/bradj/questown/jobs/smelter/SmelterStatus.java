@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.smelter;
 
+import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
@@ -17,6 +18,12 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
     WORK_COLLECTING_RAW_PRODUCT,
     WORK_INSERTING_ORE,
     WORK_PROCESSING_ORE;
+
+    static {
+        for (SmelterStatus s : values()) {
+            SessionUniqueOrdinals.register(s);
+        }
+    }
 
     static final IStatusFactory<SmelterStatus> FACTORY = new IStatusFactory<>() {
 
