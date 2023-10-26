@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.production.IProductionJob;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,7 +25,7 @@ public class TypicalProductionJob<S> implements IProductionJob<S> {
     }
 
     @Override
-    public @Nullable S tryUsingSupplies(Map<S, Boolean> supplyItemStatus) {
+    public @Nullable S tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
         return null;
     }
 }

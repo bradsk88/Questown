@@ -39,7 +39,7 @@ class FarmerStatusesTest {
             boolean hasNonSupplyItems,
             boolean hasItems,
             Map<GathererJournal.Status, Boolean> getSupplyItemStatus
-    ) implements EntityInvStateProvider {
+    ) implements EntityInvStateProvider<GathererJournal.Status> {
     }
 
     @Test

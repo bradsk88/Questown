@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import org.jetbrains.annotations.Nullable;
@@ -21,6 +22,12 @@ public class JobStatuses {
         @Nullable STATUS tryChoosingItemlessWork();
 
         @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus);
+    }
+
+    public interface DJob<STATUS> {
+        @Nullable STATUS tryChoosingItemlessWork();
+
+        @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus);
     }
 
     public static <STATUS extends IStatus<STATUS>> STATUS usualRoutine(
@@ -107,9 +114,9 @@ public class JobStatuses {
     public static <STATUS extends IStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
-            EntityInvStateProvider<STATUS> inventory,
+            DEntityInvStateProvider inventory,
             EntityLocStateProvider<ROOM> entity,
-            JobTownProvider<STATUS, ROOM> town,
+            JobTownProvider<ROOM> town,
             IProductionJob<STATUS> job,
             IStatusFactory<STATUS> factory
     ) {
@@ -128,13 +135,13 @@ public class JobStatuses {
 
                     @Override
                     public boolean canUseMoreSupplies() {
-                        return !town.roomsNeedingIngredients()
+                        return !town.roomsNeedingIngredientsByState()
                                 .entrySet()
                                 .stream()
                                 .allMatch(v -> v.getValue().isEmpty());
                     }
                 },
-                new Job<>() {
+                new DJob<>() {
                     @Override
                     public @Nullable STATUS tryChoosingItemlessWork() {
                         Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -142,16 +149,16 @@ public class JobStatuses {
                             return null;
                         }
 
-                        return factory.collectingFinishedProduct();
+                        return factory.extractingProduct();
                     }
 
                     @Override
-                    public @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus) {
+                    public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
                         RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
-                        Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredients();
+                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
 
                         boolean foundWork = false;
 

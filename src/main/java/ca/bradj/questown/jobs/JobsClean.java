@@ -30,6 +30,10 @@ public class JobsClean {
             Collection<H> currentHeldItems,
             I item
     ) {
+        if (recipe.isEmpty()) {
+            return false;
+        }
+
         // Check if all items in the inventory are empty
         if (currentHeldItems.stream().noneMatch(Item::isEmpty)) {
             return false;

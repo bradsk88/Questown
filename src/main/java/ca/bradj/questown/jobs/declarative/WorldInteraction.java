@@ -5,7 +5,7 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.blocks.SmeltingOvenBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.DeclarativeJournal;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -31,7 +31,7 @@ public class WorldInteraction {
 
     private final Container inventory;
     // FIXME: Build production journal
-    private final DeclarativeJournal journal;
+    private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final int maxState;
     private final ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -40,7 +40,7 @@ public class WorldInteraction {
 
     public WorldInteraction(
             Container inventory,
-            DeclarativeJournal journal,
+            ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
             ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
@@ -173,7 +173,7 @@ public class WorldInteraction {
                     // didn't insert successfully
                     return false;
                 }
-                QT.JOB_LOGGER.debug(marker, "Smelter removed {} from {}", name, invBefore);
+                QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
                 inventory.setChanged();
                 return true;
             }

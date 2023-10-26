@@ -29,11 +29,6 @@ public class SessionUniqueOrdinals {
         }
 
         @Override
-        public boolean isWorkingOnProduction() {
-            return false;
-        }
-
-        @Override
         public boolean isDroppingLoot() {
             return false;
         }

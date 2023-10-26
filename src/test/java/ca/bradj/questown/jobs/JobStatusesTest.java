@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -9,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Objects;
 
-class StatusezTest {
+class JobStatusesTest {
 
     static class TestStatus implements IStatus<TestStatus> {
 
@@ -23,6 +22,7 @@ class StatusezTest {
         static final TestStatus ITEM_WORK = new TestStatus("item_work");
         static final TestStatus ITEM_WORK_2 = new TestStatus("item_work_2");
         static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
+        static final TestStatus RELAXING = new TestStatus("relaxing");
 
         static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
             @Override
@@ -56,8 +56,13 @@ class StatusezTest {
             }
 
             @Override
-            public TestStatus collectingFinishedProduct() {
+            public TestStatus extractingProduct() {
                 return COLLECTING_PRODUCT;
+            }
+
+            @Override
+            public TestStatus relaxing() {
+                return RELAXING;
             }
         };
 
@@ -75,15 +80,6 @@ class StatusezTest {
         @Override
         public boolean isGoingToJobsite() {
             return this == GOING_TO_JOB;
-        }
-
-        @Override
-        public boolean isWorkingOnProduction() {
-            return ImmutableList.of(
-                    ITEM_WORK,
-                    ITEM_WORK_2,
-                    ITEMLESS_WORK
-            ).contains(this);
         }
 
         @Override
@@ -130,7 +126,7 @@ class StatusezTest {
         }
     }
 
-    public static final ImmutableMap<TestStatus, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
             TestStatus.GOING_TO_JOB, true,
             TestStatus.ITEM_WORK, true
     );
@@ -138,7 +134,7 @@ class StatusezTest {
     record ConstInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
-            Map<TestStatus, Boolean> getSupplyItemStatus
+            Map<Integer, Boolean> getSupplyItemStatusByState
     ) implements EntityInvStateProvider<TestStatus> {
     }
 

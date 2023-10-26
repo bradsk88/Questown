@@ -5,8 +5,6 @@ public interface IStatus<S extends IStatus<S>> {
 
     boolean isGoingToJobsite();
 
-    boolean isWorkingOnProduction();
-
     boolean isDroppingLoot();
 
     boolean isCollectingSupplies();

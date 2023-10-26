@@ -503,7 +503,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     }
 
                     @Override
-                    public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
+                    public Map<GathererJournal.Status, Boolean> getSupplyItemStatusByState() {
                         boolean hasSeeds = journal.getItems().stream().anyMatch(v -> Items.WHEAT_SEEDS.equals(v.get().get()));
                         boolean hasCompostable = journal.getItems().stream().anyMatch(
                                 v -> Ingredient.of(TagsInit.Items.COMPOSTABLE).test(v.get().toItemStack()));

@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs.blacksmith;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.SmeltingOvenBlock;
 import ca.bradj.questown.jobs.DeclarativeJob;
-import ca.bradj.questown.jobs.ProductionStatus;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,9 +52,9 @@ public class BlacksmithJob extends DeclarativeJob {
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 ImmutableBiMap.of(
-                        ProductionStatus.INSERTING_INGREDIENTS, 0,
-                        ProductionStatus.WORKING_ON_PRODUCTION, 1,
-                        ProductionStatus.EXTRACTING_PRODUCT, 2
+                        0, ProductionStatus.INSERTING_INGREDIENTS,
+                        1, ProductionStatus.WORKING_ON_PRODUCTION,
+                        2, ProductionStatus.EXTRACTING_PRODUCT
                 )
         );
     }

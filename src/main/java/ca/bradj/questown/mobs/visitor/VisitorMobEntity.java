@@ -11,7 +11,7 @@ import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.smelter.SmelterJob;
+import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -939,7 +939,7 @@ public class VisitorMobEntity extends PathfinderMob {
         if (level.isClientSide()) {
             return;
         }
-        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new SmelterJob(uuid, 6);
+        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new DSmelterJob(uuid, 6);
         this.setJob(job1);
     }
 

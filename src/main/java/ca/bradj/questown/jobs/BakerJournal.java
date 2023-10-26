@@ -60,6 +60,32 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
         updateItemListeners();
     }
 
+    @Override
+    public void setItem(
+            int idx,
+            H mcHeldItem
+    ) {
+        H curItem = inventory.get(idx);
+        if (!curItem.isEmpty()) {
+            throw new IllegalArgumentException(String.format(
+                    "Cannot set to %s. Slot %d is not empty. [has: %s]",
+                    mcHeldItem,
+                    idx,
+                    curItem
+            ));
+        }
+        setItemNoUpdateNoCheck(idx, mcHeldItem);
+        updateItemListeners();
+    }
+
+    public void setItemNoUpdateNoCheck(
+            int index,
+            H mcHeldItem
+    ) {
+        inventory.set(index, mcHeldItem);
+        changeStatus(GathererJournal.Status.IDLE);
+    }
+
     private void updateItemListeners() {
         ImmutableList<H> copyForListeners = ImmutableList.copyOf(inventory);
         this.listeners.forEach(l -> l.itemsChanged(copyForListeners));

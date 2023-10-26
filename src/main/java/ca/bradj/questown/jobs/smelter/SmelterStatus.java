@@ -1,11 +1,10 @@
 package ca.bradj.questown.jobs.smelter;
 
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
-import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.jobs.IStatusFactory;
-import com.google.common.collect.ImmutableList;
 
-public enum SmelterStatus implements IStatus<SmelterStatus> {
+public enum SmelterStatus implements IProductionStatus<SmelterStatus> {
 
     UNSET,
     DROPPING_LOOT,
@@ -58,8 +57,13 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
         }
 
         @Override
-        public SmelterStatus collectingFinishedProduct() {
+        public SmelterStatus extractingProduct() {
             return WORK_COLLECTING_RAW_PRODUCT;
+        }
+
+        @Override
+        public SmelterStatus relaxing() {
+            return RELAXING;
         }
     };
 
@@ -83,15 +87,6 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
     }
 
     @Override
-    public boolean isWorkingOnProduction() {
-        return ImmutableList.of(
-                WORK_COLLECTING_RAW_PRODUCT,
-                WORK_INSERTING_ORE,
-                WORK_PROCESSING_ORE
-        ).contains(this);
-    }
-
-    @Override
     public boolean isDroppingLoot() {
         return this == DROPPING_LOOT;
     }
@@ -109,5 +104,20 @@ public enum SmelterStatus implements IStatus<SmelterStatus> {
     @Override
     public boolean isAllowedToTakeBreaks() {
         return isGoingToJobsite() || isCollectingSupplies() || isDroppingLoot();
+    }
+
+    @Override
+    public boolean isInsertingIngredients() {
+        return this == WORK_INSERTING_ORE;
+    }
+
+    @Override
+    public boolean isWorkingOnProduction() {
+        return this == WORK_PROCESSING_ORE;
+    }
+
+    @Override
+    public boolean isExtractingProduct() {
+        return this == WORK_COLLECTING_RAW_PRODUCT;
     }
 }

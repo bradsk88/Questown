@@ -42,8 +42,8 @@ class SmelterStatusesTest {
             boolean hasSpace,
             Collection<RoomRecipeMatch<Room>> fullBakeries,
             Collection<Room> roomsWithCompletedProduct,
-            Map<SmelterStatus, ? extends Collection<Room>> roomsNeedingIngredients
-    ) implements JobTownProvider<SmelterStatus, Room> {
+            Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState
+    ) implements JobTownProvider<Room> {
     }
 
     private record ConstEntity(

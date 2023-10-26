@@ -327,8 +327,13 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             }
 
             @Override
-            public Status collectingFinishedProduct() {
+            public Status extractingProduct() {
                 throw new UnsupportedOperationException("Gatherers do not generate products");
+            }
+
+            @Override
+            public Status relaxing() {
+                return RELAXING;
             }
         };
 
@@ -432,12 +437,6 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         public boolean isGoingToJobsite() {
             return ImmutableList.of(
                     GOING_TO_JOBSITE
-            ).contains(this);
-        }
-
-        @Override
-        public boolean isWorkingOnProduction() {
-            return ImmutableList.of(
             ).contains(this);
         }
 

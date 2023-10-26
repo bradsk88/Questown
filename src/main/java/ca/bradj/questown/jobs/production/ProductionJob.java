@@ -1,14 +1,14 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -25,39 +25,42 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public abstract class ProductionJob<
-        STATUS extends IStatus<STATUS>,
+        STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-        > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
     private final Marker marker;
 
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     protected final Container inventory;
     protected final JOURNAL journal;
+    private final IStatusFactory<STATUS> statusFactory;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
     // TODO: Support more recipes
-    protected final RecipeProvider<STATUS> recipe;
+    protected final RecipeProvider recipe;
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     private final UUID ownerUUID;
-    private Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients;
+    private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
 
-    public interface RecipeProvider<STATUS> {
-        ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(STATUS s);
+    public interface RecipeProvider {
+        ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(int workState);
     }
 
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
             ImmutableList<MCTownItem> allowedToPickUp,
-            RecipeProvider<STATUS> recipe,
-            Marker logMarker
+            RecipeProvider recipe,
+            Marker logMarker,
+            IStatusFactory<STATUS> sFac
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -77,11 +80,15 @@ public abstract class ProductionJob<
             this.locks.add(new LockSlot(i, this));
         }
 
-        this.journal = getInitializedJournal(inventoryCapacity);
+        this.journal = getInitializedJournal(inventoryCapacity, sFac);
         this.journal.addItemListener(this);
+
+        this.statusFactory = sFac;
     }
 
-    protected abstract JOURNAL getInitializedJournal(int inventoryCapacity);
+    protected abstract JOURNAL getInitializedJournal(
+            int inventoryCapacity,  IStatusFactory<STATUS> sFac
+    );
 
     @Override
     public void addStatusListener(StatusListener o) {
@@ -138,7 +145,7 @@ public abstract class ProductionJob<
         return journal.isInventoryFull();
     }
 
-    protected abstract Map<STATUS, Boolean> getSupplyItemStatus();
+    protected abstract Map<Integer, Boolean> getSupplyItemStatus();
 
     protected void tryDropLoot(
             BlockPos entityPos
@@ -153,7 +160,7 @@ public abstract class ProductionJob<
     }
 
     protected void tryGetSupplies(
-            JobTownProvider<STATUS, MCRoom> town,
+            JobTownProvider<MCRoom> town,
             BlockPos entityPos
     ) {
         // TODO: Introduce this status for farmer
@@ -162,11 +169,22 @@ public abstract class ProductionJob<
             return;
         }
 
+        Optional<Integer> first = roomsNeedingIngredients.entrySet()
+                .stream()
+                .filter(v -> !v.getValue().isEmpty())
+                .map(Map.Entry::getKey)
+                .findFirst();
+
+        if (first.isEmpty()) {
+            QT.JOB_LOGGER.warn("Trying to try container items when no rooms need items");
+            return;
+        }
+
         Jobs.tryTakeContainerItems(
                 this, entityPos, suppliesTarget,
                 item -> JobsClean.shouldTakeItem(
                         journal.getCapacity(),
-                        recipe.getRecipe(status),
+                        recipe.getRecipe(first.get()),
                         journal.getItems(), item
                 )
         );
@@ -174,10 +192,10 @@ public abstract class ProductionJob<
 
     @NotNull
     protected ImmutableList<JobsClean.TestFn<MCTownItem>> convertToCleanFns(
-            Map<STATUS, ? extends Collection<MCRoom>> statusMap
+            Map<Integer, ? extends Collection<MCRoom>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
-        Optional<STATUS> first = statusMap.entrySet()
+        Optional<Integer> first = statusMap.entrySet()
                 .stream()
                 .filter(v -> !v.getValue().isEmpty())
                 .map(Map.Entry::getKey)
@@ -237,7 +255,7 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findJobSite(TownInterface town);
 
-    protected abstract Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients(TownInterface town);
+    protected abstract Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(TownInterface town);
 
     @Override
     public void tick(
@@ -245,15 +263,16 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.roomsNeedingIngredients = roomsNeedingIngredients(town);
-        this.tick(town, entity, facingPos, roomsNeedingIngredients);
+        this.roomsNeedingIngredients = roomsNeedingIngredientsOrTools(town);
+        this.tick(town, entity, facingPos, roomsNeedingIngredients, statusFactory);
     }
 
     protected abstract void tick(
             TownInterface town,
             LivingEntity entity,
             Direction facingPos,
-            Map<STATUS, ? extends Collection<MCRoom>> roomsNeedingIngredients
+            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
+            IStatusFactory<STATUS> statusFactory
     );
 
     private void setupForGetSupplies(
@@ -364,8 +383,8 @@ public abstract class ProductionJob<
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<STATUS> defaultEntityInvProvider() {
-        return new EntityInvStateProvider<>() {
+    protected EntityInvStateProvider defaultEntityInvProvider() {
+        return new EntityInvStateProvider() {
             @Override
             public boolean inventoryFull() {
                 return journal.isInventoryFull();
@@ -373,13 +392,18 @@ public abstract class ProductionJob<
 
             @Override
             public boolean hasNonSupplyItems() {
-                return Jobs.hasNonSupplyItems(journal, ImmutableList.copyOf(
-                        recipe.getRecipe(journal.getStatus())
-                ));
+
+                Set<Integer> statesToFeed = roomsNeedingIngredients.entrySet().stream().filter(
+                        v -> !v.getValue().isEmpty()
+                ).map(Map.Entry::getKey).collect(Collectors.toSet());
+                ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
+                        statesToFeed.stream().flatMap(v -> recipe.getRecipe(v).stream()).toList()
+                );
+                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
             }
 
             @Override
-            public Map<STATUS, Boolean> getSupplyItemStatus() {
+            public Map<Integer, Boolean> getSupplyItemStatusByState() {
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };

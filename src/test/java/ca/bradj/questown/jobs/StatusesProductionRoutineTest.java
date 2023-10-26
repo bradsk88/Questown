@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -15,8 +16,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.Map;
 
-import ca.bradj.questown.jobs.StatusezTest.TestStatus;
-import ca.bradj.questown.jobs.StatusezTest.ConstInventory;
+import ca.bradj.questown.jobs.JobStatusesTest.TestStatus;
+import ca.bradj.questown.jobs.JobStatusesTest.ConstInventory;
 
 public class StatusesProductionRoutineTest {
 
@@ -33,8 +34,8 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<TestStatus, ? extends Collection<Room>> roomsNeedingIngredients
-    ) implements JobTownProvider<TestStatus, Room> {
+            Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState
+    ) implements JobTownProvider<Room> {
     }
 
     private record TestEntityLoc(
@@ -75,7 +76,7 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable TestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
             throw err;
         }
 

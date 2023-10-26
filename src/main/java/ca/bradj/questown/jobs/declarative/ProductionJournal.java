@@ -1,6 +1,8 @@
-package ca.bradj.questown.jobs.smelter;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -9,16 +11,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
-public class SmelterJournal<
+public class ProductionJournal<
         I extends Item<I>,
         H extends HeldItem<H, I>
-> implements Journal<SmelterStatus, H, SimpleSnapshot<SmelterStatus, H>> {
+> implements Journal<ProductionStatus, H, SimpleSnapshot<ProductionStatus, H>> {
     public static final String NAME = "smelter";
     private final JournalItemList<H> inventory;
     private final DefaultInventoryStateProvider<H> invState;
     private final int capacity;
     private final SignalSource sigs;
-    private SmelterStatus status;
+    private final IStatusFactory<ProductionStatus> statusFactory;
+    private ProductionStatus status;
     private final List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private final EmptyFactory<H> emptyFactory;
     private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
@@ -27,10 +30,11 @@ public class SmelterJournal<
         this.statusListeners.add(o);
     }
 
-    public SmelterJournal(
+    public ProductionJournal(
             SignalSource sigs,
             int capacity,
-            EmptyFactory<H> ef
+            EmptyFactory<H> ef,
+            IStatusFactory<ProductionStatus> sf
     ) {
         this.sigs = sigs;
         this.inventory = new JournalItemList<>(capacity, ef);
@@ -39,9 +43,10 @@ public class SmelterJournal<
                 () -> ImmutableList.copyOf(this.inventory)
         );
         this.emptyFactory = ef;
+        this.statusFactory = sf;
     }
 
-    public void initialize(SimpleSnapshot<SmelterStatus, H> journal) {
+    public void initialize(SimpleSnapshot<ProductionStatus, H> journal) {
         this.setItems(journal.items());
         this.initializeStatus(journal.status());
     }
@@ -67,15 +72,15 @@ public class SmelterJournal<
     public void setItemsNoUpdateNoCheck(ImmutableList<H> build) {
         inventory.clear();
         inventory.addAll(build);
-        changeStatus(SmelterStatus.IDLE);
+        changeStatus(statusFactory.idle());
     }
 
-    protected void changeStatus(SmelterStatus s) {
+    protected void changeStatus(ProductionStatus s) {
         this.status = s;
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }
 
-    public SimpleSnapshot<SmelterStatus, H> getSnapshot() {
+    public SimpleSnapshot<ProductionStatus, H> getSnapshot() {
         return new SimpleSnapshot<>(NAME, status, ImmutableList.copyOf(inventory));
     }
 
@@ -84,23 +89,24 @@ public class SmelterJournal<
     }
 
     public void tick(
-            JobTownProvider<SmelterStatus, MCRoom> townState,
+            JobTownProvider<MCRoom> townState,
             EntityLocStateProvider<MCRoom> entityState,
-            EntityInvStateProvider<SmelterStatus> inventory
+            DEntityInvStateProvider inventory,
+            IStatusFactory<ProductionStatus> factory
     ) {
         if (status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
-        @Nullable SmelterStatus newStatus = SmelterStatuses.getNewStatusFromSignal(
-                status, sig, inventory, townState, entityState
+        @Nullable ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
+                status, sig, inventory, townState, entityState, factory
         );
         if (newStatus != null) {
             changeStatus(newStatus);
         }
     }
 
-    public SmelterStatus getStatus() {
+    public ProductionStatus getStatus() {
         return status;
     }
 
@@ -125,7 +131,7 @@ public class SmelterJournal<
         this.listeners.add(l);
     }
 
-    public void initializeStatus(SmelterStatus s) {
+    public void initializeStatus(ProductionStatus s) {
         this.status = s;
     }
 
@@ -154,6 +160,6 @@ public class SmelterJournal<
         inventory.set(idx, mcHeldItem);
         updateItemListeners();
         // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
-        changeStatus(SmelterStatus.IDLE);
+        changeStatus(ProductionStatus.IDLE);
     }
 }
