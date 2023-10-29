@@ -22,7 +22,7 @@ public enum ProductionStatus implements IProductionStatus<ProductionStatus> {
         }
     }
 
-    public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<ProductionStatus>() {
+    public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
         public ProductionStatus droppingLoot() {
             return DROPPING_LOOT;
@@ -111,15 +111,5 @@ public enum ProductionStatus implements IProductionStatus<ProductionStatus> {
                 DROPPING_LOOT,
                 COLLECTING_SUPPLIES
         ).contains(this);
-    }
-
-    @Override
-    public boolean isExtractingProduct() {
-        return this == EXTRACTING_PRODUCT;
-    }
-
-    @Override
-    public boolean isInsertingIngredients() {
-        return this == INSERTING_INGREDIENTS;
     }
 }

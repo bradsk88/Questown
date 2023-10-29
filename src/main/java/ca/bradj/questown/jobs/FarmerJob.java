@@ -491,7 +491,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                         return Boolean.TRUE.equals(possibleWork.getOrDefault(action, false));
                     }
                 },
-                new EntityInvStateProvider() {
+                new EntityInvStateProvider<GathererJournal.Status>() {
                     @Override
                     public boolean inventoryFull() {
                         return journal.isInventoryFull();
@@ -503,7 +503,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     }
 
                     @Override
-                    public Map<GathererJournal.Status, Boolean> getSupplyItemStatusByState() {
+                    public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
                         boolean hasSeeds = journal.getItems().stream().anyMatch(v -> Items.WHEAT_SEEDS.equals(v.get().get()));
                         boolean hasCompostable = journal.getItems().stream().anyMatch(
                                 v -> Ingredient.of(TagsInit.Items.COMPOSTABLE).test(v.get().toItemStack()));

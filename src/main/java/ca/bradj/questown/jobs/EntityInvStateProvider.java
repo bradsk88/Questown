@@ -2,10 +2,10 @@ package ca.bradj.questown.jobs;
 
 import java.util.Map;
 
-public interface EntityInvStateProvider<STATUS> {
+public interface EntityInvStateProvider<SUP_CAT> {
     boolean inventoryFull();
 
     boolean hasNonSupplyItems();
 
-    Map<STATUS, Boolean> getSupplyItemStatus();
+    Map<SUP_CAT, Boolean> getSupplyItemStatus();
 }

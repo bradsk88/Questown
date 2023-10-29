@@ -8,14 +8,14 @@ import java.util.Map;
 
 public class TypicalProductionJob<S> implements IProductionJob<S> {
 
-    private final ImmutableList<S> sorted;
+    private final ImmutableList<Integer> sorted;
 
-    public TypicalProductionJob(ImmutableList<S> sorted) {
+    public TypicalProductionJob(ImmutableList<Integer> sorted) {
         this.sorted = sorted;
     }
 
     @Override
-    public ImmutableList<S> getAllWorkStatusesSortedByPreference() {
+    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
         return sorted;
     }
 

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.IProductionJob;
+import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import org.jetbrains.annotations.Nullable;
@@ -18,28 +19,22 @@ public class JobStatuses {
         return inventory.getSupplyItemStatus().values().stream().anyMatch(Boolean::booleanValue);
     }
 
-    public interface Job<STATUS> {
+    public interface Job<STATUS, SUP_CAT> {
         @Nullable STATUS tryChoosingItemlessWork();
 
-        @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus);
+        @Nullable STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus);
     }
 
-    public interface DJob<STATUS> {
-        @Nullable STATUS tryChoosingItemlessWork();
-
-        @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus);
-    }
-
-    public static <STATUS extends IStatus<STATUS>> STATUS usualRoutine(
+    public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
-            EntityInvStateProvider<STATUS> inventory,
+            EntityInvStateProvider<SUP_CAT> inventory,
             TownStateProvider town,
-            Job<STATUS> job,
+            Job<STATUS, SUP_CAT> job,
             IStatusFactory<STATUS> factory
     ) {
         STATUS s = null;
-        Map<STATUS, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
+        Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
         boolean hasWorkItems = supplyItemStatus.containsValue(true);
         boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems();
         if (hasWorkItems) {
@@ -111,14 +106,14 @@ public class JobStatuses {
      *                            will cause the item to be spawned into the
      *                            world for collection by whomever walks by.
      */
-    public static <STATUS extends IStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
-            DEntityInvStateProvider inventory,
+            EntityInvStateProvider<Integer> inventory,
             EntityLocStateProvider<ROOM> entity,
             JobTownProvider<ROOM> town,
             IProductionJob<STATUS> job,
-            IStatusFactory<STATUS> factory
+            IProductionStatusFactory<STATUS> factory
     ) {
         return usualRoutine(
                 currentStatus, prioritizeExtraction, inventory,
@@ -141,7 +136,7 @@ public class JobStatuses {
                                 .allMatch(v -> v.getValue().isEmpty());
                     }
                 },
-                new DJob<>() {
+                new Job<>() {
                     @Override
                     public @Nullable STATUS tryChoosingItemlessWork() {
                         Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -162,17 +157,17 @@ public class JobStatuses {
 
                         boolean foundWork = false;
 
-                        List<STATUS> orderedWithSupplies = job.getAllWorkStatusesSortedByPreference()
+                        List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
                                 .stream()
                                 .filter(work -> supplyItemStatus.getOrDefault(work, false))
                                 .toList();
 
-                        for (STATUS s : orderedWithSupplies) {
+                        for (Integer s : orderedWithSupplies) {
                             if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s).isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
                                     if (roomNeedsMap.get(s).contains(location.room)) {
-                                        return s;
+                                        return factory.fromJobBlockState(s);
                                     }
                                 }
                             }

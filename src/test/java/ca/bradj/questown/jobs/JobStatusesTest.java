@@ -10,7 +10,7 @@ import java.util.Objects;
 
 class JobStatusesTest {
 
-    static class TestStatus implements IStatus<TestStatus> {
+    public static class TestStatus implements IStatus<TestStatus> {
 
         static final TestStatus DROPPING_LOOT = new TestStatus("dropping_loot");
         static final TestStatus NO_SPACE = new TestStatus("no_space");
@@ -68,7 +68,7 @@ class JobStatusesTest {
 
         private final String inner;
 
-        private TestStatus(String inner) {
+        protected TestStatus(String inner) {
             this.inner = inner;
         }
 
@@ -126,7 +126,7 @@ class JobStatusesTest {
         }
     }
 
-    public static final ImmutableMap<Integer, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
+    public static final ImmutableMap<TestStatus, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
             TestStatus.GOING_TO_JOB, true,
             TestStatus.ITEM_WORK, true
     );
@@ -134,7 +134,7 @@ class JobStatusesTest {
     record ConstInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
-            Map<Integer, Boolean> getSupplyItemStatusByState
+            Map<TestStatus, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<TestStatus> {
     }
 
@@ -145,7 +145,7 @@ class JobStatusesTest {
     ) implements TownStateProvider {
     }
 
-    static class NoOpJob implements JobStatuses.Job<TestStatus> {
+    static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return null;
@@ -157,7 +157,7 @@ class JobStatusesTest {
         }
     }
 
-    static class FailJob implements JobStatuses.Job<TestStatus> {
+    static class FailJob implements JobStatuses.Job<TestStatus, TestStatus> {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
@@ -169,7 +169,7 @@ class JobStatusesTest {
         }
     }
 
-    private static final JobStatuses.Job<TestStatus> jobWithItemlessWork = new JobStatuses.Job<>() {
+    private static final JobStatuses.Job<TestStatus, TestStatus> jobWithItemlessWork = new JobStatuses.Job<>() {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return TestStatus.ITEMLESS_WORK;
@@ -181,7 +181,7 @@ class JobStatusesTest {
         }
     };
 
-    private static final JobStatuses.Job<TestStatus> jobWithItemWorkOnly = new JobStatuses.Job<>() {
+    private static final JobStatuses.Job<TestStatus, TestStatus> jobWithItemWorkOnly = new JobStatuses.Job<>() {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return null;

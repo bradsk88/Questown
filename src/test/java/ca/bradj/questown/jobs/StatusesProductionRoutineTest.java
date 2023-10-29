@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.production.IProductionJob;
+import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -15,11 +16,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Map;
-
-import ca.bradj.questown.jobs.JobStatusesTest.TestStatus;
-import ca.bradj.questown.jobs.JobStatusesTest.ConstInventory;
+import java.util.Objects;
 
 public class StatusesProductionRoutineTest {
+
+    // These names are just here to help better understand what the "magic
+    // numbers" used by this test represent.
+    private static final int BLOCK_READY_FOR_INGREDIENTS = 0;
+    private static final int BLOCK_READY_FOR_WORK = 1;
+    private static final int BLOCK_READY_TO_EXTRACT_PRODUCT = 2;
 
     RoomRecipeMatch<Room> arbitraryRoom = new RoomRecipeMatch<>(
             new Room(
@@ -29,6 +34,13 @@ public class StatusesProductionRoutineTest {
             new ResourceLocation(Questown.MODID, "bakery"),
             ImmutableList.of()
     );
+
+    record TestInventory(
+            boolean inventoryFull,
+            boolean hasNonSupplyItems,
+            Map<Integer, Boolean> getSupplyItemStatus
+    ) implements EntityInvStateProvider<Integer> {
+    }
 
     private record TestJobTown(
             boolean hasSupplies,
@@ -43,48 +55,178 @@ public class StatusesProductionRoutineTest {
     ) implements EntityLocStateProvider<Room> {
     }
 
-    private static class NoOpProductionJob implements IProductionJob<TestStatus> {
+    public static class PTestStatus implements IProductionStatus<PTestStatus> {
+
+        static final PTestStatus DROPPING_LOOT = new PTestStatus("dropping_loot");
+        static final PTestStatus NO_SPACE = new PTestStatus("no_space");
+        static final PTestStatus GOING_TO_JOB = new PTestStatus("going_to_job");
+        static final PTestStatus NO_SUPPLIES = new PTestStatus("no_supplies");
+        static final PTestStatus COLLECTING_SUPPLIES = new PTestStatus("collecting_supplies");
+        static final PTestStatus IDLE = new PTestStatus("idle");
+        static final PTestStatus INGREDIENTS = new PTestStatus("inserting");
+        static final PTestStatus ITEM_WORK = new PTestStatus("item_work");
+        static final PTestStatus COLLECTING_PRODUCT = new PTestStatus("collecting_product");
+        static final PTestStatus RELAXING = new PTestStatus("relaxing");
+
+        static final IProductionStatusFactory<PTestStatus> FACTORY = new IProductionStatusFactory<>() {
+            @Override
+            public PTestStatus fromJobBlockState(int s) {
+                return switch (s) {
+                    case BLOCK_READY_FOR_INGREDIENTS -> INGREDIENTS;
+                    case BLOCK_READY_FOR_WORK -> ITEM_WORK;
+                    case BLOCK_READY_TO_EXTRACT_PRODUCT -> COLLECTING_PRODUCT;
+                    default -> throw new IllegalStateException("Unexpected state " + s);
+                };
+            }
+
+            @Override
+            public PTestStatus droppingLoot() {
+                return DROPPING_LOOT;
+            }
+
+            @Override
+            public PTestStatus noSpace() {
+                return NO_SPACE;
+            }
+
+            @Override
+            public PTestStatus goingToJobSite() {
+                return GOING_TO_JOB;
+            }
+
+            @Override
+            public PTestStatus noSupplies() {
+                return NO_SUPPLIES;
+            }
+
+            @Override
+            public PTestStatus collectingSupplies() {
+                return COLLECTING_SUPPLIES;
+            }
+
+            @Override
+            public PTestStatus idle() {
+                return IDLE;
+            }
+
+            @Override
+            public PTestStatus extractingProduct() {
+                return COLLECTING_PRODUCT;
+            }
+
+            @Override
+            public PTestStatus relaxing() {
+                return RELAXING;
+            }
+        };
+
+        private final String inner;
+
+        protected PTestStatus(String inner) {
+            this.inner = inner;
+        }
 
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
+        public IStatusFactory<PTestStatus> getFactory() {
+            return FACTORY;
+        }
+
+        @Override
+        public boolean isGoingToJobsite() {
+            return this == GOING_TO_JOB;
+        }
+
+        @Override
+        public boolean isDroppingLoot() {
+            return this == DROPPING_LOOT;
+        }
+
+        @Override
+        public boolean isCollectingSupplies() {
+            return this == COLLECTING_SUPPLIES;
+        }
+
+        @Override
+        public String name() {
+            return inner;
+        }
+
+        @Override
+        public boolean isUnset() {
+            return false;
+        }
+
+        @Override
+        public boolean isAllowedToTakeBreaks() {
+            return false;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            PTestStatus that = (PTestStatus) o;
+            return Objects.equals(inner, that.inner);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(inner);
+        }
+
+        @Override
+        public String toString() {
+            return inner;
+        }
+
+        @Override
+        public boolean isWorkingOnProduction() {
+            return this == ITEM_WORK;
+        }
+    }
+
+    private static class NoOpProductionJob implements IProductionJob<PTestStatus> {
+
+        @Override
+        public @Nullable PTestStatus tryChoosingItemlessWork() {
             return null;
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
             return null;
         }
 
         @Override
-        public ImmutableList<TestStatus> getAllWorkStatusesSortedByPreference() {
+        public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
             return ImmutableList.of(
-                    TestStatus.ITEM_WORK,
-                    TestStatus.ITEM_WORK_2
+                    BLOCK_READY_FOR_INGREDIENTS,
+                    BLOCK_READY_FOR_WORK
             );
         }
     }
 
-    private static class FailProductionJob implements IProductionJob<TestStatus> {
+    private static class FailProductionJob implements IProductionJob<PTestStatus> {
 
         AssertionError err = new AssertionError(
                 String.format("Itemless work is not allowed when using %s", getClass().getName())
         );
 
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
+        public @Nullable PTestStatus tryChoosingItemlessWork() {
             throw err;
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
             throw err;
         }
 
         @Override
-        public ImmutableList<TestStatus> getAllWorkStatusesSortedByPreference() {
+        public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
             return ImmutableList.of(
-                    TestStatus.ITEM_WORK,
-                    TestStatus.ITEM_WORK_2
+                    BLOCK_READY_FOR_INGREDIENTS,
+                    BLOCK_READY_FOR_WORK
             );
         }
     }
@@ -92,26 +234,27 @@ public class StatusesProductionRoutineTest {
     @Test
     void InMorning_StatusShouldBe_DroppingLoot_WhenEntityIsInJobSite_AndInventoryIsOnlyWork1_AndAllBlocksNeedWork2() {
         boolean hasSupplies = true;
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.GOING_TO_JOB,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.GOING_TO_JOB,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
-                        TestStatus.ITEM_WORK, true, // <- Has items for work 1
-                        TestStatus.ITEM_WORK_2, false // <- Does not have items for work 2
+                new TestInventory(false, false, ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, true, // <- Has ingredients
+                        BLOCK_READY_FOR_WORK, false // <- Does not have items for work
                 )),
                 new TestEntityLoc(arbitraryRoom),
                 new TestJobTown(
                         hasSupplies, true,
                         ImmutableList.of(),
                         ImmutableMap.of(
-                                // Job site needs item work 2 (not item work 1)
-                                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room)
+                                // Job site needs work (not ingredients)
+                                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
+                                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room)
                         )
                 ),
                 new NoOpProductionJob(), // Do not provide alternate logic for doing supply-work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
     }
 
     @Test
@@ -126,23 +269,24 @@ public class StatusesProductionRoutineTest {
         );
 
         boolean hasSupplies = true;
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.GOING_TO_JOB,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.GOING_TO_JOB,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
-                        TestStatus.ITEM_WORK, true // <- Has item to do work
+                new TestInventory(false, false, ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, true, // Has ingredients
+                        BLOCK_READY_FOR_WORK, false
                 )),
                 new TestEntityLoc(currentRoom),
                 new TestJobTown(
                         hasSupplies, true,
                         ImmutableList.of(),
                         ImmutableMap.of(
-                                TestStatus.ITEM_WORK, // <- site needs item work done
+                                BLOCK_READY_FOR_INGREDIENTS, // <- site needs ingredients
                                 ImmutableList.of(arbitraryRoom.room) // <- site is not current room
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
         Assertions.assertNull(s);
     }
@@ -150,23 +294,24 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldStay_GoingToJobSite_WhenEntityIsNotInJobSite_AndHasSupplies() {
         boolean hasSupplies = true;
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.GOING_TO_JOB,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.GOING_TO_JOB,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
-                        TestStatus.ITEM_WORK, true // <- Has item to do work
+                new TestInventory(false, false, ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, true, // <- Has ingredients
+                        BLOCK_READY_FOR_WORK, false
                 )),
                 new TestEntityLoc(null),
                 new TestJobTown(
                         hasSupplies, true,
                         ImmutableList.of(),
                         ImmutableMap.of(
-                                TestStatus.ITEM_WORK, // <- site needs item work done
+                                BLOCK_READY_FOR_INGREDIENTS, // <- site needs ingredients
                                 ImmutableList.of(arbitraryRoom.room) // <- site is not current room
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
         Assertions.assertNull(s);
     }
@@ -174,10 +319,10 @@ public class StatusesProductionRoutineTest {
     @Test
     void InMorning_StatusShouldBe_Idle_WhenAllSitesFull_AndInJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.ITEM_WORK,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.ITEM_WORK,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
+                new TestInventory(false, false, ImmutableMap.of(
                         // Inventory is empty. So we don't need to drop loot
                 )),
                 new TestEntityLoc(arbitraryRoom), // <- In a job site already
@@ -186,22 +331,22 @@ public class StatusesProductionRoutineTest {
                         ImmutableList.of(), // No rooms have product to collect
                         ImmutableMap.of(
                                 // Empty map means no rooms have any work to do
-                                // TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room)
+                                // PTestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room)
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.IDLE, s);
+        Assertions.assertEquals(PTestStatus.IDLE, s);
     }
 
     @Test
     void InMorning_StatusShouldBe_Idle_WhenAllSitesFull_AndOutOfJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.ITEM_WORK,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.ITEM_WORK,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
+                new TestInventory(false, false, ImmutableMap.of(
                         // Inventory is empty. So we don't need to drop loot
                 )),
                 new TestEntityLoc(null), // <- Not in a job site
@@ -210,28 +355,28 @@ public class StatusesProductionRoutineTest {
                         ImmutableList.of(), // No rooms have product to collect
                         ImmutableMap.of(
                                 // Empty map means no rooms have any work to do
-                                // TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room)
+                                // PTestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room)
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.IDLE, s);
+        Assertions.assertEquals(PTestStatus.IDLE, s);
     }
 
     @Test
-    void StatusShouldBe_itemWork_WhenSitesNeedItemWork_AndEntityInJobSite_WithSupplies() {
+    void StatusShouldBe_INGREDIENTS_WhenSitesNeedItemWork_AndEntityInJobSite_WithSupplies() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true // We have the items for work
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true // We have ingredients
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site
                 new TestJobTown(
                         hasSupplies, true,
@@ -239,25 +384,26 @@ public class StatusesProductionRoutineTest {
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
 
     @Test
-    void StatusShouldBe_itemWork2_WhenSitesNeedItemWork2_AndEntityInJobSite_WithSupplies() {
+    void StatusShouldBe_work_WhenSitesNeedWork_AndEntityInJobSite_WithSupplies() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true, // We have the items for work
-                TestStatus.ITEM_WORK_2, true // We have the items for work 2
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work 2 be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site
                 new TestJobTown(
                         hasSupplies, true,
@@ -265,13 +411,13 @@ public class StatusesProductionRoutineTest {
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK_2, s);
+        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
 
     @Test
-    void StatusShouldBe_itemWork2_insteadOfItemWork_WhenSitesNeedBothKindsOfWork_AndEntityInJobSiteThatNeedsWork2_WithSupplies() {
+    void StatusShouldBe_WORK_insteadOfINGREDIENTS_WhenSitesNeedBothKindsOfWork_AndEntityInJobSiteThatNeedsWORK_WithSupplies() {
         RoomRecipeMatch<Room> otherRoom = new RoomRecipeMatch<>(
                 new Room(
                         new Position(0, 1),
@@ -282,50 +428,50 @@ public class StatusesProductionRoutineTest {
         );
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true, // We have the items for work
-                TestStatus.ITEM_WORK_2, true // We have the items for work 2
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(otherRoom.room), // There is work 1 to be done in another room
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(otherRoom.room), // There are ing. needed in another room
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done in this room
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
-                new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site to do work 2
+                new TestInventory(false, false, invItemsForWork),
+                new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site to do work
                 new TestJobTown(
                         hasSupplies, true,
                         ImmutableList.of(), // No rooms have product to collect
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK_2, s);
+        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
 
     @Test
-    void StatusShouldBe_itemWork2_insteadOfItemWork_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
-        ImmutableList<TestStatus> preferences = ImmutableList.of(
-                TestStatus.ITEM_WORK_2,
-                TestStatus.ITEM_WORK
+    void StatusShouldBe_WORK_insteadOfINGREDIENTS_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
+        ImmutableList<Integer> preferences = ImmutableList.of(
+                BLOCK_READY_FOR_WORK,
+                BLOCK_READY_FOR_INGREDIENTS
         );
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true, // We have the items for work
-                TestStatus.ITEM_WORK_2, true // We have the items for work 2
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room), // There is work 1 to be done
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 to be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site
                 new TestJobTown(
                         hasSupplies, true,
@@ -335,32 +481,73 @@ public class StatusesProductionRoutineTest {
 
                 new FailProductionJob() { // Shouldn't do any non-standard work
 
+
                     @Override
-                    public ImmutableList<TestStatus> getAllWorkStatusesSortedByPreference() {
+                    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
                         return preferences;
                     }
                 },
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK_2, s);
+        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
+    }
+
+    @Test
+    void StatusShouldBe_INGREDIENTS_insteadOfWORK_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
+        ImmutableList<Integer> preferences = ImmutableList.of(
+                BLOCK_READY_FOR_INGREDIENTS,
+                BLOCK_READY_FOR_WORK
+        );
+
+        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
+        );
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
+        );
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true,
+                new TestInventory(false, false, invItemsForWork),
+                new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site
+                new TestJobTown(
+                        hasSupplies, true,
+                        ImmutableList.of(), // No rooms have product to collect
+                        workToBeDone
+                ),
+
+                new FailProductionJob() { // Shouldn't do any non-standard work
+
+
+                    @Override
+                    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+                        return preferences;
+                    }
+                },
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
 
     @Test
     void StatusShouldBe_collectingProduct_insteadOfItemWorks_EvenWhenSiteNeedsBothKindsOfWork_WhileInJobSite() {
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true, // We have the items for work
-                TestStatus.ITEM_WORK_2, true // We have the items for work 2
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room), // There is work 1 to be done
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 to be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site
                 new TestJobTown(
                         hasSupplies, true,
@@ -371,26 +558,26 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, s);
+        Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
     }
 
     @Test
     void StatusShouldBe_CollectingProduct_OverAllOtherStatuses_EvenWhenOutOfSite() {
         boolean hasSupplies = true; // Town has supplies
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true, // We have the items for work
-                TestStatus.ITEM_WORK_2, true // We have the items for work 2
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
+                BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room), // There is work 1 to be done
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 to be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(null), // <- Entity is OUTSIDE
                 new TestJobTown(
                         hasSupplies, true,
@@ -401,26 +588,26 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, s);
+        Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
     }
 
     @Test
-    void StatusShouldPrefer_ItemWork_OverCollectingSupplies_WhenSiteNeedsWork_AndAlreadyInSite() {
+    void StatusShouldPrefer_INGREDIENTS_OverCollectingSupplies_WhenSiteNeedsINGREDIENTS_AndAlreadyInSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<TestStatus, Boolean> invItemsForWork = ImmutableMap.of(
-                TestStatus.ITEM_WORK, true,
-                TestStatus.ITEM_WORK_2, true
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true,
+                BLOCK_READY_FOR_WORK, true
         );
-        Map<TestStatus, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
-                TestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom.room), // There is work 1 to be done
-                TestStatus.ITEM_WORK_2, ImmutableList.of(arbitraryRoom.room) // There is work 2 to be done
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
-        TestStatus s = JobStatuses.productionRoutine(
-                TestStatus.IDLE,
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, invItemsForWork),
+                new TestInventory(false, false, invItemsForWork),
                 new TestEntityLoc(arbitraryRoom), // <- Entity is in the job site already
                 new TestJobTown(
                         hasSupplies, true,
@@ -429,8 +616,8 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                TestStatus.FACTORY
+                PTestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
 }

@@ -85,7 +85,7 @@ public class FarmerStatuses {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
                     }
                 },
-                new JobStatuses.Job<>() {
+                new JobStatuses.Job<GathererJournal.Status, GathererJournal.Status>() {
                     @Override
                     public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : PRIORITY_ITEMLESS_WORK.entrySet()) {

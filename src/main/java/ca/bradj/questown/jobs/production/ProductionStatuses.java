@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.production;
 
+import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
@@ -10,10 +11,10 @@ public class ProductionStatuses {
     public static @Nullable <ROOM extends Room> ProductionStatus getNewStatusFromSignal(
             ProductionStatus currentStatus,
             Signals signal,
-            DEntityInvStateProvider inventory,
+            EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
             EntityLocStateProvider<ROOM> entity,
-            IStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<ProductionStatus> factory
     ) {
         switch (signal) {
             case MORNING, NOON -> {
@@ -28,17 +29,17 @@ public class ProductionStatuses {
 
     public static <ROOM extends Room> @Nullable ProductionStatus getMorningStatus(
             ProductionStatus currentStatus,
-            DEntityInvStateProvider inventory,
+            EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
             EntityLocStateProvider<ROOM> entity,
-            IStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<ProductionStatus> factory
     ) {
         ProductionStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, true, inventory, entity, town,
                 new TypicalProductionJob<>(ImmutableList.of(
-                        ProductionStatus.EXTRACTING_PRODUCT,
-                        ProductionStatus.WORKING_ON_PRODUCTION,
-                        ProductionStatus.INSERTING_INGREDIENTS
+                        JobBlock.BAKE_STATE_HAS_ORE,
+                        JobBlock.BAKE_STATE_FILLED,
+                        JobBlock.BAKE_STATE_EMPTY
                 )),
                 factory
         );
@@ -47,7 +48,7 @@ public class ProductionStatuses {
 
     public static <ROOM extends Room> @Nullable ProductionStatus getEveningStatus(
             ProductionStatus currentStatus,
-            EntityInvStateProvider<ProductionStatus> inventory,
+            EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
             IStatusFactory<ProductionStatus> factory
     ) {

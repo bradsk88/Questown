@@ -41,9 +41,9 @@ public class JobBlock extends HorizontalDirectionalBlock {
             "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
     );
 
-    private static final int BAKE_STATE_EMPTY = 0;
-    private static final int BAKE_STATE_FILLED = 1;
-    private static final int BAKE_STATE_HAS_ORE = 2;
+    public static final int BAKE_STATE_EMPTY = 0;
+    public static final int BAKE_STATE_FILLED = 1;
+    public static final int BAKE_STATE_HAS_ORE = 2;
 
     public JobBlock(
     ) {

@@ -38,7 +38,7 @@ public abstract class ProductionJob<
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     protected final Container inventory;
     protected final JOURNAL journal;
-    private final IStatusFactory<STATUS> statusFactory;
+    private final IProductionStatusFactory<STATUS> statusFactory;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -60,7 +60,7 @@ public abstract class ProductionJob<
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
-            IStatusFactory<STATUS> sFac
+            IProductionStatusFactory<STATUS> sFac
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -272,7 +272,7 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
-            IStatusFactory<STATUS> statusFactory
+            IProductionStatusFactory<STATUS> statusFactory
     );
 
     private void setupForGetSupplies(
@@ -383,8 +383,8 @@ public abstract class ProductionJob<
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider defaultEntityInvProvider() {
-        return new EntityInvStateProvider() {
+    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
+        return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
                 return journal.isInventoryFull();
@@ -403,7 +403,7 @@ public abstract class ProductionJob<
             }
 
             @Override
-            public Map<Integer, Boolean> getSupplyItemStatusByState() {
+            public Map<Integer, Boolean> getSupplyItemStatus() {
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };
