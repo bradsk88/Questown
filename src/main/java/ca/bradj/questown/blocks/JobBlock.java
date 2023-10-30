@@ -187,7 +187,7 @@ public class JobBlock extends HorizontalDirectionalBlock {
             LootContext.Builder p_60538_
     ) {
         // FIXME: Also drop stuff inside
-        return ImmutableList.of(ItemsInit.SMELTING_OVEN_BLOCK.get().getDefaultInstance());
+        return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {

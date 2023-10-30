@@ -33,22 +33,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Random;
 
-public class SmeltingOvenBlock extends HorizontalDirectionalBlock {
-    public static final String ITEM_ID = "smelting_oven_block";
+import static ca.bradj.questown.blocks.JobBlock.PROCESSING_STATE;
+import static ca.bradj.questown.blocks.JobBlock.WORK_LEFT;
 
-    public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
-            "processing_state", 0, 4
-    );
-
-    public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
-            "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
-    );
+public class OreProcessingBlock extends HorizontalDirectionalBlock {
+    public static final String ITEM_ID = "ore_processing_block";
 
     private static final int BAKE_STATE_EMPTY = 0;
     private static final int BAKE_STATE_FILLED = 1;
     private static final int BAKE_STATE_HAS_ORE = 2;
 
-    public SmeltingOvenBlock(
+    public OreProcessingBlock(
     ) {
         super(
                 Properties
@@ -189,7 +184,7 @@ public class SmeltingOvenBlock extends HorizontalDirectionalBlock {
             LootContext.Builder p_60538_
     ) {
         // FIXME: Also drop stuff inside
-        return ImmutableList.of(ItemsInit.SMELTING_OVEN_BLOCK.get().getDefaultInstance());
+        return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {

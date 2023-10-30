@@ -2,7 +2,7 @@ package ca.bradj.questown.core.init.items;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
-import ca.bradj.questown.blocks.SmeltingOvenBlock;
+import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.BlocksInit;
@@ -41,10 +41,10 @@ public class ItemsInit {
             )
     );
 
-    public static final RegistryObject<Item> SMELTING_OVEN_BLOCK = ITEMS.register(
-            SmeltingOvenBlock.ITEM_ID,
+    public static final RegistryObject<Item> ORE_PROCESSING_BLOCK = ITEMS.register(
+            OreProcessingBlock.ITEM_ID,
             () -> new BlockItem(
-                    BlocksInit.SMELTING_OVEN_BLOCK.get(),
+                    BlocksInit.ORE_PROCESSING_BLOCK.get(),
                     Questown.DEFAULT_ITEM_PROPS
             )
     );

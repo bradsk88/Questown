@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.blocks.SmeltingOvenBlock;
+import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -99,7 +99,7 @@ public class WorldInteraction {
             ServerLevel sl,
             BlockPos oldPos
     ) {
-        if (SmeltingOvenBlock.hasOreToCollect(sl, oldPos)) {
+        if (OreProcessingBlock.hasOreToCollect(sl, oldPos)) {
             @Nullable BlockState newState = JobBlock.extractRawProduct(
                     sl, oldPos,
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
@@ -114,8 +114,8 @@ public class WorldInteraction {
             LivingEntity entity,
             BlockPos bp
     ) {
-        if (SmeltingOvenBlock.canAcceptWork(sl, bp)) {
-            BlockState blockState = SmeltingOvenBlock.applyWork(sl, bp);
+        if (OreProcessingBlock.canAcceptWork(sl, bp)) {
+            BlockState blockState = OreProcessingBlock.applyWork(sl, bp);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -154,7 +154,7 @@ public class WorldInteraction {
     }
 
     private boolean tryInsertIngredients(ServerLevel sl, BlockPos bp) {
-        if (!SmeltingOvenBlock.canAcceptOre(sl, bp)) {
+        if (!OreProcessingBlock.canAcceptOre(sl, bp)) {
             return false;
         }
 
@@ -167,8 +167,8 @@ public class WorldInteraction {
                 name = registryName.toString();
             }
             // TODO: Accept more ores
-            if (SmeltingOvenBlock.canAcceptOre(sl, bp) && Items.IRON_ORE.equals(item.getItem())) {
-                SmeltingOvenBlock.insertItem(sl, bp, item);
+            if (OreProcessingBlock.canAcceptOre(sl, bp) && Items.IRON_ORE.equals(item.getItem())) {
+                OreProcessingBlock.insertItem(sl, bp, item);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;

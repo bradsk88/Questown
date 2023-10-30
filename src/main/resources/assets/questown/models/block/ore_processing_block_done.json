@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "questown:blocks/ore_processing_block_top_done",
+    "front": "questown:blocks/ore_processing_block_side_done",
+    "side": "questown:blocks/ore_processing_block_side_done"
+  }
+}

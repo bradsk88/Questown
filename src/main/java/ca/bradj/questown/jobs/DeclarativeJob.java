@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.blocks.SmeltingOvenBlock;
+import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
@@ -173,7 +173,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, SmeltingOvenBlock::hasOreToCollect);
+                return Jobs.roomsWithState(town, OreProcessingBlock::hasOreToCollect);
             }
 
             @Override

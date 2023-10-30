@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.SmeltingOvenBlock;
+import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableBiMap;
@@ -46,7 +46,7 @@ public class BlacksmithJob extends DeclarativeJob {
         super(
                 ownerUUID,
                 inventoryCapacity,
-                new ResourceLocation(Questown.MODID, SmeltingOvenBlock.ITEM_ID), // TODO: Change block
+                new ResourceLocation(Questown.MODID, OreProcessingBlock.ITEM_ID), // TODO: Change block
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
