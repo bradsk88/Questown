@@ -40,7 +40,6 @@ import java.util.function.BiConsumer;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
-    private final ImmutableBiMap<Integer, ProductionStatus> statusToBlockState;
     private final ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates;
 
@@ -52,19 +51,20 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private static final Marker marker = MarkerManager.getMarker("Smelter");
     private final WorldInteraction world;
-    private final ResourceLocation workBlockId;
+    private final ResourceLocation workRoomId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
+    private TranslatableComponent name;
 
     public DeclarativeJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            ResourceLocation workBlockId,
+            TranslatableComponent name,
+            ResourceLocation workRoomId,
             int maxState,
             ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableBiMap<Integer, ProductionStatus> statusToBlockState
+            ImmutableMap<Integer, Integer> workRequiredAtStates
     ) {
         super(
                 ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -72,7 +72,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 ), marker, new IProductionStatusFactory<>() {
                     @Override
                     public ProductionStatus fromJobBlockState(int s) {
-                        return statusToBlockState.get(s);
+                        return ProductionStatus.fromJobBlockStatus(s);
                     }
 
                     @Override
@@ -116,6 +116,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                     }
                 }
         );
+        this.name = name;
         this.world = new WorldInteraction(
                 inventory,
                 journal,
@@ -124,10 +125,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 workRequiredAtStates,
                 toolsRequiredAtStates
         );
-        this.workBlockId = workBlockId;
+        this.workRoomId = workRoomId;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
-        this.statusToBlockState = statusToBlockState;
     }
 
     private static RecipeProvider buildRecipe(
@@ -173,7 +173,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, OreProcessingBlock::hasOreToCollect);
+                return Jobs.roomsWithState(town, workRoomId, OreProcessingBlock::hasOreToCollect);
             }
 
             @Override
@@ -193,7 +193,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
         };
         BlockPos entityBlockPos = entity.blockPosition();
-        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workBlockId, entityBlockPos);
+        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
             public @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite() {
@@ -204,7 +204,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory);
 
         if (entityCurrentJobSite != null) {
-            tryWorking(town, entity, statusToBlockState.inverse(), entityCurrentJobSite);
+            tryWorking(town, entity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
         tryGetSupplies(jtp, entityBlockPos);
@@ -213,7 +213,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private void tryWorking(
             TownInterface town,
             LivingEntity entity,
-            Map<ProductionStatus, Integer> sToB,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
@@ -222,13 +221,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         );
 
         ProductionStatus status = getStatus();
-        if (!sToB.containsKey(status)) {
+        if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
             QT.JOB_LOGGER.warn("Shouldn't try to work when status is {}", status);
             return;
         }
 
-        Integer key = sToB.get(status);
-        this.workSpot = workSpots.getOrDefault(key, null);
+        this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
 
         this.world.tryWorking(town, entity, workSpot);
     }
@@ -256,12 +254,17 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     public void initializeStatusFromEntityData(@Nullable String s) {
-        ProductionStatus from = ProductionStatus.from(s);
-        if (from == ProductionStatus.UNSET) {
-            from = ProductionStatus.IDLE;
+        ProductionStatus from;
+        try {
+            from = ProductionStatus.from(s);
+        } catch (NumberFormatException nfe) {
+            QT.JOB_LOGGER.error("Ignoring exception: {}", nfe.getMessage());
+            from = ProductionStatus.FACTORY.idle();
+        }
+        if (from.isUnset()) {
+            from = ProductionStatus.FACTORY.idle();
         }
         this.journal.initializeStatus(from);
-        // TODO: Implement String->Status conversion
     }
 
     @Override
@@ -273,12 +276,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     protected Map<Integer, Boolean> getSupplyItemStatus() {
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, ImmutableList<Ingredient>> fn = (state, ingrs) -> {
-            ProductionStatus key = statusToBlockState.get(state);
-            if (key == null) {
-                QT.JOB_LOGGER.error("Status to BlockState map is missing {}", state);
-                return;
-            }
-
             if (ingrs.isEmpty()) {
                 if (!b.containsKey(state)) {
                     b.put(state, false);
@@ -316,7 +313,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         // TODO: Use tags to support more tiers of bakery
-        Collection<RoomRecipeMatch<MCRoom>> bakeries = town.getRoomsMatching(workBlockId);
+        Collection<RoomRecipeMatch<MCRoom>> bakeries = town.getRoomsMatching(workRoomId);
 
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
 
@@ -346,7 +343,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return;
             }
             b.put(state, Lists.newArrayList(Jobs.roomsWithState(
-                    town, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
+                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
             )));
         });
         toolsRequiredAtStates.forEach((state, ingrs) -> {
@@ -357,7 +354,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return;
             }
             b.get(state).addAll((Jobs.roomsWithState(
-                    town, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
+                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
             )));
         });
         return ImmutableMap.copyOf(b);
@@ -382,6 +379,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     public TranslatableComponent getJobName() {
-        return new TranslatableComponent("jobs.smelter");
+        return this.name;
     }
 }

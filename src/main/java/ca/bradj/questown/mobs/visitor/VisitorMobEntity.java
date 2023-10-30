@@ -11,6 +11,7 @@ import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.blacksmith.BlacksmithJob;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -345,7 +346,7 @@ public class VisitorMobEntity extends PathfinderMob {
             moveTo(nudged);
         }
 
-        if (job.getStatus() == null || job.getStatus() == GathererJournal.Status.UNSET) {
+        if (job.getStatus() == null || job.getStatus().isUnset()) {
             @Nullable String s = getStatusForClient();
             job.initializeStatusFromEntityData(s);
         }
@@ -909,6 +910,9 @@ public class VisitorMobEntity extends PathfinderMob {
             if (itemInHand.is(Items.IRON_INGOT)) {
                 convertToSmelter();
             }
+            if (itemInHand.is(Items.WOODEN_PICKAXE)) {
+                convertToBlacksmith();
+            }
         }
 
         if (this.job.shouldBeNoClip(town, blockPosition())) {
@@ -940,6 +944,15 @@ public class VisitorMobEntity extends PathfinderMob {
             return;
         }
         Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new DSmelterJob(uuid, 6);
+        this.setJob(job1);
+    }
+
+
+    public void convertToBlacksmith() {
+        if (level.isClientSide()) {
+            return;
+        }
+        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new BlacksmithJob(uuid, 6);
         this.setJob(job1);
     }
 

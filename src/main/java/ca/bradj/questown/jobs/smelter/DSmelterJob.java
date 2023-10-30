@@ -3,10 +3,9 @@ package ca.bradj.questown.jobs.smelter;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.DeclarativeJob;
-import ca.bradj.questown.jobs.production.ProductionStatus;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -31,11 +30,6 @@ public class DSmelterJob extends DeclarativeJob {
             1, 10,
             2, 0
     );
-    private static final ImmutableBiMap<Integer, ProductionStatus> MAP = ImmutableBiMap.of(
-            0, ProductionStatus.INSERTING_INGREDIENTS,
-            1, ProductionStatus.WORKING_ON_PRODUCTION,
-            2, ProductionStatus.EXTRACTING_PRODUCT
-    );
 
     public DSmelterJob(
             UUID ownerUUID,
@@ -44,12 +38,12 @@ public class DSmelterJob extends DeclarativeJob {
         super(
                 ownerUUID,
                 inventoryCapacity,
+                new TranslatableComponent("jobs.smelter"),
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 MAX_STATE,
                 INGREDIENTS,
                 TOOLS,
-                WORK,
-                MAP
+                WORK
         );
     }
 }

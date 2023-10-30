@@ -2,25 +2,50 @@ package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
-import ca.bradj.questown.jobs.smelter.SmelterStatus;
 import com.google.common.collect.ImmutableList;
 
-public enum ProductionStatus implements IProductionStatus<ProductionStatus> {
-    IDLE,
-    GOING_TO_JOB,
-    INSERTING_INGREDIENTS,
-    WORKING_ON_PRODUCTION,
-    EXTRACTING_PRODUCT,
-    DROPPING_LOOT,
-    COLLECTING_SUPPLIES,
-    UNSET, NO_SPACE, NO_SUPPLIES, RELAXING;
+import java.util.Objects;
 
+public class ProductionStatus implements IProductionStatus<ProductionStatus> {
+
+    private final int value;
+
+    // Numbers 0-9 are reserved for job-specific statuses.
+    // TODO: Should probably build something more flexible
+    private static final int firstNonCustomIndex = 10;
+    private static int nextIndex = firstNonCustomIndex;
 
     static {
-        for (ProductionStatus s : values()) {
-            SessionUniqueOrdinals.register(s);
+        for (int i = 0; i < firstNonCustomIndex; i++) {
+            SessionUniqueOrdinals.register(ProductionStatus.fromJobBlockStatus(i));
         }
     }
+
+    private static final ProductionStatus DROPPING_LOOT = SessionUniqueOrdinals.register(
+            new ProductionStatus("DROPPING_LOOT", nextIndex++)
+    );
+    private static final ProductionStatus NO_SPACE = SessionUniqueOrdinals.register(
+            new ProductionStatus("NO_SPACE", nextIndex++)
+    );
+
+    private static final ProductionStatus GOING_TO_JOB = SessionUniqueOrdinals.register(
+            new ProductionStatus("GOING_TO_JOB", nextIndex++)
+    );
+    private static final ProductionStatus NO_SUPPLIES = SessionUniqueOrdinals.register(
+            new ProductionStatus("NO_SUPPLIES", nextIndex++)
+    );
+    private static final ProductionStatus COLLECTING_SUPPLIES = SessionUniqueOrdinals.register(
+            new ProductionStatus("COLLECTING_SUPPLIES", nextIndex++)
+    );
+    private static final ProductionStatus IDLE = SessionUniqueOrdinals.register(
+            new ProductionStatus("IDLE", nextIndex++)
+    );
+    private static final ProductionStatus EXTRACTING_PRODUCT = SessionUniqueOrdinals.register(
+            new ProductionStatus("EXTRACTING_PRODUCT", nextIndex++)
+    );
+    private static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
+            new ProductionStatus("RELAXING", nextIndex++)
+    );
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -63,53 +88,98 @@ public enum ProductionStatus implements IProductionStatus<ProductionStatus> {
             return RELAXING;
         }
     };
+    private final String name;
+
+    public static ProductionStatus fromJobBlockStatus(int s) {
+        if (s >= firstNonCustomIndex) {
+            throw new IllegalStateException("Not a valid job block status: " + s);
+        }
+        return new ProductionStatus("state:" + s, s);
+    }
+
+    private ProductionStatus(String name, int i) {
+        this.value = i;
+        this.name = name;
+    }
 
     public static ProductionStatus from(String s) {
-        for (ProductionStatus ss : values()) {
-            if (ss.name().equals(s)) {
-                return ss;
-            }
-        }
-        return ProductionStatus.UNSET;
+        int i = Integer.parseInt(s);
+        return new ProductionStatus(s, i);
     }
 
     @Override
     public IStatusFactory<ProductionStatus> getFactory() {
-        return null;
+        return FACTORY;
     }
 
     @Override
     public boolean isGoingToJobsite() {
-        return this == GOING_TO_JOB;
+        return GOING_TO_JOB.equals(this);
     }
 
     @Override
     public boolean isWorkingOnProduction() {
-        return this == WORKING_ON_PRODUCTION;
+        return this.value < firstNonCustomIndex;
     }
 
     @Override
     public boolean isDroppingLoot() {
-        return this == DROPPING_LOOT;
+        return DROPPING_LOOT.equals(this);
     }
 
     @Override
     public boolean isCollectingSupplies() {
-        return this == COLLECTING_SUPPLIES;
+        return COLLECTING_SUPPLIES.equals(this);
+    }
+
+    @Override
+    public String name() {
+        return Integer.toString(value);
     }
 
     @Override
     public boolean isUnset() {
-        return this == UNSET;
+        return this.value < 0;
     }
 
     @Override
     public boolean isAllowedToTakeBreaks() {
+        if (this.isWorkingOnProduction()) {
+            return false;
+        }
         return !ImmutableList.of(
                 GOING_TO_JOB,
-                WORKING_ON_PRODUCTION,
                 DROPPING_LOOT,
-                COLLECTING_SUPPLIES
+                COLLECTING_SUPPLIES,
+                EXTRACTING_PRODUCT
         ).contains(this);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ProductionStatus that = (ProductionStatus) o;
+        return value == that.value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
+    }
+
+    public int getProductionState() {
+        if (value >= firstNonCustomIndex) {
+            throw new IllegalStateException("Invalid production status: " + value);
+        }
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return "ProductionStatus{" +
+                "value=" + value +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.ItemAccepting;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.Config;
@@ -166,9 +167,13 @@ public class WorldInteraction {
             if (registryName != null) {
                 name = registryName.toString();
             }
-            // TODO: Accept more ores
-            if (OreProcessingBlock.canAcceptOre(sl, bp) && Items.IRON_ORE.equals(item.getItem())) {
-                OreProcessingBlock.insertItem(sl, bp, item);
+            BlockState bl = sl.getBlockState(bp);
+            if (bl.getBlock() instanceof ItemAccepting ia) {
+                Integer work = workRequiredAtStates.getOrDefault(journal.getStatus().getProductionState(), 0);
+                if (work == null) {
+                    work = 0;
+                }
+                ia.insertItem(sl, bp, item, work);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;

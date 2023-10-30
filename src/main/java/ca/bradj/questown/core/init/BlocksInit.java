@@ -1,10 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.BreadOvenBlock;
-import ca.bradj.questown.blocks.OreProcessingBlock;
-import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.materials.WallType;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.DeferredRegister;
@@ -30,5 +27,8 @@ public class BlocksInit {
     );
     public static final RegistryObject<Block> ORE_PROCESSING_BLOCK = BLOCKS.register(
             OreProcessingBlock.ITEM_ID, OreProcessingBlock::new
+    );
+    public static final RegistryObject<Block> BLACKSMITHS_TABLE_BLOCK = BLOCKS.register(
+            BlacksmithsTableBlock.ITEM_ID, BlacksmithsTableBlock::new
     );
 }

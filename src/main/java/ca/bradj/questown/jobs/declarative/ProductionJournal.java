@@ -160,6 +160,6 @@ public class ProductionJournal<
         inventory.set(idx, mcHeldItem);
         updateItemListeners();
         // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
-        changeStatus(ProductionStatus.IDLE);
+        changeStatus(ProductionStatus.FACTORY.idle());
     }
 }

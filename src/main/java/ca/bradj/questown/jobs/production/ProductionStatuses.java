@@ -53,7 +53,7 @@ public class ProductionStatuses {
             IStatusFactory<ProductionStatus> factory
     ) {
         if (JobStatuses.hasItems(inventory)) {
-            return nullIfUnchanged(currentStatus, ProductionStatus.DROPPING_LOOT);
+            return nullIfUnchanged(currentStatus, factory.droppingLoot());
         }
 
         return nullIfUnchanged(currentStatus, factory.relaxing());

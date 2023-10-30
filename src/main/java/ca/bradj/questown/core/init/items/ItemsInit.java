@@ -1,10 +1,7 @@
 package ca.bradj.questown.core.init.items;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.BreadOvenBlock;
-import ca.bradj.questown.blocks.OreProcessingBlock;
-import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.TownDoorItem;
 import ca.bradj.questown.items.TownFenceGateItem;
@@ -45,6 +42,14 @@ public class ItemsInit {
             OreProcessingBlock.ITEM_ID,
             () -> new BlockItem(
                     BlocksInit.ORE_PROCESSING_BLOCK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
+    public static final RegistryObject<Item> BLACKSMITHS_TABLE_BLOCK = ITEMS.register(
+            BlacksmithsTableBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.BLACKSMITHS_TABLE_BLOCK.get(),
                     Questown.DEFAULT_ITEM_PROPS
             )
     );

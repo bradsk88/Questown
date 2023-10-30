@@ -242,10 +242,8 @@ public class Jobs {
         boolean Check(ServerLevel sl, BlockPos bp);
     }
 
-    public static Collection<MCRoom> roomsWithState(TownInterface town, StateCheck check) {
-        // TODO: Take a map of status:checker and return a map of status:roomlist
-        ResourceLocation id = new ResourceLocation(Questown.MODID, "smeltery");
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(id);
+    public static Collection<MCRoom> roomsWithState(TownInterface town, ResourceLocation roomType, StateCheck check) {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {
                     for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {

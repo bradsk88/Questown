@@ -70,7 +70,8 @@ public class SessionUniqueOrdinals {
         return i;
     }
 
-    public static void register(IStatus<?> s) {
+    public static <S extends IStatus<?>> S register(S s) {
         claimed.add(s);
+        return s;
     }
 }
