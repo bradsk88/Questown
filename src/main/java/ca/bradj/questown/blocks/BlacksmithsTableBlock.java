@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -28,8 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-import static ca.bradj.questown.blocks.JobBlock.PROCESSING_STATE;
-import static ca.bradj.questown.blocks.JobBlock.WORK_LEFT;
+import static ca.bradj.questown.blocks.JobBlock.*;
 
 public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements ItemAccepting {
     public static final String ITEM_ID = "blacksmiths_table";
@@ -57,19 +57,32 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
     ) {
         BlockState oldState = level.getBlockState(bp);
         int curValue = oldState.getValue(PROCESSING_STATE);
-
-        boolean canDo = switch(curValue) {
-            case BlacksmithJob.BLOCK_STATE_NEED_HANDLE -> item.is(Items.STICK);
-            case BlacksmithJob.BLOCK_STATE_NEED_HEAD -> item.is(ItemTags.PLANKS);
-            default -> false;
-        };
+        boolean canDo = false;
+        Ingredient ingredient = BlacksmithJob.INGREDIENTS_REQUIRED_AT_STATES.get(curValue);
+        if (ingredient != null) {
+            canDo = ingredient.test(item);
+        }
+        Integer qtyRequired = BlacksmithJob.INGREDIENT_QTY_REQUIRED_AT_STATES.getOrDefault(curValue, 0);
+        if (qtyRequired == null) {
+            qtyRequired = 0;
+        }
+        Integer curCount = oldState.getValue(INGREDIENT_COUNT);
+        if (canDo && curCount >= qtyRequired) {
+            QT.BLOCK_LOGGER.error("Somehow exceeded required quantity: can accept up to {}, had {}", qtyRequired, curCount);
+        }
 
         // FIXME: This currently moves the block to the next stage after only one stick
 
         if (canDo) {
             item.shrink(1);
+            int count = curCount + 1;
+            BlockState blockState = setIngredientCount(oldState, count);
+            if (count < qtyRequired) {
+                level.setBlockAndUpdate(bp, blockState);
+                return blockState;
+            }
             int val = curValue + 1;
-            BlockState blockState = setProcessingState(oldState, val);
+            blockState = setProcessingState(blockState, val);
             if (val == BlacksmithJob.BLOCK_STATE_NEED_WORK) {
                 blockState = blockState.setValue(WORK_LEFT, workToNextStep);
             }
@@ -133,6 +146,15 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
     ) {
         BlockState newState = oldState.setValue(PROCESSING_STATE, s);
         QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
+        return newState;
+    }
+
+    private static BlockState setIngredientCount(
+            BlockState oldState,
+            int s
+    ) {
+        BlockState newState = oldState.setValue(INGREDIENT_COUNT, s);
+        QT.BLOCK_LOGGER.debug("Ingredient count set to {}", s);
         return newState;
     }
 

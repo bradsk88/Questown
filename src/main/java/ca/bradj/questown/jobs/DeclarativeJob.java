@@ -40,8 +40,8 @@ import java.util.function.BiConsumer;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
-    private final ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates;
+    private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
 
     private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
             MCTownItem.fromMCItemStack(Items.COAL.getDefaultInstance()),
@@ -62,8 +62,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             TranslatableComponent name,
             ResourceLocation workRoomId,
             int maxState,
-            ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates
     ) {
         super(
@@ -131,18 +132,18 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     private static RecipeProvider buildRecipe(
-            ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
         return s -> {
             ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> bb = ImmutableList.builder();
-            ImmutableList<Ingredient> ingrs = ingredientsRequiredAtStates.get(s);
-            if (ingrs != null) {
-                ingrs.forEach(v -> bb.add(item -> v.test(item.toItemStack())));
+            Ingredient ingr = ingredientsRequiredAtStates.get(s);
+            if (ingr != null) {
+                bb.add(item -> ingr.test(item.toItemStack()));
             }
-            ImmutableList<Ingredient> tools = toolsRequiredAtStates.get(s);
-            if (tools != null) {
-                tools.forEach(v -> bb.add(item -> v.test(item.toItemStack())));
+            Ingredient tool = toolsRequiredAtStates.get(s);
+            if (tool != null) {
+                bb.add(item -> tool.test(item.toItemStack()));
             }
             return bb.build();
         };
@@ -275,8 +276,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
         HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, ImmutableList<Ingredient>> fn = (state, ingrs) -> {
-            if (ingrs.isEmpty()) {
+        BiConsumer<Integer, Ingredient> fn = (state, ingr) -> {
+            if (ingr == null) {
                 if (!b.containsKey(state)) {
                     b.put(state, false);
                 }
@@ -284,9 +285,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
 
             // The check passes if the worker has ALL the ingredients needed for the state
-            boolean has = ingrs.stream().allMatch(
-                    v -> journal.getItems().stream().anyMatch(z -> v.test(z.get().toItemStack()))
-            );
+            boolean has = journal.getItems().stream().anyMatch(z -> ingr.test(z.get().toItemStack()));
             if (!b.getOrDefault(state, false)) {
                 b.put(state, has);
             }

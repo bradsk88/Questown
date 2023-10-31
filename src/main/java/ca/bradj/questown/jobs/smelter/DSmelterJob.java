@@ -15,15 +15,20 @@ import java.util.UUID;
 public class DSmelterJob extends DeclarativeJob {
     public static final String NAME = "smelter";
     private static final int MAX_STATE = 2;
-    private static final ImmutableMap<Integer, ImmutableList<Ingredient>> INGREDIENTS = ImmutableMap.of(
-            0, ImmutableList.of(Ingredient.of(Items.IRON_ORE)),
-            1, ImmutableList.of(),
-            2, ImmutableList.of()
+    private static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of(
+            0, Ingredient.of(Items.IRON_ORE)
+            // 1
+            // 2
     );
-    private static final ImmutableMap<Integer, ImmutableList<Ingredient>> TOOLS = ImmutableMap.of(
-            0, ImmutableList.of(),
-            1, ImmutableList.of(Ingredient.of(TagsInit.Items.PICKAXES)),
-            2, ImmutableList.of()
+    private static final ImmutableMap<Integer, Integer> INGREDIENTS_QTY = ImmutableMap.of(
+            0, 1
+            // 1
+            // 2
+    );
+    private static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
+            // 0
+            1, Ingredient.of(TagsInit.Items.PICKAXES)
+            // 2
     );
     private static final ImmutableMap<Integer, Integer> WORK = ImmutableMap.of(
             0, 0,
@@ -42,6 +47,7 @@ public class DSmelterJob extends DeclarativeJob {
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 MAX_STATE,
                 INGREDIENTS,
+                INGREDIENTS_QTY,
                 TOOLS,
                 WORK
         );

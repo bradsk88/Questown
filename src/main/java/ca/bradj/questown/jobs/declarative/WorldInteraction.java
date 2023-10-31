@@ -34,18 +34,18 @@ public class WorldInteraction {
     // FIXME: Build production journal
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final int maxState;
-    private final ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates;
+    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     private int ticksSinceLastAction;
 
     public WorldInteraction(
             Container inventory,
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
-            ImmutableMap<Integer, ImmutableList<Ingredient>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, ImmutableList<Ingredient>> toolsRequiredAtStates
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
         this.inventory = inventory;
         this.journal = journal;
@@ -83,7 +83,7 @@ public class WorldInteraction {
             return tryExtractOre(sl, workSpot.position);
         }
 
-        if (!this.ingredientsRequiredAtStates.getOrDefault(workSpot.action, ImmutableList.of()).isEmpty()) {
+        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
             return tryInsertIngredients(sl, workSpot.position);
         }
 
@@ -134,27 +134,29 @@ public class WorldInteraction {
             QT.JOB_LOGGER.warn("Block state is null while trying to degrade tool");
             return;
         }
-        ImmutableList<Ingredient> tools = toolsRequiredAtStates.get(state);
-        if (tools == null) {
+        Ingredient tool = toolsRequiredAtStates.get(state);
+        if (tool == null) {
             QT.JOB_LOGGER.warn("Tool requirement is null while trying to degrade tool");
             return;
         }
 
-        tools.forEach(tool -> {
-            Optional<MCHeldItem> foundTool = journal.getItems()
-                    .stream()
-                    .filter(v -> tool.test(v.get().toItemStack()))
-                    .findFirst();
-            if (foundTool.isPresent()) {
-                int idx = journal.getItems().indexOf(foundTool.get());
-                ItemStack is = foundTool.get().get().toItemStack();
-                is.hurtAndBreak(1, entity, (x) -> {});
-                journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
-            }
-        });
+        Optional<MCHeldItem> foundTool = journal.getItems()
+                .stream()
+                .filter(v -> tool.test(v.get().toItemStack()))
+                .findFirst();
+        if (foundTool.isPresent()) {
+            int idx = journal.getItems().indexOf(foundTool.get());
+            ItemStack is = foundTool.get().get().toItemStack();
+            is.hurtAndBreak(1, entity, (x) -> {
+            });
+            journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
+        }
     }
 
-    private boolean tryInsertIngredients(ServerLevel sl, BlockPos bp) {
+    private boolean tryInsertIngredients(
+            ServerLevel sl,
+            BlockPos bp
+    ) {
         if (!OreProcessingBlock.canAcceptOre(sl, bp)) {
             return false;
         }

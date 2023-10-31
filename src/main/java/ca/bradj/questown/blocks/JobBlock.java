@@ -36,6 +36,9 @@ public class JobBlock extends HorizontalDirectionalBlock {
     public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
             "processing_state", 0, 4
     );
+    public static final IntegerProperty INGREDIENT_COUNT = IntegerProperty.create(
+            "processing_state", 0, 3
+    );
 
     public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
             "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()

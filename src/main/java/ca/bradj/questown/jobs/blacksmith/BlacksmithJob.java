@@ -21,24 +21,16 @@ public class BlacksmithJob extends DeclarativeJob {
 
     private static final int MAX_STATE = BLOCK_STATE_DONE;
 
-    public static final ImmutableMap<Integer, ImmutableList<Ingredient>> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, ImmutableList.of(
-                    Ingredient.of(Items.STICK),
-                    Ingredient.of(Items.STICK)
-            ),
-            BLOCK_STATE_NEED_HEAD, ImmutableList.of(
-                    Ingredient.of(ItemTags.PLANKS),
-                    Ingredient.of(ItemTags.PLANKS),
-                    Ingredient.of(ItemTags.PLANKS)
-            ),
-            BLOCK_STATE_NEED_WORK, ImmutableList.of(),
-            BLOCK_STATE_DONE, ImmutableList.of()
+    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_HANDLE, Ingredient.of(Items.STICK),
+            BLOCK_STATE_NEED_HEAD, Ingredient.of(ItemTags.PLANKS)
     );
-    public static final ImmutableMap<Integer, ImmutableList<Ingredient>> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, ImmutableList.of(),
-            BLOCK_STATE_NEED_HEAD, ImmutableList.of(),
-            BLOCK_STATE_NEED_WORK, ImmutableList.of(), // Add blacksmiths hammer or something?
-            BLOCK_STATE_DONE, ImmutableList.of()
+    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_HANDLE, 2,
+            BLOCK_STATE_NEED_HEAD, 3
+    );
+    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+            // Add blacksmiths hammer or something?
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_HANDLE, 0,
@@ -58,6 +50,7 @@ public class BlacksmithJob extends DeclarativeJob {
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,
+                INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES
         );
