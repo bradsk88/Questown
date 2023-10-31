@@ -33,8 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Random;
 
-import static ca.bradj.questown.blocks.JobBlock.PROCESSING_STATE;
-import static ca.bradj.questown.blocks.JobBlock.WORK_LEFT;
+import static ca.bradj.questown.blocks.JobBlock.*;
 
 public class OreProcessingBlock extends HorizontalDirectionalBlock implements ItemAccepting {
     public static final String ITEM_ID = "ore_processing_block";
@@ -109,36 +108,6 @@ public class OreProcessingBlock extends HorizontalDirectionalBlock implements It
         return oldState.getValue(PROCESSING_STATE) == BAKE_STATE_HAS_ORE;
     }
 
-    public static BlockState applyWork(
-            ServerLevel sl,
-            BlockPos bp
-    ) {
-        if (!canAcceptWork(sl, bp)) {
-            throw new IllegalStateException("Cannot apply work at " + bp);
-        }
-
-        BlockState oldState = sl.getBlockState(bp);
-        int workLeft = oldState.getValue(WORK_LEFT);
-        BlockState bs;
-        if (workLeft <= 0) {
-            bs = setProcessingState(oldState, BAKE_STATE_HAS_ORE);
-        } else {
-            bs = reduceWorkLeft(oldState);
-        }
-        if (oldState.equals(bs)) {
-            return null;
-        }
-        sl.setBlockAndUpdate(bp, bs);
-        return bs;
-    }
-
-    private static BlockState reduceWorkLeft(BlockState oldState) {
-        int l = oldState.getValue(WORK_LEFT);
-        int newVal = l - 1;
-        QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
-        return oldState.setValue(WORK_LEFT, newVal);
-    }
-
     private static BlockState setProcessingState(
             BlockState oldState,
             int s
@@ -178,7 +147,7 @@ public class OreProcessingBlock extends HorizontalDirectionalBlock implements It
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(PROCESSING_STATE, FACING, WORK_LEFT);
+        JobBlock.defaultBlockStateDefinition(p_51385_);
     }
 
 

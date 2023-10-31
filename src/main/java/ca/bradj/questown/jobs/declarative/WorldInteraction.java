@@ -3,14 +3,12 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.ItemAccepting;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +16,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.logging.log4j.Marker;
@@ -37,6 +34,7 @@ public class WorldInteraction {
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
+    private final ItemStack workResult;
     private int ticksSinceLastAction;
 
     public WorldInteraction(
@@ -45,7 +43,8 @@ public class WorldInteraction {
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ItemStack workResult
     ) {
         this.inventory = inventory;
         this.journal = journal;
@@ -53,6 +52,7 @@ public class WorldInteraction {
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
+        this.workResult = workResult;
     }
 
     public boolean tryWorking(
@@ -83,16 +83,17 @@ public class WorldInteraction {
             return tryExtractOre(sl, workSpot.position);
         }
 
-        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return tryInsertIngredients(sl, workSpot.position);
-        }
-
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
-                return tryProcessOre(sl, entity, workSpot.position);
+                return tryProcessOre(sl, entity, workSpot);
             }
         }
+
+        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
+            return tryInsertIngredients(sl, workSpot);
+        }
+
         return false;
     }
 
@@ -100,9 +101,9 @@ public class WorldInteraction {
             ServerLevel sl,
             BlockPos oldPos
     ) {
-        if (OreProcessingBlock.hasOreToCollect(sl, oldPos)) {
+        if (Integer.valueOf(maxState).equals(JobBlock.getState(sl, oldPos))) {
             @Nullable BlockState newState = JobBlock.extractRawProduct(
-                    sl, oldPos,
+                    sl, oldPos, this.workResult,
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
             );
             return newState != null;
@@ -113,10 +114,12 @@ public class WorldInteraction {
     private boolean tryProcessOre(
             ServerLevel sl,
             LivingEntity entity,
-            BlockPos bp
+            WorkSpot<Integer, BlockPos> ws
     ) {
-        if (OreProcessingBlock.canAcceptWork(sl, bp)) {
-            BlockState blockState = OreProcessingBlock.applyWork(sl, bp);
+        BlockPos bp = ws.position;
+        @Nullable Integer s = JobBlock.getState(sl, bp);
+        if (ws.action.equals(s)) {
+            BlockState blockState = JobBlock.applyWork(sl, bp);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -155,9 +158,11 @@ public class WorldInteraction {
 
     private boolean tryInsertIngredients(
             ServerLevel sl,
-            BlockPos bp
+            WorkSpot<Integer, BlockPos> ws
     ) {
-        if (!OreProcessingBlock.canAcceptOre(sl, bp)) {
+        BlockPos bp = ws.position;
+        Integer state = JobBlock.getState(sl, bp);
+        if (state == null || !state.equals(ws.action)) {
             return false;
         }
 
@@ -171,11 +176,13 @@ public class WorldInteraction {
             }
             BlockState bl = sl.getBlockState(bp);
             if (bl.getBlock() instanceof ItemAccepting ia) {
-                Integer work = workRequiredAtStates.getOrDefault(journal.getStatus().getProductionState(), 0);
-                if (work == null) {
-                    work = 0;
+                Integer nextStepWork = workRequiredAtStates.getOrDefault(
+                        journal.getStatus().getProductionState() + 1, 0
+                );
+                if (nextStepWork == null) {
+                    nextStepWork = 0;
                 }
-                ia.insertItem(sl, bp, item, work);
+                ia.insertItem(sl, bp, item, nextStepWork);
                 if (item.getCount() > 0) {
                     // didn't insert successfully
                     return false;

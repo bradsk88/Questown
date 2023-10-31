@@ -620,4 +620,32 @@ public class StatusesProductionRoutineTest {
         );
         Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
+
+    @Test
+    void StatusShouldBe_GoingToJob_IfRoomHasFinishedItems_AndNotInSite() {
+        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true,
+                BLOCK_READY_FOR_WORK, true
+        );
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
+                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
+        );
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true,
+                new TestInventory(false, false, invItemsForWork),
+                new TestEntityLoc(null), // <- Entity is NOT in job site
+                new TestJobTown(
+                        hasSupplies, true,
+                        ImmutableList.of(arbitraryRoom.room), // Finished products exist
+                        workToBeDone
+                ),
+
+                new FailProductionJob(), // Shouldn't do any non-standard work
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
+    }
 }

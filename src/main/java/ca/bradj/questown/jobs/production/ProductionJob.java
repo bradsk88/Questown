@@ -39,6 +39,7 @@ public abstract class ProductionJob<
     protected final Container inventory;
     protected final JOURNAL journal;
     private final IProductionStatusFactory<STATUS> statusFactory;
+    private final int maxState;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -57,6 +58,7 @@ public abstract class ProductionJob<
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
+            int maxState,
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
@@ -71,6 +73,7 @@ public abstract class ProductionJob<
         };
         this.ownerUUID = ownerUUID;
         this.allowedToPickUp = allowedToPickUp;
+        this.maxState = maxState;
         this.marker = logMarker;
         this.recipe = recipe;
         this.inventory = sc;

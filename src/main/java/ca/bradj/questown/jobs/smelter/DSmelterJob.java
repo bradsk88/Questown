@@ -49,7 +49,8 @@ public class DSmelterJob extends DeclarativeJob {
                 INGREDIENTS,
                 INGREDIENTS_QTY,
                 TOOLS,
-                WORK
+                WORK,
+                Items.IRON_ORE.getDefaultInstance()
         );
     }
 }

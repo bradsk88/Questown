@@ -37,7 +37,7 @@ public class JobBlock extends HorizontalDirectionalBlock {
             "processing_state", 0, 4
     );
     public static final IntegerProperty INGREDIENT_COUNT = IntegerProperty.create(
-            "processing_state", 0, 3
+            "ingredient_count", 0, 3
     );
 
     public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
@@ -93,15 +93,6 @@ public class JobBlock extends HorizontalDirectionalBlock {
         }
         return oldState.getValue(PROCESSING_STATE);
     }
-
-    public static boolean canAcceptWork(ServerLevel sl, BlockPos bp) {
-        BlockState oldState = sl.getBlockState(bp);
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
-            return false;
-        }
-        return oldState.getValue(PROCESSING_STATE) == BAKE_STATE_FILLED;
-    }
-
     public static boolean hasFinishedProduct(
             ServerLevel sl,
             BlockPos bp
@@ -117,15 +108,15 @@ public class JobBlock extends HorizontalDirectionalBlock {
             ServerLevel sl,
             BlockPos bp
     ) {
-        if (!canAcceptWork(sl, bp)) {
-            throw new IllegalStateException("Cannot apply work at " + bp);
-        }
-
         BlockState oldState = sl.getBlockState(bp);
         int workLeft = oldState.getValue(WORK_LEFT);
         BlockState bs;
         if (workLeft <= 0) {
-            bs = setProcessingState(oldState, BAKE_STATE_HAS_ORE);
+            Integer state = getState(sl, bp);
+            if (state == null) {
+                state = 0;
+            }
+            bs = setProcessingState(oldState, state + 1);
         } else {
             bs = reduceWorkLeft(oldState);
         }
@@ -155,12 +146,13 @@ public class JobBlock extends HorizontalDirectionalBlock {
     public static @Nullable BlockState extractRawProduct(
             ServerLevel sl,
             BlockPos block,
+            ItemStack is,
             @Nullable TakeFn takeFn
     ) {
         BlockState oldState = sl.getBlockState(block);
         BlockState bs = oldState.setValue(PROCESSING_STATE, BAKE_STATE_EMPTY);
         sl.setBlock(block, bs, 11);
-        moveOreToWorld(sl, block, takeFn);
+        moveOreToWorld(sl, block, is, takeFn);
         if (oldState.equals(bs)) {
             return null;
         }
@@ -170,18 +162,15 @@ public class JobBlock extends HorizontalDirectionalBlock {
     private static void moveOreToWorld(
             ServerLevel level,
             BlockPos b,
+            ItemStack is,
             @Nullable TakeFn takeFn
     ) {
-        ItemStack is = new ItemStack(Items.RAW_IRON, 2);
         Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
         level.setBlock(b, level.getBlockState(b).setValue(PROCESSING_STATE, BAKE_STATE_EMPTY), 11);
     }
 
-    public static int getProcessStateAsScore(BlockState oldState) {
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
-            return 0;
-        }
-        return oldState.getValue(PROCESSING_STATE);
+    public static void defaultBlockStateDefinition(StateDefinition.Builder<Block, BlockState> def) {
+        def.add(PROCESSING_STATE, INGREDIENT_COUNT, FACING, WORK_LEFT);
     }
 
     @Override
@@ -204,7 +193,7 @@ public class JobBlock extends HorizontalDirectionalBlock {
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(PROCESSING_STATE, FACING, WORK_LEFT);
+        defaultBlockStateDefinition(p_51385_);
     }
 
 
@@ -241,34 +230,5 @@ public class JobBlock extends HorizontalDirectionalBlock {
             p_53636_.addParticle(ParticleTypes.WHITE_ASH, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
             p_53636_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
         }
-    }
-
-    @Override
-    public InteractionResult use(
-            BlockState blockState,
-            Level level,
-            BlockPos pos,
-            Player player,
-            InteractionHand p_60507_,
-            BlockHitResult p_60508_
-    ) {
-        if (!(level instanceof ServerLevel sl)) {
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-
-        if (hasFinishedProduct(sl, pos)) {
-            moveOreToWorld(sl, pos, is -> player.getInventory().add(is));
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-
-        // TODO: Declaratively define user-facing messages
-//        if (canAcceptOre(sl, pos)) {
-//            player.sendMessage(
-//                    new TranslatableComponent("message.smelter.villagers_will_add_ore"),
-//                    player.getUUID()
-//            );
-//            return InteractionResult.sidedSuccess(level.isClientSide);
-//        }
-        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 }

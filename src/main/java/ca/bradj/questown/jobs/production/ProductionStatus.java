@@ -119,7 +119,12 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     @Override
     public boolean isWorkingOnProduction() {
-        return this.value < firstNonCustomIndex;
+        return isExtractingProduct() || this.value < firstNonCustomIndex;
+    }
+
+    @Override
+    public boolean isExtractingProduct() {
+        return EXTRACTING_PRODUCT.equals(this);
     }
 
     @Override

@@ -144,7 +144,14 @@ public class JobStatuses {
                             return null;
                         }
 
-                        return factory.extractingProduct();
+                        RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
+                        if (location != null) {
+                            if (rooms.contains(location.room)) {
+                                return factory.extractingProduct();
+                            }
+                        }
+
+                        return factory.goingToJobSite();
                     }
 
                     @Override

@@ -3,12 +3,11 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.jobs.blacksmith.BlacksmithJob;
+import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -43,9 +42,15 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
         );
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(PROCESSING_STATE, 0)
+                .setValue(INGREDIENT_COUNT, 0)
                 .setValue(FACING, Direction.NORTH)
                 .setValue(WORK_LEFT, 0)
         );
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49915_) {
+        JobBlock.defaultBlockStateDefinition(p_49915_);
     }
 
     @Override
@@ -58,11 +63,11 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
         BlockState oldState = level.getBlockState(bp);
         int curValue = oldState.getValue(PROCESSING_STATE);
         boolean canDo = false;
-        Ingredient ingredient = BlacksmithJob.INGREDIENTS_REQUIRED_AT_STATES.get(curValue);
+        Ingredient ingredient = BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES.get(curValue);
         if (ingredient != null) {
             canDo = ingredient.test(item);
         }
-        Integer qtyRequired = BlacksmithJob.INGREDIENT_QTY_REQUIRED_AT_STATES.getOrDefault(curValue, 0);
+        Integer qtyRequired = BlacksmithWoodenPickaxeJob.INGREDIENT_QTY_REQUIRED_AT_STATES.getOrDefault(curValue, 0);
         if (qtyRequired == null) {
             qtyRequired = 0;
         }
@@ -83,61 +88,12 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
             }
             int val = curValue + 1;
             blockState = setProcessingState(blockState, val);
-            if (val == BlacksmithJob.BLOCK_STATE_NEED_WORK) {
-                blockState = blockState.setValue(WORK_LEFT, workToNextStep);
-            }
+            blockState = blockState.setValue(WORK_LEFT, workToNextStep);
+            blockState = blockState.setValue(INGREDIENT_COUNT, 0);
             level.setBlockAndUpdate(bp, blockState);
             return blockState;
         }
         return oldState;
-    }
-
-    private static boolean canAcceptWork(ServerLevel sl, BlockPos bp) {
-        BlockState oldState = sl.getBlockState(bp);
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
-            return false;
-        }
-        return oldState.getValue(PROCESSING_STATE) == BlacksmithJob.BLOCK_STATE_NEED_WORK;
-    }
-
-    private static boolean hasOreToCollect(
-            ServerLevel sl,
-            BlockPos bp) {
-        BlockState oldState = sl.getBlockState(bp);
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
-            return false;
-        }
-        return oldState.getValue(PROCESSING_STATE) == BlacksmithJob.BLOCK_STATE_DONE;
-    }
-
-    public static BlockState applyWork(
-            ServerLevel sl,
-            BlockPos bp
-    ) {
-        if (!canAcceptWork(sl, bp)) {
-            throw new IllegalStateException("Cannot apply work at " + bp);
-        }
-
-        BlockState oldState = sl.getBlockState(bp);
-        int workLeft = oldState.getValue(WORK_LEFT);
-        BlockState bs;
-        if (workLeft <= 0) {
-            bs = setProcessingState(oldState, BlacksmithJob.BLOCK_STATE_DONE);
-        } else {
-            bs = reduceWorkLeft(oldState);
-        }
-        if (oldState.equals(bs)) {
-            return null;
-        }
-        sl.setBlockAndUpdate(bp, bs);
-        return bs;
-    }
-
-    private static BlockState reduceWorkLeft(BlockState oldState) {
-        int l = oldState.getValue(WORK_LEFT);
-        int newVal = l - 1;
-        QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
-        return oldState.setValue(WORK_LEFT, newVal);
     }
 
     private static BlockState setProcessingState(
@@ -187,10 +143,6 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
                 .setValue(WORK_LEFT, 0);
     }
 
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(PROCESSING_STATE, FACING, WORK_LEFT);
-    }
-
     @Override
     public InteractionResult use(
             BlockState blockState,
@@ -204,7 +156,7 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        if (hasOreToCollect(sl, pos)) {
+        if (Integer.valueOf(BlacksmithWoodenPickaxeJob.MAX_STATE).equals(JobBlock.getState(sl, pos))) {
             moveOreToWorld(sl, pos, is -> player.getInventory().add(is));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }

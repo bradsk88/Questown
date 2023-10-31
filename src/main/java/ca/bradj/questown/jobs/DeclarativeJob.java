@@ -26,6 +26,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -52,6 +53,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private static final Marker marker = MarkerManager.getMarker("Smelter");
     private final WorldInteraction world;
     private final ResourceLocation workRoomId;
+    private final @NotNull Integer maxState;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
     private TranslatableComponent name;
@@ -65,10 +67,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates
+            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ItemStack workResult
     ) {
         super(
-                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
+                ownerUUID, inventoryCapacity, maxState, allowedToPickUp, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker, new IProductionStatusFactory<>() {
                     @Override
@@ -124,8 +127,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 maxState,
                 ingredientsRequiredAtStates,
                 workRequiredAtStates,
-                toolsRequiredAtStates
+                toolsRequiredAtStates,
+                workResult
         );
+        this.maxState = maxState;
         this.workRoomId = workRoomId;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
@@ -174,7 +179,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, workRoomId, OreProcessingBlock::hasOreToCollect);
+                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(sl, bp)));
             }
 
             @Override
@@ -227,7 +232,15 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             return;
         }
 
-        this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
+        this.workSpot = null;
+
+        if (status.isExtractingProduct()) {
+            this.workSpot = workSpots.get(maxState);
+        }
+
+        if (workSpot == null) {
+            this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
+        }
 
         this.world.tryWorking(town, entity, workSpot);
     }
@@ -322,6 +335,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 @Nullable Integer blockState = JobBlock.getState(sl, blocks.getKey());
                 if (blockState == null) {
                     continue;
+                }
+                if (maxState.equals(blockState)) {
+                    return blocks.getKey();
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {

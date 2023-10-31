@@ -110,4 +110,9 @@ public enum SmelterStatus implements IProductionStatus<SmelterStatus> {
     public boolean isWorkingOnProduction() {
         return this == WORK_PROCESSING_ORE;
     }
+
+    @Override
+    public boolean isExtractingProduct() {
+        return this == WORK_COLLECTING_RAW_PRODUCT;
+    }
 }
