@@ -43,7 +43,7 @@ public class DSmelterJob extends DeclarativeJob {
         super(
                 ownerUUID,
                 inventoryCapacity,
-                new TranslatableComponent("jobs.smelter"),
+                "smelter",
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 MAX_STATE,
                 INGREDIENTS,

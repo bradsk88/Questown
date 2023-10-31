@@ -133,7 +133,8 @@ public class Jobs {
     public static boolean openInventoryAndStatusScreen(
             int capacity,
             ServerPlayer sp,
-            VisitorMobEntity e
+            VisitorMobEntity e,
+            String jobId
     ) {
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuestsWithRewards());
         NetworkHooks.openGui(sp, new MenuProvider() {
@@ -150,7 +151,7 @@ public class Jobs {
             ) {
                 TownQuestsContainer questsMenu = new TownQuestsContainer(windowId, quests);
                 return new InventoryAndStatusMenu(
-                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, questsMenu
+                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, questsMenu, jobId
                 );
             }
         }, data -> {
@@ -175,6 +176,7 @@ public class Jobs {
                 buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });
+            data.writeUtf(jobId);
         });
         return true; // Different jobs might have screens or not
     }

@@ -502,7 +502,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "baker");
     }
 
     @Override

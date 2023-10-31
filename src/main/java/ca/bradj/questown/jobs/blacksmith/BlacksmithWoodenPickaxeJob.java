@@ -47,7 +47,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
         super(
                 ownerUUID,
                 inventoryCapacity,
-                new TranslatableComponent("jobs.blacksmith"),
+                "blacksmith",
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,

@@ -479,7 +479,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "gatherer");
     }
 
     @Override

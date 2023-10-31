@@ -429,6 +429,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         }
 
         @Override
+        public String getCategoryId() {
+            return "gatherer";
+        }
+
+        @Override
         public IStatusFactory<Status> getFactory() {
             return FACTORY;
         }

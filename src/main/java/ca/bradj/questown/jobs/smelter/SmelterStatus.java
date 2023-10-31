@@ -107,6 +107,11 @@ public enum SmelterStatus implements IProductionStatus<SmelterStatus> {
     }
 
     @Override
+    public String getCategoryId() {
+        return "smelter";
+    }
+
+    @Override
     public boolean isWorkingOnProduction() {
         return this == WORK_PROCESSING_ORE;
     }

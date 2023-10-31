@@ -54,14 +54,14 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final WorldInteraction world;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
+    private final String jobId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
-    private TranslatableComponent name;
 
     public DeclarativeJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            TranslatableComponent name,
+            String jobId,
             ResourceLocation workRoomId,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -120,7 +120,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                     }
                 }
         );
-        this.name = name;
+        this.jobId = jobId;
         this.world = new WorldInteraction(
                 inventory,
                 journal,
@@ -368,6 +368,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 }
                 return;
             }
+            if (!b.containsKey(state)) {
+                b.put(state, new ArrayList<>());
+            }
             b.get(state).addAll((Jobs.roomsWithState(
                     town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
             )));
@@ -389,11 +392,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, jobId);
     }
 
     @Override
     public TranslatableComponent getJobName() {
-        return this.name;
+        return new TranslatableComponent("jobs." + jobId);
     }
 }

@@ -52,6 +52,11 @@ public class SessionUniqueOrdinals {
         public boolean isAllowedToTakeBreaks() {
             return false;
         }
+
+        @Override
+        public String getCategoryId() {
+            return null;
+        }
     };
 
     public static IStatus<?> getStatus(int i) {

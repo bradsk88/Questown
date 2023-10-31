@@ -534,7 +534,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e);
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "farmer");
     }
 
     @Override

@@ -1,10 +1,9 @@
 package ca.bradj.questown.integration.minecraft;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.jobs.BakerJournal;
-import ca.bradj.questown.jobs.FarmerJournal;
-import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.Snapshot;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
@@ -113,7 +112,13 @@ public class TownStateSerializer {
             int x = vcTag.getInt("x");
             int y = vcTag.getInt("y");
             int z = vcTag.getInt("z");
-            GathererJournal.Status status = GathererJournal.Status.from(vcTag.getString("journal_status"));
+            GathererJournal.Status status = GathererJournal.Status.IDLE;
+            try {
+                // FIXME: Handle more status types
+                status = GathererJournal.Status.from(vcTag.getString("journal_status"));
+            } catch (IllegalArgumentException e) {
+                QT.VILLAGER_LOGGER.error("Exception while loading status: {}", e.getMessage());
+            }
             ListTag items = vcTag.getList("journal_items", Tag.TAG_COMPOUND);
             ImmutableList.Builder<MCHeldItem> iB = ImmutableList.builder();
             for (Tag itemTag : items) {
@@ -124,9 +129,16 @@ public class TownStateSerializer {
             Snapshot<MCHeldItem> journal = new GathererJournal.Snapshot<>(status, heldItems);
             String job = vcTag.getString("job");
             switch (job) {
+                // FIXME: Help the compiler detect when cases are missing
                 case "farmer" -> journal = new FarmerJournal.Snapshot<>(status, heldItems);
                 case "baker" -> journal = new BakerJournal.Snapshot<>(status, heldItems);
-            }
+                case "smelter" -> journal = new SimpleSnapshot<>("smelter", ProductionStatus.FACTORY.idle(), heldItems);
+                case "blacksmith" -> journal = new SimpleSnapshot<>("blacksmith", ProductionStatus.FACTORY.idle(), heldItems);
+                default -> {
+                    QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple", job);
+                    journal = new SimpleSnapshot<>(job, ProductionStatus.FACTORY.idle(), heldItems);
+                }
+            };
             b.add(new TownState.VillagerData<>(
                     x, y, z,
                     journal,

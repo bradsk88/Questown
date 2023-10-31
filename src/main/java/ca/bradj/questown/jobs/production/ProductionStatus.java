@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -158,6 +159,14 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
                 COLLECTING_SUPPLIES,
                 EXTRACTING_PRODUCT
         ).contains(this);
+    }
+
+    @Override
+    public @Nullable String getCategoryId() {
+        if (isWorkingOnProduction()) {
+            return null; // Should use job ID
+        }
+        return "production";
     }
 
     @Override

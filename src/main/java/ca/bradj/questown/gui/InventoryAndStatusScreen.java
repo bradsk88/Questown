@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.jobs.IStatus;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -157,11 +159,20 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 32;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
+                String jobId = menu.getJobId();
+                TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
+                IStatus<?> status = menu.getStatus();
+                @Nullable String cat = status.getCategoryId();
+                if (cat == null) {
+                    cat = jobId;
+                }
                 TranslatableComponent component = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_1." + menu.getStatus().name(), menu.getJobName()
+                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.name()),
+                        jobName
                 );
                 TranslatableComponent component2 = new TranslatableComponent(
-                        "tooltips.villagers.job.gatherer.status_2." + menu.getStatus().name(), menu.getJobName()
+                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.name()),
+                        jobName
                 );
                 super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
                 return;

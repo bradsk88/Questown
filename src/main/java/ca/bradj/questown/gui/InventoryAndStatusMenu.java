@@ -33,7 +33,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     private final DataSlot statusSlot;
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
-    private final Component jobName;
+    private final String jobId;
     public final TownQuestsContainer questMenu;
 
     public static InventoryAndStatusMenu ForClientSide(
@@ -51,24 +51,26 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, inv, e.getSlotLocks(), e, qMenu
+                }, inv, e.getSlotLocks(), e, qMenu, buf.readUtf()
         );
     }
 
-    public InventoryAndStatusMenu(
+
+    public <S extends IStatus<S>> InventoryAndStatusMenu(
             int windowId,
             Container gathererInv,
             Inventory inv,
             Collection<Boolean> slotLocks,
             VisitorMobEntity gatherer,
-            TownQuestsContainer questMenu
+            TownQuestsContainer questMenu,
+            String jobId
 // For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
         this.questMenu = questMenu;
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
-        this.jobName = gatherer.getJobName();
+        this.jobId = jobId;
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
@@ -263,7 +265,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(newStatus));
     }
 
-    public Component getJobName() {
-        return this.jobName;
+    public String getJobId() {
+        return this.jobId;
     }
 }
