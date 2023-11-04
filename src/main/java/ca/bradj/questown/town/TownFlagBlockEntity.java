@@ -539,8 +539,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
         } else {
-            f.get().setJob(JobsRegistry.getInitializedJob(this, jobName, null, visitorUUID));
+            doSetJob(visitorUUID, jobName, f.get());
+            setChanged();
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void doSetJob(
+            UUID visitorUUID,
+            String jobName,
+            VisitorMobEntity f
+    ) {
+        f.setJob(JobsRegistry.getInitializedJob(this, jobName, null, visitorUUID));
     }
 
     @Override
@@ -627,7 +637,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
         this.entities.add(vEntity);
         vEntity.addChangeListener(() -> {
-            QT.FLAG_LOGGER.debug("Setting changed");
+            QT.FLAG_LOGGER.debug("Entity requests flag to be marked changed");
             this.setChanged();
         });
         this.setChanged();

@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
@@ -162,8 +163,16 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         changeStatus(Status.IDLE);
     }
 
-    public void addStatusListener(StatusListener l) {
+    public Function<Void, Void> addStatusListener(StatusListener l) {
         this.statusListeners.add(l);
+        return (x) -> {
+            this.removeStatusListener(l);
+            return null;
+        };
+    }
+
+    private void removeStatusListener(StatusListener l) {
+        this.statusListeners.remove(l);
     }
 
     public void addItemsListener(JournalItemsListener<H> l) {

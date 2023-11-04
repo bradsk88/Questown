@@ -28,7 +28,6 @@ public class WorldInteraction {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
 
     private final Container inventory;
-    // FIXME: Build production journal
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final int maxState;
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;

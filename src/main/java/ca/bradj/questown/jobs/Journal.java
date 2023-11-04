@@ -2,11 +2,13 @@ package ca.bradj.questown.jobs;
 
 import com.google.common.collect.ImmutableList;
 
+import java.util.function.Function;
+
 public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
 
     STATUS getStatus();
 
-    void addStatusListener(StatusListener o);
+    Function<Void, Void> addStatusListener(StatusListener o);
 
     void initializeStatus(STATUS s);
 
@@ -20,4 +22,6 @@ public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
             int idx,
             I mcHeldItem
     );
+
+    void removeStatusListener(StatusListener o);
 }

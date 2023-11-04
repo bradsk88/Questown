@@ -5,19 +5,21 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
 public class ProductionJournal<
         I extends Item<I>,
         H extends HeldItem<H, I>
 > implements Journal<ProductionStatus, H, SimpleSnapshot<ProductionStatus, H>> {
-    public static final String NAME = "smelter";
     private final JournalItemList<H> inventory;
     private final DefaultInventoryStateProvider<H> invState;
+    private final String jobId;
     private final int capacity;
     private final SignalSource sigs;
     private final IStatusFactory<ProductionStatus> statusFactory;
@@ -26,16 +28,27 @@ public class ProductionJournal<
     private final EmptyFactory<H> emptyFactory;
     private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
-    public void addStatusListener(StatusListener o) {
+    public Function<Void, Void> addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
+        return (x) -> {
+            this.removeStatusListener(o);
+            return null;
+        };
+    }
+
+    @Override
+    public void removeStatusListener(StatusListener o) {
+        this.statusListeners.remove(o);
     }
 
     public ProductionJournal(
+            @NotNull String jobId,
             SignalSource sigs,
             int capacity,
             EmptyFactory<H> ef,
             IStatusFactory<ProductionStatus> sf
     ) {
+        this.jobId = jobId;
         this.sigs = sigs;
         this.inventory = new JournalItemList<>(capacity, ef);
         this.capacity = capacity;
@@ -81,7 +94,7 @@ public class ProductionJournal<
     }
 
     public SimpleSnapshot<ProductionStatus, H> getSnapshot() {
-        return new SimpleSnapshot<>(NAME, status, ImmutableList.copyOf(inventory));
+        return new SimpleSnapshot<>(jobId, status, ImmutableList.copyOf(inventory));
     }
 
     public int getCapacity() {

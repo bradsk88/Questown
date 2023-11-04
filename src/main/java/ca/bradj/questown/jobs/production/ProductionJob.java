@@ -25,13 +25,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker, SignalSource {
 
     private final Marker marker;
 
@@ -39,7 +41,6 @@ public abstract class ProductionJob<
     protected final Container inventory;
     protected final JOURNAL journal;
     private final IProductionStatusFactory<STATUS> statusFactory;
-    private final int maxState;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -51,6 +52,9 @@ public abstract class ProductionJob<
     private final UUID ownerUUID;
     private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
 
+    @Override
+    public abstract Signals getSignal();
+
     public interface RecipeProvider {
         ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(int workState);
     }
@@ -58,10 +62,10 @@ public abstract class ProductionJob<
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            int maxState,
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
+            BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac
     ) {
         // TODO: This is copy pasted. Reduce duplication.
@@ -73,7 +77,6 @@ public abstract class ProductionJob<
         };
         this.ownerUUID = ownerUUID;
         this.allowedToPickUp = allowedToPickUp;
-        this.maxState = maxState;
         this.marker = logMarker;
         this.recipe = recipe;
         this.inventory = sc;
@@ -83,19 +86,15 @@ public abstract class ProductionJob<
             this.locks.add(new LockSlot(i, this));
         }
 
-        this.journal = getInitializedJournal(inventoryCapacity, sFac);
+        this.journal = journalInit.apply(inventoryCapacity, this);
         this.journal.addItemListener(this);
 
         this.statusFactory = sFac;
     }
 
-    protected abstract JOURNAL getInitializedJournal(
-            int inventoryCapacity,  IStatusFactory<STATUS> sFac
-    );
-
     @Override
-    public void addStatusListener(StatusListener o) {
-        this.journal.addStatusListener(o);
+    public Function<Void, Void> addStatusListener(StatusListener o) {
+        return this.journal.addStatusListener(o);
     }
 
     @Override
@@ -349,8 +348,8 @@ public abstract class ProductionJob<
     }
 
     @Override
-    public void initialize(SNAPSHOT journal) {
-        this.journal.initialize(journal);
+    public void initialize(Snapshot<MCHeldItem> journal) {
+        this.journal.initialize((SNAPSHOT) journal);
     }
 
 

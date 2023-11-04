@@ -46,6 +46,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
@@ -111,8 +112,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public void addStatusListener(StatusListener o) {
-        this.journal.addStatusListener(o);
+    public Function<Void, Void> addStatusListener(StatusListener o) {
+        return this.journal.addStatusListener(o);
     }
 
     @Override
@@ -215,7 +216,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case FARMING_TILLING -> workSpots.getOrDefault(FarmerAction.TILL, null);
             case FARMING_COMPOSTING -> workSpots.getOrDefault(FarmerAction.COMPOST, null);
             case FARMING_WEEDING -> workSpots.getOrDefault(FarmerAction.WEED, null);
-            // FIXME: Define a custom FarmerStatus class so we can remove this default case and benefit from compiler checks
+            // TODO: Define a custom FarmerStatus class so we can remove this default case and benefit from compiler checks
             default -> null;
         };
 
@@ -548,8 +549,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public void initialize(FarmerJournal.Snapshot<MCHeldItem> journal) {
-        this.journal.initialize(journal);
+    public void initialize(Snapshot<MCHeldItem> journal) {
+        this.journal.initialize((FarmerJournal.Snapshot<MCHeldItem>) journal);
     }
 
     @Override

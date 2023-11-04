@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication? (Extend ProductionJob)
 public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implements Journal<GathererJournal.Status, H, BakerJournal.Snapshot<H>> {
@@ -19,8 +20,17 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
     private final ItemChecker<H> itemsToHold;
     private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
-    public void addStatusListener(StatusListener o) {
+    public Function<Void, Void> addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
+        return (x) -> {
+            this.removeStatusListener(o);
+            return null;
+        };
+    }
+
+    @Override
+    public void removeStatusListener(StatusListener o) {
+        statusListeners.remove(o);
     }
 
     public interface ItemChecker<H> {

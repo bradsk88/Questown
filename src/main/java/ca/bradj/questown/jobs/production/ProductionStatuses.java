@@ -63,7 +63,7 @@ public class ProductionStatuses {
             ProductionStatus oldStatus,
             ProductionStatus newStatus
     ) {
-        if (oldStatus == newStatus) {
+        if (oldStatus.equals(newStatus)) {
             return null;
         }
         return newStatus;

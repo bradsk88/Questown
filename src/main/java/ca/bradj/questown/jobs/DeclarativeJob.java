@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
@@ -15,7 +14,6 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -38,9 +36,56 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
+    public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
+        @Override
+        public ProductionStatus fromJobBlockState(int s) {
+            return ProductionStatus.fromJobBlockStatus(s);
+        }
+
+        @Override
+        public ProductionStatus droppingLoot() {
+            return ProductionStatus.FACTORY.droppingLoot();
+        }
+
+        @Override
+        public ProductionStatus noSpace() {
+            return ProductionStatus.FACTORY.noSpace();
+        }
+
+        @Override
+        public ProductionStatus goingToJobSite() {
+            return ProductionStatus.FACTORY.goingToJobSite();
+        }
+
+        @Override
+        public ProductionStatus noSupplies() {
+            return ProductionStatus.FACTORY.noSupplies();
+        }
+
+        @Override
+        public ProductionStatus collectingSupplies() {
+            return ProductionStatus.FACTORY.collectingSupplies();
+        }
+
+        @Override
+        public ProductionStatus idle() {
+            return ProductionStatus.FACTORY.idle();
+        }
+
+        @Override
+        public ProductionStatus extractingProduct() {
+            return ProductionStatus.FACTORY.extractingProduct();
+        }
+
+        @Override
+        public ProductionStatus relaxing() {
+            return ProductionStatus.FACTORY.relaxing();
+        }
+    };
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
 
@@ -50,7 +95,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             MCTownItem.fromMCItemStack(Items.RAW_IRON.getDefaultInstance())
     );
 
-    private static final Marker marker = MarkerManager.getMarker("Smelter");
+    private static final Marker marker = MarkerManager.getMarker("DJob");
     private final WorldInteraction world;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
@@ -61,7 +106,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     public DeclarativeJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            String jobId,
+            @NotNull String jobId,
             ResourceLocation workRoomId,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -71,54 +116,17 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ItemStack workResult
     ) {
         super(
-                ownerUUID, inventoryCapacity, maxState, allowedToPickUp, buildRecipe(
+                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
-                ), marker, new IProductionStatusFactory<>() {
-                    @Override
-                    public ProductionStatus fromJobBlockState(int s) {
-                        return ProductionStatus.fromJobBlockStatus(s);
-                    }
-
-                    @Override
-                    public ProductionStatus droppingLoot() {
-                        return ProductionStatus.FACTORY.droppingLoot();
-                    }
-
-                    @Override
-                    public ProductionStatus noSpace() {
-                        return ProductionStatus.FACTORY.noSpace();
-                    }
-
-                    @Override
-                    public ProductionStatus goingToJobSite() {
-                        return ProductionStatus.FACTORY.goingToJobSite();
-                    }
-
-                    @Override
-                    public ProductionStatus noSupplies() {
-                        return ProductionStatus.FACTORY.noSupplies();
-                    }
-
-                    @Override
-                    public ProductionStatus collectingSupplies() {
-                        return ProductionStatus.FACTORY.collectingSupplies();
-                    }
-
-                    @Override
-                    public ProductionStatus idle() {
-                        return ProductionStatus.FACTORY.idle();
-                    }
-
-                    @Override
-                    public ProductionStatus extractingProduct() {
-                        return ProductionStatus.FACTORY.extractingProduct();
-                    }
-
-                    @Override
-                    public ProductionStatus relaxing() {
-                        return ProductionStatus.FACTORY.relaxing();
-                    }
-                }
+                ), marker,
+                (capacity, signalSource) -> new ProductionJournal<>(
+                        jobId,
+                        signalSource,
+                        capacity,
+                        MCHeldItem::Air,
+                        STATUS_FACTORY
+                ),
+                STATUS_FACTORY
         );
         this.jobId = jobId;
         this.world = new WorldInteraction(
@@ -152,19 +160,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
             return bb.build();
         };
-    }
-
-    @Override
-    protected ProductionJournal<MCTownItem, MCHeldItem> getInitializedJournal(
-            int inventoryCapacity,
-            IStatusFactory<ProductionStatus> sFac
-    ) {
-        return new ProductionJournal<>(
-                () -> this.signal,
-                inventoryCapacity,
-                MCHeldItem::Air,
-                sFac
-        );
     }
 
     @Override
@@ -228,7 +223,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
         ProductionStatus status = getStatus();
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
-            QT.JOB_LOGGER.warn("Shouldn't try to work when status is {}", status);
             return;
         }
 
@@ -282,6 +276,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     @Override
+    public Signals getSignal() {
+        return signal;
+    }
+
+    @Override
     public String getStatusToSyncToClient() {
         return journal.getStatus().name();
     }
@@ -324,7 +323,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             return null;
         }
 
-        // TODO: Use tags to support more tiers of bakery
+        // TODO: Use tags to support more tiers of work rooms
         Collection<RoomRecipeMatch<MCRoom>> bakeries = town.getRoomsMatching(workRoomId);
 
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();

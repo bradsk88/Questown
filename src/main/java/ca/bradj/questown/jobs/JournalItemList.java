@@ -22,7 +22,7 @@ public class JournalItemList<H extends HeldItem<H, ?>> extends ArrayList<H> {
         ImmutableList<H> initItems = b.build();
         if (initItems.size() != size()) {
             throw new IllegalArgumentException(String.format(
-                    "Argument to setItems is wrong length. Should be %s", size()
+                    "Argument to setItems is wrong length. Should be %d but got %s", size(), initItems.size()
             ));
         }
         clear();

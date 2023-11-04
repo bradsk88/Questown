@@ -11,8 +11,6 @@ import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
-import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -95,6 +93,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -138,6 +137,7 @@ public class VisitorMobEntity extends PathfinderMob {
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
+    private Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -152,7 +152,9 @@ public class VisitorMobEntity extends PathfinderMob {
         }
         // Technically this also gets us item updates because item changes cause status to go back to IDLE
         // But this is admittedly a bit fragile.
-        this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
+        this.cleanupJobListeners.add(
+                this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+        );
     }
 
     public VisitorMobEntity(
@@ -283,10 +285,18 @@ public class VisitorMobEntity extends PathfinderMob {
         return new GathererJob(town, inventoryCapacity, uuid);
     }
 
+    /**
+     * @deprecated Only the town block should call this. Everyone else should change villager jobs using
+     * {@link TownInterface#changeJobForVisitor} instead.
+     */
     public void setJob(Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> initializedJob) {
+        this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
         entityData.set(jobName, job.getJobName().getKey());
         QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", job.getJobName().getKey(), uuid);
+        this.cleanupJobListeners.add(
+                this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+        );
     }
 
     @Override
@@ -323,6 +333,9 @@ public class VisitorMobEntity extends PathfinderMob {
     public void tick() {
         super.tick();
 
+        if (!initialized) {
+            return;
+        }
 
         long start = System.currentTimeMillis();
         visitorTick();
@@ -854,8 +867,11 @@ public class VisitorMobEntity extends PathfinderMob {
             double zPos,
             Snapshot journal
     ) {
+        this.town = town;
         setJob(JobsRegistry.getInitializedJob(town, journal.jobStringValue(), journal, uuid));
-        this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed));
+        this.cleanupJobListeners.add(
+                this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+        );
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;
@@ -900,18 +916,21 @@ public class VisitorMobEntity extends PathfinderMob {
             float p_21017_
     ) {
         if (p_21016_.getEntity() instanceof Player p) {
+            if (p.getLevel().isClientSide()) {
+                return super.hurt(p_21016_, p_21017_);
+            }
             ItemStack itemInHand = p.getItemInHand(InteractionHand.MAIN_HAND);
             if (itemInHand.is(Items.WHEAT_SEEDS)) {
-                convertToFarmer();
+                town.changeJobForVisitor(uuid, "farmer");
             }
             if (itemInHand.is(Items.BREAD)) {
-                convertToBaker();
+                town.changeJobForVisitor(uuid, "baker");
             }
             if (itemInHand.is(Items.IRON_INGOT)) {
-                convertToSmelter();
+                town.changeJobForVisitor(uuid, "smelter");
             }
             if (itemInHand.is(Items.WOODEN_PICKAXE)) {
-                convertToBlacksmith();
+                town.changeJobForVisitor(uuid, "blacksmith");
             }
         }
 
@@ -920,40 +939,6 @@ public class VisitorMobEntity extends PathfinderMob {
         }
 
         return super.hurt(p_21016_, p_21017_);
-    }
-
-    // TODO: Generalize
-    public void convertToFarmer() {
-        if (level.isClientSide()) {
-            return;
-        }
-        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new FarmerJob(uuid, 6);
-        this.setJob(job1);
-    }
-
-    public void convertToBaker() {
-        if (level.isClientSide()) {
-            return;
-        }
-        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new BakerJob(uuid, 6);
-        this.setJob(job1);
-    }
-
-    public void convertToSmelter() {
-        if (level.isClientSide()) {
-            return;
-        }
-        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new DSmelterJob(uuid, 6);
-        this.setJob(job1);
-    }
-
-
-    public void convertToBlacksmith() {
-        if (level.isClientSide()) {
-            return;
-        }
-        Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job1 = new BlacksmithWoodenPickaxeJob(uuid, 6);
-        this.setJob(job1);
     }
 
     @Override

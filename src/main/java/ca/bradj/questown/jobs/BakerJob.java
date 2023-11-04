@@ -39,6 +39,7 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 
 public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
@@ -91,8 +92,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
-    public void addStatusListener(StatusListener o) {
-        this.journal.addStatusListener(o);
+    public Function<Void, Void> addStatusListener(StatusListener o) {
+        return this.journal.addStatusListener(o);
     }
 
     @Override
@@ -516,8 +517,8 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
-    public void initialize(BakerJournal.Snapshot<MCHeldItem> journal) {
-        this.journal.initialize(journal);
+    public void initialize(Snapshot<MCHeldItem> journal) {
+        this.journal.initialize((BakerJournal.Snapshot<MCHeldItem>) journal);
     }
 
     @Override

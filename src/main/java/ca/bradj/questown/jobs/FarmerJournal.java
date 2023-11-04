@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 // TODO: This is almost entirely copy-pasted. Reduce duplication?
 public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
@@ -18,8 +19,16 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
     private final ItemChecker<H> itemsToHold;
     private ArrayList<StatusListener> statusListeners = new ArrayList<>();
 
-    public void addStatusListener(StatusListener o) {
+    public Function<Void, Void> addStatusListener(StatusListener o) {
         this.statusListeners.add(o);
+        return (x) -> {
+            this.removeStatusListener(o);
+            return null;
+        };
+    }
+
+    private void removeStatusListener(StatusListener o) {
+        this.statusListeners.remove(o);
     }
 
     public interface ItemChecker<H> {

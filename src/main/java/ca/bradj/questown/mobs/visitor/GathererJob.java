@@ -33,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 
 public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
@@ -510,8 +511,9 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return journal.getStatus();
     }
 
-    public void addStatusListener(StatusListener l) {
-        journal.addStatusListener(l);
+    @Override
+    public Function<Void, Void> addStatusListener(StatusListener l) {
+        return journal.addStatusListener(l);
     }
 
     @Override
@@ -528,8 +530,8 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         return journal.getSnapshot(MCHeldItem::Air);
     }
 
-    public void initialize(GathererJournal.Snapshot<MCHeldItem> journal) {
-        this.journal.initialize(journal);
+    public void initialize(Snapshot<MCHeldItem> journal) {
+        this.journal.initialize((GathererJournal.Snapshot<MCHeldItem>) journal);
     }
 
     public void lockSlot(int slot) {

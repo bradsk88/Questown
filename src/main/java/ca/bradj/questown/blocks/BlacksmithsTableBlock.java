@@ -76,8 +76,6 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock implements
             QT.BLOCK_LOGGER.error("Somehow exceeded required quantity: can accept up to {}, had {}", qtyRequired, curCount);
         }
 
-        // FIXME: This currently moves the block to the next stage after only one stick
-
         if (canDo) {
             item.shrink(1);
             int count = curCount + 1;

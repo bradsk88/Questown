@@ -162,6 +162,11 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
+        public @Nullable String getCategoryId() {
+            return "test";
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -182,6 +187,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public boolean isWorkingOnProduction() {
             return this == ITEM_WORK;
+        }
+
+        @Override
+        public boolean isExtractingProduct() {
+            return this == COLLECTING_PRODUCT;
         }
     }
 
