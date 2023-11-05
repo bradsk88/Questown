@@ -150,6 +150,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             entity.recallVillagers();
             return InteractionResult.sidedSuccess(false);
         }
+        if (itemInHand.getItem().equals(Items.PAPER)) {
+            entity.addRandomWork();
+            return InteractionResult.sidedSuccess(false);
+        }
 
         // TODO: Consider making a new recipe type so any item can be cnverted to
         //  any other item and with the parent NBT stored on the new item.

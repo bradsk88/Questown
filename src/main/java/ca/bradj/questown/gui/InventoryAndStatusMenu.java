@@ -2,10 +2,10 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,7 +33,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     private final DataSlot statusSlot;
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
-    private final String jobId;
+    private final JobID jobId;
     public final TownQuestsContainer questMenu;
 
     public static InventoryAndStatusMenu ForClientSide(
@@ -44,6 +44,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
         TownQuestsContainer qMenu = new TownQuestsContainer(windowId, TownQuestsContainer.readQuests(buf));
+        JobID id = new JobID(buf.readUtf(), buf.readUtf());
         return new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(size) {
@@ -51,7 +52,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, inv, e.getSlotLocks(), e, qMenu, buf.readUtf()
+                }, inv, e.getSlotLocks(), e, qMenu, id
         );
     }
 
@@ -63,7 +64,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             Collection<Boolean> slotLocks,
             VisitorMobEntity gatherer,
             TownQuestsContainer questMenu,
-            String jobId
+            JobID jobId
 // For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
@@ -265,7 +266,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(newStatus));
     }
 
-    public String getJobId() {
-        return this.jobId;
+    public String getRootJobId() {
+        return this.jobId.rootId();
     }
 }

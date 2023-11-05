@@ -2,8 +2,8 @@ package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.DeclarativeJob;
+import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
@@ -12,6 +12,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.UUID;
 
 public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
+    public static final JobID ID = new JobID("blacksmith", "wooden_pickaxe");
 
     public static final int BLOCK_STATE_NEED_HANDLE = 0;
     public static final int BLOCK_STATE_NEED_HEAD = 1;
@@ -47,14 +48,14 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
         super(
                 ownerUUID,
                 inventoryCapacity,
-                "blacksmith",
+                ID,
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                Items.WOODEN_PICKAXE.getDefaultInstance()
+                Items.WOODEN_PICKAXE::getDefaultInstance
         );
     }
 }

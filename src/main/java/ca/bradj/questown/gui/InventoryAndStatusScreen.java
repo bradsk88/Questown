@@ -159,7 +159,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 32;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                String jobId = menu.getJobId();
+                // TODO: Render root and current job
+                String jobId = menu.getRootJobId();
                 TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
                 IStatus<?> status = menu.getStatus();
                 @Nullable String cat = status.getCategoryId();

@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Supplier;
+
 public class JobBlock {
 
     public static @Nullable Integer getState(
@@ -65,13 +67,13 @@ public class JobBlock {
             ServerLevel sl,
             JobHandle jh,
             BlockPos block,
-            ItemStack is,
+            Supplier<ItemStack> is,
             @Nullable TakeFn takeFn
     ) {
         TownJobHandle.State oldState = jh.getJobBlockState(block);
         TownJobHandle.State bs = oldState.setProcessing(0);
+        moveOreToWorld(sl, jh, block, bs, is.get(), takeFn);
         jh.setJobBlockState(block, bs);
-        moveOreToWorld(sl, jh, block, bs, is, takeFn);
         if (oldState.equals(bs)) {
             return null;
         }
@@ -88,5 +90,6 @@ public class JobBlock {
     ) {
         Jobs.getOrCreateItemFromBlock(sl, b, takeFn, is);
         level.setJobBlockState(b, currentState.setProcessing(0));
+        QT.BLOCK_LOGGER.debug("Moved item from block to world: {} at {}", is, b);
     }
 }

@@ -69,4 +69,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     boolean isJumpingAllowed(BlockState onBlock);
 
     boolean isInitialized();
+
+    String getRootId();
 }

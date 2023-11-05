@@ -24,17 +24,19 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class WorldInteraction implements TownJobHandle.InsertionRules {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
 
+    // TODO: Can we deal with the inventory OR the journal (both causes confusion)
     private final Container inventory;
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final int maxState;
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final ItemStack workResult;
+    private final Supplier<ItemStack> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private int ticksSinceLastAction;
 
@@ -46,7 +48,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ItemStack workResult
+            Supplier<ItemStack> workResult
     ) {
         this.inventory = inventory;
         this.journal = journal;
@@ -83,7 +85,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         }
 
         if (workSpot.action == maxState) {
-            return tryExtractOre(town.getServerLevel(), jh, workSpot.position);
+            return tryExtractOre(town, workSpot.position);
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
@@ -101,10 +103,11 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
     }
 
     protected boolean tryExtractOre(
-            ServerLevel sl,
-            JobHandle jh,
+            TownInterface town,
             BlockPos oldPos
     ) {
+        JobHandle jh = town.getJobHandle();
+        @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
             @Nullable TownJobHandle.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult,
@@ -172,6 +175,9 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
 
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack item = inventory.getItem(i);
+            if (item.isEmpty()) {
+                continue;
+            }
             String invBefore = inventory.toString();
             String name = "[unknown]";
             ResourceLocation registryName = item.getItem().getRegistryName();
@@ -189,6 +195,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             }
             if (sl.tryInsertItem(this, item, bp, nextStepWork)) {
                 QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
+                inventory.setChanged();
                 return true;
             }
         }

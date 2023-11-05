@@ -6,7 +6,8 @@ import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlJob;
-import ca.bradj.questown.jobs.crafter.CrafterSeekingJob;
+import ca.bradj.questown.jobs.crafter.CrafterStickJob;
+import ca.bradj.questown.jobs.declarative.JobSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.mobs.visitor.GathererJob;
@@ -49,6 +50,15 @@ public class JobsRegistry {
         return funcs.get(job).baseRoom;
     }
 
+    public static ImmutableList<String> getPreferredWorkIds(String jobId) {
+        Funcs f = funcs.get(jobId);
+        if (f == null) {
+            QT.JOB_LOGGER.error("Unrecognized job {}", jobId);
+            return ImmutableList.of();
+        }
+        return f.preferredWork;
+    }
+
     private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {}
     private interface SnapshotFunc extends BiFunction<String, ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> {}
     private interface BlockCheckFunc extends Function<Block, Boolean> {}
@@ -58,68 +68,90 @@ public class JobsRegistry {
            SnapshotFunc snapshotFunc,
            BlockCheckFunc blockCheckFunc,
            ResourceLocation baseRoom,
-           IStatus<?> initialStatus
-
+           IStatus<?> initialStatus,
+           ImmutableList<String> preferredWork
     ) {
     }
 
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_META_JOB = null;
     private static final BlockCheckFunc NOT_A_DECLARATIVE_JOB = (block) -> false;
-    private static final ImmutableMap<String, Funcs> funcs = ImmutableMap.of(
-            "farmer", new Funcs(
+    private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
+
+    public static final ImmutableList<String> CRAFTER_PREFS = ImmutableList.of(
+            CrafterBowlJob.ID.jobId(),
+            CrafterStickJob.ID.jobId()
+    );
+
+    private static final ImmutableMap<JobID, Funcs> funcs = ImmutableMap.of(
+            FarmerJob.ID, new Funcs(
                     (town, uuid) -> new FarmerJob(uuid, 6),
                     (status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                     NOT_A_DECLARATIVE_JOB,
                     SpecialQuests.FARM,
-                    GathererJournal.Status.IDLE
+                    GathererJournal.Status.IDLE,
+                    ImmutableList.of(FarmerJob.ID.jobId())
             ),
-            "baker", new Funcs(
+            BakerJob.ID, new Funcs(
                     (town, uuid) -> new BakerJob(uuid, 6),
                     (status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                     NOT_A_DECLARATIVE_JOB,
                     new ResourceLocation("bakery"),
-                    GathererJournal.Status.IDLE
+                    GathererJournal.Status.IDLE,
+                    ImmutableList.of(BakerJob.ID.jobId())
             ),
-            DSmelterJob.NAME, new Funcs(
+            DSmelterJob.ID, new Funcs(
                     (town, uuid) -> new DSmelterJob(uuid, 6),
-                    (status, items) -> new SimpleSnapshot<>(DSmelterJob.NAME, ProductionStatus.from(status), items),
+                    (status, items) -> new SimpleSnapshot<>(DSmelterJob.ID.jobId(), ProductionStatus.from(status), items),
                     (block) -> block instanceof OreProcessingBlock,
                     new ResourceLocation("smeltery"),
-                    ProductionStatus.FACTORY.idle()
+                    ProductionStatus.FACTORY.idle(),
+                    ImmutableList.of(DSmelterJob.ID.jobId())
             ),
-            GathererJournal.Snapshot.NAME, new Funcs(
+            GathererJob.ID, new Funcs(
                     (town, uuid) -> new GathererJob(town, 6, uuid),
                     GATHERER_SNAPSHOT_FUNC,
                     NOT_A_DECLARATIVE_JOB,
                     NOT_REQUIRED_BECAUSE_META_JOB,
-                    GathererJournal.Status.IDLE
+                    GathererJournal.Status.IDLE,
+                    ImmutableList.of(GathererJob.ID)
             ),
-            "blacksmith", new Funcs(
+            BlacksmithWoodenPickaxeJob.ID, new Funcs(
                     (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6), // TODO: Add support for smaller inventories
-                    (status, items) -> new SimpleSnapshot<>("blacksmith", ProductionStatus.from(status), items),
+                    (status, items) -> new SimpleSnapshot<>(BlacksmithWoodenPickaxeJob.ID, ProductionStatus.from(status), items),
                     (block) -> block instanceof BlacksmithsTableBlock,
                     new ResourceLocation("smithy"),
-                    ProductionStatus.FACTORY.idle()
+                    ProductionStatus.FACTORY.idle(),
+                    ImmutableList.of("blacksmith")
             ),
-            "crafter", new Funcs(
+            CrafterBowlJob.ID, new Funcs(
                     (town, uuid) -> new CrafterBowlJob(uuid, 6), // TODO: Add support for smaller inventories
-                    (status, items) -> new SimpleSnapshot<>("crafter", ProductionStatus.from(status), items),
+                    (status, items) -> new SimpleSnapshot<>(CrafterBowlJob.ID, ProductionStatus.from(status), items),
                     (block) -> block instanceof CraftingTableBlock,
                     new ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle()
+                    ProductionStatus.FACTORY.idle(),
+                    CRAFTER_PREFS
             ),
-            "crafter_seeking", new Funcs(
-                    (town, uuid) -> new CrafterSeekingJob(uuid, 6, id -> town.changeJobForVisitor(uuid, id)),
-                    (status, items) -> new SimpleSnapshot<>("crafter_seeking", ProductionStatus.from(status), items),
+            CrafterStickJob.ID, new Funcs(
+                    (town, uuid) -> new CrafterStickJob(uuid, 6), // TODO: Add support for smaller inventories
+                    (status, items) -> new SimpleSnapshot<>(CrafterStickJob.ID, ProductionStatus.from(status), items),
+                    (block) -> block instanceof CraftingTableBlock,
+                    new ResourceLocation("crafting_room"),
+                    ProductionStatus.FACTORY.idle(),
+                    CRAFTER_PREFS
+            ),
+            JobSeekerJob.ID, new Funcs(
+                    (town, uuid) -> new JobSeekerJob(uuid, 6),
+                    (status, items) -> new SimpleSnapshot<>(JobSeekerJob.ID, ProductionStatus.from(status), items),
                     (block) -> block instanceof SignBlock, // TODO: Custom block?
                     NOT_REQUIRED_BECAUSE_META_JOB,
-                    ProductionStatus.FACTORY.idle()
+                    ProductionStatus.FACTORY.idle(),
+                    NOT_REQUIRED_BECAUSE_JOB_SEEKER
             )
     );
 
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
-            String jobName,
+            JobID jobName,
             @NotNull Snapshot<MCHeldItem> journal,
             UUID ownerUUID
     ) {
@@ -128,7 +160,7 @@ public class JobsRegistry {
 
     public static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
-            String jobName,
+            JobID jobName,
             ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
@@ -137,7 +169,7 @@ public class JobsRegistry {
 
     private static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
-            String jobName,
+            JobID jobName,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
@@ -162,7 +194,7 @@ public class JobsRegistry {
     }
 
     public static Snapshot<MCHeldItem> getNewJournal(
-            String job,
+            JobID job,
             String status,
             ImmutableList<MCHeldItem> heldItems
     ) {

@@ -43,6 +43,7 @@ import java.util.function.Function;
 
 public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
+    public static final JobID ID = new JobID("baker", "baker_bread");
     private final Marker marker = MarkerManager.getMarker("Baker");
 
     private final ArrayList<DataSlot> locks = new ArrayList<>();
@@ -503,7 +504,7 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "baker");
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, ID);
     }
 
     @Override
@@ -524,6 +525,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     @Override
     public boolean isInitialized() {
         return journal.isInitialized();
+    }
+
+    @Override
+    public String getRootId() {
+        return ID.rootId();
     }
 
     @Override

@@ -935,7 +935,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 town.changeJobForVisitor(uuid, "blacksmith");
             }
             if (itemInHand.is(Items.GLASS)) {
-                town.changeJobForVisitor(uuid, "crafter_seeking");
+                town.changeJobForVisitor(uuid, "job_seeker");
             }
         }
 
@@ -975,6 +975,10 @@ public class VisitorMobEntity extends PathfinderMob {
     @Override
     public String toString() {
         return String.format("%s [%s]", super.toString(), getUUID());
+    }
+
+    public String getRootJobId() {
+        return job.getRootId();
     }
 
     public interface ChangeListener {

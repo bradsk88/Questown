@@ -81,6 +81,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
             String jobName
     );
 
+    void changeJobForVisitorFromBoard(UUID ownerUUID);
+
     Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
 
     Collection<String> getAvailableJobs();

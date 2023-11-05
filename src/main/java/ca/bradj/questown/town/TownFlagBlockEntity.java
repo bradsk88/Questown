@@ -112,6 +112,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownJobHandle jobHandle = new TownJobHandle();
+    private Collection<String> availableWork = new ArrayList<>();
 
 
     public TownFlagBlockEntity(
@@ -529,6 +530,46 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         AdvancementsInit.VISITOR_TRIGGER.trigger(
                 p, VisitorTrigger.Triggers.FirstJobQuest
         );
+    }
+
+    public void addRandomWork() {
+        // TODO: Implement job board actually
+        ImmutableList<String> works = ImmutableList.of(
+            "crafter_bowl",
+            "crafter_stick"
+        );
+        this.availableWork.add(works.get(level.getRandom().nextInt(works.size())));
+    }
+
+    @Override
+    public void changeJobForVisitorFromBoard(UUID ownerUUID) {
+        String work = getVillagerPreferredWork(ownerUUID, availableWork);
+        if (work != null) {
+            changeJobForVisitor(ownerUUID, work);
+        }
+    }
+
+    private String getVillagerPreferredWork(
+            UUID uuid,
+            Collection<String> availableJobs
+    ) {
+        Optional<LivingEntity> f = entities.stream().filter(v -> uuid.equals(v.getUUID())).findFirst();
+        if (f.isEmpty()) {
+            QT.BLOCK_LOGGER.error("No entities found for UUID: {}", uuid);
+            return null;
+        }
+        LivingEntity ff = f.get();
+        if (!(ff instanceof VisitorMobEntity v)) {
+            QT.BLOCK_LOGGER.error("Entity is wrong type: {}", ff);
+            return null;
+        }
+        Collection<String> preference =  JobsRegistry.getPreferredWorkIds(v.getRootJobId());
+        for (String p : preference) {
+            if (availableJobs.contains(p)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     @Override

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.JobSeekerJob;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionJob;
@@ -37,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
@@ -99,21 +101,21 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final WorldInteraction world;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
-    private final String jobId;
+    private final JobID jobId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
 
     public DeclarativeJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            @NotNull String jobId,
+            @NotNull JobID jobId,
             ResourceLocation workRoomId,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ItemStack workResult
+            Supplier<ItemStack> workResult
     ) {
         super(
                 ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -150,7 +152,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ItemStack workResult
+            Supplier<ItemStack> workResult
     ) {
         return new WorldInteraction(
                 inventory,
@@ -256,7 +258,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
         }
 
-        this.world.tryWorking(town, entity, workSpot);
+        boolean worked = this.world.tryWorking(town, entity, workSpot);
+        boolean hasWork = !JobSeekerJob.ID.equals(jobId);
+        boolean finishedWork = workSpot.action.equals(maxState);
+        if (hasWork && worked && finishedWork) {
+            town.changeJobForVisitor(ownerUUID, JobSeekerJob.ID);
+        }
     }
 
     Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
@@ -303,6 +310,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     public String getStatusToSyncToClient() {
         return journal.getStatus().name();
+    }
+
+    @Override
+    public String getRootId() {
+        return jobId.rootId();
     }
 
     @Override

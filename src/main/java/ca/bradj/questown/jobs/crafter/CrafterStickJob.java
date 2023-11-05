@@ -12,33 +12,29 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
-public class CrafterBowlJob extends DeclarativeJob {
-    public static final JobID ID = new JobID("crafter", "crafter_bowl");
+public class CrafterStickJob extends DeclarativeJob {
+    public static final JobID ID = new JobID("crafter", "crafter_stick");
 
-    public static final int BLOCK_STATE_NEED_PLANKS = 0;
-    public static final int BLOCK_STATE_NEED_WORK = 1;
-    public static final int BLOCK_STATE_DONE = 2;
+    public static final int BLOCK_STATE_NEED_WORK = 0;
+    public static final int BLOCK_STATE_DONE = 1;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_PLANKS, Ingredient.of(ItemTags.PLANKS),
             BLOCK_STATE_NEED_WORK, Ingredient.of(ItemTags.PLANKS)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_PLANKS, 2,
             BLOCK_STATE_NEED_WORK, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             // TODO: Add support for work without a tool
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_PLANKS, 0,
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
 
-    public CrafterBowlJob(
+    public CrafterStickJob(
             UUID ownerUUID,
             int inventoryCapacity
     ) {
@@ -52,7 +48,7 @@ public class CrafterBowlJob extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                () -> new ItemStack(Items.BOWL, 3)
+                () -> new ItemStack(Items.STICK)
         );
     }
 }

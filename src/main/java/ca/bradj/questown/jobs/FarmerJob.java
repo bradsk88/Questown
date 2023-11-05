@@ -53,6 +53,7 @@ import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
 
+    public static final JobID ID = new JobID("farmer", "farm_field");
     private final Marker marker = MarkerManager.getMarker("Farmer");
 
     private final ArrayList<DataSlot> locks = new ArrayList<>();
@@ -535,7 +536,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "farmer");
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, ID);
     }
 
     @Override
@@ -556,6 +557,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public boolean isInitialized() {
         return journal.isInitialized();
+    }
+
+    @Override
+    public String getRootId() {
+        return ID.rootId();
     }
 
     @Override

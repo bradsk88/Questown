@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 
 public record SimpleSnapshot<STATUS extends IStatus<STATUS>, H extends HeldItem<H, ?> & Item<H>>(
-        @NotNull String jobName, @NotNull STATUS status, @NotNull ImmutableList<H> items
+        @NotNull JobID jobId, @NotNull STATUS status, @NotNull ImmutableList<H> items
 ) implements ca.bradj.questown.jobs.Snapshot<H> {
     @Override
     public String statusStringValue() {
@@ -13,12 +13,13 @@ public record SimpleSnapshot<STATUS extends IStatus<STATUS>, H extends HeldItem<
 
     @Override
     public String jobStringValue() {
-        return jobName;
+        // TODO: Proper serializer
+        return jobId.rootId() + "/" + jobId.jobId();
     }
 
     @Override
     public String toString() {
-        return jobName + "Journal.Snapshot{" +
+        return "Journal.Snapshot[" + jobStringValue() + " ]{" +
                 "status=" + status +
                 ", items=" + items +
                 '}';

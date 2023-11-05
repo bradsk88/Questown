@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+// FIXME: Persist this data to the flag
 public class TownJobHandle implements JobHandle {
 
     public record State(
@@ -37,6 +38,23 @@ public class TownJobHandle implements JobHandle {
 
         public State setCount(int count) {
             return new State(processingState, count, workLeft);
+        }
+
+        @Override
+        public String toString() {
+            return "State{" +
+                    "processingState=" + processingState +
+                    ", ingredientCount=" + ingredientCount +
+                    ", workLeft=" + workLeft +
+                    '}';
+        }
+
+        public String toShortString() {
+            return "[" +
+                    "state=" + processingState +
+                    ", ingCount=" + ingredientCount +
+                    ", workLeft=" + workLeft +
+                    ']';
         }
     }
 
@@ -59,6 +77,7 @@ public class TownJobHandle implements JobHandle {
             State bs
     ) {
         jobStatuses.put(bp, bs);
+        QT.BLOCK_LOGGER.debug("Job state set to {} at {}", bs.toShortString(), bp);
     }
 
     public interface InsertionRules {
@@ -87,7 +106,11 @@ public class TownJobHandle implements JobHandle {
         }
         int curCount = oldState.ingredientCount();
         if (canDo && curCount >= qtyRequired) {
-            QT.BLOCK_LOGGER.error("Somehow exceeded required quantity: can accept up to {}, had {}", qtyRequired, curCount);
+            QT.BLOCK_LOGGER.error(
+                    "Somehow exceeded required quantity: can accept up to {}, had {}",
+                    qtyRequired,
+                    curCount
+            );
         }
 
         if (canDo) {
@@ -116,7 +139,10 @@ public class TownJobHandle implements JobHandle {
         return jobStatuses.containsKey(bp);
     }
 
-    public void tick(ServerLevel sl, Collection<MCRoom> allRooms) {
+    public void tick(
+            ServerLevel sl,
+            Collection<MCRoom> allRooms
+    ) {
         rooms.addAll(allRooms);
 
         curIdx = (curIdx + 1) % rooms.size();

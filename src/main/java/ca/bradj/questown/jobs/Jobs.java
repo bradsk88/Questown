@@ -134,7 +134,7 @@ public class Jobs {
             int capacity,
             ServerPlayer sp,
             VisitorMobEntity e,
-            String jobId
+            JobID jobId
     ) {
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuestsWithRewards());
         NetworkHooks.openGui(sp, new MenuProvider() {
@@ -176,7 +176,8 @@ public class Jobs {
                 buf.writeResourceLocation(id);
                 ser.toNetwork(buf, recipe);
             });
-            data.writeUtf(jobId);
+            data.writeUtf(jobId.rootId());
+            data.writeUtf(jobId.jobId());
         });
         return true; // Different jobs might have screens or not
     }

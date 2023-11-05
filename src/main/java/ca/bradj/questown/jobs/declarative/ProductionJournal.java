@@ -19,7 +19,7 @@ public class ProductionJournal<
 > implements Journal<ProductionStatus, H, SimpleSnapshot<ProductionStatus, H>> {
     private final JournalItemList<H> inventory;
     private final DefaultInventoryStateProvider<H> invState;
-    private final String jobId;
+    private final JobID jobId;
     private final int capacity;
     private final SignalSource sigs;
     private final IStatusFactory<ProductionStatus> statusFactory;
@@ -42,7 +42,7 @@ public class ProductionJournal<
     }
 
     public ProductionJournal(
-            @NotNull String jobId,
+            @NotNull JobID jobId,
             SignalSource sigs,
             int capacity,
             EmptyFactory<H> ef,
@@ -99,7 +99,7 @@ public class ProductionJournal<
     }
 
     public SimpleSnapshot<ProductionStatus, H> getSnapshot() {
-        return new SimpleSnapshot<>(jobId, status, ImmutableList.copyOf(inventory));
+        return new SimpleSnapshot<>(jobId.jobId(), status, ImmutableList.copyOf(inventory));
     }
 
     public int getCapacity() {

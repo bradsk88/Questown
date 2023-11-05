@@ -1,21 +1,21 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.DeclarativeJob;
-import ca.bradj.questown.town.interfaces.JobHandle;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
-public abstract class TaskFinderJob extends DeclarativeJob {
+public class JobSeekerJob extends DeclarativeJob {
+
+    public static final String ID = "job_seeker";
 
     public static final int BLOCK_STATE_NO_JOBS = 0;
     public static final int BLOCK_STATE_JOBS_AVAIlABLE = 1;
@@ -32,30 +32,23 @@ public abstract class TaskFinderJob extends DeclarativeJob {
             BLOCK_STATE_NO_JOBS, 0,
             BLOCK_STATE_JOBS_AVAIlABLE, 1
     );
-    private final JobChanger jobChanger;
 
-    public interface JobChanger {
-        void changeJob(String jobId);
-    }
-
-    public TaskFinderJob(
+    public JobSeekerJob(
             UUID ownerUUID,
-            int inventoryCapacity,
-            JobChanger jobChanger
+            int inventoryCapacity
     ) {
         super(
                 ownerUUID,
                 inventoryCapacity,
-                "finder",
+                ID,
                 SpecialQuests.JOB_BOARD,
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                Items.BOWL.getDefaultInstance()
+                Items.BOWL::getDefaultInstance
         );
-        this.jobChanger = jobChanger;
     }
 
     @Override
@@ -65,7 +58,7 @@ public abstract class TaskFinderJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ItemStack workResult
+            Supplier<ItemStack> workResult
     ) {
         return new WorldInteraction(
                 inventory,
@@ -80,22 +73,17 @@ public abstract class TaskFinderJob extends DeclarativeJob {
 
             @Override
             protected boolean tryExtractOre(
-                    ServerLevel sl,
-                    JobHandle jh,
+                    TownInterface town,
                     BlockPos oldPos
             ) {
-                // TODO: Actually pull jobs from the job board
-                String crafter = chooseBestJob(ImmutableList.of(
-                        "crafter"
-                ));
-                if (crafter == null) {
-                    return false;
-                }
-                jobChanger.changeJob(crafter);
+                town.changeJobForVisitorFromBoard(ownerUUID);
                 return true;
             }
         };
     }
 
-    protected abstract @Nullable String chooseBestJob(ImmutableList<String> crafter);
+    @Override
+    public String getId() {
+        return ID;
+    }
 }
