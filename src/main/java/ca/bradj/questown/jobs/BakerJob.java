@@ -522,6 +522,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
+    public boolean isInitialized() {
+        return journal.isInitialized();
+    }
+
+    @Override
     public ImmutableList<Boolean> getSlotLockStatuses() {
         return this.journal.getSlotLockStatuses();
     }

@@ -99,6 +99,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
+    JobHandle getJobHandle();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

@@ -23,7 +23,7 @@ public class ProductionJournal<
     private final int capacity;
     private final SignalSource sigs;
     private final IStatusFactory<ProductionStatus> statusFactory;
-    private ProductionStatus status;
+    private @Nullable ProductionStatus status;
     private final List<JournalItemsListener<H>> listeners = new ArrayList<>();
     private final EmptyFactory<H> emptyFactory;
     private final ArrayList<StatusListener> statusListeners = new ArrayList<>();
@@ -62,6 +62,11 @@ public class ProductionJournal<
     public void initialize(SimpleSnapshot<ProductionStatus, H> journal) {
         this.setItems(journal.items());
         this.initializeStatus(journal.status());
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return status != null && !status.isUnset();
     }
 
     public ImmutableList<Boolean> getSlotLockStatuses() {
@@ -107,7 +112,7 @@ public class ProductionJournal<
             EntityInvStateProvider<Integer> inventory,
             IProductionStatusFactory<ProductionStatus> factory
     ) {
-        if (status.isUnset()) {
+        if (status == null || status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();

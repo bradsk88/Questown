@@ -3,7 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
@@ -140,7 +140,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         );
 
         MCQuestBatch jobQuest = new MCQuestBatch(visitorUUID, new MCInstantReward(town, reward));
-        jobQuest.addNewQuest(visitorUUID, Jobs.getRoomForJob(job));
+        jobQuest.addNewQuest(visitorUUID, JobsRegistry.getRoomForJob(job));
 
         quests.questBatches.add(jobQuest);
     }

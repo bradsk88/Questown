@@ -36,11 +36,8 @@ public class ProductionStatuses {
     ) {
         ProductionStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, true, inventory, entity, town,
-                new TypicalProductionJob<>(ImmutableList.of(
-                        JobBlock.BAKE_STATE_HAS_ORE,
-                        JobBlock.BAKE_STATE_FILLED,
-                        JobBlock.BAKE_STATE_EMPTY
-                )),
+                // TODO: Allow preferences to be provided/serialized
+                new TypicalProductionJob<>(ImmutableList.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
                 factory
         );
         return nullIfUnchanged(currentStatus, newStatus);

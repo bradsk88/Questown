@@ -534,6 +534,11 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         this.journal.initialize((GathererJournal.Snapshot<MCHeldItem>) journal);
     }
 
+    @Override
+    public boolean isInitialized() {
+        return journal.isInitialized();
+    }
+
     public void lockSlot(int slot) {
         this.journal.lockSlot(slot);
     }

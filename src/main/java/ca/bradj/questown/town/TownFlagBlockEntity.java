@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
@@ -110,6 +111,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             )),
             getBlockPos().getY()
     );
+    private final TownJobHandle jobHandle = new TownJobHandle();
 
 
     public TownFlagBlockEntity(
@@ -162,6 +164,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         e.roomsMap.tick(sl, blockPos);
+
+        // TODO: Do this less often?
+        e.jobHandle.tick(sl, e.roomsMap.getAllRooms());
 
         advanceScheduledBlocks(sl, e.roomsMap, e.blocksWithWeeds);
 
@@ -550,7 +555,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             String jobName,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(this, jobName, null, visitorUUID));
+        f.setJob(JobsRegistry.getInitializedJob(this, jobName, f.getJobJournalSnapshot().items(), visitorUUID));
     }
 
     @Override
@@ -683,6 +688,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public JobHandle getJobHandle() {
+        return jobHandle;
+    }
+
+    @Override
     public Optional<MCRoom> assignToFarm(UUID ownerUUID) {
         int idx = this.assignedFarmers.indexOf(ownerUUID);
         List<MCRoom> farms = ImmutableList.copyOf(roomsMap.getFarms());
@@ -725,7 +735,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Collection<String> getAvailableJobs() {
         // TODO: Scan villagers to make this decision
-        return ImmutableList.of("farmer", "baker");
+        return JobsRegistry.getAllJobs();
     }
 
     @Override

@@ -61,6 +61,11 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
         this.initializeStatus(journal.status());
     }
 
+    @Override
+    public boolean isInitialized() {
+        return status != null && !status.isUnset();
+    }
+
     public ImmutableList<Boolean> getSlotLockStatuses() {
         return ImmutableList.copyOf(this.inventory.stream().map(HeldItem::isLocked).toList());
     }

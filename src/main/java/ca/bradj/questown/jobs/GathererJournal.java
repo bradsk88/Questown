@@ -38,6 +38,10 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         return from;
     }
 
+    public boolean isInitialized() {
+        return status != null && !status.isUnset();
+    }
+
     public interface ToolsChecker<H extends HeldItem<H, ?>> {
         Tools computeTools(Iterable<H> items);
     }

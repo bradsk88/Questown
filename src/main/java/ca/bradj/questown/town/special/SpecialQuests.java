@@ -29,6 +29,7 @@ public class SpecialQuests {
             new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FENCE_GATE.get())), Integer.MAX_VALUE)
     );
     public static final ResourceLocation BEDROOM = new ResourceLocation(Questown.MODID, "bedroom");
+    public static final ResourceLocation JOB_BOARD = new ResourceLocation(Questown.MODID, "job_board");
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);

@@ -49,7 +49,7 @@ public abstract class ProductionJob<
     protected final RecipeProvider recipe;
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
-    private final UUID ownerUUID;
+    protected final UUID ownerUUID;
     private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
 
     @Override
@@ -352,6 +352,10 @@ public abstract class ProductionJob<
         this.journal.initialize((SNAPSHOT) journal);
     }
 
+    @Override
+    public boolean isInitialized() {
+        return this.journal.isInitialized();
+    }
 
     @Override
     public boolean shouldBeNoClip(

@@ -9,6 +9,7 @@ import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -36,7 +37,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
@@ -129,19 +129,39 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 STATUS_FACTORY
         );
         this.jobId = jobId;
-        this.world = new WorldInteraction(
-                inventory,
-                journal,
+        this.world = initWorldInteraction(
                 maxState,
                 ingredientsRequiredAtStates,
-                workRequiredAtStates,
+                ingredientsQtyRequiredAtStates,
                 toolsRequiredAtStates,
+                workRequiredAtStates,
                 workResult
         );
         this.maxState = maxState;
         this.workRoomId = workRoomId;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
+    }
+
+    @NotNull
+    protected WorldInteraction initWorldInteraction(
+            int maxState,
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ItemStack workResult
+    ) {
+        return new WorldInteraction(
+                inventory,
+                journal,
+                maxState,
+                ingredientsRequiredAtStates,
+                ingredientsQtyRequiredAtStates,
+                workRequiredAtStates,
+                toolsRequiredAtStates,
+                workResult
+        );
     }
 
     private static RecipeProvider buildRecipe(
@@ -174,7 +194,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(sl, bp)));
+                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(town.getJobHandle(), bp)));
             }
 
             @Override
@@ -217,7 +237,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
-                town.getServerLevel(),
+                town.getJobHandle(),
                 entityCurrentJobSite.room
         );
 
@@ -240,7 +260,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
-            ServerLevel level,
+            JobHandle town,
             @Nullable MCRoom jobSite
     ) {
         if (jobSite == null) {
@@ -252,7 +272,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
                 .forEach(v -> {
                     BlockPos bp = Positions.ToBlock(v, jobSite.yCoord);
-                    @Nullable Integer blockAction = JobBlock.getState(level, bp);
+                    @Nullable Integer blockAction = JobBlock.getState(town, bp);
                     if (blockAction != null) {
                         b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
                     }
@@ -331,7 +351,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         // TODO: Sort by distance and choose the closest
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
-                @Nullable Integer blockState = JobBlock.getState(sl, blocks.getKey());
+                @Nullable Integer blockState = JobBlock.getState(town.getJobHandle(), blocks.getKey());
                 if (blockState == null) {
                     continue;
                 }
@@ -350,6 +370,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(TownInterface town) {
+        JobHandle th = town.getJobHandle();
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {
@@ -357,7 +378,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return;
             }
             b.put(state, Lists.newArrayList(Jobs.roomsWithState(
-                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
+                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
             )));
         });
         toolsRequiredAtStates.forEach((state, ingrs) -> {
@@ -371,7 +392,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 b.put(state, new ArrayList<>());
             }
             b.get(state).addAll((Jobs.roomsWithState(
-                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(sl, bp))
+                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
             )));
         });
         return ImmutableMap.copyOf(b);

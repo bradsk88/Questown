@@ -67,4 +67,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     String getStatusToSyncToClient();
 
     boolean isJumpingAllowed(BlockState onBlock);
+
+    boolean isInitialized();
 }

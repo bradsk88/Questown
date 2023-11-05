@@ -133,7 +133,7 @@ public class VisitorMobEntity extends PathfinderMob {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> job = getInitialJob();
+    Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> job = getInitialJob();
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
@@ -281,7 +281,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     // TODO: Make this abstract or injectable
     @NotNull
-    private Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitialJob() {
+    private Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitialJob() {
         return new GathererJob(town, inventoryCapacity, uuid);
     }
 
@@ -289,7 +289,7 @@ public class VisitorMobEntity extends PathfinderMob {
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
      */
-    public void setJob(Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> initializedJob) {
+    public void setJob(Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> initializedJob) {
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
         entityData.set(jobName, job.getJobName().getKey());
@@ -374,7 +374,9 @@ public class VisitorMobEntity extends PathfinderMob {
 
             boolean vis = !job.shouldDisappear(town, position());
             this.entityData.set(visible, vis);
-            entityData.set(status, job.getStatusToSyncToClient());
+            if (job.isInitialized()) {
+                entityData.set(status, job.getStatusToSyncToClient());
+            }
         }
 
         this.openNearbyGates();
@@ -855,7 +857,7 @@ public class VisitorMobEntity extends PathfinderMob {
         job.addStatusListener(l);
     }
 
-    public Snapshot getJobJournalSnapshot() {
+    public Snapshot<MCHeldItem> getJobJournalSnapshot() {
         return job.getJournalSnapshot();
     }
 
@@ -931,6 +933,9 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             if (itemInHand.is(Items.WOODEN_PICKAXE)) {
                 town.changeJobForVisitor(uuid, "blacksmith");
+            }
+            if (itemInHand.is(Items.GLASS)) {
+                town.changeJobForVisitor(uuid, "crafter_seeking");
             }
         }
 

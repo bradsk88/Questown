@@ -1,13 +1,14 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.blocks.ItemAccepting;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.town.TownJobHandle;
+import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -17,14 +18,14 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.state.BlockState;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
 
-public class WorldInteraction {
+public class WorldInteraction implements TownJobHandle.InsertionRules {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
 
     private final Container inventory;
@@ -34,6 +35,7 @@ public class WorldInteraction {
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     private final ItemStack workResult;
+    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private int ticksSinceLastAction;
 
     public WorldInteraction(
@@ -41,6 +43,7 @@ public class WorldInteraction {
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ItemStack workResult
@@ -49,6 +52,7 @@ public class WorldInteraction {
         this.journal = journal;
         this.maxState = maxState;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
+        this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workResult = workResult;
@@ -62,7 +66,7 @@ public class WorldInteraction {
         if (town.getServerLevel() == null) {
             return false;
         }
-        ServerLevel sl = town.getServerLevel();
+        JobHandle jh = town.getJobHandle();
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < Config.FARM_ACTION_INTERVAL.get()) { // TODO: Smelter specific config
@@ -79,30 +83,31 @@ public class WorldInteraction {
         }
 
         if (workSpot.action == maxState) {
-            return tryExtractOre(sl, workSpot.position);
+            return tryExtractOre(town.getServerLevel(), jh, workSpot.position);
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
-                return tryProcessOre(sl, entity, workSpot);
+                return tryProcessOre(jh, entity, workSpot);
             }
         }
 
         if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return tryInsertIngredients(sl, workSpot);
+            return tryInsertIngredients(jh, workSpot);
         }
 
         return false;
     }
 
-    private boolean tryExtractOre(
+    protected boolean tryExtractOre(
             ServerLevel sl,
+            JobHandle jh,
             BlockPos oldPos
     ) {
-        if (Integer.valueOf(maxState).equals(JobBlock.getState(sl, oldPos))) {
-            @Nullable BlockState newState = JobBlock.extractRawProduct(
-                    sl, oldPos, this.workResult,
+        if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
+            @Nullable TownJobHandle.State newState = JobBlock.extractRawProduct(
+                    sl, jh, oldPos, this.workResult,
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
             );
             return newState != null;
@@ -111,14 +116,14 @@ public class WorldInteraction {
     }
 
     private boolean tryProcessOre(
-            ServerLevel sl,
+            JobHandle sl,
             LivingEntity entity,
             WorkSpot<Integer, BlockPos> ws
     ) {
         BlockPos bp = ws.position;
         @Nullable Integer s = JobBlock.getState(sl, bp);
         if (ws.action.equals(s)) {
-            BlockState blockState = JobBlock.applyWork(sl, bp);
+            TownJobHandle.State blockState = JobBlock.applyWork(sl, bp);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -156,7 +161,7 @@ public class WorldInteraction {
     }
 
     private boolean tryInsertIngredients(
-            ServerLevel sl,
+            JobHandle sl,
             WorkSpot<Integer, BlockPos> ws
     ) {
         BlockPos bp = ws.position;
@@ -173,24 +178,30 @@ public class WorldInteraction {
             if (registryName != null) {
                 name = registryName.toString();
             }
-            BlockState bl = sl.getBlockState(bp);
-            if (bl.getBlock() instanceof ItemAccepting ia) {
-                Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                        journal.getStatus().getProductionState() + 1, 0
-                );
-                if (nextStepWork == null) {
-                    nextStepWork = 0;
-                }
-                ia.insertItem(sl, bp, item, nextStepWork);
-                if (item.getCount() > 0) {
-                    // didn't insert successfully
-                    return false;
-                }
+            if (!sl.canInsertItem(item, bp)) {
+                continue;
+            }
+            Integer nextStepWork = workRequiredAtStates.getOrDefault(
+                    journal.getStatus().getProductionState() + 1, 0
+            );
+            if (nextStepWork == null) {
+                nextStepWork = 0;
+            }
+            if (sl.tryInsertItem(this, item, bp, nextStepWork)) {
                 QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
-                inventory.setChanged();
                 return true;
             }
         }
         return false;
+    }
+
+    @Override
+    public Map<Integer, Ingredient> ingredientsRequiredAtStates() {
+        return ingredientsRequiredAtStates;
+    }
+
+    @Override
+    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
+        return ingredientQtyRequiredAtStates;
     }
 }

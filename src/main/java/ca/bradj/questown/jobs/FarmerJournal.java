@@ -31,6 +31,10 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
         this.statusListeners.remove(o);
     }
 
+    public boolean isInitialized() {
+        return status != null && !status.isUnset();
+    }
+
     public interface ItemChecker<H> {
         boolean shouldHoldForWork(
                 GathererJournal.Status status,

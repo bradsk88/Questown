@@ -1,0 +1,12 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {
+      "tag": "questown:light_sources"
+    },
+    {
+      "tag": "minecraft:signs"
+    }
+  ]
+}

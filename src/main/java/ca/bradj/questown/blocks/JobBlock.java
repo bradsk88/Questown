@@ -1,116 +1,34 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.Jobs;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.town.TownJobHandle;
+import ca.bradj.questown.town.interfaces.JobHandle;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
-import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Random;
+public class JobBlock {
 
-public class JobBlock extends HorizontalDirectionalBlock {
-    public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
-            "processing_state", 0, 4
-    );
-    public static final IntegerProperty INGREDIENT_COUNT = IntegerProperty.create(
-            "ingredient_count", 0, 3
-    );
-
-    public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
-            "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
-    );
-
-    public static final int BAKE_STATE_EMPTY = 0;
-    public static final int BAKE_STATE_FILLED = 1;
-    public static final int BAKE_STATE_HAS_ORE = 2;
-
-    public JobBlock(
+    public static @Nullable Integer getState(
+            JobHandle sl,
+            BlockPos bp
     ) {
-        super(
-                Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .strength(1.0F, 10.0F)
-        );
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(PROCESSING_STATE, 0)
-                .setValue(FACING, Direction.NORTH)
-                .setValue(WORK_LEFT, 0)
-        );
-    }
-
-//    public static BlockState insertItem(
-//            ServerLevel level,
-//            BlockPos bp,
-//            ItemStack item
-//    ) {
-//        BlockState oldState = level.getBlockState(bp);
-//
-//        // FIXME: Check item type and state
-//        int curValue = oldState.getValue(PROCESSING_STATE);
-//        if (
-//                canAcceptOre(level, bp) && item.is(Items.IRON_ORE) // TODO: Support more ores
-//        ) {
-//            item.shrink(1);
-//            int val = curValue + 1;
-//            BlockState blockState = setProcessingState(oldState, val);
-//            if (val == BAKE_STATE_FILLED) {
-//                blockState = blockState.setValue(WORK_LEFT, Config.SMELTER_WORK_REQUIRED.get());
-//            }
-//            level.setBlockAndUpdate(bp, blockState);
-//            return blockState;
-//        }
-//        return oldState;
-//    }
-
-    public static @Nullable Integer getState(ServerLevel sl, BlockPos bp) {
-        BlockState oldState = sl.getBlockState(bp);
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
+        TownJobHandle.State oldState = sl.getJobBlockState(bp);
+        if (oldState == null) {
             return null;
         }
-        return oldState.getValue(PROCESSING_STATE);
-    }
-    public static boolean hasFinishedProduct(
-            ServerLevel sl,
-            BlockPos bp
-    ) {
-        BlockState oldState = sl.getBlockState(bp);
-        if (!oldState.hasProperty(PROCESSING_STATE)) {
-            return false;
-        }
-        return oldState.getValue(PROCESSING_STATE) == BAKE_STATE_HAS_ORE;
+        return oldState.processingState();
     }
 
-    public static BlockState applyWork(
-            ServerLevel sl,
+    public static TownJobHandle.State applyWork(
+            JobHandle sl,
             BlockPos bp
     ) {
-        BlockState oldState = sl.getBlockState(bp);
-        int workLeft = oldState.getValue(WORK_LEFT);
-        BlockState bs;
+        TownJobHandle.State oldState = sl.getJobBlockState(bp);
+        int workLeft = oldState.workLeft();
+        TownJobHandle.State bs;
         if (workLeft <= 0) {
             Integer state = getState(sl, bp);
             if (state == null) {
@@ -123,36 +41,37 @@ public class JobBlock extends HorizontalDirectionalBlock {
         if (oldState.equals(bs)) {
             return null;
         }
-        sl.setBlockAndUpdate(bp, bs);
+        sl.setJobBlockState(bp, bs);
         return bs;
     }
 
-    private static BlockState reduceWorkLeft(BlockState oldState) {
-        int l = oldState.getValue(WORK_LEFT);
+    private static TownJobHandle.State reduceWorkLeft(TownJobHandle.State oldState) {
+        int l = oldState.workLeft();
         int newVal = l - 1;
         QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
-        return oldState.setValue(WORK_LEFT, newVal);
+        return oldState.setWorkLeft(newVal);
     }
 
-    private static BlockState setProcessingState(
-            BlockState oldState,
+    private static TownJobHandle.State setProcessingState(
+            TownJobHandle.State oldState,
             int s
     ) {
-        BlockState newState = oldState.setValue(PROCESSING_STATE, s);
+        TownJobHandle.State newState = oldState.setProcessing(s);
         QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
         return newState;
     }
 
-    public static @Nullable BlockState extractRawProduct(
+    public static @Nullable TownJobHandle.State extractRawProduct(
             ServerLevel sl,
+            JobHandle jh,
             BlockPos block,
             ItemStack is,
             @Nullable TakeFn takeFn
     ) {
-        BlockState oldState = sl.getBlockState(block);
-        BlockState bs = oldState.setValue(PROCESSING_STATE, BAKE_STATE_EMPTY);
-        sl.setBlock(block, bs, 11);
-        moveOreToWorld(sl, block, is, takeFn);
+        TownJobHandle.State oldState = jh.getJobBlockState(block);
+        TownJobHandle.State bs = oldState.setProcessing(0);
+        jh.setJobBlockState(block, bs);
+        moveOreToWorld(sl, jh, block, bs, is, takeFn);
         if (oldState.equals(bs)) {
             return null;
         }
@@ -160,75 +79,14 @@ public class JobBlock extends HorizontalDirectionalBlock {
     }
 
     private static void moveOreToWorld(
-            ServerLevel level,
+            ServerLevel sl,
+            JobHandle level,
             BlockPos b,
+            TownJobHandle.State currentState,
             ItemStack is,
             @Nullable TakeFn takeFn
     ) {
-        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
-        level.setBlock(b, level.getBlockState(b).setValue(PROCESSING_STATE, BAKE_STATE_EMPTY), 11);
-    }
-
-    public static void defaultBlockStateDefinition(StateDefinition.Builder<Block, BlockState> def) {
-        def.add(PROCESSING_STATE, INGREDIENT_COUNT, FACING, WORK_LEFT);
-    }
-
-    @Override
-    public List<ItemStack> getDrops(
-            BlockState p_60537_,
-            LootContext.Builder p_60538_
-    ) {
-        // FIXME: Also drop stuff inside
-        return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
-    }
-
-    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        BlockState blockState = this.defaultBlockState().setValue(PROCESSING_STATE, 0);
-        if (!(ctx.getLevel() instanceof ServerLevel sl)) {
-            return blockState;
-        }
-        return blockState
-                .setValue(FACING, ctx.getHorizontalDirection().getOpposite())
-                .setValue(WORK_LEFT, 0);
-    }
-
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        defaultBlockStateDefinition(p_51385_);
-    }
-
-
-    public void animateTick(
-            BlockState p_53635_,
-            Level p_53636_,
-            BlockPos p_53637_,
-            Random p_53638_
-    ) {
-        if (p_53635_.getValue(PROCESSING_STATE) == BAKE_STATE_FILLED) {
-            double d0 = (double) p_53637_.getX() + 0.5D;
-            double d1 = (double) p_53637_.getY() + 1;
-            double d2 = (double) p_53637_.getZ() + 0.5D;
-            if (p_53638_.nextDouble() < 0.1D) {
-                p_53636_.playSound(
-                        null,
-                        d0,
-                        d1,
-                        d2,
-                        SoundEvents.VILLAGER_WORK_TOOLSMITH,
-                        SoundSource.BLOCKS,
-                        1.0F,
-                        1.0F
-                );
-            }
-
-            Direction direction = p_53635_.getValue(FACING);
-            Direction.Axis direction$axis = direction.getAxis();
-            double d3 = 0.52D;
-            double d4 = p_53638_.nextDouble() * 0.6D - 0.3D;
-            double d5 = direction$axis == Direction.Axis.X ? (double) direction.getStepX() * 0.52D : d4;
-            double d6 = p_53638_.nextDouble() * 6.0D / 16.0D;
-            double d7 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
-            p_53636_.addParticle(ParticleTypes.WHITE_ASH, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-            p_53636_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-        }
+        Jobs.getOrCreateItemFromBlock(sl, b, takeFn, is);
+        level.setJobBlockState(b, currentState.setProcessing(0));
     }
 }

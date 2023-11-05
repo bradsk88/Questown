@@ -24,4 +24,6 @@ public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
     );
 
     void removeStatusListener(StatusListener o);
+
+    boolean isInitialized();
 }

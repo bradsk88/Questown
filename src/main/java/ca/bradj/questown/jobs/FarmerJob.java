@@ -554,6 +554,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public boolean isInitialized() {
+        return journal.isInitialized();
+    }
+
+    @Override
     public ImmutableList<Boolean> getSlotLockStatuses() {
         return this.journal.getSlotLockStatuses();
     }
