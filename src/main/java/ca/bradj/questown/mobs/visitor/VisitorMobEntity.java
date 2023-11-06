@@ -11,6 +11,10 @@ import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
+import ca.bradj.questown.jobs.crafter.CrafterStickWork;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -870,7 +874,7 @@ public class VisitorMobEntity extends PathfinderMob {
             Snapshot journal
     ) {
         this.town = town;
-        setJob(JobsRegistry.getInitializedJob(town, journal.jobStringValue(), journal, uuid));
+        setJob(JobsRegistry.getInitializedJob(town, journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(
                 this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );
@@ -923,19 +927,19 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             ItemStack itemInHand = p.getItemInHand(InteractionHand.MAIN_HAND);
             if (itemInHand.is(Items.WHEAT_SEEDS)) {
-                town.changeJobForVisitor(uuid, "farmer");
+                town.changeJobForVisitor(uuid, FarmerJob.ID);
             }
             if (itemInHand.is(Items.BREAD)) {
-                town.changeJobForVisitor(uuid, "baker");
+                town.changeJobForVisitor(uuid, BakerJob.ID);
             }
             if (itemInHand.is(Items.IRON_INGOT)) {
-                town.changeJobForVisitor(uuid, "smelter");
+                town.changeJobForVisitor(uuid, DSmelterJob.ID);
             }
             if (itemInHand.is(Items.WOODEN_PICKAXE)) {
-                town.changeJobForVisitor(uuid, "blacksmith");
+                town.changeJobForVisitor(uuid, BlacksmithWoodenPickaxeJob.ID);
             }
             if (itemInHand.is(Items.GLASS)) {
-                town.changeJobForVisitor(uuid, "job_seeker");
+                town.changeJobForVisitor(uuid, WorkSeekerJob.getIDForRoot(CrafterStickWork.ID));
             }
         }
 
@@ -977,8 +981,8 @@ public class VisitorMobEntity extends PathfinderMob {
         return String.format("%s [%s]", super.toString(), getUUID());
     }
 
-    public String getRootJobId() {
-        return job.getRootId();
+    public JobID getJobId() {
+        return job.getId();
     }
 
     public interface ChangeListener {

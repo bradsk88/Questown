@@ -129,6 +129,11 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     }
 
     @Override
+    public JobID getId() {
+        return BakerJob.ID;
+    }
+
+    @Override
     public boolean hasAnyLootToDrop() {
         return journal.hasAnyLootToDrop();
     }
@@ -525,11 +530,6 @@ public class BakerJob implements Job<MCHeldItem, BakerJournal.Snapshot<MCHeldIte
     @Override
     public boolean isInitialized() {
         return journal.isInitialized();
-    }
-
-    @Override
-    public String getRootId() {
-        return ID.rootId();
     }
 
     @Override

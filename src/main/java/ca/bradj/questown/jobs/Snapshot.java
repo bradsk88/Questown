@@ -8,4 +8,6 @@ public interface Snapshot<H extends HeldItem<H, ?>> {
     String jobStringValue();
 
     ImmutableList<H> items();
+
+    JobID jobId();
 }

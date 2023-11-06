@@ -1,6 +1,9 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.nbt.CompoundTag;
@@ -40,7 +43,11 @@ public class ChangeJobReward extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> town.changeJobForVisitor(visitorUUID, jobName);
+        return () -> {
+            JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
+            town.changeJobForVisitor(visitorUUID, jobID);
+            town.addWork(JobsRegistry.getDefaultWork(jobID));
+        };
     }
 
     @Override

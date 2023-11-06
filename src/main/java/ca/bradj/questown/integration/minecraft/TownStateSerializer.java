@@ -61,7 +61,7 @@ public class TownStateSerializer {
             }
             vTag.put("journal_items", journalItems);
             vTag.putUUID("uuid", e.uuid);
-            vTag.putString("job", e.journal.jobStringValue());
+            vTag.putString("job", JobsRegistry.getStringValue(e.journal.jobId()));
             villagers.add(vTag);
         }
         tag.put("villagers", villagers);
@@ -127,7 +127,7 @@ public class TownStateSerializer {
                 job = "gatherer";
             }
             Snapshot<MCHeldItem> journal = JobsRegistry.getNewJournal(
-                    job,
+                    JobsRegistry.parseStringValue(job),
                     vcTag.getString("journal_status"),
                     heldItems
             );

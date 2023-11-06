@@ -2,6 +2,7 @@ package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -78,14 +79,14 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void changeJobForVisitor(
             UUID visitorUUID,
-            String jobName
+            JobID jobID
     );
 
     void changeJobForVisitorFromBoard(UUID ownerUUID);
 
     Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
 
-    Collection<String> getAvailableJobs();
+    Collection<String> getAvailableRootJobs();
 
     boolean hasEnoughBeds();
 
@@ -102,6 +103,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     void markBlockWeeded(BlockPos p);
 
     JobHandle getJobHandle();
+
+    void addWork(ImmutableList<JobID> defaultWork);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

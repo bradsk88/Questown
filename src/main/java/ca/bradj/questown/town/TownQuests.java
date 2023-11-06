@@ -129,8 +129,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             TownQuests quests,
             UUID visitorUUID
     ) {
-        List<String> jobs = ImmutableList.copyOf(town.getAvailableJobs());
-        int jobIdx = town.getServerLevel().getRandom().nextInt(jobs.size());
+        List<String> jobs = ImmutableList.copyOf(town.getAvailableRootJobs());
+        Random random = town.getServerLevel().getRandom();
+        int jobIdx = random.nextInt(jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
                 town,
@@ -140,7 +141,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         );
 
         MCQuestBatch jobQuest = new MCQuestBatch(visitorUUID, new MCInstantReward(town, reward));
-        jobQuest.addNewQuest(visitorUUID, JobsRegistry.getRoomForJob(job));
+        jobQuest.addNewQuest(visitorUUID, JobsRegistry.getRoomForJobRootId(random, job));
 
         quests.questBatches.add(jobQuest);
     }

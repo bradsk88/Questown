@@ -194,6 +194,11 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
         }
 
         @Override
+        public JobID jobId() {
+            return FarmerJob.ID;
+        }
+
+        @Override
         public String toString() {
             return "FarmerJournal.Snapshot{" +
                     "status=" + status +

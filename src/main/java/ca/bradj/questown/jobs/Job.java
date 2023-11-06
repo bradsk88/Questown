@@ -70,5 +70,5 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     boolean isInitialized();
 
-    String getRootId();
+    JobID getId();
 }

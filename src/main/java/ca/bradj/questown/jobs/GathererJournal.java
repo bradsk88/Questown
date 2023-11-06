@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
+import ca.bradj.questown.mobs.visitor.GathererJob;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -554,6 +555,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         @Override
         public String statusStringValue() {
             return status.name();
+        }
+
+        @Override
+        public JobID jobId() {
+            return GathererJob.ID;
         }
 
         @Override

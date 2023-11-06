@@ -12,7 +12,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
-public class CrafterBowlJob extends DeclarativeJob {
+public class CrafterBowlWork extends DeclarativeJob {
     public static final JobID ID = new JobID("crafter", "crafter_bowl");
 
     public static final int BLOCK_STATE_NEED_PLANKS = 0;
@@ -38,7 +38,7 @@ public class CrafterBowlJob extends DeclarativeJob {
             BLOCK_STATE_DONE, 0
     );
 
-    public CrafterBowlJob(
+    public CrafterBowlWork(
             UUID ownerUUID,
             int inventoryCapacity
     ) {

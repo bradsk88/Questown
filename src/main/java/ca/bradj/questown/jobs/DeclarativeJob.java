@@ -4,7 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.JobSeekerJob;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionJob;
@@ -145,6 +145,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.toolsRequiredAtStates = toolsRequiredAtStates;
     }
 
+    @Override
+    public JobID getId() {
+        return jobId;
+    }
+
     @NotNull
     protected WorldInteraction initWorldInteraction(
             int maxState,
@@ -259,10 +264,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         boolean worked = this.world.tryWorking(town, entity, workSpot);
-        boolean hasWork = !JobSeekerJob.ID.equals(jobId);
+        boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
         boolean finishedWork = workSpot.action.equals(maxState);
         if (hasWork && worked && finishedWork) {
-            town.changeJobForVisitor(ownerUUID, JobSeekerJob.ID);
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
         }
     }
 
@@ -310,11 +315,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     public String getStatusToSyncToClient() {
         return journal.getStatus().name();
-    }
-
-    @Override
-    public String getRootId() {
-        return jobId.rootId();
     }
 
     @Override

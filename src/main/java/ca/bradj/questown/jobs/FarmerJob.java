@@ -113,6 +113,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public JobID getId() {
+        return ID;
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }
@@ -557,11 +562,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public boolean isInitialized() {
         return journal.isInitialized();
-    }
-
-    @Override
-    public String getRootId() {
-        return ID.rootId();
     }
 
     @Override

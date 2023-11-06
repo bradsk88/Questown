@@ -218,6 +218,11 @@ public class BakerJournal<I extends Item<I>, H extends HeldItem<H, I>> implement
         }
 
         @Override
+        public JobID jobId() {
+            return BakerJob.ID;
+        }
+
+        @Override
         public String jobStringValue() {
             return "baker";
         }

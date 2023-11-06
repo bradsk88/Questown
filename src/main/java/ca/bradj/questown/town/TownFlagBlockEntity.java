@@ -9,7 +9,10 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
+import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -112,7 +115,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownJobHandle jobHandle = new TownJobHandle();
-    private Collection<String> availableWork = new ArrayList<>();
+    private Collection<JobID> availableWork = new ArrayList<>();
 
 
     public TownFlagBlockEntity(
@@ -534,24 +537,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void addRandomWork() {
         // TODO: Implement job board actually
-        ImmutableList<String> works = ImmutableList.of(
-            "crafter_bowl",
-            "crafter_stick"
+        ImmutableList<JobID> works = ImmutableList.of(
+                CrafterBowlWork.ID,
+                CrafterStickWork.ID
         );
-        this.availableWork.add(works.get(level.getRandom().nextInt(works.size())));
+        addWork(ImmutableList.of(works.get(level.getRandom().nextInt(works.size()))));
+    }
+
+    @Override
+    public void addWork(ImmutableList<JobID> defaultWork) {
+        // TODO: Add desired quantity of product to work
+        this.availableWork.addAll(defaultWork);
+        // TODO: Mark job board blocks as "have product"
     }
 
     @Override
     public void changeJobForVisitorFromBoard(UUID ownerUUID) {
-        String work = getVillagerPreferredWork(ownerUUID, availableWork);
+        JobID work = getVillagerPreferredWork(ownerUUID, availableWork);
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
         }
     }
 
-    private String getVillagerPreferredWork(
+    private JobID getVillagerPreferredWork(
             UUID uuid,
-            Collection<String> availableJobs
+            Collection<JobID> availableJobs
     ) {
         Optional<LivingEntity> f = entities.stream().filter(v -> uuid.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
@@ -563,8 +573,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             QT.BLOCK_LOGGER.error("Entity is wrong type: {}", ff);
             return null;
         }
-        Collection<String> preference =  JobsRegistry.getPreferredWorkIds(v.getRootJobId());
-        for (String p : preference) {
+        Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
+        for (JobID p : preference) {
             if (availableJobs.contains(p)) {
                 return p;
             }
@@ -575,7 +585,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void changeJobForVisitor(
             UUID visitorUUID,
-            String jobName
+            JobID jobID
     ) {
         Optional<VisitorMobEntity> f = entities.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
@@ -583,9 +593,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .filter(v -> v.getUUID().equals(visitorUUID))
                 .findFirst();
         if (f.isEmpty()) {
-            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobName);
+            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
         } else {
-            doSetJob(visitorUUID, jobName, f.get());
+            doSetJob(visitorUUID, jobID, f.get());
             setChanged();
         }
     }
@@ -593,7 +603,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @SuppressWarnings("deprecation")
     private void doSetJob(
             UUID visitorUUID,
-            String jobName,
+            JobID jobName,
             VisitorMobEntity f
     ) {
         f.setJob(JobsRegistry.getInitializedJob(this, jobName, f.getJobJournalSnapshot().items(), visitorUUID));
@@ -774,9 +784,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public Collection<String> getAvailableJobs() {
+    public Collection<String> getAvailableRootJobs() {
         // TODO: Scan villagers to make this decision
-        return JobsRegistry.getAllJobs();
+        return JobsRegistry.getAllJobs().stream().map(JobID::rootId).toList();
     }
 
     @Override

@@ -37,7 +37,7 @@ import java.util.function.Function;
 
 public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
-    public static final String ID = "gatherer";
+    public static final JobID ID = new JobID("gatherer", "gather");
     private @Nullable TownInterface town;
     private final Container inventory;
     private final UUID ownerUUID;
@@ -481,7 +481,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, "gatherer");
+        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, ID);
     }
 
     @Override
@@ -541,7 +541,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     @Override
-    public String getId() {
+    public JobID getId() {
         return ID;
     }
 

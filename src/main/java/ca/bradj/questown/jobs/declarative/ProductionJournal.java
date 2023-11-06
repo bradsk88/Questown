@@ -99,7 +99,7 @@ public class ProductionJournal<
     }
 
     public SimpleSnapshot<ProductionStatus, H> getSnapshot() {
-        return new SimpleSnapshot<>(jobId.jobId(), status, ImmutableList.copyOf(inventory));
+        return new SimpleSnapshot<>(jobId, status, ImmutableList.copyOf(inventory));
     }
 
     public int getCapacity() {
