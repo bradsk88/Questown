@@ -535,10 +535,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void addRandomWork() {
-        // TODO: Implement job board so player can actually request work
-        ImmutableList<Ingredient> works = ImmutableList.of(
-                Ingredient.of(Items.BOWL),
-                Ingredient.of(Items.STICK)
+        // TODO: Implement jobs UI so player can actually request work
+        ImmutableList<Ingredient> works = ImmutableList.copyOf(JobsRegistry.getAllJobs()
+                .stream()
+                .map(JobsRegistry::getOutput)
+                .map(Ingredient::of)
+                .collect(Collectors.toSet())
         );
         requestResult(ImmutableList.of(works.get(level.getRandom().nextInt(works.size()))));
     }

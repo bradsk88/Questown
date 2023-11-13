@@ -52,7 +52,7 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (e.getStatusForServer() == GathererJournal.Status.GATHERING) {
             return true;
         }
-        QT.VILLAGER_LOGGER.debug("Visitor has chosen {} as their target [{}]", target, e.getUUID());
+        QT.VILLAGER_LOGGER.trace("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;
     }
 

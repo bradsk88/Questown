@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.StatefulJobBlock;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -19,9 +20,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.function.Function;
 
 // FIXME: Persist this data to the flag
 public class TownJobHandle implements JobHandle {
+
+    private Map<BlockPos, Function<State, Void>> cascading = new HashMap<>();
 
     public record State(
             int processingState,
@@ -78,6 +82,10 @@ public class TownJobHandle implements JobHandle {
     ) {
         jobStatuses.put(bp, bs);
         QT.BLOCK_LOGGER.debug("Job state set to {} at {}", bs.toShortString(), bp);
+
+        if (cascading.containsKey(bp)) {
+            cascading.get(bp).apply(bs);
+        }
     }
 
     public interface InsertionRules {
@@ -174,6 +182,13 @@ public class TownJobHandle implements JobHandle {
                     }
                     State bs = new State(initialProcessingState, 0, 0);
                     jobStatuses.put(pp, bs);
+
+                    if (b instanceof StatefulJobBlock sjb) {
+                        cascading.put(pp, z -> {
+                            sjb.setProcessingState(sl, pp, z);
+                            return null;
+                        });
+                    }
                 }
             }
         }

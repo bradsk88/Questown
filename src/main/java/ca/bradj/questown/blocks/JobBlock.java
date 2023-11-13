@@ -1,17 +1,30 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.TownJobHandle;
 import ca.bradj.questown.town.interfaces.JobHandle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
 
 public class JobBlock {
+
+    public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
+            "processing_state", 0, 4
+    );
+    public static final IntegerProperty INGREDIENT_COUNT = IntegerProperty.create(
+            "processing_state", 0, 3
+    );
+
+    public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
+            "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
+    );
 
     public static @Nullable Integer getState(
             JobHandle sl,

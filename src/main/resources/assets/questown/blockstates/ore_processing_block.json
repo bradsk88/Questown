@@ -1,196 +1,49 @@
 {
   "variants": {
-    "facing=east,processing_state=0": {
-      "model": "questown:block/ore_processing_block_empty",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=10": {
-      "model": "questown:block/ore_processing_block_filled",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=9": {
-      "model": "questown:block/ore_processing_block_wl9",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=8": {
-      "model": "questown:block/ore_processing_block_wl8",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=7": {
-      "model": "questown:block/ore_processing_block_wl7",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=6": {
-      "model": "questown:block/ore_processing_block_wl6",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=5": {
-      "model": "questown:block/ore_processing_block_wl5",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=4": {
-      "model": "questown:block/ore_processing_block_wl4",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=3": {
-      "model": "questown:block/ore_processing_block_wl3",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=2": {
-      "model": "questown:block/ore_processing_block_wl2",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=1": {
-      "model": "questown:block/ore_processing_block_wl1",
-      "y": 90
-    },
-    "facing=east,processing_state=1,work_left=0": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 90
-    },
-    "facing=east,processing_state=2": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 90
-    },
-    "facing=north,processing_state=0": {
+    "processing_state=0": {
       "model": "questown:block/ore_processing_block_empty"
     },
-    "facing=north,processing_state=1,work_left=10": {
+    "processing_state=1,work_left=10": {
       "model": "questown:block/ore_processing_block_filled"
     },
-    "facing=north,processing_state=1,work_left=9": {
+    "processing_state=1,work_left=9": {
       "model": "questown:block/ore_processing_block_wl9"
     },
-    "facing=north,processing_state=1,work_left=8": {
+    "processing_state=1,work_left=8": {
       "model": "questown:block/ore_processing_block_wl8"
     },
-    "facing=north,processing_state=1,work_left=7": {
+    "processing_state=1,work_left=7": {
       "model": "questown:block/ore_processing_block_wl7"
     },
-    "facing=north,processing_state=1,work_left=6": {
+    "processing_state=1,work_left=6": {
       "model": "questown:block/ore_processing_block_wl6"
     },
-    "facing=north,processing_state=1,work_left=5": {
+    "processing_state=1,work_left=5": {
       "model": "questown:block/ore_processing_block_wl5"
     },
-    "facing=north,processing_state=1,work_left=4": {
+    "processing_state=1,work_left=4": {
       "model": "questown:block/ore_processing_block_wl4"
     },
-    "facing=north,processing_state=1,work_left=3": {
+    "processing_state=1,work_left=3": {
       "model": "questown:block/ore_processing_block_wl3"
     },
-    "facing=north,processing_state=1,work_left=2": {
+    "processing_state=1,work_left=2": {
       "model": "questown:block/ore_processing_block_wl2"
     },
-    "facing=north,processing_state=1,work_left=1": {
+    "processing_state=1,work_left=1": {
       "model": "questown:block/ore_processing_block_wl1"
     },
-    "facing=north,processing_state=1,work_left=0": {
+    "processing_state=1,work_left=0": {
       "model": "questown:block/ore_processing_block_done"
     },
-    "facing=south,processing_state=0": {
-      "model": "questown:block/ore_processing_block_empty",
-      "y": 180
+    "processing_state=2": {
+      "model": "questown:block/ore_processing_block_done"
     },
-    "facing=south,processing_state=1,work_left=10": {
-      "model": "questown:block/ore_processing_block_filled",
-      "y": 180
+    "processing_state=3": {
+      "model": "questown:block/ore_processing_block_done"
     },
-    "facing=south,processing_state=1,work_left=9": {
-      "model": "questown:block/ore_processing_block_wl9",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=8": {
-      "model": "questown:block/ore_processing_block_wl8",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=7": {
-      "model": "questown:block/ore_processing_block_wl7",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=6": {
-      "model": "questown:block/ore_processing_block_wl6",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=5": {
-      "model": "questown:block/ore_processing_block_wl5",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=4": {
-      "model": "questown:block/ore_processing_block_wl4",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=3": {
-      "model": "questown:block/ore_processing_block_wl3",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=2": {
-      "model": "questown:block/ore_processing_block_wl2",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=1": {
-      "model": "questown:block/ore_processing_block_wl1",
-      "y": 180
-    },
-    "facing=south,processing_state=1,work_left=0": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 180
-    },
-    "facing=south,processing_state=2": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 180
-    },
-    "facing=west,processing_state=0": {
-      "model": "questown:block/ore_processing_block_empty",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=10": {
-      "model": "questown:block/ore_processing_block_filled",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=9": {
-      "model": "questown:block/ore_processing_block_wl9",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=8": {
-      "model": "questown:block/ore_processing_block_wl8",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=7": {
-      "model": "questown:block/ore_processing_block_wl7",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=6": {
-      "model": "questown:block/ore_processing_block_wl6",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=5": {
-      "model": "questown:block/ore_processing_block_wl5",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=4": {
-      "model": "questown:block/ore_processing_block_wl4",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=3": {
-      "model": "questown:block/ore_processing_block_wl3",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=2": {
-      "model": "questown:block/ore_processing_block_wl2",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=1": {
-      "model": "questown:block/ore_processing_block_wl1",
-      "y": 270
-    },
-    "facing=west,processing_state=1,work_left=0": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 270
-    },
-    "facing=west,processing_state=2": {
-      "model": "questown:block/ore_processing_block_done",
-      "y": 270
+    "processing_state=4": {
+      "model": "questown:block/ore_processing_block_done"
     }
   }
 }
