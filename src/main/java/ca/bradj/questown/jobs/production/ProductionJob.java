@@ -299,7 +299,7 @@ public abstract class ProductionJob<
             );
         }
         if (this.suppliesTarget != null) {
-            QT.JOB_LOGGER.debug(marker, "Baker located supplies at {}", this.suppliesTarget.getPosition());
+            QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
 

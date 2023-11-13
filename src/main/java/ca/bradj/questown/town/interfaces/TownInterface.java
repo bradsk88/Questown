@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -104,7 +105,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     JobHandle getJobHandle();
 
-    void addWork(ImmutableList<JobID> defaultWork);
+    void requestResult(Collection<Ingredient> defaultWork);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

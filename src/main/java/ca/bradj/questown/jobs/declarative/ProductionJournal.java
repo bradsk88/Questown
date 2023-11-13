@@ -110,14 +110,15 @@ public class ProductionJournal<
             JobTownProvider<MCRoom> townState,
             EntityLocStateProvider<MCRoom> entityState,
             EntityInvStateProvider<Integer> inventory,
-            IProductionStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<ProductionStatus> factory,
+            boolean prioritizeExtraction
     ) {
         if (status == null || status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
         Signals sig = sigs.getSignal();
         @Nullable ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
-                status, sig, inventory, townState, entityState, factory
+                status, sig, inventory, townState, entityState, factory, prioritizeExtraction
         );
         if (newStatus != null) {
             changeStatus(newStatus);

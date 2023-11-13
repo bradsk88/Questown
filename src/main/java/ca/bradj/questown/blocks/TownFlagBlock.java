@@ -162,6 +162,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(ItemsInit.WELCOME_MAT_BLOCK.get())) {
             converted = itemInHand;
         }
+        if (Ingredient.of(ItemTags.SIGNS).test(itemInHand)) {
+            converted = ItemsInit.JOB_BOARD_BLOCK.get().getDefaultInstance();
+        }
         if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
             player.giveExperiencePoints(100);
@@ -185,7 +188,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (converted != null) {
             StoreFlagInputOnOutputNBT(itemInHand, converted);
             player.setItemInHand(hand, converted);
-            Questown.LOGGER.debug(
+            QT.FLAG_LOGGER.debug(
                     "{} created at {}",
                     converted.getItem().getRegistryName(),
                     entity.getTownFlagBasePos()
@@ -200,7 +203,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                 level.addFreshEntity(new ItemEntity(level, flagPos.getX(), flagPos.getY(), flagPos.getZ(), toDrop));
             }
             StoreParentOnNBT(converted, entity.getTownFlagBasePos());
-            Questown.LOGGER.debug(
+            QT.FLAG_LOGGER.debug(
                     "{} has been paired with {} at {}",
                     converted.getItem().getRegistryName(), entity.getUUID(), entity.getTownFlagBasePos()
             );

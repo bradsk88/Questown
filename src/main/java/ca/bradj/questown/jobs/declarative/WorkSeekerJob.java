@@ -44,6 +44,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 new JobID(rootId, WORK_ID),
                 SpecialQuests.JOB_BOARD,
                 MAX_STATE,
+                false,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,

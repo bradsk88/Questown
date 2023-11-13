@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -16,8 +17,9 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CraftingTableBlock;
@@ -31,7 +33,8 @@ import java.util.function.Function;
 
 public class JobsRegistry {
 
-    private static final SnapshotFunc GATHERER_SNAPSHOT_FUNC = productionJobSnapshot(GathererJob.ID);
+    private static final SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
+            new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
     public static boolean isJobBlock(Block b) {
         // TODO: Switch to job board block
@@ -93,6 +96,27 @@ public class JobsRegistry {
         }
         throw new IllegalArgumentException("Unexpected job ID format: " + jobID);
     }
+
+    public static boolean canSatisfy(
+            JobID p,
+            Ingredient requestedResult) {
+        Work w = works.get(p);
+        if (w == null) {
+            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
+            return false;
+        }
+        return requestedResult.test(w.result);
+    }
+
+    public static ItemStack getOutput(JobID p) {
+        Work w = works.get(p);
+        if (w == null) {
+            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
+            return ItemStack.EMPTY;
+        }
+        return w.result;
+    }
+
     private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }
@@ -113,9 +137,9 @@ public class JobsRegistry {
             SnapshotFunc snapshotFunc,
             BlockCheckFunc blockCheckFunc,
             ResourceLocation baseRoom,
-            IStatus<?> initialStatus
+            IStatus<?> initialStatus,
+            ItemStack result
     ) {
-
     }
 
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_META_JOB = null;
@@ -164,50 +188,57 @@ public class JobsRegistry {
                     (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                     NOT_A_DECLARATIVE_JOB,
                     SpecialQuests.FARM,
-                    GathererJournal.Status.IDLE
+                    GathererJournal.Status.IDLE,
+                    Items.WHEAT.getDefaultInstance()
             ),
             BakerJob.ID, new Work(
                     (town, uuid) -> new BakerJob(uuid, 6),
                     (jobId, status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                     NOT_A_DECLARATIVE_JOB,
-                    new ResourceLocation("bakery"),
-                    GathererJournal.Status.IDLE
+                    Questown.ResourceLocation("bakery"),
+                    GathererJournal.Status.IDLE,
+                    Items.BREAD.getDefaultInstance()
             ),
             DSmelterJob.ID, new Work(
                     (town, uuid) -> new DSmelterJob(uuid, 6),
                     productionJobSnapshot(DSmelterJob.ID),
                     (block) -> block instanceof OreProcessingBlock,
-                    new ResourceLocation("smeltery"),
-                    ProductionStatus.FACTORY.idle()
+                    Questown.ResourceLocation("smeltery"),
+                    ProductionStatus.FACTORY.idle(),
+                    DSmelterJob.RESULT
             ),
             GathererJob.ID, new Work(
                     (town, uuid) -> new GathererJob(town, 6, uuid),
                     GATHERER_SNAPSHOT_FUNC,
                     NOT_A_DECLARATIVE_JOB,
                     NOT_REQUIRED_BECAUSE_META_JOB,
-                    GathererJournal.Status.IDLE
+                    GathererJournal.Status.IDLE,
+                    Items.WHEAT_SEEDS.getDefaultInstance()
             ),
             BlacksmithWoodenPickaxeJob.ID, new Work(
                     (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
                     // TODO: Add support for smaller inventories
                     productionJobSnapshot(BlacksmithWoodenPickaxeJob.ID),
                     (block) -> block instanceof BlacksmithsTableBlock,
-                    new ResourceLocation("smithy"),
-                    ProductionStatus.FACTORY.idle()
+                    Questown.ResourceLocation("smithy"),
+                    ProductionStatus.FACTORY.idle(),
+                    BlacksmithWoodenPickaxeJob.RESULT
             ),
             CrafterBowlWork.ID, new Work(
                     (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
                     productionJobSnapshot(CrafterBowlWork.ID),
                     (block) -> block instanceof CraftingTableBlock,
-                    new ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle()
+                    Questown.ResourceLocation("crafting_room"),
+                    ProductionStatus.FACTORY.idle(),
+                    CrafterBowlWork.RESULT
             ),
             CrafterStickWork.ID, new Work(
                     (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
                     productionJobSnapshot(CrafterStickWork.ID),
                     (block) -> block instanceof CraftingTableBlock,
-                    new ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle()
+                    Questown.ResourceLocation("crafting_room"),
+                    ProductionStatus.FACTORY.idle(),
+                    CrafterStickWork.RESULT
             )
     );
 
@@ -297,6 +328,10 @@ public class JobsRegistry {
             String status,
             ImmutableList<MCHeldItem> heldItems
     ) {
+        if (WorkSeekerJob.isSeekingWork(job)) {
+            return new SimpleSnapshot<>(job, ProductionStatus.from(status), heldItems);
+        }
+
         Work f = works.get(job);
         if (f == null) {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);

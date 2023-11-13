@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -40,6 +41,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
+    public static final ItemStack RESULT = Items.WOODEN_PICKAXE.getDefaultInstance();
 
     public BlacksmithWoodenPickaxeJob(
             UUID ownerUUID,
@@ -51,11 +53,12 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 ID,
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
+                true,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                Items.WOODEN_PICKAXE::getDefaultInstance
+                RESULT::copy
         );
     }
 }

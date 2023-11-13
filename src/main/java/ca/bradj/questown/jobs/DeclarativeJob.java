@@ -104,6 +104,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final JobID jobId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
+    private final boolean prioritizeExtraction;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -111,6 +112,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull JobID jobId,
             ResourceLocation workRoomId,
             int maxState,
+            boolean prioritizeExtraction,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
@@ -131,6 +133,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 STATUS_FACTORY
         );
         this.jobId = jobId;
+        this.prioritizeExtraction = prioritizeExtraction;
         this.world = initWorldInteraction(
                 maxState,
                 ingredientsRequiredAtStates,
@@ -229,7 +232,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return entityCurrentJobSite;
             }
         };
-        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory);
+        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
 
         if (entityCurrentJobSite != null) {
             tryWorking(town, entity, entityCurrentJobSite);
@@ -279,17 +282,17 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             return ImmutableMap.of();
         }
 
-        ImmutableMap.Builder<Integer, WorkSpot<Integer, BlockPos>> b = ImmutableMap.builder();
+        Map<Integer, WorkSpot<Integer, BlockPos>> b = new HashMap<>();
         jobSite.getSpaces().stream()
                 .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
                 .forEach(v -> {
                     BlockPos bp = Positions.ToBlock(v, jobSite.yCoord);
                     @Nullable Integer blockAction = JobBlock.getState(town, bp);
-                    if (blockAction != null) {
+                    if (blockAction != null && !b.containsKey(blockAction)) {
                         b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
                     }
                 });
-        return b.build();
+        return ImmutableMap.copyOf(b);
     }
 
     @Override

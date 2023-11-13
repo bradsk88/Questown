@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -60,6 +61,10 @@ public class Questown {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
     }
 
+    public static ResourceLocation ResourceLocation(String id) {
+        return new ResourceLocation(Questown.MODID, id);
+    }
+
     private void setup(final FMLCommonSetupEvent event) {
     }
 
@@ -67,6 +72,7 @@ public class Questown {
         Questown.LOGGER.info("Doing client stuff");
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
+        MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
         Questown.LOGGER.info("Registered screens");

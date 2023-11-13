@@ -145,6 +145,10 @@ public class TownJobHandle implements JobHandle {
     ) {
         rooms.addAll(allRooms);
 
+        if (rooms.isEmpty()) {
+            return;
+        }
+
         curIdx = (curIdx + 1) % rooms.size();
 
         this.doTick(sl, (MCRoom) rooms.toArray()[curIdx]);

@@ -33,6 +33,7 @@ public class CrafterStickWork extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
+    public static final ItemStack RESULT = new ItemStack(Items.STICK, 1);
 
     public CrafterStickWork(
             UUID ownerUUID,
@@ -44,11 +45,12 @@ public class CrafterStickWork extends DeclarativeJob {
                 ID,
                 new ResourceLocation(Questown.MODID, "crafting_room"),
                 MAX_STATE,
+                true,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                () -> new ItemStack(Items.STICK)
+                RESULT::copy
         );
     }
 }

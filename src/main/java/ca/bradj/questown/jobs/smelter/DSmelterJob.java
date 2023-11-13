@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 public class DSmelterJob extends DeclarativeJob {
     public static final JobID ID = new JobID("smelter", "process_ore");
+    public static final ItemStack RESULT = new ItemStack(Items.RAW_IRON, 2);
     private static final int MAX_STATE = 2;
     private static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of(
             0, Ingredient.of(Items.IRON_ORE)
@@ -45,11 +47,12 @@ public class DSmelterJob extends DeclarativeJob {
                 ID,
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 MAX_STATE,
+                true,
                 INGREDIENTS,
                 INGREDIENTS_QTY,
                 TOOLS,
                 WORK,
-                Items.IRON_ORE::getDefaultInstance
+                RESULT::copy
         );
     }
 }

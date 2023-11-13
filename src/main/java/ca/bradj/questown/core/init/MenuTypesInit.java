@@ -3,6 +3,7 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
+import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
@@ -19,6 +20,9 @@ public class MenuTypesInit {
     );
     public static RegistryObject<MenuType<TownQuestsContainer>> TOWN_QUESTS = MENUS.register(
             "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::new)
+    );
+    public static RegistryObject<MenuType<TownWorkContainer>> TOWN_WORK = MENUS.register(
+            "town_work", () -> IForgeMenuType.create(TownWorkContainer::new)
     );
     public static RegistryObject<MenuType<VisitorQuestsContainer>> VISITOR_QUESTS = MENUS.register(
             "visitor_quests", () -> IForgeMenuType.create(VisitorQuestsContainer::new)

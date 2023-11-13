@@ -115,7 +115,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownJobHandle jobHandle = new TownJobHandle();
-    private Collection<JobID> availableWork = new ArrayList<>();
+    private WorkHandle workHandle = new WorkHandle(this);
 
 
     public TownFlagBlockEntity(
@@ -146,6 +146,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             setChanged(level, blockPos, state);
         }
 
+        e.workHandle.tick();
         e.quests.tick(e);
 
         long gameTime = level.getGameTime();
@@ -536,24 +537,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void addRandomWork() {
-        // TODO: Implement job board actually
-        ImmutableList<JobID> works = ImmutableList.of(
-                CrafterBowlWork.ID,
-                CrafterStickWork.ID
+        // TODO: Implement job board so player can actually request work
+        ImmutableList<Ingredient> works = ImmutableList.of(
+                Ingredient.of(Items.BOWL),
+                Ingredient.of(Items.STICK)
         );
-        addWork(ImmutableList.of(works.get(level.getRandom().nextInt(works.size()))));
+        requestResult(ImmutableList.of(works.get(level.getRandom().nextInt(works.size()))));
     }
 
     @Override
-    public void addWork(ImmutableList<JobID> defaultWork) {
-        // TODO: Add desired quantity of product to work
-        this.availableWork.addAll(defaultWork);
-        // TODO: Mark job board blocks as "have product"
+    public void requestResult(Collection<Ingredient> defaultWork) {
+        this.workHandle.addWork(defaultWork);
     }
 
     @Override
     public void changeJobForVisitorFromBoard(UUID ownerUUID) {
-        JobID work = getVillagerPreferredWork(ownerUUID, availableWork);
+        JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
         }
@@ -561,7 +560,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     private JobID getVillagerPreferredWork(
             UUID uuid,
-            Collection<JobID> availableJobs
+            Collection<Ingredient> requestedResults
     ) {
         Optional<LivingEntity> f = entities.stream().filter(v -> uuid.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
@@ -575,8 +574,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
         Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
         for (JobID p : preference) {
-            if (availableJobs.contains(p)) {
-                return p;
+            for (Ingredient requestedResult : requestedResults) {
+                // TODO: Think about how work chains work.
+                //  E.g. If a blacksmith needs iron ingots to do a requested job,
+                //  but none of the other villagers produce that resource, the
+                //  blacksmith should light up red to indicate a broken chain and
+                //  that the player will need to contribute in order for the
+                //  blacksmith to work, rather than everything being automated.
+                if (JobsRegistry.canSatisfy(p, requestedResult)) {
+                    return p;
+                }
             }
         }
         return null;
@@ -693,7 +700,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
         this.entities.add(vEntity);
         vEntity.addChangeListener(() -> {
-            QT.FLAG_LOGGER.debug("Entity requests flag to be marked changed");
+            QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
             this.setChanged();
         });
         this.setChanged();
@@ -914,5 +921,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
             v.setHealth(v.getMaxHealth());
         });
+    }
+
+    public void registerJobsBoard(BlockPos matPos) {
+        ServerLevel sl = getServerLevel();
+        if (sl == null) {
+            return;
+        }
+        this.workHandle.registerJobBoard(sl, matPos);
     }
 }

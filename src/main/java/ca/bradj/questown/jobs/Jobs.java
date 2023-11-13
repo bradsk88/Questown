@@ -188,8 +188,11 @@ public class Jobs {
             TakeFn takeFn,
             ItemStack is
     ) {
-        if (takeFn == null || !takeFn.Take(is)) {
-            level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+        while (!is.isEmpty()) {
+            if (takeFn == null || !takeFn.Take(is)) {
+                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+            }
+            is.shrink(1);
         }
     }
 

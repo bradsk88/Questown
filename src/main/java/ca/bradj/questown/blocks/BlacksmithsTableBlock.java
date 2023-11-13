@@ -8,9 +8,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
@@ -19,7 +18,7 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
 
-public class BlacksmithsTableBlock extends HorizontalDirectionalBlock {
+public class BlacksmithsTableBlock extends Block {
     public static final String ITEM_ID = "blacksmiths_table";
 
     public BlacksmithsTableBlock(
@@ -38,15 +37,6 @@ public class BlacksmithsTableBlock extends HorizontalDirectionalBlock {
     ) {
         // FIXME: Also drop stuff inside
         return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
-    }
-
-    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        BlockState blockState = this.defaultBlockState();
-        if (!(ctx.getLevel() instanceof ServerLevel sl)) {
-            return blockState;
-        }
-        return blockState
-                .setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     @Override

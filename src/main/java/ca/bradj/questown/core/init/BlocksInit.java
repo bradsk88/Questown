@@ -22,6 +22,9 @@ public class BlocksInit {
     public static final RegistryObject<Block> WELCOME_MAT_BLOCK = BLOCKS.register(
             WelcomeMatBlock.ITEM_ID, WelcomeMatBlock::new
     );
+    public static final RegistryObject<Block> JOB_BOARD_BLOCK = BLOCKS.register(
+            JobBoardBlock.ITEM_ID, JobBoardBlock::new
+    );
     public static final RegistryObject<Block> BREAD_OVEN_BLOCK = BLOCKS.register(
             BreadOvenBlock.ITEM_ID, BreadOvenBlock::new
     );

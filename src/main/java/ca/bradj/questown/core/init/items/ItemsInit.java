@@ -30,6 +30,15 @@ public class ItemsInit {
                     Questown.DEFAULT_ITEM_PROPS
             )
     );
+
+    public static final RegistryObject<Item> JOB_BOARD_BLOCK = ITEMS.register(
+            JobBoardBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.JOB_BOARD_BLOCK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
     public static final RegistryObject<Item> BREAD_OVEN_BLOCK = ITEMS.register(
             BreadOvenBlock.ITEM_ID,
             () -> new BlockItem(

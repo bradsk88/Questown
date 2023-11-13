@@ -1,13 +1,17 @@
 package ca.bradj.questown.town.rewards;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -46,7 +50,16 @@ public class ChangeJobReward extends MCReward {
         return () -> {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
             town.changeJobForVisitor(visitorUUID, jobID);
-            town.addWork(JobsRegistry.getDefaultWork(jobID));
+            ImmutableList<JobID> defaultWork = JobsRegistry.getDefaultWork(jobID);
+            defaultWork.forEach(v -> {
+                ItemStack output = JobsRegistry.getOutput(v);
+                if (output.isEmpty()) {
+                    return;
+                }
+                ImmutableList<Ingredient> result = ImmutableList.of(Ingredient.of(output));
+                town.requestResult(result);
+                QT.JOB_LOGGER.debug("Request was added to job board automatically");
+            });
         };
     }
 

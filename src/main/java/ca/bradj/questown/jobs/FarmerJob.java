@@ -470,7 +470,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 v -> {
                     WorkSpot<FarmerAction, BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
                     b.put(v, ws != null);
-                    if (ws != null) {
+                    if (ws != null && v.equals(ws.action)) {
                         workSpots.put(v, ws);
                     }
                 }
