@@ -45,6 +45,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 SpecialQuests.JOB_BOARD,
                 MAX_STATE,
                 false,
+                0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
@@ -72,7 +73,8 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            Supplier<ItemStack> workResult
+            Supplier<ItemStack> workResult,
+            int interval
     ) {
         return new WorldInteraction(
                 inventory,
@@ -82,7 +84,8 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ingredientQtyRequiredAtStates,
                 workRequiredAtStates,
                 toolsRequiredAtStates,
-                workResult
+                workResult,
+                interval
         ) {
 
             @Override

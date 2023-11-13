@@ -11,8 +11,6 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
-import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -114,8 +112,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             )),
             getBlockPos().getY()
     );
-    private final TownJobHandle jobHandle = new TownJobHandle();
-    private WorkHandle workHandle = new WorkHandle(this);
+    private final TownJobHandle jobHandle = new TownJobHandle(); // FIXME: Persist to tile
+    private WorkHandle workHandle = new WorkHandle(this); // FIXME: Persist to tile
 
 
     public TownFlagBlockEntity(
@@ -793,7 +791,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public Collection<String> getAvailableRootJobs() {
         // TODO: Scan villagers to make this decision
-        return JobsRegistry.getAllJobs().stream().map(JobID::rootId).toList();
+        Set<String> allJobs = JobsRegistry.getAllJobs().stream()
+                .map(JobID::rootId)
+                .collect(Collectors.toSet());
+        Set<String> allFilledJobs = entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .map(VisitorMobEntity::getJobId)
+                .map(JobID::rootId)
+                .collect(Collectors.toSet());
+        Set<String> allNewJobs = allJobs.stream()
+                .filter(v -> !allFilledJobs.contains(v))
+                .collect(Collectors.toSet());
+        if (allNewJobs.isEmpty()) {
+            allNewJobs = allJobs;
+        }
+        return allNewJobs;
     }
 
     @Override

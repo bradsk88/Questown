@@ -50,6 +50,7 @@ public class CrafterBowlWork extends DeclarativeJob {
                 new ResourceLocation(Questown.MODID, "crafting_room"),
                 MAX_STATE,
                 true,
+                100,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,

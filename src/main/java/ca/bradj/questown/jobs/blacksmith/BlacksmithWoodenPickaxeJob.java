@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -54,6 +55,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
                 true,
+                100,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,

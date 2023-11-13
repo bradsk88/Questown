@@ -30,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class JobsRegistry {
 
@@ -44,11 +45,11 @@ public class JobsRegistry {
         return works.values().stream().anyMatch(v -> v.blockCheckFunc.apply(b));
     }
 
-    public static Collection<JobID> getAllJobs() {
+    public static Set<JobID> getAllJobs() {
         return works.keySet().stream()
                 .filter(v -> !v.equals(GathererJob.ID))
                 .filter(v -> !WorkSeekerJob.isSeekingWork(v))
-                .toList();
+                .collect(Collectors.toSet());
     }
 
     public static ResourceLocation getRoomForJobRootId(Random rand, String rootId) {

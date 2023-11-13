@@ -38,6 +38,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     private final Supplier<ItemStack> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
+    private final int interval;
     private int ticksSinceLastAction;
 
     public WorldInteraction(
@@ -48,7 +49,8 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            Supplier<ItemStack> workResult
+            Supplier<ItemStack> workResult,
+            int interval
     ) {
         this.inventory = inventory;
         this.journal = journal;
@@ -58,6 +60,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         this.workRequiredAtStates = workRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workResult = workResult;
+        this.interval = interval;
     }
 
     public boolean tryWorking(
@@ -71,7 +74,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         JobHandle jh = town.getJobHandle();
 
         ticksSinceLastAction++;
-        if (ticksSinceLastAction < Config.FARM_ACTION_INTERVAL.get()) { // TODO: Smelter specific config
+        if (ticksSinceLastAction < interval) {
             return false;
         }
         ticksSinceLastAction = 0;

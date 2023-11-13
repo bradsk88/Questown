@@ -48,6 +48,7 @@ public class DSmelterJob extends DeclarativeJob {
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 MAX_STATE,
                 true,
+                100,
                 INGREDIENTS,
                 INGREDIENTS_QTY,
                 TOOLS,

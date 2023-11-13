@@ -113,6 +113,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ResourceLocation workRoomId,
             int maxState,
             boolean prioritizeExtraction,
+            int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
@@ -140,7 +141,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 ingredientsQtyRequiredAtStates,
                 toolsRequiredAtStates,
                 workRequiredAtStates,
-                workResult
+                workResult,
+                workInterval
         );
         this.maxState = maxState;
         this.workRoomId = workRoomId;
@@ -160,7 +162,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            Supplier<ItemStack> workResult
+            Supplier<ItemStack> workResult,
+            int interval
     ) {
         return new WorldInteraction(
                 inventory,
@@ -170,7 +173,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 ingredientsQtyRequiredAtStates,
                 workRequiredAtStates,
                 toolsRequiredAtStates,
-                workResult
+                workResult,
+                interval
         );
     }
 

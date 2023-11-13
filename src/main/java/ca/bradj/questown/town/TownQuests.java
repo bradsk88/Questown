@@ -63,7 +63,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         if (town.getVillagersWithQuests().isEmpty()) {
             // Spawn a villager with a set of quests
             return newVisitor;
-        } else if (rand.nextBoolean()) {
+        } else if (!town.getAvailableRootJobs().isEmpty() || rand.nextBoolean()) {
             List<UUID> unemployed = ImmutableList.copyOf(town.getUnemployedVillagers());
             if (!unemployed.isEmpty()) {
                 UUID villager = unemployed.get(rand.nextInt(unemployed.size()));

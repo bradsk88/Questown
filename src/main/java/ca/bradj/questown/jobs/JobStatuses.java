@@ -106,7 +106,7 @@ public class JobStatuses {
      *                            will cause the item to be spawned into the
      *                            world for collection by whomever walks by.
      */
-    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+            public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
             EntityInvStateProvider<Integer> inventory,
