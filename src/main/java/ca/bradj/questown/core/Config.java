@@ -39,6 +39,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> SMELTER_WORK_REQUIRED;
 
+    public static final ForgeConfigSpec.ConfigValue<Boolean> SCAN_FOR_DOORS;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -88,6 +90,9 @@ public class Config {
         SMELTER_WORK_REQUIRED = BUILDER.comment(
                 "The number of times a smelter must work on a block of ore to extract the raw materials inside"
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
+        SCAN_FOR_DOORS = BUILDER.comment(
+                "RISKY: Set true to scan for vanilla doors in a radius around the town flag during room detection. This may be prone due to crashes if rooms get too complex."
+        ).define("ScanForDoors", false);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

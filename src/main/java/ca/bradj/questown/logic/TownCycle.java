@@ -36,7 +36,7 @@ public class TownCycle {
             Iterable<Position> registeredDoors
     ) {
         ImmutableCollection<Position> foundDoors = ImmutableList.of();
-        if (scanAroundPosition != null) {
+        if (scanAroundPosition != null && Config.SCAN_FOR_DOORS.get()) {
             foundDoors = findDoors(checker, scanAroundPosition);
             // TODO: Register these doors?
         }
