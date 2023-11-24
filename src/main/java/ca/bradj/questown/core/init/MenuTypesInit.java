@@ -22,7 +22,7 @@ public class MenuTypesInit {
             "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::new)
     );
     public static RegistryObject<MenuType<TownWorkContainer>> TOWN_WORK = MENUS.register(
-            "town_work", () -> IForgeMenuType.create(TownWorkContainer::new)
+            "town_work", () -> IForgeMenuType.create(TownWorkContainer::ForClientSide)
     );
     public static RegistryObject<MenuType<VisitorQuestsContainer>> VISITOR_QUESTS = MENUS.register(
             "visitor_quests", () -> IForgeMenuType.create(VisitorQuestsContainer::new)

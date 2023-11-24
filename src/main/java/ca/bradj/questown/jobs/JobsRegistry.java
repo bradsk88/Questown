@@ -118,6 +118,12 @@ public class JobsRegistry {
         return w.result;
     }
 
+    public static ImmutableList<Ingredient> getAllOutputs() {
+        return ImmutableList.copyOf(
+                works.values().stream().map(v -> Ingredient.of(v.result)).toList()
+        );
+    }
+
     private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }

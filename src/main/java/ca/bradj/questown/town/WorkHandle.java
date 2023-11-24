@@ -3,8 +3,10 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.OpenMenuListener;
+import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
+import ca.bradj.questown.jobs.JobsRegistry;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -66,11 +68,12 @@ public class WorkHandle implements OpenMenuListener {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList());
+                AddWorkContainer r = new AddWorkContainer(windowId, requestedResults);
+                return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r);
             }
         }, data -> {
-            data.writeInt(requestedResults.size());
-            data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
+            AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(), data);
+            TownWorkContainer.writeWork(requestedResults, data);
         });
     }
 

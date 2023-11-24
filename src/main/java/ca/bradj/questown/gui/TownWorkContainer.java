@@ -5,6 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,21 +13,25 @@ import java.util.Collection;
 public class TownWorkContainer extends AbstractContainerMenu {
 
     private final Collection<UIWork> work;
+    public final ca.bradj.questown.gui.AddWorkContainer addWorkContainer;
 
-    public TownWorkContainer(
+    public static TownWorkContainer ForClientSide(
             int windowId,
-            Collection<UIWork> quests
+            Inventory inv,
+            FriendlyByteBuf buf
     ) {
-        super(MenuTypesInit.TOWN_WORK.get(), windowId);
-        this.work = quests;
+        AddWorkContainer qMenu = new AddWorkContainer(windowId, AddWorkContainer.readWorkResults(buf));
+        return new TownWorkContainer(windowId, readWork(buf), qMenu);
     }
 
     public TownWorkContainer(
             int windowId,
-            Inventory inv,
-            FriendlyByteBuf data
+            Collection<UIWork> quests,
+            AddWorkContainer awc
     ) {
-        this(windowId, readWork(data));
+        super(MenuTypesInit.TOWN_WORK.get(), windowId);
+        this.work = quests;
+        this.addWorkContainer = awc;
     }
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
@@ -36,6 +41,11 @@ public class TownWorkContainer extends AbstractContainerMenu {
                 buf -> new UIWork.Serializer().fromNetwork(buf)
         );
         return r;
+    }
+
+    public static void writeWork(Collection<Ingredient> requestedResults, FriendlyByteBuf data) {
+        data.writeInt(requestedResults.size());
+        data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
     }
 
     @Override
