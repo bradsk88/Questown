@@ -4,7 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.Snapshot;
-import ca.bradj.questown.jobs.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import com.google.common.collect.ImmutableList;

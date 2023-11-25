@@ -142,6 +142,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
             QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
             QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
+//            QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getJobs(), '\n'));
             QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getMatches(), '\n'));
             return InteractionResult.sidedSuccess(false);
         }

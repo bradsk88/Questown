@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
-import ca.bradj.questown.jobs.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;

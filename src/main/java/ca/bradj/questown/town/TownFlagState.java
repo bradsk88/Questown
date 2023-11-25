@@ -7,7 +7,7 @@ import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.GathererTimeWarper;
 import ca.bradj.questown.jobs.Snapshot;
-import ca.bradj.questown.jobs.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.jobs.GathererJob;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -27,7 +27,6 @@ import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 // This class is NOT encapsulated from MC
 

@@ -1,5 +1,6 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.leaver;
 
+import ca.bradj.questown.jobs.Item;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;

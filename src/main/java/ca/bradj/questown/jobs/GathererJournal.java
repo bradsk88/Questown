@@ -14,7 +14,7 @@ import java.util.stream.IntStream;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
-public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> {
+public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> implements LockSlotHaver {
     private final SignalSource sigs;
     private final EmptyFactory<H> emptyFactory;
     private final GathererStatuses.TownStateProvider storageCheck;
@@ -48,14 +48,17 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
     private ToolsChecker<H> tools;
 
+    @Override
     public void lockSlot(int slot) {
         this.inventory.set(slot, this.inventory.get(slot).locked());
     }
 
+    @Override
     public void unlockSlot(int slotIndex) {
         this.inventory.set(slotIndex, this.inventory.get(slotIndex).unlocked());
     }
 
+    @Override
     public ImmutableList<Boolean> getSlotLockStatuses() {
         return ImmutableList.copyOf(this.inventory.stream().map(HeldItem::isLocked).toList());
     }

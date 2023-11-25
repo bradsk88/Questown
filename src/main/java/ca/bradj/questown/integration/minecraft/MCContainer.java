@@ -1,6 +1,6 @@
 package ca.bradj.questown.integration.minecraft;
 
-import ca.bradj.questown.jobs.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
