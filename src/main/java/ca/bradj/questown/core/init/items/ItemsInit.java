@@ -3,6 +3,7 @@ package ca.bradj.questown.core.init.items;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.TownDoorItem;
 import ca.bradj.questown.items.TownFenceGateItem;
 import net.minecraft.world.item.BlockItem;
@@ -71,6 +72,12 @@ public class ItemsInit {
     public static final RegistryObject<Item> TOWN_FENCE_GATE = ITEMS.register(
             TownFenceGateItem.ITEM_ID,
             TownFenceGateItem::new
+    );
+
+
+    public static final RegistryObject<Item> GATHERER_MAP = ITEMS.register(
+            GathererMap.ITEM_ID,
+            GathererMap::new
     );
 
     public static void register(IEventBus bus) {

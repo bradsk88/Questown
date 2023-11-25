@@ -15,6 +15,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,6 +27,7 @@ import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 // This class is NOT encapsulated from MC
 
@@ -100,11 +102,13 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem> loot = (int max, GathererJournal.Tools tools) -> GathererJob.getLootFromLevel(e, max, tools);
-        GathererTimeWarper<MCTownItem, MCHeldItem> warper = new GathererTimeWarper<MCTownItem, MCHeldItem>(
+        GathererTimeWarper.LootGiver<MCTownItem, ResourceLocation> loot =
+                (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
+        GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
                 storedState, loot, storedState,
                 MCHeldItem::Air, MCHeldItem::new,
-                GathererJob::checkTools
+                GathererJob::checkTools,
+                (items) -> GathererJob.computeBiome(items, e)
         );
 
         for (int i = 0; i < villagers.size(); i++) {

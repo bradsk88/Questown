@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import com.google.common.collect.ImmutableList;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -8,24 +9,28 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> {
+public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME> {
 
     private final FoodRemover<I> remover;
-    private final LootGiver<I> lootGiver;
+    private final LootGiver<I, BIOME> lootGiver;
     private final Town<I> town;
     private final EmptyFactory<H> emptyFactory;
     private final ItemToEntityMover<I, H> converter;
     private final GathererJournal.ToolsChecker<H> toolChecker;
+    private final Function<Iterable<H>, BIOME> biome;
 
     public GathererTimeWarper(
             FoodRemover<I> remover,
-            LootGiver<I> lootGiver,
+            LootGiver<I, BIOME> lootGiver,
             Town<I> town,
             EmptyFactory<H> emptyFactory,
             ItemToEntityMover<I, H> converter,
-            GathererJournal.ToolsChecker<H> toolChecker
+            GathererJournal.ToolsChecker<H> toolChecker,
+            Function<Iterable<H>, BIOME> biome
     ) {
         this.remover = remover;
         this.lootGiver = lootGiver;
@@ -33,6 +38,7 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
         this.emptyFactory = emptyFactory;
         this.converter = converter;
         this.toolChecker = toolChecker;
+        this.biome = biome;
     }
 
     public interface FoodRemover<I extends Item<I>> {
@@ -40,9 +46,9 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
         @Nullable I removeFood();
     }
 
-    public interface LootGiver<I extends Item<I>> {
+    public interface LootGiver<I extends Item<I>, BIOME> {
         // Return null if there is no food
-        @NotNull Iterable<I> giveLoot(int max, GathererJournal.Tools tools);
+        @NotNull Iterable<I> giveLoot(int max, GathererJournal.Tools tools, BIOME biome);
     }
 
     public interface Town<I extends Item<I>> extends GathererStatuses.TownStateProvider {
@@ -92,7 +98,7 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
             }
             if (newStatus == GathererJournal.Status.RETURNED_SUCCESS) {
                 GathererJournal.Tools tools = this.toolChecker.computeTools(output.items());
-                @NotNull Iterable<I> loot = lootGiver.giveLoot(lootPerDay, tools);
+                @NotNull Iterable<I> loot = lootGiver.giveLoot(lootPerDay, tools, biome.apply(output.items()));
                 Iterator<I> iterator = loot.iterator();
                 outItems = outItems.stream().map(
                         v -> {

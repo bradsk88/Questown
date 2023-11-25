@@ -1,7 +1,10 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Resource;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -161,135 +164,34 @@ public class ExplorerJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
-        return getLootFromLevel(town, journal.getCapacity(), tools);
+        return getLootFromLevel(town);
     }
 
     public static Collection<MCTownItem> getLootFromLevel(
-            TownInterface town,
-            int maxItems,
-            GathererJournal.Tools tools
+            TownInterface town
     ) {
         if (town == null || town.getServerLevel() == null) {
             return ImmutableList.of();
         }
         ServerLevel level = town.getServerLevel();
 
-        ImmutableList.Builder<MCTownItem> items = ImmutableList.builder();
-        if (tools.hasAxe()) {
-            List<MCTownItem> axed = computeAxedItems(town, maxItems);
-            items.addAll(axed);
-            maxItems = maxItems - axed.size();
-        } else if (tools.hasPick()) {
-            List<MCTownItem> axed = computeWoodPickaxedItems(level, maxItems);
-            items.addAll(axed);
-            maxItems = maxItems - axed.size();
-        } else if (tools.hasShovel()) {
-            List<MCTownItem> axed = computeWoodShoveledItems(level, maxItems);
-            items.addAll(axed);
-            maxItems = maxItems - axed.size();
-        } else if (tools.hasRod()) {
-            List<MCTownItem> axed = computeFishedItems(level, maxItems);
-            items.addAll(axed);
-            maxItems = maxItems - axed.size();
-        }
-        // TODO: Handle other tool types
-        else {
-            // Increase the number of gathered items if no tool is carried
-            items.addAll(computeGatheredItems(level, Math.min(3, maxItems), maxItems));
-        }
-        items.addAll(computeGatheredItems(level, Math.min(6, maxItems), maxItems));
+        ItemStack map = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
 
-        ImmutableList<MCTownItem> list = items.build();
+        // TODO: Get from JSON files so mod can be extended
+        ImmutableList<ResourceLocation> biomes = ImmutableList.of(
+                new ResourceLocation("dark_forest"),
+                new ResourceLocation("desert"),
+                new ResourceLocation("jungle")
+        );
 
-        Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
+        ResourceLocation biome = biomes.get(level.getRandom().nextInt(biomes.size()));
 
-        return list;
-    }
+        map.getOrCreateTag().putString("biome", biome.toString());
 
-    @NotNull
-    private static List<MCTownItem> computeGatheredItems(
-            ServerLevel level,
-            int minItems,
-            int maxItems
-    ) {
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_notools");
-        LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, minItems, maxItems, rl);
-    }
+        ImmutableList<MCTownItem> list = ImmutableList.of(MCTownItem.fromMCItemStack(map));
 
-    @NotNull
-    private static List<MCTownItem> computeAxedItems(
-            TownInterface town,
-            int maxItems
-    ) {
-        ResourceLocation biome = town.getRandomNearbyBiome();
-        String id = String.format("jobs/gatherer_axe/%s/%s", biome.getNamespace(), biome.getPath());
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = town.getServerLevel().getServer().getLootTables();
-        if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_axe/default");
-        }
-        LootTable lootTable = tables.get(rl);
-        return getLoots(town.getServerLevel(), lootTable, 3, maxItems, rl);
-    }
+        QT.JOB_LOGGER.debug("Presenting items to explorer: {}", list);
 
-    @NotNull
-    private static List<MCTownItem> computeWoodPickaxedItems(
-            ServerLevel level,
-            int maxItems
-    ) {
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_pickaxe_wood");
-        LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
-    }
-
-    @NotNull
-    private static List<MCTownItem> computeWoodShoveledItems(
-            ServerLevel level,
-            int maxItems
-    ) {
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_shovel_wood");
-        LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
-    }
-
-    @NotNull
-    private static List<MCTownItem> computeFishedItems(
-            ServerLevel level,
-            int maxItems
-    ) {
-        ResourceLocation rl = new ResourceLocation("minecraft", "gameplay/fishing");
-        LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
-    }
-
-    @NotNull
-    private static List<MCTownItem> getLoots(
-            ServerLevel level,
-            LootTable lootTable,
-            int minItems,
-            int maxItems,
-            ResourceLocation rl
-    ) {
-        if (maxItems <= 0) {
-            return ImmutableList.of();
-        }
-
-        LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
-        LootContext lc = lcb.create(LootContextParamSets.EMPTY);
-
-        ArrayList<ItemStack> rItems = new ArrayList<>();
-        int max = Math.min(minItems, level.random.nextInt(maxItems) + 1);
-        while (rItems.size() < max) {
-            rItems.addAll(lootTable.getRandomItems(lc));
-        }
-        Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), maxItems);
-        List<MCTownItem> list = rItems.stream()
-                .filter(v -> !v.isEmpty())
-                .map(MCTownItem::fromMCItemStack)
-                .toList()
-                .subList(0, subLen);
         return list;
     }
 

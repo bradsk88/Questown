@@ -1,10 +1,13 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -34,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
@@ -180,13 +184,32 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     }
 
     public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
-        return getLootFromLevel(town, journal.getCapacity(), tools);
+        return getLootFromLevel(town, journal.getCapacity(), tools, computeBiome(journal.getItems(), town));
+    }
+
+    public static ResourceLocation computeBiome(Iterable<MCHeldItem> items, TownInterface town) {
+        ResourceLocation biome = null;
+        for (MCHeldItem item : items) {
+            if (item.get().get().equals(ItemsInit.GATHERER_MAP.get())) {
+                biome = GathererMap.getBiome(item.get().toItemStack());
+                if (biome == null) {
+                    QT.JOB_LOGGER.error("No biome tag on gatherer map. Ignoring");
+                    continue;
+                }
+                break;
+            }
+        }
+        if (biome == null) {
+            biome = town.getRandomNearbyBiome();
+        }
+        return biome;
     }
 
     public static Collection<MCTownItem> getLootFromLevel(
             TownInterface town,
             int maxItems,
-            GathererJournal.Tools tools
+            GathererJournal.Tools tools,
+            ResourceLocation biome
     ) {
         if (town == null || town.getServerLevel() == null) {
             return ImmutableList.of();
@@ -195,7 +218,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
 
         ImmutableList.Builder<MCTownItem> items = ImmutableList.builder();
         if (tools.hasAxe()) {
-            List<MCTownItem> axed = computeAxedItems(town, maxItems);
+            List<MCTownItem> axed = computeAxedItems(town, maxItems, biome);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         } else if (tools.hasPick()) {
@@ -239,9 +262,9 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     @NotNull
     private static List<MCTownItem> computeAxedItems(
             TownInterface town,
-            int maxItems
+            int maxItems,
+            ResourceLocation biome
     ) {
-        ResourceLocation biome = town.getRandomNearbyBiome();
         String id = String.format("jobs/gatherer_axe/%s/%s", biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = town.getServerLevel().getServer().getLootTables();
