@@ -39,7 +39,8 @@ public class JobBlock {
 
     public static TownJobHandle.State applyWork(
             JobHandle sl,
-            BlockPos bp
+            BlockPos bp,
+            int nextWork
     ) {
         TownJobHandle.State oldState = sl.getJobBlockState(bp);
         int workLeft = oldState.workLeft();
@@ -55,6 +56,9 @@ public class JobBlock {
         }
         if (oldState.equals(bs)) {
             return null;
+        }
+        if (bs.workLeft() == 0) {
+            bs = bs.setProcessing(bs.processingState() + 1).setWorkLeft(nextWork).setCount(0);
         }
         sl.setJobBlockState(bp, bs);
         return bs;

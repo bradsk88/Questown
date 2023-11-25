@@ -7,11 +7,12 @@ import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
+import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
+import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
-import ca.bradj.questown.mobs.visitor.GathererJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -154,12 +155,14 @@ public class JobsRegistry {
     private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
 
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
+            CrafterPlanksWork.ID,
             CrafterBowlWork.ID,
-            CrafterStickWork.ID
+            CrafterStickWork.ID,
+            CrafterPaperWork.ID
     );
 
     public static final ImmutableList<JobID> CRAFTER_DEFAULT_WORK = ImmutableList.of(
-            CrafterBowlWork.ID
+            CrafterPlanksWork.ID
     );
 
     private static final ImmutableMap<String, Jerb> jobs = ImmutableMap.of(
@@ -246,6 +249,22 @@ public class JobsRegistry {
                     Questown.ResourceLocation("crafting_room"),
                     ProductionStatus.FACTORY.idle(),
                     CrafterStickWork.RESULT
+            ),
+            CrafterPaperWork.ID, new Work(
+                    (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
+                    productionJobSnapshot(CrafterPaperWork.ID),
+                    (block) -> block instanceof CraftingTableBlock,
+                    Questown.ResourceLocation("crafting_room"),
+                    ProductionStatus.FACTORY.idle(),
+                    CrafterPaperWork.RESULT
+            ),
+            CrafterPlanksWork.ID, new Work(
+                    (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
+                    productionJobSnapshot(CrafterPlanksWork.ID),
+                    (block) -> block instanceof CraftingTableBlock,
+                    Questown.ResourceLocation("crafting_room"),
+                    ProductionStatus.FACTORY.idle(),
+                    CrafterPlanksWork.RESULT
             )
     );
 

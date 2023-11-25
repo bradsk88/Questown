@@ -121,19 +121,22 @@ public class TownJobHandle implements JobHandle {
             );
         }
 
-        if (canDo) {
+        if (canDo && curCount < qtyRequired) {
             item.shrink(1);
             int count = curCount + 1;
             State blockState = oldState.setCount(count);
+            setJobBlockState(bp, blockState);
             if (count < qtyRequired) {
-                setJobBlockState(bp, blockState);
                 return true;
             }
-            int val = curValue + 1;
-            blockState = blockState.setProcessing(val);
-            blockState = blockState.setWorkLeft(workToNextStep);
-            blockState = blockState.setCount(0);
-            setJobBlockState(bp, blockState);
+
+            if (oldState.workLeft == 0) {
+                int val = curValue + 1;
+                blockState = blockState.setProcessing(val);
+                blockState = blockState.setWorkLeft(workToNextStep);
+                blockState = blockState.setCount(0);
+                setJobBlockState(bp, blockState);
+            }
             return true;
         }
         return false;

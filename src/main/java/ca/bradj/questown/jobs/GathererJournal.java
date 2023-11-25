@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
-import ca.bradj.questown.mobs.visitor.GathererJob;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
@@ -273,7 +272,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
     // TODO: Create read-only class
     public Snapshot<H> getSnapshot(EmptyFactory<H> ef) {
-        return new Snapshot<>(status, ImmutableList.copyOf(inventory));
+        return new Snapshot<>(GathererJob.ID, status, ImmutableList.copyOf(inventory));
     }
 
     public void initialize(Snapshot<H> journal) {
@@ -501,10 +500,20 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         Collection<I> getLoot(Tools tools);
     }
 
-    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(Status status,
-                                                               ImmutableList<H> items) implements ca.bradj.questown.jobs.Snapshot<H> {
+    public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(
+            JobID jobId,
+            Status status,
+            ImmutableList<H> items
+    ) implements ca.bradj.questown.jobs.Snapshot<H> {
 
         public static final String NAME = "gatherer";
+
+        public Snapshot(
+                Status newStatus,
+                ImmutableList<H> outImItems
+        ) {
+            this(GathererJob.ID, newStatus, outImItems);
+        }
 
         public Snapshot<H> eatFoodFromInventory(
                 EmptyFactory<H> ef,
@@ -539,11 +548,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
             itemsCopy.set(lastIndex.getAsInt(), ef.makeEmptyItem());
 
-            return new Snapshot<>(nextStatus, ImmutableList.copyOf(itemsCopy));
+            return new Snapshot<>(jobId, nextStatus, ImmutableList.copyOf(itemsCopy));
         }
 
         public Snapshot<H> withStatus(@Nullable GathererJournal.Status newStatus) {
-            return new Snapshot<>(newStatus, items);
+            return new Snapshot<>(jobId, newStatus, items);
         }
 
         @Override
@@ -559,7 +568,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
         @Override
         public JobID jobId() {
-            return GathererJob.ID;
+            return jobId;
         }
 
         @Override

@@ -399,6 +399,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             b.put(state, Lists.newArrayList(Jobs.roomsWithState(
                     town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
             )));
+            // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
         toolsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {

@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.jobs.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;

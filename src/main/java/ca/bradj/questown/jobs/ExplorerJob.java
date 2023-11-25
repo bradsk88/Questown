@@ -1,11 +1,11 @@
-package ca.bradj.questown.mobs.visitor;
+package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.collect.ImmutableList;
@@ -35,9 +35,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
-public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
+public class ExplorerJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, SignalSource, GathererJournal.LootProvider<MCTownItem>, ContainerListener, JournalItemsListener<MCHeldItem>, LockSlotHaver, Jobs.LootDropper<MCHeldItem> {
 
-    public static final JobID ID = new JobID("gatherer", "gather");
+    public static final JobID ID = new JobID("gatherer", "explore");
     private @Nullable TownInterface town;
     private final Container inventory;
     private final UUID ownerUUID;
@@ -53,7 +53,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
     private Signals passedThroughGate = Signals.UNDEFINED;
     private boolean closeToGate;
 
-    public GathererJob(
+    public ExplorerJob(
             TownInterface town,
             // null on client side
             int inventoryCapacity,
@@ -87,12 +87,12 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
                 return gateTarget != null;
             }
         };
-        journal = new GathererJournal<MCTownItem, MCHeldItem>(
+        journal = new ExplorerJournal<MCTownItem, MCHeldItem>(
                 this, MCHeldItem::Air, MCHeldItem::new,
-                tsp, inventoryCapacity, GathererJob::checkTools
+                tsp, inventoryCapacity
         ) {
             @Override
-            protected void changeStatus(Status s) {
+            protected void changeStatus(GathererJournal.Status s) {
                 super.changeStatus(s);
                 Questown.LOGGER.debug("Changed status to {}", s);
             }
@@ -100,28 +100,9 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         journal.addItemsListener(this);
     }
 
-    public static GathererJournal.Tools checkTools(Iterable<MCHeldItem> journalItems) {
-        GathererJournal.Tools tool = new GathererJournal.Tools(false, false, false, false);
-        for (MCHeldItem item : journalItems) {
-            if (Ingredient.of(TagsInit.Items.AXES).test(item.get().toItemStack())) {
-                tool = tool.withAxe();
-            }
-            if (Ingredient.of(TagsInit.Items.PICKAXES).test(item.get().toItemStack())) {
-                tool = tool.withPickaxe();
-            }
-            if (Ingredient.of(TagsInit.Items.SHOVELS).test(item.get().toItemStack())) {
-                tool = tool.withShovel();
-            }
-            if (Ingredient.of(TagsInit.Items.FISHING_RODS).test(item.get().toItemStack())) {
-                tool = tool.withFishingRod();
-            }
-        }
-        return tool;
-    }
-
     private static void processSignal(
             Level level,
-            GathererJob e
+            ExplorerJob e
     ) {
         if (level.isClientSide()) {
             return;

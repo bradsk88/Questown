@@ -12,7 +12,7 @@ import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.jobs.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;

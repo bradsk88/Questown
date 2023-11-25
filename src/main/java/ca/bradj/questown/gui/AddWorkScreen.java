@@ -162,6 +162,10 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
         int j = 0;
         for (Ingredient ing : workResults) {
+            if (j >= 8) {
+                y = y + 16;
+                j = 0;
+            }
             int iconX = x + 8 + j * 18;
 
             ItemStack[] matchingStacks = ing.getItems();

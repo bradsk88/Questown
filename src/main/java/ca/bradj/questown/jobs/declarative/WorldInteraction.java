@@ -94,6 +94,18 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
+                if (workSpot.action == 0) {
+                    TownJobHandle.State jobBlockState = jh.getJobBlockState(workSpot.position);
+                    if (jobBlockState == null) {
+                        jobBlockState = new TownJobHandle.State(0, 0, 0);
+                    }
+                    if (jobBlockState.workLeft() == 0) {
+                        jh.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
+                    }
+                }
+                if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
+                    tryInsertIngredients(jh, workSpot);
+                }
                 return tryProcessOre(jh, entity, workSpot);
             }
         }
@@ -129,7 +141,13 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         BlockPos bp = ws.position;
         @Nullable Integer s = JobBlock.getState(sl, bp);
         if (ws.action.equals(s)) {
-            TownJobHandle.State blockState = JobBlock.applyWork(sl, bp);
+            Integer nextStepWork = workRequiredAtStates.getOrDefault(
+                    ws.action + 1, 0
+            );
+            if (nextStepWork == null) {
+                nextStepWork = 0;
+            }
+            TownJobHandle.State blockState = JobBlock.applyWork(sl, bp, nextStepWork);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -191,7 +209,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
                 continue;
             }
             Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    journal.getStatus().getProductionState() + 1, 0
+                    ws.action + 1, 0
             );
             if (nextStepWork == null) {
                 nextStepWork = 0;

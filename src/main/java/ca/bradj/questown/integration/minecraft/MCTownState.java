@@ -1,6 +1,6 @@
 package ca.bradj.questown.integration.minecraft;
 
-import ca.bradj.questown.mobs.visitor.ContainerTarget;
+import ca.bradj.questown.jobs.ContainerTarget;
 import ca.bradj.questown.town.TownState;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
