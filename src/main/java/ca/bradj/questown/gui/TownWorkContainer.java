@@ -20,7 +20,11 @@ public class TownWorkContainer extends AbstractContainerMenu {
             Inventory inv,
             FriendlyByteBuf buf
     ) {
-        AddWorkContainer qMenu = new AddWorkContainer(windowId, AddWorkContainer.readWorkResults(buf));
+        AddWorkContainer qMenu = new AddWorkContainer(
+                windowId,
+                AddWorkContainer.readWorkResults(buf),
+                AddWorkContainer.readFlagPosition(buf)
+        );
         return new TownWorkContainer(windowId, readWork(buf), qMenu);
     }
 

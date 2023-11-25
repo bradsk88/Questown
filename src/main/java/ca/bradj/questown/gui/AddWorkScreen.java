@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.AddWorkMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -25,6 +27,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -166,8 +170,20 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
                 ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
                 this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
                 if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-                    fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF); // transparent white square behind hovered item slot
-                    renderTooltip(poseStack, itemStack.getItem().getName(itemStack), mouseX, mouseY); // render hovered item's name as a tooltip
+                    fill(
+                            poseStack,
+                            iconX,
+                            y + 1,
+                            iconX + 16,
+                            y + 17,
+                            0x80FFFFFF
+                    ); // transparent white square behind hovered item slot
+                    renderTooltip(
+                            poseStack,
+                            itemStack.getItem().getName(itemStack),
+                            mouseX,
+                            mouseY
+                    ); // render hovered item's name as a tooltip
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);
                 element.set(itemStack);
@@ -283,9 +299,19 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     }
 
     @Override
-    protected void slotClicked(Slot p_97778_, int p_97779_, int p_97780_, ClickType p_97781_) {
-        super.slotClicked(p_97778_, p_97779_, p_97780_, p_97781_);
-        // TODO[ASAP]: Send a custom packet to the server requesting the work be added
+    public boolean mouseClicked(
+            double x,
+            double y,
+            int p_97750_
+    ) {
+        for (Slot s : slots) {
+            if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
+                menu.sendRequest(s.getItem());
+                minecraft.setScreen(null);
+                return true;
+            }
+        }
+        return super.mouseClicked(x, y, p_97750_);
     }
 
     @Override

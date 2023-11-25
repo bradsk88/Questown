@@ -64,13 +64,13 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         this.background = textures.getRecipeGuiBackground();
         this.cardBackground = textures.getRecipeBackground();
 
-        IDrawableStatic arrowNext = textures.getArrowNext();
+        IDrawableStatic plusIcon = textures.getRecipeTransfer();
 
         int btnX = backgroundWidth - (buttonWidth + borderPadding);
 
         addWorkScreen = new AddWorkScreen(menu.addWorkContainer, playerInv, title);
         this.addMoreBtn = new GuiIconButtonSmall(
-                btnX, 0, buttonWidth, buttonHeight, arrowNext, b -> addMoreWork()
+                btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork()
         );
     }
 

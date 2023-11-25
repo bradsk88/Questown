@@ -1,11 +1,14 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.AddWorkMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
@@ -14,21 +17,16 @@ import java.util.Collection;
 public class AddWorkContainer extends AbstractContainerMenu {
 
     private final Collection<Ingredient> work;
+    private final BlockPos flag;
 
     public AddWorkContainer(
             int windowId,
-            Collection<Ingredient> quests
+            Collection<Ingredient> quests,
+            BlockPos flag
     ) {
         super(MenuTypesInit.TOWN_WORK.get(), windowId);
         this.work = quests;
-    }
-
-    public AddWorkContainer(
-            int windowId,
-            Inventory inv,
-            FriendlyByteBuf data
-    ) {
-        this(windowId, readWorkResults(data));
+        this.flag = flag;
     }
 
     public static Collection<Ingredient> readWorkResults(FriendlyByteBuf data) {
@@ -45,6 +43,17 @@ public class AddWorkContainer extends AbstractContainerMenu {
         data.writeCollection(allOutputs, (v, i) -> i.toNetwork(v));
     }
 
+    public static BlockPos readFlagPosition(FriendlyByteBuf buf) {
+        return buf.readBlockPos();
+    }
+
+    public static void writeFlagPosition(
+            BlockPos blockPos,
+            FriendlyByteBuf data
+    ) {
+        data.writeBlockPos(blockPos);
+    }
+
     @Override
     public boolean stillValid(Player p_38874_) {
         return true;
@@ -52,5 +61,11 @@ public class AddWorkContainer extends AbstractContainerMenu {
 
     public Collection<Ingredient> getAddableWork() {
         return work;
+    }
+
+    public void sendRequest(ItemStack item) {
+        QuestownNetwork.CHANNEL.sendToServer(
+                new AddWorkMessage(flag.getX(), flag.getY(), flag.getZ())
+        );
     }
 }

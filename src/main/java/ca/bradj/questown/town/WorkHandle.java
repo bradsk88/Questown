@@ -68,11 +68,12 @@ public class WorkHandle implements OpenMenuListener {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                AddWorkContainer r = new AddWorkContainer(windowId, requestedResults);
+                AddWorkContainer r = new AddWorkContainer(windowId, requestedResults, parent.getTownFlagBasePos());
                 return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r);
             }
         }, data -> {
             AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(), data);
+            AddWorkContainer.writeFlagPosition(parent.getTownFlagBasePos(), data);
             TownWorkContainer.writeWork(requestedResults, data);
         });
     }

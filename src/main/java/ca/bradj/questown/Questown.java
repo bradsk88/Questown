@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -66,6 +67,7 @@ public class Questown {
     }
 
     private void setup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(QuestownNetwork::init);
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
