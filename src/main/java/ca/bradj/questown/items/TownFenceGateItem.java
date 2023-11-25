@@ -1,5 +1,6 @@
 package ca.bradj.questown.items;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -21,7 +22,7 @@ public class TownFenceGateItem extends Item {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
                 ctx.getItemInHand());
         if (input == null) {
-            Questown.LOGGER.error("{} is missing flag input", ctx.getItemInHand().getItem().getRegistryName());
+            QT.BLOCK_LOGGER.error("{} is missing flag input", ctx.getItemInHand().getItem().getRegistryName());
             return InteractionResult.FAIL;
         }
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));

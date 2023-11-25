@@ -1,11 +1,7 @@
 package ca.bradj.questown.items;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;

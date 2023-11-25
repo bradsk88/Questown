@@ -297,7 +297,7 @@ public class VisitorMobEntity extends PathfinderMob {
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
         entityData.set(jobName, job.getJobName().getKey());
-        QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", job.getJobName().getKey(), uuid);
+        QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", job.getId(), uuid);
         this.cleanupJobListeners.add(
                 this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );

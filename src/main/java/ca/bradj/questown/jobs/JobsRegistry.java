@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
@@ -150,7 +151,7 @@ public class JobsRegistry {
     ) {
     }
 
-    private static final ResourceLocation NOT_REQUIRED_BECAUSE_META_JOB = null;
+    private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
     private static final BlockCheckFunc NOT_A_DECLARATIVE_JOB = (block) -> false;
     private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
 
@@ -179,7 +180,7 @@ public class JobsRegistry {
                     ImmutableList.of(DSmelterJob.ID)
             ),
             GathererJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(GathererJob.ID),
+                    ImmutableList.of(ExplorerJob.ID, GathererJob.ID),
                     ImmutableList.of(GathererJob.ID)
             ),
             BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
@@ -193,6 +194,22 @@ public class JobsRegistry {
     );
 
     private static final ImmutableMap<JobID, Work> works = ImmutableMap.of(
+            GathererJob.ID, new Work(
+                    (town, uuid) -> new GathererJob(town, 6, uuid),
+                    GATHERER_SNAPSHOT_FUNC,
+                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+                    GathererJournal.Status.IDLE,
+                    Items.WHEAT_SEEDS.getDefaultInstance()
+            ),
+            ExplorerJob.ID, new Work(
+                    (town, uuid) -> new ExplorerJob(town, 6, uuid),
+                    (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
+                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+                    GathererJournal.Status.IDLE,
+                    ItemsInit.GATHERER_MAP.get().getDefaultInstance()
+            ),
             FarmerJob.ID, new Work(
                     (town, uuid) -> new FarmerJob(uuid, 6),
                     (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
@@ -216,14 +233,6 @@ public class JobsRegistry {
                     Questown.ResourceLocation("smeltery"),
                     ProductionStatus.FACTORY.idle(),
                     DSmelterJob.RESULT
-            ),
-            GathererJob.ID, new Work(
-                    (town, uuid) -> new GathererJob(town, 6, uuid),
-                    GATHERER_SNAPSHOT_FUNC,
-                    NOT_A_DECLARATIVE_JOB,
-                    NOT_REQUIRED_BECAUSE_META_JOB,
-                    GathererJournal.Status.IDLE,
-                    Items.WHEAT_SEEDS.getDefaultInstance()
             ),
             BlacksmithWoodenPickaxeJob.ID, new Work(
                     (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),

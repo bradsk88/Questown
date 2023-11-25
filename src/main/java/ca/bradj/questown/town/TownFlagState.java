@@ -114,7 +114,7 @@ public class TownFlagState {
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
             Snapshot<MCHeldItem> unwarped = v.journal;
-            Questown.LOGGER.debug("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
+            QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
             Snapshot<MCHeldItem> warped = unwarped;
             if (unwarped instanceof GathererJournal.Snapshot<?>) {
                 warped = warper.timeWarp(

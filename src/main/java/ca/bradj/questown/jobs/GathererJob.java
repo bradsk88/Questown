@@ -8,6 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -479,7 +480,7 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
         for (int i = 0; i < foodTarget.container.size(); i++) {
             MCTownItem mcTownItem = foodTarget.container.getItem(i);
             if (mcTownItem.isFood()) {
-                Questown.LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
+                QT.JOB_LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
                 journal.addItem(new MCHeldItem(mcTownItem));
                 foodTarget.container.removeItem(i, 1);
                 break;
@@ -495,9 +496,13 @@ public class GathererJob implements Job<MCHeldItem, GathererJournal.Snapshot<MCH
             return;
         }
         if (this.dropping) {
-            Questown.LOGGER.debug("Trying to drop too quickly");
+            QT.JOB_LOGGER.debug("Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
+
+        if (this.dropping && !journal.hasAnyLootToDrop() && town != null) {
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(ID));
+        }
     }
 
     public boolean openScreen(

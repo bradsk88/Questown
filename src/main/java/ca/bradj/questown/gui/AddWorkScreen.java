@@ -160,13 +160,14 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         Inventory dummyInv = new Inventory(null);
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
 
-        int j = 0;
+        int slotIndex = 0;
+        int slotX = 0;
         for (Ingredient ing : workResults) {
-            if (j >= 8) {
+            if (slotX >= 8) {
                 y = y + 16;
-                j = 0;
+                slotX = 0;
             }
-            int iconX = x + 8 + j * 18;
+            int iconX = x + 8 + slotX * 18;
 
             ItemStack[] matchingStacks = ing.getItems();
             if (matchingStacks.length > 0) {
@@ -189,11 +190,12 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
                             mouseY
                     ); // render hovered item's name as a tooltip
                 }
-                Slot element = new Slot(dummyInv, j, iconX, y + 1);
+                Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
                 element.set(itemStack);
                 b.add(element);
             }
-            j++;
+            slotIndex++;
+            slotX++;
         }
         return b.build();
     }
