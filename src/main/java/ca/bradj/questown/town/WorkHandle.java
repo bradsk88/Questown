@@ -85,7 +85,9 @@ public class WorkHandle implements OpenMenuListener {
     public void addWork(Collection<Ingredient> requestedResult) {
         // TODO: Add desired quantity of product to work
         this.requestedResults.addAll(requestedResult);
-        QT.FLAG_LOGGER.debug("Request added to job board: {}", requestedResult);
+        QT.FLAG_LOGGER.debug("Request added to job board: {}", requestedResult.stream().map(
+                Ingredient::toJson
+        ).toList());
     }
 
     public void tick() {

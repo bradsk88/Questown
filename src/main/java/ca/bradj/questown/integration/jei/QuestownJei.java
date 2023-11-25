@@ -1,9 +1,7 @@
 package ca.bradj.questown.integration.jei;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.gui.QuestsScreen;
-import ca.bradj.questown.gui.VisitorDialogScreen;
-import ca.bradj.questown.gui.WorkScreen;
+import ca.bradj.questown.gui.*;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
@@ -49,6 +47,22 @@ public class QuestownJei implements IModPlugin {
             @Override
             public @Nullable Object getIngredientUnderMouse(
                     WorkScreen containerScreen,
+                    double mouseX,
+                    double mouseY
+            ) {
+                ItemStack is = containerScreen.getHoveredIngredient((int) mouseX, (int) mouseY);
+                return is;
+            }
+        });
+        registration.addGuiContainerHandler(AddWorkScreen.class, new IGuiContainerHandler<>() {
+            @Override
+            public List<Rect2i> getGuiExtraAreas(AddWorkScreen containerScreen) {
+                return containerScreen.getExtraAreas();
+            }
+
+            @Override
+            public @Nullable Object getIngredientUnderMouse(
+                    AddWorkScreen containerScreen,
                     double mouseX,
                     double mouseY
             ) {

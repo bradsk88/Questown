@@ -5,9 +5,12 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
+import mezz.jei.common.util.ImmutableRect2i;
+import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.textures.Textures;
+import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -44,6 +47,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     private final List<UIWork> work;
     private final DrawableNineSliceTexture background;
     private final DrawableNineSliceTexture cardBackground;
+    private final GuiIconButtonSmall nextPage;
+    private final GuiIconButtonSmall previousPage;
     private final GuiIconButtonSmall addMoreBtn;
 
     private final AddWorkScreen addWorkScreen;
@@ -68,6 +73,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         int btnX = backgroundWidth - (buttonWidth + borderPadding);
 
+        IDrawableStatic arrowNext = textures.getArrowNext();
+        IDrawableStatic arrowPrevious = textures.getArrowPrevious();
+        this.nextPage = new GuiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
+        );
+        this.previousPage = new GuiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
+        );
+
         addWorkScreen = new AddWorkScreen(menu.addWorkContainer, playerInv, title);
         this.addMoreBtn = new GuiIconButtonSmall(
                 btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork()
@@ -82,6 +96,29 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         this.addMoreBtn.x = x + backgroundWidth - buttonWidth - borderPadding;
         this.addMoreBtn.y = pageStringY;
         this.addRenderableWidget(this.addMoreBtn);
+        this.previousPage.x = x + borderPadding;
+        this.previousPage.y = pageStringY;
+        this.nextPage.x = x + backgroundWidth - (2 * buttonWidth) - borderPadding;
+        this.nextPage.y = pageStringY;
+        this.addRenderableWidget(this.previousPage);
+        this.addRenderableWidget(this.nextPage);
+    }
+
+
+    @Override
+    public boolean mouseScrolled(double scrollX, double scrollY, double scrollDelta) {
+        final double x = MouseUtil.getX();
+        final double y = MouseUtil.getY();
+        if (isMouseOver(x, y)) {
+            if (scrollDelta < 0) {
+                this.nextPage();
+                return true;
+            } else if (scrollDelta > 0) {
+                this.previousPage();
+                return true;
+            }
+        }
+        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
     }
 
     @Override
@@ -110,6 +147,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
+
+        renderPageNum(poseStack, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -144,6 +183,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         // Render the page buttons
         this.addMoreBtn.render(poseStack, mouseX, mouseY, partialTicks);
+        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
+        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
@@ -190,6 +231,26 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         return b.build();
     }
 
+    private void renderPageNum(
+            PoseStack poseStack,
+            int x
+    ) {
+        // Draw page numbers
+        fill(
+                poseStack,
+                x + borderPadding + buttonWidth,
+                nextPage.y,
+                x + backgroundWidth - borderPadding - buttonWidth,
+                nextPage.y + buttonHeight,
+                0x30000000);
+        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+
+        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
+        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
+    }
+
     @Override
     protected void renderBg(
             PoseStack poseStack,
@@ -213,6 +274,20 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         if (!stack.isEmpty()) {
             this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
             this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
+        }
+    }
+
+
+    private void nextPage() {
+        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        if (currentPage < totalPages - 1) {
+            currentPage++;
+        }
+    }
+
+    private void previousPage() {
+        if (currentPage > 0) {
+            currentPage--;
         }
     }
 
