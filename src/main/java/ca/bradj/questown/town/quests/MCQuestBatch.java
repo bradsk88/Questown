@@ -7,6 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -20,7 +21,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         this(null, null);
     }
 
-    public MCQuestBatch(@Nullable UUID owner, MCReward reward) {
+    public MCQuestBatch(@Nullable UUID owner, @NotNull MCReward reward) {
         super(new Quest.QuestFactory<>() {
             @Override
             public MCQuest newQuest(@Nullable UUID ownerID, ResourceLocation recipeId) {
@@ -47,6 +48,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
     public UUID getOwner() {
         return owner;
+    }
+
+    @Override
+    public void assignTo(@NotNull UUID owner) {
+        this.owner = owner;
+        super.assignTo(owner);
     }
 
     public static class Serializer {

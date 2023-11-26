@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     private final Stack<PendingQuests> pendingQuests = new Stack<>();
+    private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private QuestBatch.ChangeListener<MCQuest> changeListener;
 
@@ -198,17 +199,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             @Nullable UUID visitorUUID
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
-        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
-                Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(quests).size() + 1)
-        ) / 2;
-        QT.QUESTS_LOGGER.debug("Adding batch of quests with target weight sum: {}", targetItemWeight);
-        PendingQuests theNewQuests = new PendingQuests(
-                town::alreadyHasQuest,
-                targetItemWeight,
-                visitorUUID,
-                new MCDelayedReward(town, reward)
-        );
-        quests.pendingQuests.push(theNewQuests);
+        quests.questRequests.add(new PendingReward(visitorUUID, reward));
     }
 
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
@@ -221,14 +212,41 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     public void tick(TownInterface town) {
-
-
-        if (!pendingQuests.isEmpty()) {
-            PendingQuests pop = pendingQuests.pop();
-            Optional<MCQuestBatch> o = pop.grow(town);
-            o.ifPresentOrElse(questBatches::add, () -> pendingQuests.push(pop));
+        // TODO: Check if target weight (based on town size) has changed since last tick
+        //  If it has, discard the pending quests and start over.
+        if (pendingQuests.isEmpty()) {
+            int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
+                    Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
+            ) / 2;
+            QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
+            PendingQuests theNewQuests = new PendingQuests(
+                    town::alreadyHasQuest,
+                    targetItemWeight
+            );
+            pendingQuests.push(theNewQuests);
         }
 
+        PendingQuests pop = pendingQuests.pop();
+        boolean canGrowMore = pop.grow(town);
+
+        if (canGrowMore) {
+            if (!questRequests.isEmpty()) {
+                QT.QUESTS_LOGGER.warn("Quest batch was not ready when requested"); // TODO: Track how far behind we get
+            }
+            pendingQuests.push(pop);
+            return;
+        }
+
+        if (!questRequests.isEmpty()) {
+            PendingReward pr = questRequests.pop();
+            MCDelayedReward rw = new MCDelayedReward(town, pr.reward());
+            MCQuestBatch q = pop.get(rw, pr.owner());
+            questBatches.add(q);
+            QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q);
+            return;
+        }
+
+        pendingQuests.push(pop); // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
     public void markQuestAsComplete(
@@ -331,6 +349,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     }
 
     public boolean alreadyRequested(ResourceLocation resourceLocation) {
+        // TODO: If new quest is an UPGRADE of an existing UNFINISHED quest, also make it more costly.
         return getAll().stream().map(Quest::getWantedId).anyMatch(v -> v.equals(resourceLocation));
     }
 }

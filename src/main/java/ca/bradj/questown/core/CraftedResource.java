@@ -8,7 +8,7 @@ public class CraftedResource implements Resource {
     private final Collection<? extends Resource> ingredients;
 
     public CraftedResource(
-            String name,
+            String name, // The name is not used for anything. It just makes the usage of this easier to understand.
             int output,
             Collection<? extends Resource> ingredients
     ) {

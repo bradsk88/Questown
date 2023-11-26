@@ -32,7 +32,7 @@ public class CommonRecipes {
     public static final Collection<? extends Resource> FURNACE = ImmutableList.copyOf(
             Collections.nCopies(
                     8,
-                    new MinedResource("cobblestone", Rarity.EVERYWHERE)
+                    new MinedResource("cobblestone", Rarity.ITS_EVERYWHERE)
             )
     );
     public static final Collection<? extends Resource> BOOKSHELF = ImmutableList.of(
@@ -58,14 +58,14 @@ public class CommonRecipes {
     );
     public static final Collection<? extends Resource> BREW_STAND = ImmutableList.of(
             new CombatResource("blaze_rod", Rarity.RARE),
-            new MinedResource("cobblestone", Rarity.EVERYWHERE),
-            new MinedResource("cobblestone", Rarity.EVERYWHERE),
-            new MinedResource("cobblestone", Rarity.EVERYWHERE)
+            new MinedResource("cobblestone", Rarity.ITS_EVERYWHERE),
+            new MinedResource("cobblestone", Rarity.ITS_EVERYWHERE),
+            new MinedResource("cobblestone", Rarity.ITS_EVERYWHERE)
     );
 
     public static final Collection<? extends Resource> LANTERN = ImmutableList.of(
             new CraftedResource("torch", 4, ImmutableList.of(
-                    new MinedResource("coal", Rarity.COMMON),
+                    new MinedResource("coal", Rarity.EASY_TO_FIND),
                     CraftedResources.STICK
             )),
             CraftedResources.IRON_NUGGET,

@@ -28,21 +28,21 @@ public class RecipeItemConfig {
             CommonRecipes.CRAFTING_TABLE, false
     );
     private static final int BED = RecipeItemScore.requiresCraftingTable(ImmutableList.of(
-            new MinedResource("wool", Rarity.MEDIUM),
-            new MinedResource("wool", Rarity.MEDIUM),
-            new MinedResource("wool", Rarity.MEDIUM),
+            new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
+            new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
+            new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
             new CraftedResource("planks", 4, ImmutableList.of(
-                    new MinedResource("wood", Rarity.COMMON))
+                    new MinedResource("wood", Rarity.EASY_TO_FIND))
             ),
             new CraftedResource("planks", 4, ImmutableList.of(
-                    new MinedResource("wood", Rarity.COMMON))
+                    new MinedResource("wood", Rarity.EASY_TO_FIND))
             ),
             new CraftedResource("planks", 4, ImmutableList.of(
-                    new MinedResource("wood", Rarity.COMMON))
+                    new MinedResource("wood", Rarity.EASY_TO_FIND))
             )
     ), true);
     private static final int DIRT =
-            new MinedResource("dirt", Rarity.EVERYWHERE).calculateValue();
+            new MinedResource("dirt", Rarity.ITS_EVERYWHERE).calculateValue();
     private static final int CHEST = RecipeItemScore.requiresCraftingTable(
             CommonRecipes.CHEST,
             true // Boosted because gatherers need storage ASAP
@@ -51,7 +51,7 @@ public class RecipeItemConfig {
     private static final int FURNACE = RecipeItemScore.requiresCraftingTable(
             Collections.nCopies(
                     8,
-                    new MinedResource("cobblestone", Rarity.EVERYWHERE)
+                    new MinedResource("cobblestone", Rarity.ITS_EVERYWHERE)
             ),
             false
     );
@@ -72,11 +72,16 @@ public class RecipeItemConfig {
     );
     private static final int TARGET = RecipeItemScore.requiresCraftingTable(
             ImmutableList.of(
-                    new MinedResource("redstone_dust", Rarity.MEDIUM),
-                    new MinedResource("redstone_dust", Rarity.MEDIUM),
-                    new MinedResource("redstone_dust", Rarity.MEDIUM),
-                    new MinedResource("redstone_dust", Rarity.MEDIUM),
-                    new CraftedResource("hay_bale", 1, Collections.nCopies(9, new FarmedResource("wheat", Rarity.EVERYWHERE)))
+                    new MinedResource("redstone_dust", Rarity.SOMETIMES_HARD_TO_FIND),
+                    new MinedResource("redstone_dust", Rarity.SOMETIMES_HARD_TO_FIND),
+                    new MinedResource("redstone_dust", Rarity.SOMETIMES_HARD_TO_FIND),
+                    new MinedResource("redstone_dust", Rarity.SOMETIMES_HARD_TO_FIND),
+                    new CraftedResource("hay_bale", 1, Collections.nCopies(9, new FarmedResource("wheat", Rarity.ITS_EVERYWHERE)))
+            ), false
+    );
+    private static final int CAULDRON = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.copyOf(
+                    Collections.nCopies(7, CraftedResources.IRON_ORE_OR_INGOT)
             ), false
     );
 
@@ -92,6 +97,7 @@ public class RecipeItemConfig {
         defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), TORCH_SCORE);
         defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), CRAFTING_TABLE);
         defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), LANTERN);
+        defaultItemWeights.add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
         defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), CHEST);
         defaultItemWeights.add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
         defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), FURNACE);
@@ -100,6 +106,7 @@ public class RecipeItemConfig {
         defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), ENCH_TABLE);
         defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), BREW_STAND);
         defaultItemWeights.add(Items.TARGET.getRegistryName().toString(), TARGET);
+        defaultItemWeights.add(Items.CACTUS.getRegistryName().toString(), CAULDRON);
     }
 
     // TODO: How can mod pack builders add weights to this?

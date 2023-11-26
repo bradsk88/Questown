@@ -1,8 +1,6 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.quests.MCQuestBatch;
-import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
@@ -49,7 +47,7 @@ public class PendingQuestsSerializer {
             CompoundTag tag = aq.getCompound(i);
             MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(town, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
-            PendingQuests pendingQuests = new PendingQuests(town::alreadyHasQuest, threshold, b.getOwner(), b.getReward());
+            PendingQuests pendingQuests = new PendingQuests(town::alreadyHasQuest, threshold);
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
                 pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }

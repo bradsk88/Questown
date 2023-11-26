@@ -1,9 +1,8 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.QT;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
-import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,7 +19,7 @@ public class QuestBatch<
         > {
 
     private final List<QUEST> quests = new ArrayList<>();
-    protected REWARD reward;
+    @NotNull protected REWARD reward;
 
     private final Quest.QuestFactory<KEY, ROOM, QUEST> questFactory;
 
@@ -46,7 +45,7 @@ public class QuestBatch<
 
     QuestBatch(
             Quest.QuestFactory<KEY, ROOM, QUEST> qf,
-            REWARD reward
+            @NotNull REWARD reward
     ) {
         this.questFactory = qf;
         this.reward = reward;
@@ -162,7 +161,7 @@ public class QuestBatch<
         this.quests.addAll(snapshot.stream().peek(
                 v -> {
                     if (oldRoom.equals(v.completedOn)) {
-                        Questown.LOGGER.debug(
+                        QT.QUESTS_LOGGER.debug(
                                 "Quest completion room updated after room size change. {} -> {}",
                                 oldRoom, newRoom
                         );
@@ -218,11 +217,21 @@ public class QuestBatch<
     @Override
     public String toString() {
         return "QuestBatch{" +
-                "quests=" + Strings.join(quests, '\n') +
+                "quests=" + String.join(", ", quests.stream().map(Object::toString).toList()) +
                 ", reward=" + reward +
                 ", questFactory=" + questFactory +
                 ", changeListener=" + changeListener +
                 '}';
+    }
+
+    public void assignTo(@NotNull UUID owner) {
+        for (QUEST q : quests) {
+            q.uuid = owner;
+        }
+    }
+
+    public void setReward(REWARD reward) {
+        this.reward = reward;
     }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {

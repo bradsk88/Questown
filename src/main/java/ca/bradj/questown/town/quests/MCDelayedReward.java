@@ -62,4 +62,11 @@ public class MCDelayedReward extends MCReward implements MCRewardContainer {
     public Collection<MCReward> getContainedRewards() {
         return ImmutableList.of(child);
     }
+
+    @Override
+    public String toString() {
+        return "MCDelayedReward{" +
+                "child=" + child +
+                '}';
+    }
 }

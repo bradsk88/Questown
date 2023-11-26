@@ -26,17 +26,17 @@ class RecipeCalculatorTest {
     @Test
     void bed() {
         int score = RecipeItemScore.requiresCraftingTable(ImmutableList.of(
-                new MinedResource("wool", Rarity.MEDIUM),
-                new MinedResource("wool", Rarity.MEDIUM),
-                new MinedResource("wool", Rarity.MEDIUM),
+                new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
+                new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
+                new MinedResource("wool", Rarity.SOMETIMES_HARD_TO_FIND),
                 new CraftedResource("planks", 4, ImmutableList.of(
-                        new MinedResource("wood", Rarity.COMMON))
+                        new MinedResource("wood", Rarity.EASY_TO_FIND))
                 ),
                 new CraftedResource("planks", 4, ImmutableList.of(
-                        new MinedResource("wood", Rarity.COMMON))
+                        new MinedResource("wood", Rarity.EASY_TO_FIND))
                 ),
                 new CraftedResource("planks", 4, ImmutableList.of(
-                        new MinedResource("wood", Rarity.COMMON))
+                        new MinedResource("wood", Rarity.EASY_TO_FIND))
                 )
         ), true);
         Assertions.assertEquals(23, score);

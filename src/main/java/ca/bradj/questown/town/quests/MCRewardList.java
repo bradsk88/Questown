@@ -97,7 +97,8 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
     @Override
     public String toString() {
         return "MCRewardList{" +
-                "children=" + Strings.join(children,'\n') +
+                // Log4J doesn't like when this contains newlines
+                "children=" + String.join(", ", children.stream().map(Object::toString).toList()) +
                 '}';
     }
 }
