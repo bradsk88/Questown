@@ -7,6 +7,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
@@ -29,7 +30,9 @@ import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -46,6 +49,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -67,6 +71,7 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
@@ -114,6 +119,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     );
     private final TownJobHandle jobHandle = new TownJobHandle(); // FIXME: Persist to tile
     private WorkHandle workHandle = new WorkHandle(this); // FIXME: Persist to tile
+    private final Stack<Long> mornings = new Stack<>();
 
 
     public TownFlagBlockEntity(
@@ -132,6 +138,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         if (!(level instanceof ServerLevel sl)) {
             return;
+        }
+
+        if (!e.mornings.empty()) {
+            e.morningTick(e.mornings.pop());
         }
 
         long start = System.currentTimeMillis();
@@ -180,6 +190,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.everScanned = true;
 
         profileTick(e, start);
+    }
+
+    private void morningTick(Long newTime) {
+        this.assignedFarmers.clear();
+        for (MCReward r : this.morningRewards.getChildren()) {
+            this.asapRewards.push(r);
+        }
+        this.setChanged();
+        for (LivingEntity e : entities) {
+            e.stopSleeping();
+        }
+        getTileData().putLong(NBT_LAST_TICK, newTime);
     }
 
     private static void profileTick(
@@ -410,8 +432,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void roomRecipeCreated(
             MCRoom roomDoorPos,
-            RoomRecipeMatch match
+            RoomRecipeMatch<MCRoom> match
     ) {
+        swapBlocks(getServerLevel(), match);
         broadcastMessage(new TranslatableComponent(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match.getRecipeID()),
@@ -420,6 +443,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
+    }
+
+    private void swapBlocks(
+            ServerLevel level,
+            RoomRecipeMatch<MCRoom> match
+    ) {
+        ImmutableMap<ResourceLocation, BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void>> swaps = ImmutableMap.of(
+                Questown.ResourceLocation("job_board"), this::swapJobBoardSign
+        );
+        BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void> swap = swaps.get(match.getRecipeID());
+        if (swap != null) {
+            swap.apply(level, match);
+        }
+    }
+
+    private Void swapJobBoardSign(
+            ServerLevel level,
+            RoomRecipeMatch<MCRoom> room
+    ) {
+        BlockPredicate predicate = BlockPredicate.Builder.block().of(BlockTags.SIGNS).build();
+        for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
+            if (!predicate.matches(level, e.getKey())) {
+                continue;
+            }
+            level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
+            registerJobsBoard(e.getKey());
+        }
+        return null;
     }
 
     @Override
@@ -836,15 +887,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     void onMorning(long newTime) {
-        this.assignedFarmers.clear();
-        for (MCReward r : this.morningRewards.getChildren()) {
-            this.asapRewards.push(r);
-        }
-        this.setChanged();
-        for (LivingEntity e : entities) {
-            e.stopSleeping();
-        }
-        getTileData().putLong(NBT_LAST_TICK, newTime);
+        this.mornings.push(newTime);
+        // IMPORTANT: DO NOTHING ELSE IN THIS FUNCTION
+        // Adding logic here may cause the game to lock up.
+        // Do morning logic via morningTick().
     }
 
     @Override

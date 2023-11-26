@@ -41,7 +41,7 @@ public class ExplorerJob extends LeaverJob {
             GathererStatuses.TownStateProvider tsp,
             int inventoryCapacity
     ) {
-        return new ExplorerJournal<>(
+        return new ExplorerJournal<MCTownItem, MCHeldItem>(
                 signalSource, MCHeldItem::Air, MCHeldItem::new,
                 tsp, inventoryCapacity
         ) {
@@ -142,26 +142,5 @@ public class ExplorerJob extends LeaverJob {
     @Override
     public boolean addToEmptySlot(MCTownItem mcTownItem) {
         return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
-    }
-
-
-    @Override
-    public UUID UUID() {
-        return ownerUUID;
-    }
-
-    @Override
-    public boolean hasAnyLootToDrop() {
-        return journal.hasAnyLootToDrop();
-    }
-
-    @Override
-    public Iterable<MCHeldItem> getItems() {
-        return journal.getItems();
-    }
-
-    @Override
-    public boolean removeItem(MCHeldItem mct) {
-        return journal.removeItem(mct);
     }
 }

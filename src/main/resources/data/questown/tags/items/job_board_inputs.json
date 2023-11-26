@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:signs",
+    "questown:job_board_block"
+  ]
+}

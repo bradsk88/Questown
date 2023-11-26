@@ -18,6 +18,7 @@ public class TagsInit {
         public static final TagKey<Item> LIGHT_SOURCES = createTag("light_sources");
         public static final TagKey<Item> LANTERNS = createTag("lanterns");
         public static final TagKey<Item> COMPOSTABLE = createTag("compostable");
+        public static final TagKey<Item> JOB_BOARD_INPUTS = createTag("job_board_inputs");
 
 
         private static TagKey<Item> createTag(String name) {

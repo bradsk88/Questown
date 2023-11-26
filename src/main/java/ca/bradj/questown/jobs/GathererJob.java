@@ -49,7 +49,7 @@ public class GathererJob extends LeaverJob {
             GathererStatuses.TownStateProvider tsp,
             int inventoryCapacity
     ) {
-        return new GathererJournal<>(
+        return new GathererJournal<MCTownItem, MCHeldItem>(
                 signalSource, MCHeldItem::Air, MCHeldItem::new,
                 tsp, inventoryCapacity, GathererJob::checkTools
         ) {
