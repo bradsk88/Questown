@@ -19,6 +19,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -107,21 +108,30 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return false;
         }
-        return requestedResult.test(w.result);
+        for (ItemStack r : w.result) {
+            if (requestedResult.test(r)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public static ItemStack getOutput(JobID p) {
-        Work w = works.get(p);
+    public static ItemStack getDefaultWorkForNewWorker(JobID v) {
+        Work w = works.get(v);
         if (w == null) {
-            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
+            QT.JOB_LOGGER.error("No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
-        return w.result;
+        return w.initialRequest;
     }
 
     public static ImmutableList<Ingredient> getAllOutputs() {
         return ImmutableList.copyOf(
-                works.values().stream().map(v -> Ingredient.of(v.result)).toList()
+                works.values().stream()
+                        .map(v -> v.result)
+                        .flatMap(Collection::stream)
+                        .map(Ingredient::of)
+                        .toList()
         );
     }
 
@@ -146,12 +156,13 @@ public class JobsRegistry {
             BlockCheckFunc blockCheckFunc,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
-            ItemStack result
+            ImmutableSet<ItemStack> result,
+            ItemStack initialRequest
     ) {
     }
 
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
-    private static final BlockCheckFunc NOT_A_DECLARATIVE_JOB = (block) -> false;
+    private static final BlockCheckFunc NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
     private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
 
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
@@ -196,33 +207,38 @@ public class JobsRegistry {
             GathererJob.ID, new Work(
                     (town, uuid) -> new GathererJob(town, 6, uuid),
                     GATHERER_SNAPSHOT_FUNC,
-                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                     NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                     GathererJournal.Status.IDLE,
+                    // TODO: Load all possible results via loot tables and nearby biomes
+                    ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
                     Items.WHEAT_SEEDS.getDefaultInstance()
             ),
             ExplorerJob.ID, new Work(
                     (town, uuid) -> new ExplorerJob(town, 6, uuid),
                     (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
-                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                     NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                     GathererJournal.Status.IDLE,
+                    ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
                     ItemsInit.GATHERER_MAP.get().getDefaultInstance()
             ),
             FarmerJob.ID, new Work(
                     (town, uuid) -> new FarmerJob(uuid, 6),
                     (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                     SpecialQuests.FARM,
                     GathererJournal.Status.IDLE,
+                    ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
                     Items.WHEAT.getDefaultInstance()
             ),
             BakerJob.ID, new Work(
                     (town, uuid) -> new BakerJob(uuid, 6),
                     (jobId, status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                    NOT_A_DECLARATIVE_JOB,
+                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                     Questown.ResourceLocation("bakery"),
                     GathererJournal.Status.IDLE,
+                    ImmutableSet.of(Items.BREAD.getDefaultInstance()),
                     Items.BREAD.getDefaultInstance()
             ),
             DSmelterJob.ID, new Work(
@@ -231,6 +247,7 @@ public class JobsRegistry {
                     (block) -> block instanceof OreProcessingBlock,
                     Questown.ResourceLocation("smeltery"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(DSmelterJob.RESULT),
                     DSmelterJob.RESULT
             ),
             BlacksmithWoodenPickaxeJob.ID, new Work(
@@ -240,6 +257,7 @@ public class JobsRegistry {
                     (block) -> block instanceof BlacksmithsTableBlock,
                     Questown.ResourceLocation("smithy"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
                     BlacksmithWoodenPickaxeJob.RESULT
             ),
             CrafterBowlWork.ID, new Work(
@@ -248,6 +266,7 @@ public class JobsRegistry {
                     (block) -> block instanceof CraftingTableBlock,
                     Questown.ResourceLocation("crafting_room"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(CrafterBowlWork.RESULT),
                     CrafterBowlWork.RESULT
             ),
             CrafterStickWork.ID, new Work(
@@ -256,6 +275,7 @@ public class JobsRegistry {
                     (block) -> block instanceof CraftingTableBlock,
                     Questown.ResourceLocation("crafting_room"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(CrafterStickWork.RESULT),
                     CrafterStickWork.RESULT
             ),
             CrafterPaperWork.ID, new Work(
@@ -264,6 +284,7 @@ public class JobsRegistry {
                     (block) -> block instanceof CraftingTableBlock,
                     Questown.ResourceLocation("crafting_room"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(CrafterPaperWork.RESULT),
                     CrafterPaperWork.RESULT
             ),
             CrafterPlanksWork.ID, new Work(
@@ -272,6 +293,7 @@ public class JobsRegistry {
                     (block) -> block instanceof CraftingTableBlock,
                     Questown.ResourceLocation("crafting_room"),
                     ProductionStatus.FACTORY.idle(),
+                    ImmutableSet.of(CrafterPlanksWork.RESULT),
                     CrafterPlanksWork.RESULT
             )
     );

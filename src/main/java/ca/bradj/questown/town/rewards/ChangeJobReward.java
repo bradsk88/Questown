@@ -52,7 +52,7 @@ public class ChangeJobReward extends MCReward {
             town.changeJobForVisitor(visitorUUID, jobID);
             ImmutableList<JobID> defaultWork = JobsRegistry.getDefaultWork(jobID);
             defaultWork.forEach(v -> {
-                ItemStack output = JobsRegistry.getOutput(v);
+                ItemStack output = JobsRegistry.getDefaultWorkForNewWorker(v);
                 if (output.isEmpty()) {
                     return;
                 }
