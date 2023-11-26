@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -116,22 +117,28 @@ public class PendingQuests {
     @NotNull
     private Integer computeCurrentCost(ServerLevel level) {
         return batch.getAll().stream()
-                // TODO: Pre-compute and cache recipe costs
                 .map(v -> PendingQuests.computeCosts(level, v.getWantedId(), targetItemWeight))
                 .reduce(Integer::sum)
                 .orElse(0);
     }
+
+    private static Map<ResourceLocation, Integer> cachedCosts = new HashMap<>();
 
     private static int computeCosts(
             ServerLevel level,
             ResourceLocation qID,
             int stopAt
     ) {
+        if (cachedCosts.containsKey(qID)) {
+            return cachedCosts.get(qID);
+        }
         Map<ResourceLocation, RoomRecipe> hydrated = RoomRecipes.hydrate(level);
         if (!hydrated.containsKey(qID)) {
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
-        return RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
+        int recipeWeight = RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
+        cachedCosts.put(qID, recipeWeight);
+        return recipeWeight;
     }
 
     @Override
