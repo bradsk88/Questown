@@ -39,7 +39,7 @@ public class PendingQuestsSerializer {
     }
 
     public Collection<PendingQuests> deserializeNBT(
-            TownInterface entity, CompoundTag nbt
+            TownInterface town, CompoundTag nbt
     ) {
 
         ImmutableList.Builder<PendingQuests> aqs = ImmutableList.builder();
@@ -47,9 +47,9 @@ public class PendingQuestsSerializer {
         ListTag aq = nbt.getList(NBT_BATCHES, Tag.TAG_COMPOUND);
         for (int i = 0; i < num; i++) {
             CompoundTag tag = aq.getCompound(i);
-            MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag);
+            MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(town, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
-            PendingQuests pendingQuests = new PendingQuests(threshold, b.getOwner(), b.getReward());
+            PendingQuests pendingQuests = new PendingQuests(town::alreadyHasQuest, threshold, b.getOwner(), b.getReward());
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
                 pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }

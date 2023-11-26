@@ -41,6 +41,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Boolean> SCAN_FOR_DOORS;
 
+    public static final ForgeConfigSpec.ConfigValue<Double> DUPLICATE_QUEST_COST_FACTOR;
+
     static {
         BUILDER.push("Questown.Config");
         DOOR_SEARCH_RADIUS = BUILDER.comment(
@@ -93,6 +95,9 @@ public class Config {
         SCAN_FOR_DOORS = BUILDER.comment(
                 "RISKY: Set true to scan for vanilla doors in a radius around the town flag during room detection. This may be prone due to crashes if rooms get too complex."
         ).define("ScanForDoors", false);
+        DUPLICATE_QUEST_COST_FACTOR = BUILDER.comment(
+                "When new batches of quests are calculated, a request for a room to be built AGAIN is more expensive. This is done to discourage lots of repeated quests. This factor determines how much more expensive it is."
+        ).defineInRange("DuplicateQuestCostFactor", 1.5, 1.0, 100.0);
 
         BUILDER.pop();
         SPEC = BUILDER.build();

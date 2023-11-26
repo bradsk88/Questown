@@ -107,6 +107,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void requestResult(Collection<Ingredient> defaultWork);
 
+    boolean alreadyHasQuest(ResourceLocation resourceLocation);
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

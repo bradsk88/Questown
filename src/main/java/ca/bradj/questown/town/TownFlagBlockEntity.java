@@ -602,6 +602,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public boolean alreadyHasQuest(ResourceLocation resourceLocation) {
+        return quests.alreadyRequested(resourceLocation);
+    }
+
+    @Override
     public void changeJobForVisitorFromBoard(UUID ownerUUID) {
         JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
         if (work != null) {

@@ -23,9 +23,20 @@ import java.util.UUID;
 public class PendingQuests {
 
     private final UUID ownerUUID;
+    private final AlreadyAddedChecker checker;
     MCQuestBatch batch;
 
-    public PendingQuests(int targetItemWeight, @Nullable UUID ownerUUID, MCReward reward) {
+    public interface AlreadyAddedChecker {
+        boolean questAlreadyRequested(ResourceLocation questId);
+    }
+
+    public PendingQuests(
+            AlreadyAddedChecker checker,
+            int targetItemWeight,
+            @Nullable UUID ownerUUID,
+            MCReward reward
+    ) {
+        this.checker = checker;
         this.targetItemWeight = targetItemWeight;
         this.batch = new MCQuestBatch(ownerUUID, reward);
         this.ownerUUID = ownerUUID;
@@ -51,7 +62,12 @@ public class PendingQuests {
                 .map(v -> PendingQuests.computeCosts(level, v.getWantedId(), targetItemWeight))
                 .reduce(Integer::sum)
                 .orElse(0);
-        QT.QUESTS_LOGGER.debug("Current weight: {} of {} \n{}", cost, targetItemWeight, Strings.join(batch.getAll(), '\n'));
+        QT.QUESTS_LOGGER.debug(
+                "Current weight: {} of {} \n{}",
+                cost,
+                targetItemWeight,
+                Strings.join(batch.getAll(), '\n')
+        );
         if (cost >= targetItemWeight) {
             return Optional.of(batch);
         }
@@ -64,6 +80,9 @@ public class PendingQuests {
         List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
         ResourceLocation id = ids.get(level.getRandom().nextInt(ids.size()));
         int newCost = computeCosts(level, id, targetItemWeight);
+        if (checker.questAlreadyRequested(id)) {
+            newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
+        }
         QT.QUESTS_LOGGER.debug("Trying to add {} [Cost: {}]", id, newCost);
         if (attempts < idealTicks && (newCost < targetItemWeight / 4)) {
             // Ignore small rooms early on
@@ -79,7 +98,11 @@ public class PendingQuests {
         return Optional.empty();
     }
 
-    private static int computeCosts(ServerLevel level, ResourceLocation qID, int stopAt) {
+    private static int computeCosts(
+            ServerLevel level,
+            ResourceLocation qID,
+            int stopAt
+    ) {
         Map<ResourceLocation, RoomRecipe> hydrated = RoomRecipes.hydrate(level);
         if (!hydrated.containsKey(qID)) {
             throw new IllegalStateException("No recipe found for ID " + qID);

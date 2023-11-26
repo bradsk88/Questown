@@ -203,6 +203,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         ) / 2;
         QT.QUESTS_LOGGER.debug("Adding batch of quests with target weight sum: {}", targetItemWeight);
         PendingQuests theNewQuests = new PendingQuests(
+                town::alreadyHasQuest,
                 targetItemWeight,
                 visitorUUID,
                 new MCDelayedReward(town, reward)
@@ -327,5 +328,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             MCRoom newRoom
     ) {
         questBatches.changeRoomOnly(oldRoom, newRoom);
+    }
+
+    public boolean alreadyRequested(ResourceLocation resourceLocation) {
+        return getAll().stream().map(Quest::getWantedId).anyMatch(v -> v.equals(resourceLocation));
     }
 }

@@ -44,7 +44,8 @@ public class RecipeItemConfig {
     private static final int DIRT =
             new MinedResource("dirt", Rarity.EVERYWHERE).calculateValue();
     private static final int CHEST = RecipeItemScore.requiresCraftingTable(
-            CommonRecipes.CHEST, false
+            CommonRecipes.CHEST,
+            true // Boosted because gatherers need storage ASAP
     );
 
     private static final int FURNACE = RecipeItemScore.requiresCraftingTable(
