@@ -143,6 +143,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
         MCQuestBatch jobQuest = new MCQuestBatch(visitorUUID, new MCInstantReward(town, reward));
         jobQuest.addNewQuest(visitorUUID, JobsRegistry.getRoomForJobRootId(random, job));
+        if (!town.hasJobBoard()) {
+            jobQuest.addNewQuest(visitorUUID, SpecialQuests.JOB_BOARD);
+        }
 
         quests.questBatches.add(jobQuest);
     }

@@ -24,6 +24,7 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
         Invalid,
         FirstVisitor,
         FirstJobQuest;
+        // TODO: WorkAdded
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
                 Triggers.FirstVisitor, "first_visitor",

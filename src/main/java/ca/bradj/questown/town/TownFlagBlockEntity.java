@@ -12,8 +12,9 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.JobHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -95,7 +96,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final UUID uuid = UUID.randomUUID();
     private final TownFlagState state = new TownFlagState(this);
     public long advancedTimeOnTick = -1;
-    List<LivingEntity> entities = new ArrayList<>();
+    final List<LivingEntity> entities = new ArrayList<>();
     private boolean isInitializedQuests = false;
     private boolean everScanned = false;
     private boolean changed = false;
@@ -461,6 +462,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
             registerJobsBoard(e.getKey());
+            jobHandle.setJobBlockState(e.getKey(), new TownJobHandle.State(WorkSeekerJob.MAX_STATE, 0, 0));
         }
         return null;
     }
@@ -861,6 +863,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public boolean hasEnoughBeds() {
+        // TODO: This returns false positives if called before entities have been loaded from tile data
         long beds = roomsMap.getAllMatches().stream()
                 .flatMap(v -> v.getContainedBlocks().values().stream())
                 .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem())))
@@ -990,5 +993,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
         this.workHandle.registerJobBoard(sl, matPos);
+    }
+
+    public boolean hasJobBoard() {
+        return workHandle.hasAtLeastOneBoard();
     }
 }

@@ -54,6 +54,10 @@ public class WorkHandle implements OpenMenuListener {
         });
     }
 
+    public boolean hasAtLeastOneBoard() {
+        return !jobBoards.isEmpty();
+    }
+
     @Override
     public void openMenuRequested(ServerPlayer sp) {
         NetworkHooks.openGui(sp, new MenuProvider() {

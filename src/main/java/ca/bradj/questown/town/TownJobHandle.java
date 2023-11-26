@@ -177,13 +177,7 @@ public class TownJobHandle implements JobHandle {
                 }
                 Block b = sl.getBlockState(pp).getBlock();
                 if (JobsRegistry.isJobBlock(b)) {
-                    int initialProcessingState = 0;
-                    if (b instanceof SignBlock) {
-                        // FIXME: If we add a job board block, we can have it
-                        //  self-set its own processing state as jobs are added
-                        initialProcessingState = 1;
-                    }
-                    State bs = new State(initialProcessingState, 0, 0);
+                    State bs = new State(0, 0, 0);
                     jobStatuses.put(pp, bs);
 
                     if (b instanceof StatefulJobBlock sjb) {

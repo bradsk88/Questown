@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
@@ -19,7 +20,6 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -40,8 +40,7 @@ public class JobsRegistry {
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
     public static boolean isJobBlock(Block b) {
-        // TODO: Switch to job board block
-        if (Ingredient.of(ItemTags.SIGNS).test(b.asItem().getDefaultInstance())) {
+        if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
         return works.values().stream().anyMatch(v -> v.blockCheckFunc.apply(b));
