@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
+import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -13,6 +14,7 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -21,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -54,7 +57,10 @@ public class JobsRegistry {
                 .collect(Collectors.toSet());
     }
 
-    public static ResourceLocation getRoomForJobRootId(Random rand, String rootId) {
+    public static ResourceLocation getRoomForJobRootId(
+            Random rand,
+            String rootId
+    ) {
         List<Map.Entry<JobID, Work>> x = works.entrySet()
                 .stream()
                 .filter(v -> v.getKey().rootId().equals(rootId))
@@ -102,7 +108,8 @@ public class JobsRegistry {
 
     public static boolean canSatisfy(
             JobID p,
-            Ingredient requestedResult) {
+            Ingredient requestedResult
+    ) {
         Work w = works.get(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
@@ -138,25 +145,29 @@ public class JobsRegistry {
     private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }
+
     private interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> {
 
     }
+
     private interface BlockCheckFunc extends Function<Block, Boolean> {
 
     }
+
     private record Jerb(
             ImmutableList<JobID> preferredWork,
             ImmutableList<JobID> defaultWork
     ) {
 
     }
+
     private record Work(
             JobFunc jobFunc,
             SnapshotFunc snapshotFunc,
             BlockCheckFunc blockCheckFunc,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
-            ImmutableSet<ItemStack> result,
+            Function<MinecraftServer, ImmutableSet<ItemStack>> result,
             ItemStack initialRequest
     ) {
     }
@@ -164,6 +175,7 @@ public class JobsRegistry {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
     private static final BlockCheckFunc NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
     private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
+    private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
             CrafterPlanksWork.ID,
@@ -203,100 +215,113 @@ public class JobsRegistry {
             )
     );
 
-    private static final ImmutableMap<JobID, Work> works = ImmutableMap.of(
-            GathererJob.ID, new Work(
-                    (town, uuid) -> new GathererJob(town, 6, uuid),
-                    GATHERER_SNAPSHOT_FUNC,
-                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                    NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
-                    GathererJournal.Status.IDLE,
-                    // TODO: Load all possible results via loot tables and nearby biomes
-                    ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
-                    Items.WHEAT_SEEDS.getDefaultInstance()
-            ),
-            ExplorerJob.ID, new Work(
-                    (town, uuid) -> new ExplorerJob(town, 6, uuid),
-                    (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
-                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                    NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
-                    GathererJournal.Status.IDLE,
-                    ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
-                    ItemsInit.GATHERER_MAP.get().getDefaultInstance()
-            ),
-            FarmerJob.ID, new Work(
-                    (town, uuid) -> new FarmerJob(uuid, 6),
-                    (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                    SpecialQuests.FARM,
-                    GathererJournal.Status.IDLE,
-                    ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
-                    Items.WHEAT.getDefaultInstance()
-            ),
-            BakerJob.ID, new Work(
-                    (town, uuid) -> new BakerJob(uuid, 6),
-                    (jobId, status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                    NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                    Questown.ResourceLocation("bakery"),
-                    GathererJournal.Status.IDLE,
-                    ImmutableSet.of(Items.BREAD.getDefaultInstance()),
-                    Items.BREAD.getDefaultInstance()
-            ),
-            DSmelterJob.ID, new Work(
-                    (town, uuid) -> new DSmelterJob(uuid, 6),
-                    productionJobSnapshot(DSmelterJob.ID),
-                    (block) -> block instanceof OreProcessingBlock,
-                    Questown.ResourceLocation("smeltery"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(DSmelterJob.RESULT),
-                    DSmelterJob.RESULT
-            ),
-            BlacksmithWoodenPickaxeJob.ID, new Work(
-                    (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
-                    // TODO: Add support for smaller inventories
-                    productionJobSnapshot(BlacksmithWoodenPickaxeJob.ID),
-                    (block) -> block instanceof BlacksmithsTableBlock,
-                    Questown.ResourceLocation("smithy"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
-                    BlacksmithWoodenPickaxeJob.RESULT
-            ),
-            CrafterBowlWork.ID, new Work(
-                    (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
-                    productionJobSnapshot(CrafterBowlWork.ID),
-                    (block) -> block instanceof CraftingTableBlock,
-                    Questown.ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(CrafterBowlWork.RESULT),
-                    CrafterBowlWork.RESULT
-            ),
-            CrafterStickWork.ID, new Work(
-                    (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
-                    productionJobSnapshot(CrafterStickWork.ID),
-                    (block) -> block instanceof CraftingTableBlock,
-                    Questown.ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(CrafterStickWork.RESULT),
-                    CrafterStickWork.RESULT
-            ),
-            CrafterPaperWork.ID, new Work(
-                    (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
-                    productionJobSnapshot(CrafterPaperWork.ID),
-                    (block) -> block instanceof CraftingTableBlock,
-                    Questown.ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(CrafterPaperWork.RESULT),
-                    CrafterPaperWork.RESULT
-            ),
-            CrafterPlanksWork.ID, new Work(
-                    (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
-                    productionJobSnapshot(CrafterPlanksWork.ID),
-                    (block) -> block instanceof CraftingTableBlock,
-                    Questown.ResourceLocation("crafting_room"),
-                    ProductionStatus.FACTORY.idle(),
-                    ImmutableSet.of(CrafterPlanksWork.RESULT),
-                    CrafterPlanksWork.RESULT
-            )
-    );
+    private static final ImmutableMap<JobID, Work> works;
+
+    static {
+        ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+        b.put(GathererJob.ID, new Work(
+                (town, uuid) -> new GathererJob(town, 6, uuid),
+                GATHERER_SNAPSHOT_FUNC,
+                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+                GathererJournal.Status.IDLE,
+                // TODO: Load all possible results via loot tables and nearby biomes
+                s -> ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
+                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
+        ));
+        b.put(ExplorerJob.ID, new Work(
+                (town, uuid) -> new ExplorerJob(town, 6, uuid),
+                (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
+                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+                GathererJournal.Status.IDLE,
+                s -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
+                ItemsInit.GATHERER_MAP.get().getDefaultInstance()
+        ));
+        b.put(FarmerJob.ID, new Work(
+                (town, uuid) -> new FarmerJob(uuid, 6),
+                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
+                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+                SpecialQuests.FARM,
+                GathererJournal.Status.IDLE,
+                s -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
+                Items.WHEAT.getDefaultInstance()
+        ));
+        b.put(BakerJob.ID, new Work(
+                (town, uuid) -> new BakerJob(uuid, 6),
+                (jobId, status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
+                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+                Questown.ResourceLocation("bakery"),
+                GathererJournal.Status.IDLE,
+                s -> ImmutableSet.of(Items.BREAD.getDefaultInstance()),
+                Items.BREAD.getDefaultInstance()
+        ));
+        b.put(DSmelterJob.ID, new Work(
+                (town, uuid) -> new DSmelterJob(uuid, 6),
+                productionJobSnapshot(DSmelterJob.ID),
+                (block) -> block instanceof OreProcessingBlock,
+                Questown.ResourceLocation("smeltery"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(DSmelterJob.RESULT),
+                DSmelterJob.RESULT
+        ));
+        b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
+                (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
+                // TODO: Add support for smaller inventories
+                productionJobSnapshot(BlacksmithWoodenPickaxeJob.ID),
+                (block) -> block instanceof BlacksmithsTableBlock,
+                Questown.ResourceLocation("smithy"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
+                BlacksmithWoodenPickaxeJob.RESULT
+        ));
+        b.put(CrafterBowlWork.ID, new Work(
+                (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
+                productionJobSnapshot(CrafterBowlWork.ID),
+                (block) -> block instanceof CraftingTableBlock,
+                Questown.ResourceLocation("crafting_room"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(CrafterBowlWork.RESULT),
+                CrafterBowlWork.RESULT
+        ));
+        b.put(CrafterStickWork.ID, new Work(
+                (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
+                productionJobSnapshot(CrafterStickWork.ID),
+                (block) -> block instanceof CraftingTableBlock,
+                Questown.ResourceLocation("crafting_room"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(CrafterStickWork.RESULT),
+                CrafterStickWork.RESULT
+        ));
+        b.put(CrafterPaperWork.ID, new Work(
+                (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
+                productionJobSnapshot(CrafterPaperWork.ID),
+                (block) -> block instanceof CraftingTableBlock,
+                Questown.ResourceLocation("crafting_room"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(CrafterPaperWork.RESULT),
+                CrafterPaperWork.RESULT
+        ));
+        b.put(CrafterPlanksWork.ID, new Work(
+                (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
+                productionJobSnapshot(CrafterPlanksWork.ID),
+                (block) -> block instanceof CraftingTableBlock,
+                Questown.ResourceLocation("crafting_room"),
+                ProductionStatus.FACTORY.idle(),
+                s -> ImmutableSet.of(CrafterPlanksWork.RESULT),
+                CrafterPlanksWork.RESULT
+        ));
+        b.put(GathererMappedAxeWork.ID, new Work(
+                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
+                productionJobSnapshot(GathererMappedAxeWork.ID),
+                (block) -> block instanceof WelcomeMatBlock,
+                SpecialQuests.TOWN_GATE, // TODO[ASAP]: Confirm this works
+                ProductionStatus.FACTORY.idle(),
+                s -> GathererMappedAxeWork.LoadAllPossibleResults(s),
+                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
+        ));
+        works = b.build();
+    }
 
     @NotNull
     private static SnapshotFunc productionJobSnapshot(JobID id) {

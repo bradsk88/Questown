@@ -4,8 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -38,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
+import java.util.function.BiFunction;
 
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
@@ -118,7 +118,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            Supplier<ItemStack> workResult
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult
     ) {
         super(
                 ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -162,7 +162,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            Supplier<ItemStack> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
     ) {
         return new WorldInteraction(

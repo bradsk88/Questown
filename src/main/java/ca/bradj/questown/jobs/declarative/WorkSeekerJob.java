@@ -1,18 +1,21 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
-import java.util.function.Supplier;
+import java.util.function.BiFunction;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
@@ -50,7 +53,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                Items.BOWL::getDefaultInstance
+                (a, b) -> ImmutableSet.of()
         );
     }
 
@@ -73,7 +76,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            Supplier<ItemStack> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
     ) {
         return new WorldInteraction(

@@ -18,9 +18,6 @@ public class JobBlock {
     public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
             "processing_state", 0, 4
     );
-    public static final IntegerProperty INGREDIENT_COUNT = IntegerProperty.create(
-            "processing_state", 0, 3
-    );
 
     public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
             "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
@@ -84,12 +81,15 @@ public class JobBlock {
             ServerLevel sl,
             JobHandle jh,
             BlockPos block,
-            Supplier<ItemStack> is,
+            Iterable<ItemStack> is,
             @Nullable TakeFn takeFn
     ) {
         TownJobHandle.State oldState = jh.getJobBlockState(block);
         TownJobHandle.State bs = oldState.setProcessing(0);
-        moveOreToWorld(sl, jh, block, bs, is.get(), takeFn);
+        for (ItemStack i : is) {
+            // TODO[ASAP]: Don't drop items for gatherers - just skip them
+            releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
+        }
         jh.setJobBlockState(block, bs);
         if (oldState.equals(bs)) {
             return null;
@@ -97,7 +97,7 @@ public class JobBlock {
         return bs;
     }
 
-    private static void moveOreToWorld(
+    private static void releaseOreFromBlock(
             ServerLevel sl,
             JobHandle level,
             BlockPos b,

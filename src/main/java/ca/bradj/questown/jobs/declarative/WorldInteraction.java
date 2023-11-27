@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
@@ -24,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.function.BiFunction;
 
 public class WorldInteraction implements TownJobHandle.InsertionRules {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
@@ -36,7 +35,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final Supplier<ItemStack> workResult;
+    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final int interval;
     private int ticksSinceLastAction;
@@ -49,7 +48,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            Supplier<ItemStack> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
     ) {
         this.inventory = inventory;
@@ -125,7 +124,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
             @Nullable TownJobHandle.State newState = JobBlock.extractRawProduct(
-                    sl, jh, oldPos, this.workResult,
+                    sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
             );
             return newState != null;
