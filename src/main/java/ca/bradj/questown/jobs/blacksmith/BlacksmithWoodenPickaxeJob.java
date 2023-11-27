@@ -1,10 +1,10 @@
 package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
@@ -60,7 +60,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                RESULT::copy
+                (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }
 }

@@ -7,19 +7,20 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.Journal;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class GathererMappedAxeWork extends DeclarativeJob {
-    public static final JobID ID = new JobID("crafter", "crafter_bowl");
+    public static final JobID ID = new JobID("gatherer", "mapped_axe");
 
     // TODO: Can we somehow allow gatherers to bring all three at once?
     //  By using discrete "states", we force the gatherer to bring food to the
@@ -50,7 +51,6 @@ public class GathererMappedAxeWork extends DeclarativeJob {
             // And 100 is the default
             BLOCK_STATE_NEED_WORK, 1
     );
-    public static final ImmutableSet<ItemStack> ALL_POSSIBLE_RESULTS = loadEveryPossibleResult();
 
     public GathererMappedAxeWork(
             UUID ownerUUID,
@@ -72,15 +72,16 @@ public class GathererMappedAxeWork extends DeclarativeJob {
         );
     }
 
+    // Note: this is still declarative. In a file, we would just specify something like:
+    // - Strategy: "loot_tables"
+    // - Prefix: "jobs/axe"
+    // - Default "jobs/axe/default"
     private static Iterable<ItemStack> getFromLootTables(
-            ServerLevel level, ProductionJournal<MCTownItem, MCHeldItem> journal
+            ServerLevel level,
+            Journal<?, MCHeldItem, ?> journal
     ) {
-        String ltPrefix = "jobs/gatherer_axe";
-        String defaultLT = "jobs/gatherer_axe/default";
+        GathererTools.LootTablePrefix ltPrefix = GathererTools.AXE_LOOT_TABLE_PREFIX;
+        GathererTools.LootTablePath defaultLT = GathererTools.AXE_LOOT_TABLE_DEFAULT;
         return Loots.getFromLootTables(level, journal, ltPrefix, defaultLT);
-    }
-
-    public static ImmutableSet<ItemStack> LoadAllPossibleResults(MinecraftServer s) {
-        return Loots.getAllPossibleResultsFromLootTables(s);
     }
 }

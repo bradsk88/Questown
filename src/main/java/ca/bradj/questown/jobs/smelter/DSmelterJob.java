@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -53,7 +54,7 @@ public class DSmelterJob extends DeclarativeJob {
                 INGREDIENTS_QTY,
                 TOOLS,
                 WORK,
-                RESULT::copy
+                (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }
 }

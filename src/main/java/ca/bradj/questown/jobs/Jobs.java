@@ -91,10 +91,12 @@ public class Jobs {
         }
 
         for (int i = 0; i < items.size(); i++) {
-            if (items.get(i).get().equals(inventory.getItem(i).getItem())) {
+            net.minecraft.world.item.Item curItem = inventory.getItem(i).getItem();
+            net.minecraft.world.item.Item newItem = items.get(i).get().get();
+            if (newItem.equals(curItem)) {
                 continue;
             }
-            inventory.setItem(i, new ItemStack(items.get(i).get().get(), 1));
+            inventory.setItem(i, new ItemStack(newItem, 1));
         }
     }
 
@@ -276,7 +278,7 @@ public class Jobs {
             QT.JOB_LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
             return false;
         }
-        if (!isCloseToChest(entityPos, target)) {
+        if (isFarFromChest(entityPos, target)) {
             QT.JOB_LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
             return false;
         }
@@ -323,7 +325,7 @@ public class Jobs {
             ContainerTarget<MCContainer, MCTownItem> suppliesTarget,
             ContainerTarget.CheckFn<MCTownItem> check
     ) {
-        if (!isCloseToChest(entityPos, suppliesTarget)) {
+        if (isFarFromChest(entityPos, suppliesTarget)) {
             return;
         }
         if (farmerJob.isInventoryFull()) {
@@ -334,20 +336,20 @@ public class Jobs {
             MCTownItem mcTownItem = suppliesTarget.getItem(i);
             if (check.Matches(mcTownItem)) {
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
-                farmerJob.addItem(new MCHeldItem(mcTownItem));
+                farmerJob.addItem(MCHeldItem.fromTown(mcTownItem));
                 suppliesTarget.getContainer().removeItem(i, 1);
                 break;
             }
         }
     }
 
-    private static boolean isCloseToChest(
+    private static boolean isFarFromChest(
             BlockPos entityPos,
             ContainerTarget<?, ? extends Item<?>> chest
     ) {
         if (chest == null) {
-            return false;
+            return true;
         }
-        return Jobs.isCloseTo(entityPos, chest.getBlockPos());
+        return !Jobs.isCloseTo(entityPos, chest.getBlockPos());
     }
 }

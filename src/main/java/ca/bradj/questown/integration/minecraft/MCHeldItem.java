@@ -1,9 +1,12 @@
 package ca.bradj.questown.integration.minecraft;
 
+import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.HeldItem;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -11,19 +14,23 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
 
     private final MCTownItem delegate;
     private boolean locked = false;
+    private final String prefix;
+    private final String biome;
 
-    public MCHeldItem(
-            MCTownItem item
-    ) {
-        this(item, false);
-    }
-
-    public MCHeldItem(
+    private MCHeldItem(
             MCTownItem item,
-            boolean locked
+            boolean locked,
+            @Nullable String prefix,
+            @Nullable String biome
     ) {
         this.delegate = item;
         this.locked = locked;
+        this.prefix = prefix;
+        this.biome = biome;
+    }
+
+    public static MCHeldItem fromLootTable(MCTownItem item, String lootTablePrefix, ResourceLocation biome) {
+        return new MCHeldItem(item, false, lootTablePrefix, biome.toString());
     }
 
     public static MCHeldItem fromTag(CompoundTag tag) {
@@ -31,11 +38,26 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         ItemStack stack = ItemStack.of(nbt);
         MCTownItem ti = new MCTownItem(stack.getItem(), stack.getCount(), nbt);
         boolean loqued = tag.getBoolean("locked");
-        return new MCHeldItem(ti, loqued);
+        String prefix = QTNBT.getString(tag, "prefix");
+        String biome = QTNBT.getString(tag, "biome");
+        return new MCHeldItem(ti, loqued, prefix, biome);
     }
 
     public static MCHeldItem fromMCItemStack(ItemStack item) {
-        return new MCHeldItem(MCTownItem.fromMCItemStack(item), false);
+        return new MCHeldItem(
+                MCTownItem.fromMCItemStack(item),
+                false,
+                QTNBT.getString(item.getOrCreateTag(), "prefix"),
+                QTNBT.getString(item.getOrCreateTag(), "biome")
+        );
+    }
+
+    public static MCHeldItem fromTown(MCTownItem mcTownItem) {
+        return new MCHeldItem(mcTownItem, false, null, null);
+    }
+
+    public static MCHeldItem fromTown(ItemStack itemstack) {
+        return fromTown(MCTownItem.fromMCItemStack(itemstack));
     }
 
     @Override
@@ -55,11 +77,11 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
 
     @Override
     public MCHeldItem shrink() {
-        return new MCHeldItem(delegate.shrink(), locked);
+        return new MCHeldItem(delegate.shrink(), locked, prefix, biome);
     }
 
     public static MCHeldItem Air() {
-        return new MCHeldItem(MCTownItem.Air(), false);
+        return new MCHeldItem(MCTownItem.Air(), false, null, null);
     }
 
     public MCTownItem get() {
@@ -67,13 +89,23 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     @Override
+    public @Nullable String acquiredViaLootTablePrefix() {
+        return prefix;
+    }
+
+    @Override
+    public @Nullable String foundInBiome() {
+        return biome;
+    }
+
+    @Override
     public MCHeldItem locked() {
-        return new MCHeldItem(delegate, true);
+        return new MCHeldItem(delegate, true, prefix, biome);
     }
 
     @Override
     public MCHeldItem unlocked() {
-        return new MCHeldItem(delegate, false);
+        return new MCHeldItem(delegate, false, prefix, biome);
     }
 
     public Tag serializeNBT() {
@@ -91,6 +123,8 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         return "MCHeldItem{" +
                 "delegate=" + delegate +
                 ", locked=" + locked +
+                ", prefix=" + prefix +
+                ", biome=" + biome +
                 '}';
     }
 

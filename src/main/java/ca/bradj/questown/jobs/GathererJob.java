@@ -7,6 +7,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.LeaverJob;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -17,7 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,6 +26,7 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootTables;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
@@ -50,7 +51,7 @@ public class GathererJob extends LeaverJob {
             int inventoryCapacity
     ) {
         return new GathererJournal<MCTownItem, MCHeldItem>(
-                signalSource, MCHeldItem::Air, MCHeldItem::new,
+                signalSource, MCHeldItem::Air,
                 tsp, inventoryCapacity, GathererJob::checkTools
         ) {
             @Override
@@ -81,7 +82,7 @@ public class GathererJob extends LeaverJob {
     }
 
     @Override
-    public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
+    public Collection<MCHeldItem> getLoot(GathererJournal.Tools tools) {
         return getLootFromLevel(town, journal.getCapacity(), tools, computeBiome(journal.getItems(), town));
     }
 
@@ -106,7 +107,7 @@ public class GathererJob extends LeaverJob {
         return biome;
     }
 
-    public static Collection<MCTownItem> getLootFromLevel(
+    public static Collection<MCHeldItem> getLootFromLevel(
             TownInterface town,
             int maxItems,
             GathererJournal.Tools tools,
@@ -117,21 +118,21 @@ public class GathererJob extends LeaverJob {
         }
         ServerLevel level = town.getServerLevel();
 
-        ImmutableList.Builder<MCTownItem> items = ImmutableList.builder();
+        ImmutableList.Builder<MCHeldItem> items = ImmutableList.builder();
         if (tools.hasAxe()) {
-            List<MCTownItem> axed = computeAxedItems(town, maxItems, biome);
+            List<MCHeldItem> axed = computeAxedItems(town, maxItems, biome);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         } else if (tools.hasPick()) {
-            List<MCTownItem> axed = computeWoodPickaxedItems(level, maxItems);
+            List<MCHeldItem> axed = computeWoodPickaxedItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         } else if (tools.hasShovel()) {
-            List<MCTownItem> axed = computeWoodShoveledItems(level, maxItems);
+            List<MCHeldItem> axed = computeWoodShoveledItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         } else if (tools.hasRod()) {
-            List<MCTownItem> axed = computeFishedItems(level, maxItems);
+            List<MCHeldItem> axed = computeFishedItems(level, maxItems);
             items.addAll(axed);
             maxItems = maxItems - axed.size();
         }
@@ -142,7 +143,7 @@ public class GathererJob extends LeaverJob {
         }
         items.addAll(computeGatheredItems(level, Math.min(6, maxItems), maxItems));
 
-        ImmutableList<MCTownItem> list = items.build();
+        ImmutableList<MCHeldItem> list = items.build();
 
         Questown.LOGGER.debug("[VMJ] Presenting items to gatherer: {}", list);
 
@@ -150,75 +151,88 @@ public class GathererJob extends LeaverJob {
     }
 
     @NotNull
-    private static List<MCTownItem> computeGatheredItems(
+    private static List<MCHeldItem> computeGatheredItems(
             ServerLevel level,
             int minItems,
             int maxItems
     ) {
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_notools");
+        GathererTools.LootTablePrefix prefix = new GathererTools.LootTablePrefix("jobs/gatherer_notools");
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.path());
         LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, minItems, maxItems, rl);
+        return getLoots(level, lootTable, minItems, maxItems, prefix, null);
     }
 
     @NotNull
-    private static List<MCTownItem> computeAxedItems(
+    private static List<MCHeldItem> computeAxedItems(
             TownInterface town,
             int maxItems,
             ResourceLocation biome
     ) {
-        String id = String.format("jobs/gatherer_axe/%s/%s", biome.getNamespace(), biome.getPath());
+        GathererTools.LootTablePrefix prefix = GathererTools.AXE_LOOT_TABLE_PREFIX;
+        String id = String.format("%s/%s/%s", prefix, biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = town.getServerLevel().getServer().getLootTables();
         if (!tables.getIds().contains(rl)) {
             rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_axe/default");
         }
         LootTable lootTable = tables.get(rl);
-        return getLoots(town.getServerLevel(), lootTable, 3, maxItems, rl);
+        return getLoots(town.getServerLevel(), lootTable, 3, maxItems, prefix, null);
     }
 
     @NotNull
-    private static List<MCTownItem> computeWoodPickaxedItems(
+    private static List<MCHeldItem> computeWoodPickaxedItems(
             ServerLevel level,
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_pickaxe_wood");
         LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
+        GathererTools.LootTablePrefix prefix = new GathererTools.LootTablePrefix("jobs/gatherer_pickaxe");
+        return getLoots(level, lootTable, 3, maxItems, prefix, null);
     }
 
     @NotNull
-    private static List<MCTownItem> computeWoodShoveledItems(
+    private static List<MCHeldItem> computeWoodShoveledItems(
             ServerLevel level,
             int maxItems
     ) {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, "jobs/gatherer_plains_shovel_wood");
         LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
+        GathererTools.LootTablePrefix prefix = new GathererTools.LootTablePrefix("jobs/gatherer_shovel");
+        return getLoots(level, lootTable, 3, maxItems, prefix, null);
     }
 
     @NotNull
-    private static List<MCTownItem> computeFishedItems(
+    private static List<MCHeldItem> computeFishedItems(
             ServerLevel level,
             int maxItems
     ) {
+        // TODO[ASAP]: Should held item also track the namespace of the loot table?
         ResourceLocation rl = new ResourceLocation("minecraft", "gameplay/fishing");
         LootTable lootTable = level.getServer().getLootTables().get(rl);
-        return getLoots(level, lootTable, 3, maxItems, rl);
+        GathererTools.LootTablePrefix prefix = new GathererTools.LootTablePrefix("jobs/gatherer_fishing");
+        return getLoots(level, lootTable, 3, maxItems, prefix, null);
     }
 
     @NotNull
-    private static List<MCTownItem> getLoots(
+    private static List<MCHeldItem> getLoots(
             ServerLevel level,
             LootTable lootTable,
             int minItems,
             int maxItems,
-            ResourceLocation rl
+            GathererTools.LootTablePrefix prefix,
+            @Nullable ResourceLocation biome
     ) {
         if (maxItems <= 0) {
             return ImmutableList.of();
         }
+        final ResourceLocation fBiome;
+        if (biome == null) {
+            fBiome = new ResourceLocation("forest"); // TODO: store "home biomes" on job and choose one at random
+        } else {
+            fBiome = biome;
+        }
 
-        LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
+        LootContext.Builder lcb = new LootContext.Builder(level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
         ArrayList<ItemStack> rItems = new ArrayList<>();
@@ -228,9 +242,10 @@ public class GathererJob extends LeaverJob {
         }
         Collections.shuffle(rItems);
         int subLen = Math.min(rItems.size(), maxItems);
-        List<MCTownItem> list = rItems.stream()
+        List<MCHeldItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(MCTownItem::fromMCItemStack)
+                .map(v -> MCHeldItem.fromLootTable(v, prefix.path(), fBiome))
                 .toList()
                 .subList(0, subLen);
         return list;
@@ -298,8 +313,8 @@ public class GathererJob extends LeaverJob {
     }
 
     @Override
-    public boolean addToEmptySlot(MCTownItem mcTownItem) {
-        return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
+    public boolean addToEmptySlot(MCHeldItem i) {
+        return journal.addItemIfSlotAvailable(i);
     }
 
 }

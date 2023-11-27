@@ -18,7 +18,6 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
     private final SignalSource sigs;
     private final EmptyFactory<H> emptyFactory;
     private final GathererStatuses.TownStateProvider storageCheck;
-    private final Converter<I, H> converter;
     private JournalItemList<H> inventory;
     private boolean ate = false;
     private List<JournalItemsListener<H>> listeners = new ArrayList<>();
@@ -64,13 +63,12 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
     }
 
     public interface Converter<I extends Item<I>, H extends HeldItem<H, I>> {
-        H convert(I item);
+        H fromLoot(I item);
     }
 
     public GathererJournal(
             SignalSource sigs,
             EmptyFactory<H> ef,
-            Converter<I, H> converter,
             GathererStatuses.TownStateProvider cont,
             int inventoryCapacity,
             ToolsChecker<H> tools
@@ -78,7 +76,6 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         super();
         this.sigs = sigs;
         this.emptyFactory = ef;
-        this.converter = converter;
         this.storageCheck = cont;
         this.inventory = new JournalItemList<>(inventoryCapacity, ef);
         this.tools = tools;
@@ -211,7 +208,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
     }
 
     public void tick(
-            LootProvider<I> loot
+            LootProvider<I, H> loot
     ) {
         if (status == Status.UNSET) {
             throw new IllegalStateException("Must initialize status");
@@ -255,15 +252,15 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         return hadFood;
     }
 
-    private void addLoot(Collection<I> loot) {
-        Iterator<I> iterator = loot.iterator();
+    private void addLoot(Collection<H> loot) {
+        Iterator<H> iterator = loot.iterator();
         for (int i = 0; i < inventory.size(); i++) {
             if (!iterator.hasNext()) {
                 break;
             }
             // TODO: On extended trips, replace non-food
             if (inventory.get(i).isEmpty()) {
-                inventory.set(i, converter.convert(iterator.next()));
+                inventory.set(i, iterator.next());
             }
         }
         updateItemListeners();
@@ -499,8 +496,8 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         }
     }
 
-    public interface LootProvider<I extends Item<I>> {
-        Collection<I> getLoot(Tools tools);
+    public interface LootProvider<I extends Item<I>, H extends HeldItem<H, I>> {
+        Collection<H> getLoot(Tools tools);
     }
 
     public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(

@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 class GathererTimeWarperTest {
-    private static final GathererTimeWarper.Town<GathererJournalTest.TestItem> infiniteStorageTown = new GathererTimeWarper.Town<>() {
+    private static final GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem> infiniteStorageTown
+            = new GathererTimeWarper.Town<>() {
         @Override
         public ImmutableList<GathererJournalTest.TestItem> depositItems(ImmutableList<GathererJournalTest.TestItem> itemsToDeposit) {
             return ImmutableList.of(

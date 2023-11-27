@@ -955,7 +955,7 @@ public class VisitorMobEntity extends PathfinderMob {
         ItemStack itemstack = p_21471_.getItem();
         int taken = 0;
         for (int i = 0; i < itemstack.getCount(); i++) {
-            if (this.job.addToEmptySlot(MCTownItem.fromMCItemStack(itemstack))) {
+            if (this.job.addToEmptySlot(MCHeldItem.fromTown(itemstack))) {
                 taken++;
                 continue;
             }

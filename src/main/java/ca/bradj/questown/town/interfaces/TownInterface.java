@@ -1,8 +1,10 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -16,6 +18,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
@@ -108,6 +111,12 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     void requestResult(Collection<Ingredient> defaultWork);
 
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
+
+    ImmutableSet<ItemStack> getAllKnownGatherResults(
+            GathererTools.LootTablePrefix ltPrefix
+    );
+
+    void registerFoundLoots(ImmutableList<MCHeldItem> items);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

@@ -4,11 +4,9 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.Journal;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -21,17 +19,15 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class Loots {
 
     @NotNull
     static List<ItemStack> getFromLootTables(
             ServerLevel level,
-            ProductionJournal<MCTownItem, MCHeldItem> journal,
-            String ltPrefix,
-            String defaultLT
+            Journal<?, MCHeldItem, ?> journal,
+            GathererTools.LootTablePrefix ltPrefix,
+            GathererTools.LootTablePath defaultLT
     ) {
         @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
         if (biome == null) {
@@ -41,31 +37,7 @@ public class Loots {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = level.getServer().getLootTables();
         if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, defaultLT);
-        }
-        LootTable lootTable = tables.get(rl);
-        List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
-        return loot.stream().map(MCTownItem::toItemStack).toList();
-    }
-
-    public static ImmutableSet<ItemStack> getAllPossibleResultsFromLootTables(
-            String ltPrefix,
-            MinecraftServer s
-    ) {
-        String id = String.format("%s/%s/%s", ltPrefix, biome.getNamespace(), biome.getPath());
-        final ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = s.getLootTables();
-        Set<ResourceLocation> matchedIds = tables.getIds().stream().
-                filter(v -> v.getNamespace().equals(rl.getNamespace())).
-                filter(v -> v.getPath().startsWith(ltPrefix)).
-                collect(Collectors.toSet());
-        ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-        matchedIds.forEach(v -> {
-            LootTable table = tables.get(v);
-            table.getRandomItems(Lo)
-        });
-        if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, defaultLT);
+            rl = new ResourceLocation(Questown.MODID, defaultLT.path());
         }
         LootTable lootTable = tables.get(rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
@@ -83,7 +55,7 @@ public class Loots {
             return ImmutableList.of();
         }
 
-        LootContext.Builder lcb = new LootContext.Builder((ServerLevel) level);
+        LootContext.Builder lcb = new LootContext.Builder(level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
         ArrayList<ItemStack> rItems = new ArrayList<>();

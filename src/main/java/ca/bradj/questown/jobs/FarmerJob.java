@@ -629,17 +629,17 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public boolean addToEmptySlot(MCTownItem mcTownItem) {
+    public boolean addToEmptySlot(MCHeldItem i) {
         boolean isAllowedToPickUp = ImmutableList.of(
                 Items.WHEAT_SEEDS,
                 Items.GRASS,
                 Items.BONE_MEAL,
                 Items.WHEAT
-        ).contains(mcTownItem.get());
+        ).contains(i.get().get());
         if (!isAllowedToPickUp) {
             return false;
         }
-        return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
+        return journal.addItemIfSlotAvailable(i);
     }
 
     @Override
@@ -652,7 +652,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         for (int i = 0; i < p_18983_.getContainerSize(); i++) {
             ItemStack item = p_18983_.getItem(i);
-            b.add(new MCHeldItem(MCTownItem.fromMCItemStack(item), locks.get(i).get() == 1));
+            MCHeldItem mItem = MCHeldItem.fromMCItemStack(item);
+            if (locks.get(i).get() == 1) {
+                mItem = mItem.locked();
+            }
+            b.add(mItem);
         }
         journal.setItemsNoUpdateNoCheck(b.build());
     }

@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import org.jetbrains.annotations.Nullable;
+
 public interface HeldItem<
         SELF extends Item<SELF>,
         INNER extends Item<INNER>
@@ -11,4 +13,8 @@ public interface HeldItem<
     SELF locked();
 
     SELF unlocked();
+
+    @Nullable String acquiredViaLootTablePrefix();
+
+    @Nullable String foundInBiome();
 }

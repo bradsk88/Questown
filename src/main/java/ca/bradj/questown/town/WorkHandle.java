@@ -29,12 +29,12 @@ import java.util.function.Function;
 
 public class WorkHandle implements OpenMenuListener {
 
-    private Collection<Ingredient> requestedResults = new ArrayList<>();
+    private final Collection<Ingredient> requestedResults = new ArrayList<>();
 
-    private Stack<Function<Void, Void>> nextTick = new Stack<>();
+    private final Stack<Function<Void, Void>> nextTick = new Stack<>();
 
     private final TownFlagBlockEntity parent;
-    private ArrayList<BlockPos> jobBoards = new ArrayList<>();
+    private final ArrayList<BlockPos> jobBoards = new ArrayList<>();
 
     public WorkHandle(TownFlagBlockEntity townFlagBlockEntity) {
         parent = townFlagBlockEntity;
@@ -76,7 +76,8 @@ public class WorkHandle implements OpenMenuListener {
                 return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r);
             }
         }, data -> {
-            AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(), data);
+            JobsRegistry.TownData td = new JobsRegistry.TownData(parent::getAllKnownGatherResults);
+            AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(td), data);
             AddWorkContainer.writeFlagPosition(parent.getTownFlagBasePos(), data);
             TownWorkContainer.writeWork(requestedResults, data);
         });

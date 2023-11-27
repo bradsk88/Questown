@@ -24,7 +24,6 @@ import java.util.function.Function;
 public class ExplorerJob extends LeaverJob {
 
     public static final JobID ID = new JobID("gatherer", "explore");
-    private boolean dropping;
 
     public ExplorerJob(
             TownInterface town,
@@ -42,7 +41,7 @@ public class ExplorerJob extends LeaverJob {
             int inventoryCapacity
     ) {
         return new ExplorerJournal<MCTownItem, MCHeldItem>(
-                signalSource, MCHeldItem::Air, MCHeldItem::new,
+                signalSource, MCHeldItem::Air,
                 tsp, inventoryCapacity
         ) {
             @Override
@@ -53,12 +52,18 @@ public class ExplorerJob extends LeaverJob {
         };
     }
 
+    private static MCHeldItem mapsAreNotLoot(MCTownItem item) {
+        // It's not actually "from town", but the map items produced by explorers
+        // also shouldn't be considered "from a biome"
+        return MCHeldItem.fromTown(item);
+    }
+
     @Override
-    public Collection<MCTownItem> getLoot(GathererJournal.Tools tools) {
+    public Collection<MCHeldItem> getLoot(GathererJournal.Tools tools) {
         return getLootFromLevel(town);
     }
 
-    private static Collection<MCTownItem> getLootFromLevel(
+    private static Collection<MCHeldItem> getLootFromLevel(
             TownInterface town
     ) {
         if (town == null || town.getServerLevel() == null) {
@@ -79,7 +84,7 @@ public class ExplorerJob extends LeaverJob {
 
         QTNBT.putString(map, "biome", biome.toString());
 
-        ImmutableList<MCTownItem> list = ImmutableList.of(MCTownItem.fromMCItemStack(map));
+        ImmutableList<MCHeldItem> list = ImmutableList.of(ExplorerJob.mapsAreNotLoot(MCTownItem.fromMCItemStack(map)));
 
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", list);
 
@@ -140,7 +145,7 @@ public class ExplorerJob extends LeaverJob {
     }
 
     @Override
-    public boolean addToEmptySlot(MCTownItem mcTownItem) {
-        return journal.addItemIfSlotAvailable(new MCHeldItem(mcTownItem));
+    public boolean addToEmptySlot(MCHeldItem i) {
+        return journal.addItemIfSlotAvailable(i);
     }
 }

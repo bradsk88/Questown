@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 
 class GathererJournalsTest {
 
-    private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> defaultLootGiver =
+    private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> defaultLootGiver =
             (max, tools, biome) -> ImmutableList.of(
                     new GathererJournalTest.TestItem(
                             "gold"),
@@ -26,7 +26,7 @@ class GathererJournalsTest {
             );
 
     private static class FakeTownWithInfiniteStorage implements
-            GathererTimeWarper.Town<GathererJournalTest.TestItem>,
+            GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>,
             GathererTimeWarper.FoodRemover<GathererJournalTest.TestItem> {
 
         final List<GathererJournalTest.TestItem> container = new ArrayList<>();
@@ -129,7 +129,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, biome) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, biome) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -180,7 +180,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -236,7 +236,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -287,7 +287,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -338,7 +338,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -393,7 +393,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -444,7 +444,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -522,7 +522,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -590,7 +590,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -640,7 +640,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -691,7 +691,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -749,7 +749,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -800,7 +800,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -867,7 +867,7 @@ class GathererJournalsTest {
                 )
         );
 
-        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),

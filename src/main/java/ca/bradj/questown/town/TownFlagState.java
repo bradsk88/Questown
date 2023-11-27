@@ -101,11 +101,11 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem, ResourceLocation> loot =
+        GathererTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
         GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
                 storedState, loot, storedState,
-                MCHeldItem::Air, MCHeldItem::new,
+                MCHeldItem::Air, MCHeldItem::fromTown,
                 GathererJob::checkTools,
                 (items) -> GathererJob.computeBiome(items, e)
         );

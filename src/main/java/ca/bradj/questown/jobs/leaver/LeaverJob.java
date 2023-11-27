@@ -125,9 +125,10 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
         }
         tryDropLoot(entityPos);
         tryTakeFood(entityPos);
+        town.registerFoundLoots(journal.getItems());
     }
 
-    protected abstract Collection<MCTownItem> getLoot(GathererJournal.Tools tools);
+    protected abstract Collection<MCHeldItem> getLoot(GathererJournal.Tools tools);
 
     private void tryDropLoot(
             BlockPos entityPos
@@ -160,7 +161,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
             MCTownItem mcTownItem = foodTarget.container.getItem(i);
             if (mcTownItem.isFood()) {
                 QT.JOB_LOGGER.debug("Gatherer is taking {} from {}", mcTownItem, foodTarget);
-                journal.addItem(new MCHeldItem(mcTownItem));
+                journal.addItem(MCHeldItem.fromTown(mcTownItem));
                 foodTarget.container.removeItem(i, 1);
                 break;
             }
@@ -182,7 +183,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
     private static void processSignal(
             Level level,
             LeaverJob e,
-            GathererJournal.LootProvider<MCTownItem> loot
+            GathererJournal.LootProvider<MCTownItem, MCHeldItem> loot
     ) {
         if (level.isClientSide()) {
             return;

@@ -15,6 +15,7 @@ import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -23,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -106,7 +106,13 @@ public class JobsRegistry {
         throw new IllegalArgumentException("Unexpected job ID format: " + jobID);
     }
 
+    public record TownData(
+            Function<GathererTools.LootTablePrefix, ImmutableSet<ItemStack>> allKnownGatherItemsFn
+    ) {
+    }
+
     public static boolean canSatisfy(
+            TownData town,
             JobID p,
             Ingredient requestedResult
     ) {
@@ -115,7 +121,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return false;
         }
-        for (ItemStack r : w.result) {
+        for (ItemStack r : w.results.apply(town)) {
             if (requestedResult.test(r)) {
                 return true;
             }
@@ -132,10 +138,10 @@ public class JobsRegistry {
         return w.initialRequest;
     }
 
-    public static ImmutableList<Ingredient> getAllOutputs() {
+    public static ImmutableList<Ingredient> getAllOutputs(TownData t) {
         return ImmutableList.copyOf(
                 works.values().stream()
-                        .map(v -> v.result)
+                        .map(v -> v.results.apply(t))
                         .flatMap(Collection::stream)
                         .map(Ingredient::of)
                         .toList()
@@ -167,14 +173,13 @@ public class JobsRegistry {
             BlockCheckFunc blockCheckFunc,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
-            Function<MinecraftServer, ImmutableSet<ItemStack>> result,
+            Function<TownData, ImmutableSet<ItemStack>> results,
             ItemStack initialRequest
     ) {
     }
 
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
     private static final BlockCheckFunc NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
-    private static final ImmutableList<String> NOT_REQUIRED_BECAUSE_JOB_SEEKER = ImmutableList.of();
     private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
@@ -217,6 +222,7 @@ public class JobsRegistry {
 
     private static final ImmutableMap<JobID, Work> works;
 
+
     static {
         ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
         b.put(GathererJob.ID, new Work(
@@ -226,7 +232,7 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                 GathererJournal.Status.IDLE,
                 // TODO: Load all possible results via loot tables and nearby biomes
-                s -> ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
+                t -> ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
         ));
         b.put(ExplorerJob.ID, new Work(
@@ -235,7 +241,7 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                 GathererJournal.Status.IDLE,
-                s -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
+                t -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
                 ItemsInit.GATHERER_MAP.get().getDefaultInstance()
         ));
         b.put(FarmerJob.ID, new Work(
@@ -244,7 +250,7 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 SpecialQuests.FARM,
                 GathererJournal.Status.IDLE,
-                s -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
+                t -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
                 Items.WHEAT.getDefaultInstance()
         ));
         b.put(BakerJob.ID, new Work(
@@ -253,7 +259,7 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 Questown.ResourceLocation("bakery"),
                 GathererJournal.Status.IDLE,
-                s -> ImmutableSet.of(Items.BREAD.getDefaultInstance()),
+                t -> ImmutableSet.of(Items.BREAD.getDefaultInstance()),
                 Items.BREAD.getDefaultInstance()
         ));
         b.put(DSmelterJob.ID, new Work(
@@ -262,7 +268,7 @@ public class JobsRegistry {
                 (block) -> block instanceof OreProcessingBlock,
                 Questown.ResourceLocation("smeltery"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(DSmelterJob.RESULT),
+                t -> ImmutableSet.of(DSmelterJob.RESULT),
                 DSmelterJob.RESULT
         ));
         b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
@@ -272,7 +278,7 @@ public class JobsRegistry {
                 (block) -> block instanceof BlacksmithsTableBlock,
                 Questown.ResourceLocation("smithy"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
+                t -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
                 BlacksmithWoodenPickaxeJob.RESULT
         ));
         b.put(CrafterBowlWork.ID, new Work(
@@ -281,7 +287,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(CrafterBowlWork.RESULT),
+                t -> ImmutableSet.of(CrafterBowlWork.RESULT),
                 CrafterBowlWork.RESULT
         ));
         b.put(CrafterStickWork.ID, new Work(
@@ -290,7 +296,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(CrafterStickWork.RESULT),
+                t -> ImmutableSet.of(CrafterStickWork.RESULT),
                 CrafterStickWork.RESULT
         ));
         b.put(CrafterPaperWork.ID, new Work(
@@ -299,7 +305,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(CrafterPaperWork.RESULT),
+                t -> ImmutableSet.of(CrafterPaperWork.RESULT),
                 CrafterPaperWork.RESULT
         ));
         b.put(CrafterPlanksWork.ID, new Work(
@@ -308,7 +314,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                s -> ImmutableSet.of(CrafterPlanksWork.RESULT),
+                t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
                 CrafterPlanksWork.RESULT
         ));
         b.put(GathererMappedAxeWork.ID, new Work(
@@ -317,7 +323,7 @@ public class JobsRegistry {
                 (block) -> block instanceof WelcomeMatBlock,
                 SpecialQuests.TOWN_GATE, // TODO[ASAP]: Confirm this works
                 ProductionStatus.FACTORY.idle(),
-                s -> GathererMappedAxeWork.LoadAllPossibleResults(s),
+                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
         ));
         works = b.build();

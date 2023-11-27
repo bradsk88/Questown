@@ -13,6 +13,7 @@ import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -163,16 +164,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         if (e.nearbyBiomes.isEmpty()) {
-            ChunkPos here = new ChunkPos(blockPos);
-            Biome value = level.getBiome(blockPos).value();
-            e.nearbyBiomes.add(value);
-            for (Direction d : Direction.Plane.HORIZONTAL) {
-                for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
-                    ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
-                    Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY())).value();
-                    e.nearbyBiomes.add(biome);
-                }
-            }
+            computeNearbyBiomes(level, blockPos, e);
         }
 
         e.roomsMap.tick(sl, blockPos);
@@ -189,6 +181,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.everScanned = true;
 
         profileTick(e, start);
+    }
+
+    private static void computeNearbyBiomes(
+            Level level,
+            BlockPos blockPos,
+            TownFlagBlockEntity e
+    ) {
+        ChunkPos here = new ChunkPos(blockPos);
+        Biome value = level.getBiome(blockPos).value();
+        e.nearbyBiomes.add(value);
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
+                ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
+                Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY())).value();
+                e.nearbyBiomes.add(biome);
+            }
+        }
     }
 
     private void morningTick(Long newTime) {
@@ -589,6 +598,48 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         return quests.alreadyRequested(resourceLocation);
     }
 
+    private final Map<ResourceLocation, Map<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>>> knownGatherResults = new HashMap<>();
+
+    @Override
+    public ImmutableSet<ItemStack> getAllKnownGatherResults(
+            GathererTools.LootTablePrefix ltPrefix
+    ) {
+        ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
+        knownGatherResults.values()
+                .stream()
+                .flatMap(v -> v.getOrDefault(ltPrefix, ImmutableSet.of()).stream())
+                .forEach(v -> b.add(v.toItemStack()));
+        return b.build();
+    }
+
+    @Override
+    public void registerFoundLoots(ImmutableList<MCHeldItem> items) {
+        items.forEach(item -> {
+            if (item.foundInBiome() == null) {
+                return;
+            }
+            String o = item.foundInBiome();
+            ResourceLocation bId = new ResourceLocation(o);
+            Map<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> biome = knownGatherResults.get(bId);
+            if (biome == null) {
+                biome = new HashMap<>();
+            }
+            String lootPrefix = item.acquiredViaLootTablePrefix();
+            if (lootPrefix == null) {
+                QT.FLAG_LOGGER.error("Found item has no loot table prefix");
+                return;
+            }
+            GathererTools.LootTablePrefix ltp = new GathererTools.LootTablePrefix(lootPrefix);
+            Set<MCTownItem> known = new HashSet<>(biome.get(ltp));
+            int sizeBefore = known.size();
+            known.add(item.get());
+            if (sizeBefore != known.size()) {
+                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", item);
+            }
+            biome.put(ltp, ImmutableSet.copyOf(known));
+        });
+    }
+
     @Override
     public void changeJobForVisitorFromBoard(UUID ownerUUID) {
         JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
@@ -611,6 +662,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             QT.BLOCK_LOGGER.error("Entity is wrong type: {}", ff);
             return null;
         }
+
+        JobsRegistry.TownData data = new JobsRegistry.TownData(this::getAllKnownGatherResults);
+
         Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
         for (JobID p : preference) {
             for (Ingredient requestedResult : requestedResults) {
@@ -620,7 +674,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 //  blacksmith should light up red to indicate a broken chain and
                 //  that the player will need to contribute in order for the
                 //  blacksmith to work, rather than everything being automated.
-                if (JobsRegistry.canSatisfy(p, requestedResult)) {
+                if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
                     return p;
                 }
             }
@@ -865,6 +919,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public ResourceLocation getRandomNearbyBiome() {
+        if (nearbyBiomes.isEmpty()) {
+            computeNearbyBiomes(level, getBlockPos(), this);
+        }
         return nearbyBiomes.get(getServerLevel().getRandom().nextInt(nearbyBiomes.size())).getRegistryName();
     }
 

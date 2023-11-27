@@ -15,7 +15,7 @@ public class TownState<
         C extends ContainerTarget.Container<I>,
         I extends Item<I>,
         H extends HeldItem<H, I> & Item<H>
-        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I> {
+        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I, H> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<BlockPos> gates;
@@ -64,10 +64,10 @@ public class TownState<
 
     // TODO: TownState should be immutable. Should this be "withItemsDeposited"?
     @Override
-    public ImmutableList<I> depositItems(ImmutableList<I> itemsToDeposit) {
-        ImmutableList.Builder<I> notDepositedItems = ImmutableList.builder();
+    public ImmutableList<H> depositItems(ImmutableList<H> itemsToDeposit) {
+        ImmutableList.Builder<H> notDepositedItems = ImmutableList.builder();
         boolean allFull = false;
-        for (I item : itemsToDeposit) {
+        for (H item : itemsToDeposit) {
             boolean deposited = false;
             if (!allFull) {
                 for (int i = 0; i < containers.size(); i++) {
@@ -75,7 +75,7 @@ public class TownState<
                     for (int j = 0; j < container.size(); j++) {
                         I containerItem = container.getItem(j);
                         if (containerItem.isEmpty()) {
-                            container.setItem(j, item);
+                            container.setItem(j, item.get());
                             deposited = true;
                             break;
                         }
