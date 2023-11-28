@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "questown:blocks/blacksmiths_table_top",
+    "front": "questown:blocks/blacksmiths_table_front",
+    "side": "questown:blocks/blacksmiths_table_side"
+  }
+}
