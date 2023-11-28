@@ -34,7 +34,8 @@ public class JobBoardBlock extends HorizontalDirectionalBlock {
         super(
                 Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .strength(1.0F, 10.0F)
+                        .strength(1.0F, 10.0F).
+                        noOcclusion()
         );
     }
 
