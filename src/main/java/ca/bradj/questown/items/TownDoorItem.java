@@ -1,7 +1,9 @@
 package ca.bradj.questown.items;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
@@ -27,13 +29,16 @@ public class TownDoorItem extends Item {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
                 ctx.getItemInHand());
         if (input == null) {
-            Questown.LOGGER.error("{} is missing flag input", ctx.getItemInHand().getItem().getRegistryName());
+            QT.ITEM_LOGGER.error("{} is missing flag input", ctx.getItemInHand().getItem().getRegistryName());
             return InteractionResult.FAIL;
         }
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));
         if (interactionResult.equals(InteractionResult.CONSUME) && ctx.getLevel() instanceof ServerLevel sl) {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
             parent.registerDoor(ctx.getClickedPos().above());
+        }
+        if (!Config.INFINITE_TOWN_DOORS.get()) {
+            ctx.getItemInHand().shrink(1);
         }
         return interactionResult;
     }
