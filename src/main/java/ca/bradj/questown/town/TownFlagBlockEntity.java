@@ -89,6 +89,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     public static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
     public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
+    public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
     private final TownPois pois = new TownPois();
@@ -118,7 +119,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownJobHandle jobHandle = new TownJobHandle(); // FIXME: Persist to tile
-    private WorkHandle workHandle = new WorkHandle(this); // FIXME: Persist to tile
+    private final WorkHandle workHandle = new WorkHandle(this); // FIXME: Persist to tile
     private final Stack<Long> mornings = new Stack<>();
 
 
@@ -154,7 +155,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             setChanged(level, blockPos, state);
         }
 
-        e.workHandle.tick();
+        e.workHandle.tick(sl);
         e.quests.tick(e);
 
         long gameTime = level.getGameTime();
@@ -284,8 +285,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
-        this.writeTownData(tag);
         if (!level.isClientSide() && everScanned) {
+            this.writeTownData(tag);
             MCTownState state = this.state.captureState();
             if (state == null) {
                 return;
@@ -298,6 +299,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
         // TODO: Store active rooms? (Cost to re-compute is low, I think)
+        if (!tag.contains("side")) {
+            return;
+        }
+        if (!tag.getString("side").equals("server")) {
+            return;
+        }
+
         if (tag.contains(NBT_ROOMS)) {
             TownRoomsMapSerializer.INSTANCE.deserialize(tag.getCompound(NBT_ROOMS), this, roomsMap);
         }
@@ -315,11 +323,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
             l.forEach(this.pois::registerWelcomeMat);
         }
+        if (tag.contains(NBT_JOBS)) {
+            TownJobHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), workHandle);
+        }
 //        state.load(tag);
 
     }
 
     private void writeTownData(CompoundTag tag) {
+        if (level == null) {
+            return;
+        }
+        if (level.isClientSide()) {
+            tag.putString("side", "client"); // TODO: Return
+        } else {
+            tag.putString("side", "server");
+        }
         if (roomsMap.numRecipes() > 0) {
 //            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
         }
@@ -327,13 +346,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(pois.getWelcomeMats()));
         tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(roomsMap));
+        tag.put(NBT_JOBS, TownJobHandleSerializer.INSTANCE.serializeNBT(workHandle));
         // TODO: Serialization for ASAPss
     }
 
     @Override
     public CompoundTag getUpdateTag() {
         CompoundTag tag = super.getUpdateTag();
-        this.writeTownData(tag);
+        if (this.isInitialized()) {
+            this.writeTownData(tag);
+        }
         return tag;
     }
 
@@ -591,6 +613,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void requestResult(Collection<Ingredient> defaultWork) {
         this.workHandle.addWork(defaultWork);
+        this.setChanged();
     }
 
     @Override
@@ -1034,11 +1057,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void registerJobsBoard(BlockPos matPos) {
-        ServerLevel sl = getServerLevel();
-        if (sl == null) {
-            return;
-        }
-        this.workHandle.registerJobBoard(sl, matPos);
+        this.workHandle.registerJobBoard(matPos);
+        this.setChanged();
     }
 
     public boolean hasJobBoard() {

@@ -91,16 +91,17 @@ public class GathererJob extends LeaverJob {
             TownInterface town
     ) {
         ResourceLocation biome = null;
-        for (MCHeldItem item : items) {
-            if (item.get().get().equals(ItemsInit.GATHERER_MAP.get())) {
-                biome = GathererMap.getBiome(item.get().toItemStack());
-                if (biome == null) {
-                    QT.JOB_LOGGER.error("No biome tag on gatherer map. Ignoring");
-                    continue;
-                }
-                break;
-            }
-        }
+        // TODO[ASAP]: Bring back
+//        for (MCHeldItem item : items) {
+//            if (item.get().get().equals(ItemsInit.GATHERER_MAP.get())) {
+//                biome = GathererMap.getBiome(item.get().toItemStack());
+//                if (biome == null) {
+//                    QT.JOB_LOGGER.error("No biome tag on gatherer map. Ignoring");
+//                    continue;
+//                }
+//                break;
+//            }
+//        }
         if (biome == null) {
             biome = town.getRandomNearbyBiome();
         }

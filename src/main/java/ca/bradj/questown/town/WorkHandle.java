@@ -29,20 +29,20 @@ import java.util.function.Function;
 
 public class WorkHandle implements OpenMenuListener {
 
-    private final Collection<Ingredient> requestedResults = new ArrayList<>();
+    final Collection<Ingredient> requestedResults = new ArrayList<>();
 
-    private final Stack<Function<Void, Void>> nextTick = new Stack<>();
+    private final Stack<Function<ServerLevel, Void>> nextTick = new Stack<>();
 
     private final TownFlagBlockEntity parent;
-    private final ArrayList<BlockPos> jobBoards = new ArrayList<>();
+    final ArrayList<BlockPos> jobBoards = new ArrayList<>();
 
     public WorkHandle(TownFlagBlockEntity townFlagBlockEntity) {
         parent = townFlagBlockEntity;
     }
 
-    public void registerJobBoard(ServerLevel sl, BlockPos matPos) {
+    public void registerJobBoard(BlockPos matPos) {
         final WorkHandle self = this;
-        nextTick.add(unused -> {
+        nextTick.add(sl -> {
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
                 QT.FLAG_LOGGER.error("Registered job board was not found in world at {}", matPos);
@@ -95,10 +95,10 @@ public class WorkHandle implements OpenMenuListener {
         ).toList());
     }
 
-    public void tick() {
+    public void tick(ServerLevel sl) {
         if (this.nextTick.isEmpty()) {
             return;
         }
-        this.nextTick.pop().apply(null);
+        this.nextTick.pop().apply(sl);
     }
 }

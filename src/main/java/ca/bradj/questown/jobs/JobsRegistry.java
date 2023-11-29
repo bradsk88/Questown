@@ -4,9 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
@@ -14,7 +12,6 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
@@ -207,7 +204,10 @@ public class JobsRegistry {
                     ImmutableList.of(DSmelterJob.ID)
             ),
             GathererJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(ExplorerJob.ID, GathererJob.ID),
+                    ImmutableList.of(
+                            //ExplorerJob.ID, // TODO[ASAP]: Bring back
+                            GathererJob.ID
+                    ),
                     ImmutableList.of(GathererJob.ID)
             ),
             BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
@@ -235,15 +235,16 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
         ));
-        b.put(ExplorerJob.ID, new Work(
-                (town, uuid) -> new ExplorerJob(town, 6, uuid),
-                (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
-                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
-                GathererJournal.Status.IDLE,
-                t -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
-                ItemsInit.GATHERER_MAP.get().getDefaultInstance()
-        ));
+        // TODO[ASAP]: Bring back for the "outside" update
+//        b.put(ExplorerJob.ID, new Work(
+//                (town, uuid) -> new ExplorerJob(town, 6, uuid),
+//                (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
+//                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+//                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+//                GathererJournal.Status.IDLE,
+//                t -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
+//                ItemsInit.GATHERER_MAP.get().getDefaultInstance()
+//        ));
         b.put(FarmerJob.ID, new Work(
                 (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
@@ -317,15 +318,16 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
                 CrafterPlanksWork.RESULT
         ));
-        b.put(GathererMappedAxeWork.ID, new Work(
-                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
-                productionJobSnapshot(GathererMappedAxeWork.ID),
-                (block) -> block instanceof WelcomeMatBlock,
-                SpecialQuests.TOWN_GATE, // TODO[ASAP]: Confirm this works
-                ProductionStatus.FACTORY.idle(),
-                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
-                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
-        ));
+        // TODO[ASAP]: Bring back
+//        b.put(GathererMappedAxeWork.ID, new Work(
+//                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
+//                productionJobSnapshot(GathererMappedAxeWork.ID),
+//                (block) -> block instanceof WelcomeMatBlock,
+//                SpecialQuests.TOWN_GATE, // TODO[ASAP]: Confirm this works
+//                ProductionStatus.FACTORY.idle(),
+//                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
+//                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
+//        ));
         works = b.build();
     }
 
