@@ -20,10 +20,10 @@ public class QuestownNetwork {
     );
 
     public static void init() {
-        registerMessage(AddWorkMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(AddWorkMessage::encode).
-                decoder(AddWorkMessage::decode).
-                consumer(AddWorkMessage::handle).
+        registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(AddWorkFromUIMessage::encode).
+                decoder(AddWorkFromUIMessage::decode).
+                consumer(AddWorkFromUIMessage::handle).
                 add();
     }
 

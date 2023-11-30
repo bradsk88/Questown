@@ -14,12 +14,12 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-public record AddWorkMessage(
+public record AddWorkFromUIMessage(
         ItemStack requested,
         int flagX, int flagY, int flagZ
 ) {
 
-    public static void encode(AddWorkMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(AddWorkFromUIMessage msg, FriendlyByteBuf buffer) {
         buffer.writeItem(msg.requested);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
@@ -27,12 +27,12 @@ public record AddWorkMessage(
 
     }
 
-    public static AddWorkMessage decode(FriendlyByteBuf buffer) {
+    public static AddWorkFromUIMessage decode(FriendlyByteBuf buffer) {
         ItemStack requested = buffer.readItem();
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
-        return new AddWorkMessage(requested, flagX, flagY, flagZ);
+        return new AddWorkFromUIMessage(requested, flagX, flagY, flagZ);
     }
 
 
@@ -50,6 +50,7 @@ public record AddWorkMessage(
                 return;
             }
             flag.get().requestResult(ImmutableList.of(Ingredient.of(requested)));
+            flag.get().openJobsMenu(sender);
         });
         ctx.get().setPacketHandled(true);
 

@@ -335,7 +335,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
         if (level.isClientSide()) {
-            tag.putString("side", "client"); // TODO: Return
+            tag.putString("side", "client");
+            return;
         } else {
             tag.putString("side", "server");
         }
@@ -1063,5 +1064,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public boolean hasJobBoard() {
         return workHandle.hasAtLeastOneBoard();
+    }
+
+    public void openJobsMenu(ServerPlayer sender) {
+        workHandle.openMenuRequested(sender);
     }
 }

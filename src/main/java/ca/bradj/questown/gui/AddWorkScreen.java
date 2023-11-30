@@ -1,9 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.network.AddWorkMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
@@ -18,7 +15,6 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -27,8 +23,6 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -313,7 +307,6 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
                 menu.sendRequest(s.getItem());
-                minecraft.setScreen(null);
                 return true;
             }
         }

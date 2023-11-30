@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.questown.core.network.AddWorkMessage;
+import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -65,7 +65,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
 
     public void sendRequest(ItemStack item) {
         QuestownNetwork.CHANNEL.sendToServer(
-                new AddWorkMessage(item, flag.getX(), flag.getY(), flag.getZ())
+                new AddWorkFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ())
         );
     }
 }
