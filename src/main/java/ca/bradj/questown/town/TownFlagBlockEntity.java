@@ -617,6 +617,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.setChanged();
     }
 
+    public void removeResultRequest(Ingredient request) {
+        this.workHandle.removeWork(request);
+        this.setChanged();
+    }
+
     @Override
     public boolean alreadyHasQuest(ResourceLocation resourceLocation) {
         return quests.alreadyRequested(resourceLocation);

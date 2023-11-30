@@ -25,6 +25,11 @@ public class QuestownNetwork {
                 decoder(AddWorkFromUIMessage::decode).
                 consumer(AddWorkFromUIMessage::handle).
                 add();
+        registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(RemoveWorkFromUIMessage::encode).
+                decoder(RemoveWorkFromUIMessage::decode).
+                consumer(RemoveWorkFromUIMessage::handle).
+                add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

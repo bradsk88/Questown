@@ -7,6 +7,7 @@ import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorkRequest;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -29,7 +30,7 @@ import java.util.function.Function;
 
 public class WorkHandle implements OpenMenuListener {
 
-    final Collection<Ingredient> requestedResults = new ArrayList<>();
+    final Collection<WorkRequest> requestedResults = new ArrayList<>();
 
     private final Stack<Function<ServerLevel, Void>> nextTick = new Stack<>();
 
@@ -60,6 +61,11 @@ public class WorkHandle implements OpenMenuListener {
 
     @Override
     public void openMenuRequested(ServerPlayer sp) {
+        BlockPos flagPos = parent.getTownFlagBasePos();
+        Collection<Ingredient> results = requestedResults.stream()
+                .flatMap(v -> v.getIngredientCombosForGUI().stream())
+                .toList();
+
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -72,27 +78,33 @@ public class WorkHandle implements OpenMenuListener {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                AddWorkContainer r = new AddWorkContainer(windowId, requestedResults, parent.getTownFlagBasePos());
-                return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r);
+                AddWorkContainer r = new AddWorkContainer(windowId, results, flagPos);
+                return new TownWorkContainer(windowId, results.stream().map(UIWork::new).toList(), r,
+                        flagPos
+                );
             }
         }, data -> {
             JobsRegistry.TownData td = new JobsRegistry.TownData(parent::getAllKnownGatherResults);
             AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(td), data);
-            AddWorkContainer.writeFlagPosition(parent.getTownFlagBasePos(), data);
-            TownWorkContainer.writeWork(requestedResults, data);
+            AddWorkContainer.writeFlagPosition(flagPos, data);
+            TownWorkContainer.writeWork(results, data);
+            TownWorkContainer.writeFlagPosition(flagPos, data);
         });
     }
 
-    public ImmutableList<Ingredient> getRequestedResults() {
+    public ImmutableList<WorkRequest> getRequestedResults() {
         return ImmutableList.copyOf(requestedResults);
     }
 
-    public void addWork(Collection<Ingredient> requestedResult) {
+    public void addWork(Collection<WorkRequest> requestedResult) {
         // TODO: Add desired quantity of product to work
         this.requestedResults.addAll(requestedResult);
-        QT.FLAG_LOGGER.debug("Request added to job board: {}", requestedResult.stream().map(
-                Ingredient::toJson
-        ).toList());
+        QT.FLAG_LOGGER.debug("Request added to job board: {}", requestedResult);
+    }
+
+    public void removeWork(WorkRequest of) {
+        this.requestedResults.remove(of);
+        QT.FLAG_LOGGER.debug("Request removed from job board: {}", of);
     }
 
     public void tick(ServerLevel sl) {

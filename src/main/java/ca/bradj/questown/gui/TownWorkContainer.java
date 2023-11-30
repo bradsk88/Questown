@@ -1,6 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.RemoveWorkFromUIMessage;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -14,6 +17,7 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     private final Collection<UIWork> work;
     public final ca.bradj.questown.gui.AddWorkContainer addWorkContainer;
+    private final BlockPos flag;
 
     public static TownWorkContainer ForClientSide(
             int windowId,
@@ -25,17 +29,26 @@ public class TownWorkContainer extends AbstractContainerMenu {
                 AddWorkContainer.readWorkResults(buf),
                 AddWorkContainer.readFlagPosition(buf)
         );
-        return new TownWorkContainer(windowId, readWork(buf), qMenu);
+        return new TownWorkContainer(
+                windowId, readWork(buf), qMenu,
+                readFlagPosition(buf)
+        );
+    }
+
+    private static BlockPos readFlagPosition(FriendlyByteBuf buf) {
+        return AddWorkContainer.readFlagPosition(buf);
     }
 
     public TownWorkContainer(
             int windowId,
             Collection<UIWork> quests,
-            AddWorkContainer awc
+            AddWorkContainer awc,
+            BlockPos flag
     ) {
         super(MenuTypesInit.TOWN_WORK.get(), windowId);
         this.work = quests;
         this.addWorkContainer = awc;
+        this.flag = flag;
     }
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
@@ -52,6 +65,13 @@ public class TownWorkContainer extends AbstractContainerMenu {
         data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
     }
 
+    public static void writeFlagPosition(
+            BlockPos townFlagBasePos,
+            FriendlyByteBuf data
+    ) {
+        AddWorkContainer.writeFlagPosition(townFlagBasePos, data);
+    }
+
     @Override
     public boolean stillValid(Player p_38874_) {
         return true;
@@ -59,5 +79,11 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     public Collection<UIWork> getWork() {
         return work;
+    }
+
+    public void sendRemoveRequest(UIWork jobPosting) {
+        QuestownNetwork.CHANNEL.sendToServer(
+                new RemoveWorkFromUIMessage(jobPosting.getResultWanted(), flag.getX(), flag.getY(), flag.getZ())
+        );
     }
 }
