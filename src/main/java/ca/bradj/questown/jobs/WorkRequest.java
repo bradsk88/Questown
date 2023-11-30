@@ -23,7 +23,8 @@ public class WorkRequest {
     }
     // private final int quantity; // TODO: Implement
 
-    public ImmutableList<Ingredient> getIngredientCombosForGUI() {
+    // For example, if the player requests
+    public ImmutableList<Ingredient> getAllInterpretationsForGUI() {
         if (tag == null) {
             return ImmutableList.of(Ingredient.of(item));
         }

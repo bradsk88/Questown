@@ -10,7 +10,7 @@ import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.interfaces.JobHandle;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -208,7 +208,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(town.getJobHandle(), bp)));
+                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(town.getWorkStatusHandle(), bp)));
             }
 
             @Override
@@ -251,7 +251,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
-                town.getJobHandle(),
+                town.getWorkStatusHandle(),
                 entityCurrentJobSite.room
         );
 
@@ -279,7 +279,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
-            JobHandle town,
+            WorkStatusHandle town,
             @Nullable MCRoom jobSite
     ) {
         if (jobSite == null) {
@@ -370,7 +370,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         // TODO: Sort by distance and choose the closest
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
-                @Nullable Integer blockState = JobBlock.getState(town.getJobHandle(), blocks.getKey());
+                @Nullable Integer blockState = JobBlock.getState(town.getWorkStatusHandle(), blocks.getKey());
                 if (blockState == null) {
                     continue;
                 }
@@ -389,7 +389,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(TownInterface town) {
-        JobHandle th = town.getJobHandle();
+        WorkStatusHandle th = town.getWorkStatusHandle();
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {

@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.WorkHandle;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -19,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -106,9 +106,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    JobHandle getJobHandle();
+    WorkStatusHandle getWorkStatusHandle();
 
-    void requestResult(Collection<Ingredient> defaultWork);
+    WorkHandle getWorkHandle();
 
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
 

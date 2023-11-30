@@ -3,7 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.StatefulJobBlock;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.town.interfaces.JobHandle;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -14,18 +14,20 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.SignBlock;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 // FIXME: Persist this data to the flag
-public class TownJobHandle implements JobHandle {
+public class TownWorkStatusStore implements WorkStatusHandle {
 
-    private Map<BlockPos, Function<State, Void>> cascading = new HashMap<>();
+    // Work status is generally only stored in this store. However, some
+    // blocks support applying the status directly to the block (e.g. for
+    // visual indication of progress). This map facilitates that.
+    private final Map<BlockPos, Consumer<State>> cascading = new HashMap<>();
 
     public record State(
             int processingState,
@@ -67,7 +69,7 @@ public class TownJobHandle implements JobHandle {
 
     int curIdx = 0;
 
-    public TownJobHandle() {
+    public TownWorkStatusStore() {
     }
 
     @Override
@@ -84,7 +86,7 @@ public class TownJobHandle implements JobHandle {
         QT.BLOCK_LOGGER.debug("Job state set to {} at {}", bs.toShortString(), bp);
 
         if (cascading.containsKey(bp)) {
-            cascading.get(bp).apply(bs);
+            cascading.get(bp).accept(bs);
         }
     }
 
@@ -181,10 +183,7 @@ public class TownJobHandle implements JobHandle {
                     jobStatuses.put(pp, bs);
 
                     if (b instanceof StatefulJobBlock sjb) {
-                        cascading.put(pp, z -> {
-                            sjb.setProcessingState(sl, pp, z);
-                            return null;
-                        });
+                        cascading.put(pp, z -> sjb.setProcessingState(sl, pp, z));
                     }
                 }
             }

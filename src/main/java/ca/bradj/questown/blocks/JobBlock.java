@@ -3,15 +3,13 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.town.TownJobHandle;
-import ca.bradj.questown.town.interfaces.JobHandle;
+import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.function.Supplier;
 
 public class JobBlock {
 
@@ -24,24 +22,24 @@ public class JobBlock {
     );
 
     public static @Nullable Integer getState(
-            JobHandle sl,
+            WorkStatusHandle sl,
             BlockPos bp
     ) {
-        TownJobHandle.State oldState = sl.getJobBlockState(bp);
+        TownWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             return null;
         }
         return oldState.processingState();
     }
 
-    public static TownJobHandle.State applyWork(
-            JobHandle sl,
+    public static TownWorkStatusStore.State applyWork(
+            WorkStatusHandle sl,
             BlockPos bp,
             int nextWork
     ) {
-        TownJobHandle.State oldState = sl.getJobBlockState(bp);
+        TownWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         int workLeft = oldState.workLeft();
-        TownJobHandle.State bs;
+        TownWorkStatusStore.State bs;
         if (workLeft <= 0) {
             Integer state = getState(sl, bp);
             if (state == null) {
@@ -61,31 +59,31 @@ public class JobBlock {
         return bs;
     }
 
-    private static TownJobHandle.State reduceWorkLeft(TownJobHandle.State oldState) {
+    private static TownWorkStatusStore.State reduceWorkLeft(TownWorkStatusStore.State oldState) {
         int l = oldState.workLeft();
         int newVal = l - 1;
         QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
         return oldState.setWorkLeft(newVal);
     }
 
-    private static TownJobHandle.State setProcessingState(
-            TownJobHandle.State oldState,
+    private static TownWorkStatusStore.State setProcessingState(
+            TownWorkStatusStore.State oldState,
             int s
     ) {
-        TownJobHandle.State newState = oldState.setProcessing(s);
+        TownWorkStatusStore.State newState = oldState.setProcessing(s);
         QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
         return newState;
     }
 
-    public static @Nullable TownJobHandle.State extractRawProduct(
+    public static @Nullable TownWorkStatusStore.State extractRawProduct(
             ServerLevel sl,
-            JobHandle jh,
+            WorkStatusHandle jh,
             BlockPos block,
             Iterable<ItemStack> is,
             @Nullable TakeFn takeFn
     ) {
-        TownJobHandle.State oldState = jh.getJobBlockState(block);
-        TownJobHandle.State bs = oldState.setProcessing(0);
+        TownWorkStatusStore.State oldState = jh.getJobBlockState(block);
+        TownWorkStatusStore.State bs = oldState.setProcessing(0);
         for (ItemStack i : is) {
             // TODO[ASAP]: Don't drop items for gatherers - just skip them
             releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
@@ -99,9 +97,9 @@ public class JobBlock {
 
     private static void releaseOreFromBlock(
             ServerLevel sl,
-            JobHandle level,
+            WorkStatusHandle level,
             BlockPos b,
-            TownJobHandle.State currentState,
+            TownWorkStatusStore.State currentState,
             ItemStack is,
             @Nullable TakeFn takeFn
     ) {

@@ -6,8 +6,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.TownJobHandle;
-import ca.bradj.questown.town.interfaces.JobHandle;
+import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
-public class WorldInteraction implements TownJobHandle.InsertionRules {
+public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
 
     // TODO: Can we deal with the inventory OR the journal (both causes confusion)
@@ -70,7 +70,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
         if (town.getServerLevel() == null) {
             return false;
         }
-        JobHandle jh = town.getJobHandle();
+        WorkStatusHandle jh = town.getWorkStatusHandle();
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
@@ -94,9 +94,9 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
                 if (workSpot.action == 0) {
-                    TownJobHandle.State jobBlockState = jh.getJobBlockState(workSpot.position);
+                    TownWorkStatusStore.State jobBlockState = jh.getJobBlockState(workSpot.position);
                     if (jobBlockState == null) {
-                        jobBlockState = new TownJobHandle.State(0, 0, 0);
+                        jobBlockState = new TownWorkStatusStore.State(0, 0, 0);
                     }
                     if (jobBlockState.workLeft() == 0) {
                         jh.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
@@ -120,10 +120,10 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             TownInterface town,
             BlockPos oldPos
     ) {
-        JobHandle jh = town.getJobHandle();
+        WorkStatusHandle jh = town.getWorkStatusHandle();
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
-            @Nullable TownJobHandle.State newState = JobBlock.extractRawProduct(
+            @Nullable TownWorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
             );
@@ -133,7 +133,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
     }
 
     private boolean tryProcessOre(
-            JobHandle sl,
+            WorkStatusHandle sl,
             LivingEntity entity,
             WorkSpot<Integer, BlockPos> ws
     ) {
@@ -146,7 +146,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
             if (nextStepWork == null) {
                 nextStepWork = 0;
             }
-            TownJobHandle.State blockState = JobBlock.applyWork(sl, bp, nextStepWork);
+            TownWorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -184,7 +184,7 @@ public class WorldInteraction implements TownJobHandle.InsertionRules {
     }
 
     private boolean tryInsertIngredients(
-            JobHandle sl,
+            WorkStatusHandle sl,
             WorkSpot<Integer, BlockPos> ws
     ) {
         BlockPos bp = ws.position;

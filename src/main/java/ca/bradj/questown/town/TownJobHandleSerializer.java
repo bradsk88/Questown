@@ -21,7 +21,7 @@ import java.util.Collection;
 public class TownJobHandleSerializer {
     public static final TownJobHandleSerializer INSTANCE = new TownJobHandleSerializer();
 
-    public Tag serializeNBT(WorkHandle workHandle) {
+    public Tag serializeNBT(TownWorkHandle workHandle) {
         CompoundTag tag = new CompoundTag();
         QTNBT.put(tag, "boards", serializeBoards(workHandle));
         QTNBT.put(tag, "requests", serializeRequests(workHandle));
@@ -30,7 +30,7 @@ public class TownJobHandleSerializer {
 
     public void deserializeNBT(
             CompoundTag compound,
-            WorkHandle workHandle
+            TownWorkHandle workHandle
     ) {
         deserializeBoards(QTNBT.getList(compound, "boards")).forEach(
                 workHandle::registerJobBoard
@@ -39,7 +39,7 @@ public class TownJobHandleSerializer {
     }
 
     @NotNull
-    private static ListTag serializeBoards(WorkHandle workHandle) {
+    private static ListTag serializeBoards(TownWorkHandle workHandle) {
         ListTag list = new ListTag();
         workHandle.jobBoards.forEach(v -> {
             CompoundTag bT = new CompoundTag();
@@ -58,7 +58,7 @@ public class TownJobHandleSerializer {
         }).toList();
     }
 
-    private Tag serializeRequests(WorkHandle workHandle) {
+    private Tag serializeRequests(TownWorkHandle workHandle) {
         ListTag list = new ListTag();
         workHandle.requestedResults.forEach(v -> {
             CompoundTag tag = new CompoundTag();
