@@ -145,7 +145,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
     private ImmutableList<Slot> renderJobCardIcons(
             PoseStack poseStack,
-            Iterable<Ingredient> workResults,
+            Iterable<Ingredient> possibleRequests,
             int x,
             int y,
             int mouseX,
@@ -156,42 +156,69 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
         int slotIndex = 0;
         int slotX = 0;
-        for (Ingredient ing : workResults) {
+        for (Ingredient ing : possibleRequests) {
             if (slotX >= 8) {
                 y = y + 16;
                 slotX = 0;
             }
             int iconX = x + 8 + slotX * 18;
 
-            ItemStack[] matchingStacks = ing.getItems();
-            if (matchingStacks.length > 0) {
+            ItemStack[] allPossible = ing.getItems();
+            if (allPossible.length > 0) {
                 int curSeconds = (int) (System.currentTimeMillis() / 1000);
-                ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-                this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-                if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-                    fill(
-                            poseStack,
-                            iconX,
-                            y + 1,
-                            iconX + 16,
-                            y + 17,
-                            0x80FFFFFF
-                    ); // transparent white square behind hovered item slot
-                    renderTooltip(
-                            poseStack,
-                            itemStack.getItem().getName(itemStack),
-                            mouseX,
-                            mouseY
-                    ); // render hovered item's name as a tooltip
-                }
-                Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
-                element.set(itemStack);
-                b.add(element);
+                ItemStack itemStack = allPossible[curSeconds % allPossible.length];
+                renderRequest(poseStack, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
+                slotIndex++;
+                slotX++;
             }
-            slotIndex++;
-            slotX++;
+            if (allPossible.length == 1) {
+                continue;
+            }
+            for (ItemStack specificItem : allPossible) {
+                if (slotX >= 8) {
+                    y = y + 16;
+                    slotX = 0;
+                }
+                iconX = x + 8 + slotX * 18;
+                renderRequest(poseStack, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
+                slotIndex++;
+                slotX++;
+            }
         }
         return b.build();
+    }
+
+    private void renderRequest(
+            PoseStack poseStack,
+            int y,
+            int mouseX,
+            int mouseY,
+            ItemStack itemStack,
+            int iconX,
+            Inventory dummyInv,
+            int slotIndex,
+            ImmutableList.Builder<Slot> b
+    ) {
+        this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
+            fill(
+                    poseStack,
+                    iconX,
+                    y + 1,
+                    iconX + 16,
+                    y + 17,
+                    0x80FFFFFF
+            ); // transparent white square behind hovered item slot
+            renderTooltip(
+                    poseStack,
+                    itemStack.getItem().getName(itemStack),
+                    mouseX,
+                    mouseY
+            ); // render hovered item's name as a tooltip
+        }
+        Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
+        element.set(itemStack);
+        b.add(element);
     }
 
     private void renderPageNum(
@@ -306,7 +333,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                menu.sendRequest(s.getItem());
+                menu.sendRequest(s.getItem()); // FIXME: Use the tag when relevant
                 return true;
             }
         }

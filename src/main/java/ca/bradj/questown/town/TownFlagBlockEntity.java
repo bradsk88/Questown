@@ -12,7 +12,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.WorkRequest;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -120,7 +120,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
-    private final TownWorkHandle workHandle = new TownWorkHandle(this); // FIXME: Persist to tile
+    final TownWorkHandle workHandle = new TownWorkHandle(getBlockPos());
     private final Stack<Long> mornings = new Stack<>();
 
 
@@ -129,7 +129,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState p_155230_
     ) {
         super(TilesInit.TOWN_FLAG.get(), p_155229_, p_155230_);
-        workHandle.addChangeListener(() -> setChanged());
+        // Don't write code here, it runs on both client and server.
+        // Instead, put any initialization in onLoad
     }
 
     public static void tick(
@@ -299,6 +300,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void load(@NotNull CompoundTag tag) {
+        ////////////////////////
+        /////// WARNING ////////
+        ////////////////////////
+        // This function is NOT a safe place to deserialize server data
+        // "this" is not the server entity - I don't know what it is.
+
+
         super.load(tag);
         // TODO: Store active rooms? (Cost to re-compute is low, I think)
         if (!tag.contains("side")) {
@@ -326,7 +334,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             l.forEach(this.pois::registerWelcomeMat);
         }
         if (tag.contains(NBT_JOBS)) {
-            TownJobHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), workHandle);
+            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), workHandle);
         }
 //        state.load(tag);
 
@@ -349,7 +357,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
         tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(pois.getWelcomeMats()));
         tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(roomsMap));
-        tag.put(NBT_JOBS, TownJobHandleSerializer.INSTANCE.serializeNBT(workHandle));
+        tag.put(NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(workHandle));
         // TODO: Serialization for ASAPss
     }
 
@@ -381,6 +389,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.quests.setChangeListener(this);
         this.roomsMap.addChangeListener(this);
         this.pois.setListener(this);
+        this.workHandle.addChangeListener(this::setChanged);
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
         if (!level.isClientSide()) {
             TownFlags.register(uuid, this);
@@ -687,17 +696,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
         for (JobID p : preference) {
-            for (WorkRequest requestedResult : requestedResults) {
-                for (Ingredient ing : requestedResult.getAllInterpretationsForGUI()) {
-                    // TODO: Think about how work chains work.
-                    //  E.g. If a blacksmith needs iron ingots to do a requested job,
-                    //  but none of the other villagers produce that resource, the
-                    //  blacksmith should light up red to indicate a broken chain and
-                    //  that the player will need to contribute in order for the
-                    //  blacksmith to work, rather than everything being automated.
-                    if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
-                        return p;
-                    }
+            List<Ingredient> i = requestedResults.stream().map(WorkRequest::asIngredient).toList();
+            for (Ingredient requestedResult : i) {
+                // TODO: Think about how work chains work.
+                //  E.g. If a blacksmith needs iron ingots to do a requested job,
+                //  but none of the other villagers produce that resource, the
+                //  blacksmith should light up red to indicate a broken chain and
+                //  that the player will need to contribute in order for the
+                //  blacksmith to work, rather than everything being automated.
+                if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
+                    return p;
                 }
             }
         }
@@ -863,6 +871,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public WorkStatusHandle getWorkStatusHandle() {
         return jobHandle;
+    }
+
+    @Override
+    public WorkHandle getWorkHandle() {
+        return workHandle;
     }
 
     @Override

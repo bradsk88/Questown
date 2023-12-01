@@ -1,17 +1,14 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.Optional;
 import java.util.function.Supplier;
 
 public record AddWorkFromUIMessage(
@@ -43,14 +40,14 @@ public record AddWorkFromUIMessage(
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            BlockEntity flag = sender.getLevel()
+                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ));
+            if (!(flag instanceof TownFlagBlockEntity tfbe)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Work will not be added.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().requestResult(ImmutableList.of(Ingredient.of(requested)));
-            flag.get().openJobsMenu(sender);
+            tfbe.getWorkHandle().requestWork(requested.getItem());
+            tfbe.openJobsMenu(sender);
         });
         ctx.get().setPacketHandled(true);
 

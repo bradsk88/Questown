@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,5 +44,20 @@ public class QTNBT {
             String key
     ) {
         return compound.getList(keyify(key), Tag.TAG_COMPOUND);
+    }
+
+    public static void put(
+            CompoundTag t,
+            String key,
+            ResourceLocation location
+    ) {
+        t.putString(keyify(key), location.toString());
+    }
+
+    public static ResourceLocation getResourceLocation(
+            CompoundTag tag,
+            String key
+    ) {
+        return new ResourceLocation(getString(tag, keyify(key)));
     }
 }

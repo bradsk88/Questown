@@ -7,7 +7,7 @@ import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.WorkRequest;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -18,7 +18,9 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
@@ -27,33 +29,41 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
-public class TownWorkHandle implements OpenMenuListener {
+public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     final Collection<WorkRequest> requestedResults = new ArrayList<>();
 
-    private final Stack<Function<ServerLevel, Void>> nextTick = new Stack<>();
+    private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
 
-    private final TownFlagBlockEntity parent;
     final ArrayList<BlockPos> jobBoards = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
+    private final BlockPos parentPos;
 
-    public TownWorkHandle(TownFlagBlockEntity townFlagBlockEntity) {
-        parent = townFlagBlockEntity;
+    public TownWorkHandle(BlockPos parentPos) {
+        this.parentPos = parentPos;
     }
 
     public void registerJobBoard(BlockPos matPos) {
-        final TownWorkHandle self = this;
         nextTick.add(sl -> {
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
                 QT.FLAG_LOGGER.error("Registered job board was not found in world at {}", matPos);
-                return null;
+                return;
             }
+
+            BlockEntity p = sl.getBlockEntity(parentPos);
+            if (!(p instanceof TownFlagBlockEntity parent)) {
+                QT.FLAG_LOGGER.error("No flag found at work handle parent pos");
+                return;
+            }
+
+            TownWorkHandle self = parent.workHandle;
+
             self.jobBoards.add(matPos);
             jbb.addOpenMenuListener(self);
-            return null;
+            return;
         });
     }
 
@@ -63,11 +73,15 @@ public class TownWorkHandle implements OpenMenuListener {
 
     @Override
     public void openMenuRequested(ServerPlayer sp) {
-        BlockPos flagPos = parent.getTownFlagBasePos();
-        Collection<Ingredient> results = requestedResults.stream()
-                .map(v -> v.getAllInterpretationsForGUI().stream())
-                .toList();
+        BlockEntity p = sp.getLevel().getBlockEntity(parentPos);
+        if (!(p instanceof TownFlagBlockEntity parent)) {
+            QT.FLAG_LOGGER.error("No flag found at work handle parent pos");
+            return;
+        }
 
+        BlockPos flagPos = parent.getTownFlagBasePos();
+        JobsRegistry.TownData td = new JobsRegistry.TownData(parent::getAllKnownGatherResults);
+        ImmutableList<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -80,16 +94,15 @@ public class TownWorkHandle implements OpenMenuListener {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                AddWorkContainer r = new AddWorkContainer(windowId, results, flagPos);
-                return new TownWorkContainer(windowId, results.stream().map(UIWork::new).toList(), r,
+                AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
+                return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r,
                         flagPos
                 );
             }
         }, data -> {
-            JobsRegistry.TownData td = new JobsRegistry.TownData(parent::getAllKnownGatherResults);
-            AddWorkContainer.writeWorkResults(JobsRegistry.getAllOutputs(td), data);
+            AddWorkContainer.writeWorkResults(allOutputs, data);
             AddWorkContainer.writeFlagPosition(flagPos, data);
-            TownWorkContainer.writeWork(results, data);
+            TownWorkContainer.writeWork(requestedResults, data);
             TownWorkContainer.writeFlagPosition(flagPos, data);
         });
     }
@@ -98,14 +111,22 @@ public class TownWorkHandle implements OpenMenuListener {
         return ImmutableList.copyOf(requestedResults);
     }
 
-    public void addWork(Collection<WorkRequest> requestedResult) {
-        // TODO: Add desired quantity of product to work
-        this.requestedResults.addAll(requestedResult);
-        this.listeners.forEach(Runnable::run);
-        QT.FLAG_LOGGER.debug("Request added to job board: {}", requestedResult);
+    @Override
+    public void requestWork(Item requested) {
+        // TODO: Take desired quantity of product as input
+        WorkRequest e = WorkRequest.of(requested);
+        requestWork(e);
     }
 
-    public void removeWork(WorkRequest of) {
+    @Override
+    public void requestWork(WorkRequest e) {
+        this.requestedResults.add(e);
+        this.listeners.forEach(Runnable::run);
+        QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
+    }
+
+    @Override
+    public void removeWorkRequest(WorkRequest of) {
         this.requestedResults.remove(of);
         this.listeners.forEach(Runnable::run);
         QT.FLAG_LOGGER.debug("Request removed from job board: {}", of);
@@ -115,7 +136,7 @@ public class TownWorkHandle implements OpenMenuListener {
         if (this.nextTick.isEmpty()) {
             return;
         }
-        this.nextTick.pop().apply(sl);
+        this.nextTick.pop().accept(sl);
     }
 
     public void addChangeListener(Runnable o) {

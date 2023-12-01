@@ -232,7 +232,7 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                 GathererJournal.Status.IDLE,
                 // TODO: Load all possible results via loot tables and nearby biomes
-                t -> ImmutableSet.of(Items.WHEAT_SEEDS.getDefaultInstance()),
+                t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
         ));
         // TODO[ASAP]: Bring back for the "outside" update

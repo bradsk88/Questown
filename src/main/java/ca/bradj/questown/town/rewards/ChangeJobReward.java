@@ -11,7 +11,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -56,8 +55,7 @@ public class ChangeJobReward extends MCReward {
                 if (output.isEmpty()) {
                     return;
                 }
-                ImmutableList<Ingredient> result = ImmutableList.of(Ingredient.of(output));
-                town.requestResult(result);
+                town.getWorkHandle().requestWork(output.getItem());
                 QT.JOB_LOGGER.debug("Request was added to job board automatically");
             });
         };

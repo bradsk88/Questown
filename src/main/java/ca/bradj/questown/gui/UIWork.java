@@ -1,32 +1,16 @@
 package ca.bradj.questown.gui;
 
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 
 public class UIWork {
 
-    private final Ingredient resultWanted;
+    private final WorkRequest resultWanted;
 
-    public UIWork(Ingredient resultWanted) {
+    public UIWork(WorkRequest resultWanted) {
         this.resultWanted = resultWanted;
     }
 
-    public Ingredient getResultWanted() {
+    public WorkRequest getResultWanted() {
         return resultWanted;
-    }
-
-    public static class Serializer {
-        public UIWork fromNetwork(
-                FriendlyByteBuf buf
-        ) {
-            return new UIWork(Ingredient.fromNetwork(buf));
-        }
-
-        public void toNetwork(
-                FriendlyByteBuf buf,
-                Ingredient q
-        ) {
-            q.toNetwork(buf);
-        }
     }
 }

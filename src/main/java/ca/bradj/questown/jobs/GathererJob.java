@@ -157,7 +157,7 @@ public class GathererJob extends LeaverJob {
             int minItems,
             int maxItems
     ) {
-        GathererTools.LootTablePrefix prefix = new GathererTools.LootTablePrefix("jobs/gatherer_notools");
+        GathererTools.LootTablePrefix prefix = GathererTools.NO_TOOL_TABLE_PREFIX;
         ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.path());
         LootTable lootTable = level.getServer().getLootTables().get(rl);
         return getLoots(level, lootTable, minItems, maxItems, prefix, null);

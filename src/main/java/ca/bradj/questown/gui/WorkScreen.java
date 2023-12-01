@@ -208,7 +208,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             int mouseY
     ) {
         Inventory dummyInv = new Inventory(null);
-        Ingredient ing = recipe.getResultWanted();
+        Ingredient ing = recipe.getResultWanted().asIngredient();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
 
         int iconX = x + 8;

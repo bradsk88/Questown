@@ -3,12 +3,12 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveWorkFromUIMessage;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,14 +53,13 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
         int size = data.readInt();
-        ArrayList<UIWork> r = data.readCollection(
+        return data.readCollection(
                 c -> new ArrayList<>(size),
-                buf -> new UIWork.Serializer().fromNetwork(buf)
+                buf -> new UIWork(WorkRequest.fromNetwork(buf))
         );
-        return r;
     }
 
-    public static void writeWork(Collection<Ingredient> requestedResults, FriendlyByteBuf data) {
+    public static void writeWork(Collection<WorkRequest> requestedResults, FriendlyByteBuf data) {
         data.writeInt(requestedResults.size());
         data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
     }
