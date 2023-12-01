@@ -74,7 +74,9 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
@@ -122,6 +124,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
     final TownWorkHandle workHandle = new TownWorkHandle(getBlockPos());
     private final Stack<Long> mornings = new Stack<>();
+    private final LinkedBlockingQueue<Consumer<TownFlagBlockEntity>> initializers = new LinkedBlockingQueue<>();
 
 
     public TownFlagBlockEntity(
@@ -141,6 +144,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
 
         if (!(level instanceof ServerLevel sl)) {
+            return;
+        }
+
+        if (!e.initializers.isEmpty()) {
+            QT.FLAG_LOGGER.info("Running initializer ({} left)", e.initializers.size() - 1);
+            e.initializers.remove().accept(e);
             return;
         }
 
@@ -288,8 +297,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
+        this.writeTownData(tag);
         if (!level.isClientSide() && everScanned) {
-            this.writeTownData(tag);
             MCTownState state = this.state.captureState();
             if (state == null) {
                 return;
@@ -300,14 +309,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void load(@NotNull CompoundTag tag) {
+        super.load(tag);
+
         ////////////////////////
         /////// WARNING ////////
         ////////////////////////
         // This function is NOT a safe place to deserialize server data
         // "this" is not the server entity - I don't know what it is.
+        // Use the initializers stack to ensure you have a reliable
+        // reference to the flag entity.
 
+        loadNextTick(tag, initializers);
+    }
 
-        super.load(tag);
+    private static void loadNextTick(CompoundTag tag, Queue<Consumer<TownFlagBlockEntity>> initializers) {
         // TODO: Store active rooms? (Cost to re-compute is low, I think)
         if (!tag.contains("side")) {
             return;
@@ -317,24 +332,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         if (tag.contains(NBT_ROOMS)) {
-            TownRoomsMapSerializer.INSTANCE.deserialize(tag.getCompound(NBT_ROOMS), this, roomsMap);
+            initializers.add(t ->
+                    TownRoomsMapSerializer.INSTANCE.deserialize(tag.getCompound(NBT_ROOMS), t, t.roomsMap)
+            );
         }
         if (tag.contains(NBT_QUEST_BATCHES)) {
-            CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-            MCQuestBatches.SERIALIZER.deserializeNBT(this, data, quests.questBatches); // TODO: Serialize "quests"
-            this.isInitializedQuests = true;
+            initializers.add(t -> {
+                CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
+                MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
+                t.isInitializedQuests = true;
+            });
         }
         if (tag.contains(NBT_MORNING_REWARDS)) {
-            CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
-            this.morningRewards.deserializeNbt(this, data);
+            initializers.add(t -> {
+                CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
+                t.morningRewards.deserializeNbt(t, data);
+            });
         }
         if (tag.contains(NBT_WELCOME_MATS)) {
-            ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
-            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
-            l.forEach(this.pois::registerWelcomeMat);
+            initializers.add(t -> {
+                ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
+                Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
+                l.forEach(t.pois::registerWelcomeMat);
+            });
         }
         if (tag.contains(NBT_JOBS)) {
-            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), workHandle);
+            initializers.add(t ->
+                    TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), t.workHandle)
+            );
         }
 //        state.load(tag);
 
@@ -383,17 +408,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
         grantAdvancementOnApproach();
-        if (!this.isInitializedQuests) {
-            this.setUpQuestsForNewlyPlacedFlag();
-        }
-        this.quests.setChangeListener(this);
-        this.roomsMap.addChangeListener(this);
-        this.pois.setListener(this);
-        this.workHandle.addChangeListener(this::setChanged);
-        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
-        if (!level.isClientSide()) {
-            TownFlags.register(uuid, this);
-        }
+
+        initializers.add(t -> {
+            if (!this.isInitializedQuests) {
+                t.setUpQuestsForNewlyPlacedFlag();
+            }
+            t.quests.setChangeListener(t);
+            t.roomsMap.addChangeListener(t);
+            t.pois.setListener(t);
+            t.workHandle.addChangeListener(t::setChanged);
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
+            if (!level.isClientSide()) {
+                TownFlags.register(uuid, t);
+            }
+        });
     }
 
     @Override

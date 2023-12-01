@@ -25,7 +25,7 @@ public class QTNBT {
             CompoundTag tag,
             String prefix
     ) {
-        if (tag.contains(prefix)) {
+        if (contains(tag, prefix)) {
             return tag.getString(keyify(prefix));
         }
         return null;
@@ -58,6 +58,13 @@ public class QTNBT {
             CompoundTag tag,
             String key
     ) {
-        return new ResourceLocation(getString(tag, keyify(key)));
+        return new ResourceLocation(getString(tag, key));
+    }
+
+    public static boolean contains(
+            CompoundTag t,
+            String item
+    ) {
+        return t.contains(keyify(item));
     }
 }
