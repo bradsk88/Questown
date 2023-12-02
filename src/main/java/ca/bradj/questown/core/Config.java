@@ -45,6 +45,7 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Boolean> INFINITE_TOWN_DOORS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
 
     static {
@@ -123,6 +124,9 @@ public class Config {
         FLAG_SUB_BLOCK_RETENTION_TICKS = BUILDER.comment(
                 "To prevent confusion due to orphaning, blocks like job boards and welcome mats are removed when their flag is destroyed."
         ).defineInRange("FlagSubBlockRetentionTicks", 20, 1, 1000);
+        FLAG_SUB_BLOCK_REMOVED_TICKS = BUILDER.comment(
+                "The town flag handles dropping the items for sub blocks that are removed. This is the number of ticks it takes to decide that a sub block is gone."
+        ).defineInRange("FlagSubBlockRemovedTicks", 2, 1, 1000);
         FLAG_SUB_BLOCK_DETECTION_TICKS = BUILDER.comment(
                 "It may take a few ticks before the entity for the sub block shows up in the world. If the number exceeds this config value, the server will crash."
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);

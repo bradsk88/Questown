@@ -21,6 +21,7 @@ public final class TownFlagSubBlocks {
     private final Stack<BlockPos> pending = new Stack<>();
     private final Map<BlockPos, Integer> pendingTicks = new HashMap<>();
     private final Map<BlockPos, Integer> ticksWithoutParent = new HashMap<>();
+    private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, Function<BlockPos, Collection<ItemStack>>> dropOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
 
@@ -43,13 +44,25 @@ public final class TownFlagSubBlocks {
         ImmutableMap.Builder<BlockPos, Integer> allZeros = ImmutableMap.builder();
         ticksWithoutParent.forEach((k, b) -> allZeros.put(k, 0));
         ticksWithoutParent.putAll(allZeros.build());
-        // TODO[ASAP]: Record "ticksWithoutChild" and then drop like an orphan (because the blocks don't know who their parent is)
+
+        ImmutableMap.Builder<BlockPos, Integer> twoc = ImmutableMap.builder();
+        ticksWithoutChild.forEach((bp, v) -> {
+            if (v > Config.FLAG_SUB_BLOCK_REMOVED_TICKS.get()) {
+                dropDrops(sl, bp, dropOnOrphaned.get(bp).apply(flagPos));
+                ticksWithoutParent.remove(bp);
+                return;
+            }
+            twoc.put(bp, v + 1);
+        });
+        ticksWithoutChild.clear();
+        ticksWithoutChild.putAll(twoc.build());
     }
 
     public void tick(
             ServerLevel sl,
             BlockPos pos
     ) {
+        ticksWithoutChild.put(pos, 0);
         Integer twop = ticksWithoutParent.get(pos);
         if (twop == null) {
             return;
@@ -58,12 +71,20 @@ public final class TownFlagSubBlocks {
         if (twop >= Config.FLAG_SUB_BLOCK_RETENTION_TICKS.get()) {
             QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {}", pos);
             sl.removeBlock(pos, true);
-            int x = pos.getX();
-            int y = pos.getY();
-            int z = pos.getZ();
-            // TODO: Add "paper bag" block containing dropped item so items aren't eventually lost
-            dropOnOrphaned.get(pos).apply(flagPos).forEach(i -> sl.addFreshEntity(new ItemEntity(sl, x, y, z, i)));
+            dropDrops(sl, pos, dropOnOrphaned.get(pos).apply(flagPos));
         }
+    }
+
+    private static void dropDrops(
+            ServerLevel sl,
+            BlockPos pos,
+            Collection<ItemStack> drops
+    ) {
+        int x = pos.getX();
+        int y = pos.getY();
+        int z = pos.getZ();
+        // TODO: Add "paper bag" block containing dropped item so items aren't eventually lost
+        drops.forEach(i -> sl.addFreshEntity(new ItemEntity(sl, x, y, z, i)));
     }
 
     private boolean initialize(
