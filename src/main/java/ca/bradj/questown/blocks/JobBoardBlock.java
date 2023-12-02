@@ -1,6 +1,7 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -11,11 +12,14 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Material;
@@ -25,13 +29,14 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
-public class JobBoardBlock extends TownFlagSubBlock {
+public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
     public static final String ITEM_ID = "job_board_block";
-    private ArrayList<OpenMenuListener> openMenuListeners = new ArrayList<>();
+    private final ArrayList<OpenMenuListener> openMenuListeners = new ArrayList<>();
 
     public JobBoardBlock(
     ) {
@@ -39,7 +44,9 @@ public class JobBoardBlock extends TownFlagSubBlock {
                 Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
                         .strength(1.0F, 10.0F).
-                        noOcclusion()
+                        noOcclusion(),
+                Entity::new,
+                Entity::tick
         );
     }
 
@@ -53,7 +60,8 @@ public class JobBoardBlock extends TownFlagSubBlock {
             BlockState p_60537_,
             LootContext.Builder p_60538_
     ) {
-        return ImmutableList.of(ItemsInit.JOB_BOARD_BLOCK.get().getDefaultInstance());
+        // The drop is handled by Entity.dropWhenOrphaned
+        return ImmutableList.of();
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
@@ -66,6 +74,7 @@ public class JobBoardBlock extends TownFlagSubBlock {
 
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
+            QT.BLOCK_LOGGER.error("Job Board is not associated to an existing flag");
             sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
             return Blocks.AIR.defaultBlockState();
         }
@@ -103,5 +112,43 @@ public class JobBoardBlock extends TownFlagSubBlock {
             return InteractionResult.sidedSuccess(clientSide);
         }
         return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+    }
+
+    @Override
+    protected BlockEntityType<Entity> getTickerEntityType() {
+        return TilesInit.JOB_BOARD.get();
+    }
+
+    public static class Entity extends BlockEntity implements TownFlagSubEntity {
+
+        private final List<Runnable> tickListeners = new ArrayList<>();
+
+        public Entity(
+                BlockPos p_155229_,
+                BlockState p_155230_
+        ) {
+            super(TilesInit.JOB_BOARD.get(), p_155229_, p_155230_);
+        }
+
+        @Override
+        public Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
+            ItemStack toDrop = Items.OAK_SIGN.getDefaultInstance();
+            TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
+            return ImmutableList.of(toDrop);
+        }
+
+        @Override
+        public void addTickListener(Runnable listener) {
+            this.tickListeners.add(listener);
+        }
+
+        public static void tick(
+                Level level,
+                BlockPos pos,
+                BlockState blockState,
+                Entity entity
+        ) {
+            entity.tickListeners.forEach(Runnable::run);
+        }
     }
 }

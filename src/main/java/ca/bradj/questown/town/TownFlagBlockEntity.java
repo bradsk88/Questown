@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.ScheduledBlock;
+import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
@@ -95,7 +96,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     private final TownQuests quests = new TownQuests();
-    private final TownPois pois = new TownPois();
+    private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
+    private final TownPois pois = new TownPois(subBlocks);
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
     private final UUID uuid = UUID.randomUUID();
@@ -122,10 +124,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             getBlockPos().getY()
     );
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
-    final TownWorkHandle workHandle = new TownWorkHandle(getBlockPos());
+    final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
     private final Stack<Long> mornings = new Stack<>();
     private final LinkedBlockingQueue<Consumer<TownFlagBlockEntity>> initializers = new LinkedBlockingQueue<>();
-
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -147,17 +148,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
+        long start = System.currentTimeMillis();
+
         if (!e.initializers.isEmpty()) {
             QT.FLAG_LOGGER.info("Running initializer ({} left)", e.initializers.size() - 1);
             e.initializers.remove().accept(e);
             return;
         }
 
+        e.subBlocks.parentTick(sl);
+
         if (!e.mornings.empty()) {
             e.morningTick(e.mornings.pop());
         }
-
-        long start = System.currentTimeMillis();
 
         boolean stateChanged = e.state.tick(e, e.getTileData(), sl);
 

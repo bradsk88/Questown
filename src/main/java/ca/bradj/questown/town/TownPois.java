@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.core.Room;
@@ -22,7 +23,12 @@ import java.util.Optional;
 
 public class TownPois {
 
+    private final TownFlagSubBlocks subBlocks;
     private List<BlockPos> welcomeMats = new ArrayList<>();
+
+    public TownPois(TownFlagSubBlocks subBlocks) {
+        this.subBlocks = subBlocks;
+    }
 
     public void setListener(Listener listener) {
         this.listener = listener;
@@ -88,7 +94,8 @@ public class TownPois {
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         this.welcomeMats.add(welcomeMatBlock);
-        Questown.LOGGER.debug("Welcome mat was registered with town flag at {}", welcomeMatBlock);
+        this.subBlocks.register(welcomeMatBlock);
+        QT.FLAG_LOGGER.debug("Welcome mat was registered with town flag at {}", welcomeMatBlock);
     }
 
     public ImmutableList<BlockPos> getWelcomeMats() {

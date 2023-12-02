@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.OpenMenuListener;
+import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
@@ -40,9 +41,13 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     final ArrayList<BlockPos> jobBoards = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
     private final BlockPos parentPos;
+    private final TownFlagSubBlocks subBlocks;
 
-    public TownWorkHandle(BlockPos parentPos) {
+    public TownWorkHandle(
+            TownFlagSubBlocks subBlocks,
+            BlockPos parentPos) {
         this.parentPos = parentPos;
+        this.subBlocks = subBlocks;
     }
 
     public void registerJobBoard(BlockPos matPos) {
@@ -63,7 +68,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
             self.jobBoards.add(matPos);
             jbb.addOpenMenuListener(self);
-            return;
+            subBlocks.register(matPos);
         });
     }
 
@@ -133,13 +138,6 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     }
 
     public void tick(ServerLevel sl) {
-        // TODO[Optimization]: Is this too much work in one tick
-        jobBoards.forEach(v -> {
-            BlockEntity e = sl.getBlockEntity(v);
-            if (e instanceof JobBoardBlock.Entity j) {
-                j.parentTick();
-            }
-        });
         if (this.nextTick.isEmpty()) {
             return;
         }
