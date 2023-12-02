@@ -8,12 +8,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Material;
@@ -25,7 +27,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JobBoardBlock extends HorizontalDirectionalBlock {
+import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
+
+public class JobBoardBlock extends TownFlagSubBlock {
     public static final String ITEM_ID = "job_board_block";
     private ArrayList<OpenMenuListener> openMenuListeners = new ArrayList<>();
 
@@ -37,6 +41,11 @@ public class JobBoardBlock extends HorizontalDirectionalBlock {
                         .strength(1.0F, 10.0F).
                         noOcclusion()
         );
+    }
+
+    @Override
+    public RenderShape getRenderShape(BlockState blockState) {
+        return RenderShape.MODEL;
     }
 
     @Override
@@ -55,11 +64,12 @@ public class JobBoardBlock extends HorizontalDirectionalBlock {
         ItemStack item = ctx.getItemInHand();
         @Nullable TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, item);
 
+        BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
-            throw new IllegalStateException(String.format("%s has no parent", ITEM_ID));
+            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
+            return Blocks.AIR.defaultBlockState();
         }
 
-        BlockPos matPos = ctx.getClickedPos();
         parent.registerJobsBoard(matPos);
         return blockState;
     }

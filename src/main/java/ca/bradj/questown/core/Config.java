@@ -44,6 +44,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Double> DUPLICATE_QUEST_COST_FACTOR;
 
     public static final ForgeConfigSpec.ConfigValue<Boolean> INFINITE_TOWN_DOORS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
 
     static {
         // Scanning Config
@@ -116,9 +117,12 @@ public class Config {
         // Advanced Config
         BUILDER.push("Advanced");
         TICK_SAMPLING_RATE = BUILDER.comment(
-                "Advanced setting. For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
+                "For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
         ).defineInRange("TickSamplingRate", 0, 0, 24000);
-        BUILDER.pop();
+        FLAG_SUB_BLOCK_RETENTION_TICKS = BUILDER.comment(
+                "To prevent confusion due to orphaning, blocks like job boards and welcome mats are removed when their flag is destroyed."
+        ).defineInRange("FlagSubBlockRetentionTicks", 20, 1, 1000);
+        BUILDER.pop(); // Yep, really twice. Getting out of config
         BUILDER.pop();
 
         // Cheats

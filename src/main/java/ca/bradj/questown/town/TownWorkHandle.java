@@ -133,6 +133,13 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     }
 
     public void tick(ServerLevel sl) {
+        // TODO[Optimization]: Is this too much work in one tick
+        jobBoards.forEach(v -> {
+            BlockEntity e = sl.getBlockEntity(v);
+            if (e instanceof JobBoardBlock.Entity j) {
+                j.parentTick();
+            }
+        });
         if (this.nextTick.isEmpty()) {
             return;
         }
