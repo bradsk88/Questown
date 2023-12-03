@@ -17,28 +17,31 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         super();
     }
     private MCQuest(
+            UUID batchUUID,
             @Nullable UUID ownerId,
             ResourceLocation wantedRecipe,
             @Nullable ResourceLocation fromRecipe
     ) {
-        super(ownerId, wantedRecipe, fromRecipe);
+        super(batchUUID, ownerId, wantedRecipe, fromRecipe);
     }
 
     public static MCQuest standalone(
+            UUID batchUUID,
             @Nullable UUID ownerId,
             ResourceLocation recipeId
     ) {
-        return new MCQuest(ownerId, recipeId, null);
+        return new MCQuest(batchUUID, ownerId, recipeId, null);
     }
 
     public static MCQuest upgrade(
+            UUID batchUUID,
             @Nullable UUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
     ) {
-        return new MCQuest(ownerId, newRecipeId, oldRecipeId);
+        return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId);
     }
 
     public MCQuest completed(MCRoom room) {
-        MCQuest q = new MCQuest(this.uuid, this.getWantedId(), this.fromRecipeID().orElse(null));
+        MCQuest q = new MCQuest(this.batchUUID, this.uuid, this.getWantedId(), this.fromRecipeID().orElse(null));
         q.uuid = this.uuid;
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
@@ -46,7 +49,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     }
 
     public MCQuest lost() {
-        MCQuest q = new MCQuest(this.uuid, this.getWantedId(), this.fromRecipeID().orElse(null));
+        MCQuest q = new MCQuest(this.batchUUID, this.uuid, this.getWantedId(), this.fromRecipeID().orElse(null));
         q.uuid = this.uuid;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
@@ -56,6 +59,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static class Serializer {
 
         private static final String NBT_UUID = "uuid";
+        private static final String NBT_BATCH_UUID = "batch_uuid";
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_STATUS = "status";
@@ -97,6 +101,10 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (nbt.contains(NBT_UUID)) {
                 uuid = nbt.getUUID(NBT_UUID);
             }
+            @Nullable UUID batchUUID = null;
+            if (nbt.contains(NBT_BATCH_UUID)) {
+                uuid = nbt.getUUID(NBT_BATCH_UUID);
+            }
             ResourceLocation recipeId = new ResourceLocation(nbt.getString(NBT_RECIPE_ID));
             QuestStatus status = QuestStatus.valueOf(nbt.getString(NBT_STATUS));
             int doorX = nbt.getInt(NBT_COMPLETED_ON_DOORPOS_X);
@@ -113,7 +121,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 fromRecipeId = new ResourceLocation(nbt.getString(NBT_FROM_RECIPE_ID));
             }
             quest.initialize(
-                    uuid, recipeId, status,
+                    batchUUID, uuid, recipeId, status,
                     new MCRoom(doorPos, ImmutableList.of(space), doorY),
                     fromRecipeId
             );

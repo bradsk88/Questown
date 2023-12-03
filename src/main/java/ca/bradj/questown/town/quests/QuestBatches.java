@@ -46,7 +46,7 @@ public class QuestBatches<
     }
 
     public interface Factory<BATCH, REWARD> {
-        BATCH getNew(UUID owner, REWARD r);
+        BATCH getNew(UUID batchUUID, UUID owner, REWARD r);
     }
 
     public interface VillagerProvider<R extends Room> {
@@ -88,7 +88,7 @@ public class QuestBatches<
         ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
         bs.forEach(v -> {
             final UUID owner = coerceUUID(villagers, v.getUUID());
-            BATCH e = this.emptyBatch(owner, v.reward);
+            BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 e.addNewQuest(owner, q.getWantedId());
@@ -121,8 +121,8 @@ public class QuestBatches<
         return owner;
     }
 
-    private BATCH emptyBatch(UUID owner, REWARD reward) {
-        return this.factory.getNew(owner, reward);
+    private BATCH emptyBatch(UUID batchUUID, UUID owner, REWARD reward) {
+        return this.factory.getNew(batchUUID, owner, reward);
     }
 
     @Override

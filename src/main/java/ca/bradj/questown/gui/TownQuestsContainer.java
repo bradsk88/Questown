@@ -15,6 +15,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class TownQuestsContainer extends AbstractContainerMenu {
 
@@ -58,7 +59,7 @@ public class TownQuestsContainer extends AbstractContainerMenu {
             ResourceLocation id;
             if (q == null) {
                 id = SpecialQuests.BROKEN;
-                q = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
+                q = new UIQuest(null, SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
             } else {
                 id = q.getRecipeId();
             }
@@ -99,9 +100,9 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         return this.quests;
     }
 
-    public void sendRemoveRequest(int index) {
+    public void sendRemoveRequest(UUID batchUUID) {
         QuestownNetwork.CHANNEL.sendToServer(
-                new RemoveQuestFromUIMessage(index, flagPos.getX(), flagPos.getY(), flagPos.getZ())
+                new RemoveQuestFromUIMessage(batchUUID, flagPos.getX(), flagPos.getY(), flagPos.getZ())
         );
     }
 }

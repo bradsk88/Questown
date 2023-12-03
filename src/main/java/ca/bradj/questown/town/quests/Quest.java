@@ -11,13 +11,14 @@ import java.util.UUID;
 public class Quest<KEY, ROOM extends Room> {
 
     @Nullable protected UUID uuid;
+    protected UUID batchUUID;
     protected KEY recipeId;
     protected QuestStatus status;
     protected @Nullable ROOM completedOn;
     private @Nullable KEY fromRecipeID;
 
     Quest() {
-        this(null, null, null);
+        this(null, null, null, null);
     }
 
     @Override
@@ -39,7 +40,8 @@ public class Quest<KEY, ROOM extends Room> {
         return String.format("Quest{id=%s, owner=%s, on=%s, from=%s", recipeId, uuid, doorPos, fromRecipeID);
     }
 
-    protected Quest(@Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {
+    protected Quest(UUID batchUUID, @Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {
+        this.batchUUID = batchUUID;
         this.uuid = ownerId;
         this.recipeId = recipe;
         this.status = QuestStatus.ACTIVE;
@@ -63,12 +65,14 @@ public class Quest<KEY, ROOM extends Room> {
     }
 
     public void initialize(
+            UUID batchUUID,
             UUID uuid,
             KEY recipeId,
             QuestStatus status,
             @Nullable ROOM completedOn,
             @Nullable KEY fromRecipeID
     ) {
+        this.batchUUID = batchUUID;
         this.uuid = uuid;
         this.recipeId = recipeId;
         this.status = status;
@@ -78,6 +82,10 @@ public class Quest<KEY, ROOM extends Room> {
 
     public Optional<KEY> fromRecipeID() {
         return Optional.ofNullable(this.fromRecipeID);
+    }
+
+    public UUID getBatchUUID() {
+        return batchUUID;
     }
 
     public enum QuestStatus {

@@ -13,9 +13,11 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.AbstractMap;
+import java.util.UUID;
 
 public class TownQuestsHandle implements QuestsHolder {
-    @Nullable private TownFlagBlockEntity town;
+    @Nullable
+    private TownFlagBlockEntity town;
 
     public void initialize(TownFlagBlockEntity t) {
         this.town = t;
@@ -23,24 +25,26 @@ public class TownQuestsHandle implements QuestsHolder {
 
     @Override
     public void requestRemovalOfQuestAtIndex(
-            int questIndex,
+            UUID batchID,
             ServerPlayer sender
     ) {
-        int i = 0;
         for (MCQuestBatch b : town.quests.getBatches()) {
-            for (MCQuest q : b.getAll()) {
-                if (i == questIndex) {
-                    // TODO[ASAP]: Prompt the user to confirm
-                    if (town.quests.questBatches.decline(b)) {
-                        QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                        town.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(town, b.getOwner()));
-                        town.setChanged();
-                        TownFlagBlock.openQuestsUI(town.getServerLevel(), town.getBlockPos(), sender, town.getQuestHandle());
-                        town.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed"));
-                    }
-                    return;
+            if (batchID.equals(b.getBatchUUID())) {
+                // TODO[ASAP]: Prompt the user to confirm
+                if (town.quests.questBatches.decline(b)) {
+                    QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
+                    town.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(town, b.getOwner()));
+                    town.setChanged();
+                    TownFlagBlock.openQuestsUI(
+                            town.getServerLevel(),
+                            town.getBlockPos(),
+                            sender,
+                            town.getQuestHandle()
+                    );
+                    town.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_1"));
+                    town.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_2"));
                 }
-                i++;
+                return;
             }
         }
     }

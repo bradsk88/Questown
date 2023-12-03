@@ -260,6 +260,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 if (recipe == null) {
                     id = SpecialQuests.BROKEN;
                     recipe = new UIQuest(
+                            null,
                             SpecialQuests.SPECIAL_QUESTS.get(id),
                             Quest.QuestStatus.ACTIVE,
                             null,

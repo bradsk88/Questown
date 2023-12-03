@@ -42,13 +42,16 @@ public class QuestBatch<
             // No op by default
         }
     };
+    private UUID batchUUID;
 
     QuestBatch(
             Quest.QuestFactory<KEY, ROOM, QUEST> qf,
-            @NotNull REWARD reward
+            @NotNull REWARD reward,
+            @NotNull UUID batchUUID
     ) {
         this.questFactory = qf;
         this.reward = reward;
+        this.batchUUID = batchUUID;
     }
 
     public void addChangeListener(ChangeListener<QUEST> changeListener) {
@@ -203,10 +206,6 @@ public class QuestBatch<
         return false;
     }
 
-    public QuestBatch<KEY, ROOM, QUEST, REWARD> withoutCompletion() {
-        return new QuestBatch<>(questFactory, reward);
-    }
-
     public @Nullable UUID getUUID() {
         if (quests.isEmpty()) {
             return null;
@@ -216,7 +215,7 @@ public class QuestBatch<
 
     @Override
     public String toString() {
-        return "QuestBatch{" +
+        return "QuestBatch[ID="+ batchUUID +"]{" +
                 "quests=" + String.join(", ", quests.stream().map(Object::toString).toList()) +
                 ", reward=" + reward +
                 ", questFactory=" + questFactory +
@@ -232,6 +231,10 @@ public class QuestBatch<
 
     public void setReward(REWARD reward) {
         this.reward = reward;
+    }
+
+    public UUID getBatchUUID() {
+        return batchUUID;
     }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {

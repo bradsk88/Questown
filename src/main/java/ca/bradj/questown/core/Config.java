@@ -15,6 +15,8 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
 
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_QUEST_BATCH_GENERATION;
+
     public static final ForgeConfigSpec.ConfigValue<Integer> IDEAL_QUEST_THRESHOLD_TICKS;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
@@ -67,11 +69,17 @@ public class Config {
         BUILDER.pop();
 
         // Quests Config
-        BUILDER.push("Quests");
+        BUILDER.push("Quests").comment(
+                "Quests are pre-generated as soon as possible. When a batch of quests is consumed, another pre" +
+                        "-generation begins. These options control that process."
+        );
+        LOG_QUEST_BATCH_GENERATION = BUILDER.comment(
+                "If set to True, quest pre-generation will be printed verbosely to the debug logs. This can be quite noisy."
+        ).define("LogQuestBatchGeneration", true);
         IDEAL_QUEST_THRESHOLD_TICKS = BUILDER.comment(
-                "When a new batch of quests is added, the mod makes several attempts to find a large quest to add" +
-                        " to the batch randomly. This determines how many ticks it will try before giving up and " +
-                        "filling the empty space with simpler quests."
+                "When a new batch of quests is added, the mod makes several attempts to find a random" +
+                        ", complex room quest to add to the batch. This setting determines how many ticks" +
+                        " it will try before giving up and filling the empty space with simpler quests."
         ).define("IdealQuestThresholdTicks", 25);
         QUEST_GENERATION_MAX_TICKS = BUILDER.comment(
                 "When a new batch of quests is added, the mod makes several attempts to find quests to add" +

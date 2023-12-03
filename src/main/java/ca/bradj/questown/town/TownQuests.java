@@ -29,7 +29,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
-    private final Stack<PendingQuests> pendingQuests = new Stack<>();
+    private final Stack<QuestBatchSeed> pendingQuests = new Stack<>();
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private QuestBatch.ChangeListener<MCQuest> changeListener;
@@ -44,7 +44,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        MCQuestBatch fireQuest = new MCQuestBatch(null, new MCDelayedReward(town, reward));
+        MCQuestBatch fireQuest = new MCQuestBatch(null, null, new MCDelayedReward(town, reward));
         fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
 
         quests.questBatches.add(fireQuest);
@@ -119,7 +119,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             return;
         }
 
-        MCQuestBatch upgradeQuest = new MCQuestBatch(visitorUUID, new MCDelayedReward(town, reward));
+        MCQuestBatch upgradeQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCDelayedReward(town, reward));
         upgradeQuest.addNewUpgradeQuest(visitorUUID, quest.getWantedId(), upgradeRecipe);
 
         quests.questBatches.add(upgradeQuest);
@@ -141,7 +141,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                 new AddBatchOfRandomQuestsForVisitorReward(town, town.getRandomVillager())
         );
 
-        MCQuestBatch jobQuest = new MCQuestBatch(visitorUUID, new MCInstantReward(town, reward));
+        MCQuestBatch jobQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCInstantReward(town, reward));
         jobQuest.addNewQuest(visitorUUID, JobsRegistry.getRoomForJobRootId(random, job));
         if (!town.hasJobBoard()) {
             jobQuest.addNewQuest(visitorUUID, SpecialQuests.JOB_BOARD);
@@ -222,14 +222,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
                     Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
             ) / 2;
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
-            PendingQuests theNewQuests = new PendingQuests(
+            QuestBatchSeed theNewQuests = new QuestBatchSeed(
+                    UUID.randomUUID(),
                     town::alreadyHasQuest,
                     targetItemWeight
             );
             pendingQuests.push(theNewQuests);
         }
 
-        PendingQuests pop = pendingQuests.pop();
+        QuestBatchSeed pop = pendingQuests.pop();
         boolean canGrowMore = pop.grow(town);
 
         if (canGrowMore) {

@@ -9,15 +9,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public record RemoveQuestFromUIMessage(
-        int questIndex,
+        UUID questIndex,
         int flagX, int flagY, int flagZ
 ) {
 
     public static void encode(RemoveQuestFromUIMessage msg, FriendlyByteBuf buffer) {
-        buffer.writeInt(msg.questIndex);
+        buffer.writeUUID(msg.questIndex);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
         buffer.writeInt(msg.flagZ);
@@ -25,7 +26,7 @@ public record RemoveQuestFromUIMessage(
     }
 
     public static RemoveQuestFromUIMessage decode(FriendlyByteBuf buffer) {
-        int questIndex = buffer.readInt();
+        UUID questIndex = buffer.readUUID();
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();

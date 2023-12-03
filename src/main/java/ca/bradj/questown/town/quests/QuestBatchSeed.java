@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 // TODO: Decouple from MC and test
-public class PendingQuests {
+public class QuestBatchSeed {
 
     private final AlreadyAddedChecker checker;
     MCQuestBatch batch;
@@ -35,13 +35,14 @@ public class PendingQuests {
         boolean questAlreadyRequested(ResourceLocation questId);
     }
 
-    public PendingQuests(
+    public QuestBatchSeed(
+            UUID batchUUID,
             AlreadyAddedChecker checker,
             int targetItemWeight
     ) {
         this.checker = checker;
         this.targetItemWeight = targetItemWeight;
-        this.batch = new MCQuestBatch(null, null); //
+        this.batch = new MCQuestBatch(batchUUID, null, null);
     }
 
     int targetItemWeight;
@@ -57,7 +58,7 @@ public class PendingQuests {
         }
 
         if (!hasBed && !town.hasEnoughBeds()) {
-            QT.QUESTS_LOGGER.debug("Adding bed quest");
+            debugLog("Adding bed quest");
             batch.addNewQuest(null, SpecialQuests.BEDROOM);
             hasBed = true;
         }
@@ -70,7 +71,7 @@ public class PendingQuests {
 
         attempts++;
         int currentCost = computeCurrentCost(level);
-        QT.QUESTS_LOGGER.debug(
+        debugLog(
                 "Current weight: {} of {} \n- {}",
                 currentCost,
                 targetItemWeight,
@@ -82,26 +83,62 @@ public class PendingQuests {
             newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
         }
         int idealTicks = Config.IDEAL_QUEST_THRESHOLD_TICKS.get();
-        QT.QUESTS_LOGGER.debug("Iteration: {} of ideal {} max {}", attempts, idealTicks, maxTicks);
-        QT.QUESTS_LOGGER.debug("Trying to add {} [Cost: {}]", id, newCost);
+        debugLog("Iteration: {} of ideal {} max {}", attempts, idealTicks, maxTicks);
+        debugLog("Trying to add {} [Cost: {}]", id, newCost);
         if (attempts < idealTicks && (newCost < targetItemWeight / 4)) {
             // Ignore small rooms early on
             // TODO: compartmentalize pre-computed costs so we can grab expensive
             //  recipes first and then fill empty space with cheaper ones later.
-            QT.QUESTS_LOGGER.debug("Ignoring {} for now. Looking for more interesting quests", id);
+            debugLog("Ignoring {} for now. Looking for more interesting quests", id);
             return true;
         }
         if ((newCost > targetItemWeight / 2)) {
-            QT.QUESTS_LOGGER.debug("Room is more than 50% of target weight. Not adding {}", id);
+            debugLog("Room is more than 50% of target weight. Not adding {}", id);
             return true;
         }
         if (newCost > targetItemWeight - currentCost) {
-            QT.QUESTS_LOGGER.debug("Room would exceed weight limit {}. Not adding {}", targetItemWeight, id);
+            debugLog("Room would exceed weight limit {}. Not adding {}", targetItemWeight, id);
             return true;
         }
-        QT.QUESTS_LOGGER.debug("Successfully added to quest batch: {}", id);
+        debugLog("Successfully added to quest batch: {}", id);
         batch.addNewQuest(null, id);
         return true;
+    }
+
+    private void debugLog(String msg) {
+        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
+            QT.QUESTS_LOGGER.debug(msg);
+        }
+    }
+
+    private void debugLog(
+            String msg,
+            Object p1
+    ) {
+        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
+            QT.QUESTS_LOGGER.debug(msg, p1);
+        }
+    }
+
+    private void debugLog(
+            String msg,
+            Object p1,
+            Object p2
+    ) {
+        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
+            QT.QUESTS_LOGGER.debug(msg, p1, p2);
+        }
+    }
+
+    private void debugLog(
+            String msg,
+            Object p1,
+            Object p2,
+            Object p3
+    ) {
+        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
+            QT.QUESTS_LOGGER.debug(msg, p1, p2, p3);
+        }
     }
 
     private boolean questAlreadyRequested(MCQuestBatch batch, ResourceLocation id) {
@@ -117,7 +154,7 @@ public class PendingQuests {
     @NotNull
     private Integer computeCurrentCost(ServerLevel level) {
         return batch.getAll().stream()
-                .map(v -> PendingQuests.computeCosts(level, v.getWantedId(), targetItemWeight))
+                .map(v -> QuestBatchSeed.computeCosts(level, v.getWantedId(), targetItemWeight))
                 .reduce(Integer::sum)
                 .orElse(0);
     }

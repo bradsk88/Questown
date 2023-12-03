@@ -6,10 +6,12 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.AbstractMap;
+import java.util.UUID;
 
 public interface QuestsHolder {
-    void requestRemovalOfQuestAtIndex(int questIndex,
-                                      ServerPlayer sender
+    void requestRemovalOfQuestAtIndex(
+            UUID batchUUID,
+            ServerPlayer sender
     );
 
     ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards();

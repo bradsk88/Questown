@@ -24,19 +24,23 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class UIQuest implements Comparable<UIQuest> {
 
     private static final String NBT_VILLAGER_UUID = "villager_uuid";
+    private static final String NBT_BATCH_UUID = "batch_uuid";
     private static final String NBT_JOB_NAME = "job_name";
 
     public final Quest.QuestStatus status;
     private final RoomRecipe recipe;
     public final ResourceLocation fromRecipe;
     private final String villagerUUID;
+    private final UUID batchUUID;
     private final String jobName;
 
     public UIQuest(
+            UUID batchUUID,
             RoomRecipe recipe,
             Quest.QuestStatus status,
             @Nullable ResourceLocation fromRecipe,
@@ -48,6 +52,7 @@ public class UIQuest implements Comparable<UIQuest> {
         this.fromRecipe = fromRecipe;
         this.villagerUUID = jobRecipientUUID;
         this.jobName = jobName;
+        this.batchUUID = batchUUID;
     }
 
     public static List<UIQuest> fromLevel(
@@ -81,6 +86,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 jobRecipientUUID = v.getUUID().toString();
             }
             return new UIQuest(
+                    v.getBatchUUID(),
                     new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength),
                     v.getStatus(), v.fromRecipeID().orElse(null),
                     jobRecipientUUID, job
@@ -142,6 +148,10 @@ public class UIQuest implements Comparable<UIQuest> {
         return villagerUUID;
     }
 
+    public UUID getBatchUUID() {
+        return batchUUID;
+    }
+
     public static class Serializer {
 
         private final RoomRecipe.Serializer recipeSerializer;
@@ -167,11 +177,15 @@ public class UIQuest implements Comparable<UIQuest> {
             if (p_44104_.has(NBT_VILLAGER_UUID)) {
                 villagerUUID = p_44104_.get(NBT_VILLAGER_UUID).getAsString();
             }
+            String batchUUID = null;
+            if (p_44104_.has(NBT_BATCH_UUID)) {
+                batchUUID = p_44104_.get(NBT_BATCH_UUID).getAsString();
+            }
             String jobName = null;
             if (p_44104_.has(NBT_JOB_NAME)) {
                 jobName = p_44104_.get(NBT_JOB_NAME).getAsString();
             }
-            return new UIQuest(recipe, Quest.QuestStatus.valueOf(status), fromID, villagerUUID, jobName);
+            return new UIQuest(UUID.fromString(batchUUID), recipe, Quest.QuestStatus.valueOf(status), fromID, villagerUUID, jobName);
         }
 
         public void toNetwork(
@@ -195,6 +209,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 jobName = p_44102_.jobName.toString();
             }
             buf.writeUtf(jobName);
+            buf.writeUUID(p_44102_.batchUUID);
         }
 
         @Nullable
@@ -211,7 +226,8 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             String villagerUUID = buf.readUtf();
             String jobName = buf.readUtf();
-            return new UIQuest(rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
+            UUID batchUUID = buf.readUUID();
+            return new UIQuest(batchUUID, rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
         }
     }
 }

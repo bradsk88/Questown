@@ -19,13 +19,13 @@ public class PendingQuestsSerializer {
     private static final String NBT_WEIGHT_THRESHOLD = "weight_threshold";
 
     public CompoundTag serializeNBT(
-        Collection<PendingQuests> batches
+        Collection<QuestBatchSeed> batches
     ) {
         CompoundTag ct = new CompoundTag();
         ct.putInt(NBT_NUM_BATCHES, batches.size());
         ListTag aq = new ListTag();
-        for (PendingQuests q : batches) {
-            MCQuestBatch asBatch = new MCQuestBatch(q.batch.getOwner(), q.batch.getReward());
+        for (QuestBatchSeed q : batches) {
+            MCQuestBatch asBatch = new MCQuestBatch(q.batch.getBatchUUID(), q.batch.getOwner(), q.batch.getReward());
             q.batch.getAll().forEach(v -> asBatch.addNewQuest(v.getUUID(), v.getWantedId()));
             CompoundTag tag = MCQuestBatch.SERIALIZER.serializeNBT(asBatch);
             tag.putInt(NBT_WEIGHT_THRESHOLD, q.targetItemWeight);
@@ -36,18 +36,18 @@ public class PendingQuestsSerializer {
         return ct;
     }
 
-    public Collection<PendingQuests> deserializeNBT(
+    public Collection<QuestBatchSeed> deserializeNBT(
             TownInterface town, CompoundTag nbt
     ) {
 
-        ImmutableList.Builder<PendingQuests> aqs = ImmutableList.builder();
+        ImmutableList.Builder<QuestBatchSeed> aqs = ImmutableList.builder();
         int num = nbt.getInt(NBT_NUM_BATCHES);
         ListTag aq = nbt.getList(NBT_BATCHES, Tag.TAG_COMPOUND);
         for (int i = 0; i < num; i++) {
             CompoundTag tag = aq.getCompound(i);
             MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(town, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
-            PendingQuests pendingQuests = new PendingQuests(town::alreadyHasQuest, threshold);
+            QuestBatchSeed pendingQuests = new QuestBatchSeed(b.getBatchUUID(), town::alreadyHasQuest, threshold);
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
                 pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }

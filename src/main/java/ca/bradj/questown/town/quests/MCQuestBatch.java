@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
@@ -18,19 +19,20 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     private UUID owner;
 
     MCQuestBatch() {
-        this(null, null);
+        this(null, null, null);
     }
 
-    public MCQuestBatch(@Nullable UUID owner, @NotNull MCReward reward) {
-        super(new Quest.QuestFactory<>() {
+    public MCQuestBatch(UUID batchUUID, @Nullable UUID owner, @NotNull MCReward reward) {
+        super(new Quest.QuestFactory<ResourceLocation, MCRoom, MCQuest>() {
+
             @Override
             public MCQuest newQuest(@Nullable UUID ownerID, ResourceLocation recipeId) {
-                return MCQuest.standalone(ownerID, recipeId);
+                return MCQuest.standalone(batchUUID, ownerID, recipeId);
             }
 
             @Override
             public MCQuest newUpgradeQuest(@Nullable UUID ownerID, ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
-                return MCQuest.upgrade(ownerID, oldRecipeId, newRecipeId);
+                return MCQuest.upgrade(batchUUID, ownerID, oldRecipeId, newRecipeId);
             }
 
             @Override
@@ -42,7 +44,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             public MCQuest lost(MCQuest foundQuest) {
                 return foundQuest.lost();
             }
-        }, reward);
+        }, reward, batchUUID);
         this.owner = owner;
     }
 

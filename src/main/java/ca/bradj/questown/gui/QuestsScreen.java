@@ -182,7 +182,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
                 Component tooltip = new TranslatableComponent("quests.job_owner", vID);
 
-                renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, index);
+                renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
 
                 if (vID.isEmpty()) {
                     continue;
@@ -223,7 +223,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             int mouseY,
             int idX,
             int idY,
-            int index
+            UUID index
     ) {
         int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
         this.font.drawShadow(
