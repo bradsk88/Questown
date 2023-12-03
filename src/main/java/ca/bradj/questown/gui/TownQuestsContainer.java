@@ -1,6 +1,11 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
+import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,17 +14,21 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 public class TownQuestsContainer extends AbstractContainerMenu {
 
     private final Collection<UIQuest> quests;
+    private final BlockPos flagPos;
 
     public TownQuestsContainer(
             int windowId,
-            Collection<UIQuest> quests
+            Collection<UIQuest> quests,
+            BlockPos flagPos
     ) {
         super(MenuTypesInit.TOWN_QUESTS.get(), windowId);
         this.quests = quests;
+        this.flagPos = flagPos;
     }
 
     public TownQuestsContainer(
@@ -27,7 +36,35 @@ public class TownQuestsContainer extends AbstractContainerMenu {
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        this(windowId, readQuests(data));
+        this(windowId, readQuests(data), readFlagPos(data));
+    }
+
+    public static void write(
+            FriendlyByteBuf data,
+            List<UIQuest> quests,
+            BlockPos pos
+    ) {
+        writeQuests(data, quests);
+        writeFlagPos(data, pos);
+    }
+
+    private static void writeQuests(
+            FriendlyByteBuf data,
+            List<UIQuest> quests
+    ) {
+        UIQuest.Serializer ser = new UIQuest.Serializer();
+        data.writeInt(quests.size());
+        data.writeCollection(quests, (buf, q) -> {
+            ResourceLocation id;
+            if (q == null) {
+                id = SpecialQuests.BROKEN;
+                q = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
+            } else {
+                id = q.getRecipeId();
+            }
+            buf.writeResourceLocation(id);
+            ser.toNetwork(buf, q);
+        });
     }
 
     public static Collection<UIQuest> readQuests(FriendlyByteBuf data) {
@@ -40,6 +77,19 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         return r;
     }
 
+    private static void writeFlagPos(
+            FriendlyByteBuf data,
+            BlockPos pos
+    ) {
+        data.writeInt(pos.getX());
+        data.writeInt(pos.getY());
+        data.writeInt(pos.getZ());
+    }
+
+    public static BlockPos readFlagPos(FriendlyByteBuf data) {
+        return new BlockPos(data.readInt(), data.readInt(), data.readInt());
+    }
+
     @Override
     public boolean stillValid(Player p_38874_) {
         return true;
@@ -47,5 +97,11 @@ public class TownQuestsContainer extends AbstractContainerMenu {
 
     public Collection<UIQuest> GetQuests() {
         return this.quests;
+    }
+
+    public void sendRemoveRequest(int index) {
+        QuestownNetwork.CHANNEL.sendToServer(
+                new RemoveQuestFromUIMessage(index, flagPos.getX(), flagPos.getY(), flagPos.getZ())
+        );
     }
 }

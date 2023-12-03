@@ -9,6 +9,7 @@ import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
@@ -309,10 +310,20 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
+        openQuestsUI(level, pos, (ServerPlayer) player, entity.getQuestHandle());
+        return InteractionResult.sidedSuccess(false);
+    }
+
+    public static void openQuestsUI(
+            Level level,
+            BlockPos pos,
+            ServerPlayer player,
+            QuestsHolder entity
+    ) {
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = entity.getAllQuestsWithRewards();
         List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
 
-        NetworkHooks.openGui((ServerPlayer) player, new MenuProvider() {
+        NetworkHooks.openGui(player, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
                 return TextComponent.EMPTY;
@@ -324,24 +335,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return new TownQuestsContainer(windowId, quests);
+                return new TownQuestsContainer(windowId, quests, pos);
             }
         }, data -> {
-            UIQuest.Serializer ser = new UIQuest.Serializer();
-            data.writeInt(quests.size());
-            data.writeCollection(quests, (buf, q) -> {
-                ResourceLocation id;
-                if (q == null) {
-                    id = SpecialQuests.BROKEN;
-                    q = new UIQuest(SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
-                } else {
-                    id = q.getRecipeId();
-                }
-                buf.writeResourceLocation(id);
-                ser.toNetwork(buf, q);
-            });
+            TownQuestsContainer.write(data, quests, pos);
         });
-        return InteractionResult.sidedSuccess(false);
     }
 
 

@@ -30,6 +30,11 @@ public class QuestownNetwork {
                 decoder(RemoveWorkFromUIMessage::decode).
                 consumer(RemoveWorkFromUIMessage::handle).
                 add();
+        registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(RemoveQuestFromUIMessage::encode).
+                decoder(RemoveQuestFromUIMessage::decode).
+                consumer(RemoveQuestFromUIMessage::handle).
+                add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

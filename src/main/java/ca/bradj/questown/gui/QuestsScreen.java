@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -17,6 +18,7 @@ import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -26,10 +28,7 @@ import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -56,7 +55,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
-
+    private final Map<Position, Runnable> removes = new HashMap<>();
     private int currentPage = 0;
 
     public QuestsScreen(
@@ -108,7 +107,9 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
     @Override
     public boolean keyReleased(
-            int keyCode, int scanCode, int modifiers
+            int keyCode,
+            int scanCode,
+            int modifiers
     ) {
         if (keyCode == GLFW.GLFW_KEY_Q) { // TODO: Get from user's config
 
@@ -143,6 +144,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
+            final int index = i;
             int row = i - startIndex;
             int cardY = y + row * (CARD_HEIGHT + CARD_PADDING);
 
@@ -180,6 +182,8 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
                 Component tooltip = new TranslatableComponent("quests.job_owner", vID);
 
+                renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, index);
+
                 if (vID.isEmpty()) {
                     continue;
                 }
@@ -195,7 +199,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 }
 
                 if (showHead) {
-                    int headX = x + CARD_WIDTH - 19;
+                    int headX = x + CARD_WIDTH - 19 - 19;
                     int headY = idY - 6;
                     this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
                     if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
@@ -213,12 +217,77 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
     }
 
+    private void renderRemovalButton(
+            PoseStack poseStack,
+            int mouseX,
+            int mouseY,
+            int idX,
+            int idY,
+            int index
+    ) {
+        int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
+        this.font.drawShadow(
+                poseStack,
+                new TextComponent("x"),
+                removeX + borderPadding - 1,
+                idY + borderPadding - 1,
+                0xFFFFFF
+        );
+        highlightAndTooltip(
+                poseStack,
+                mouseX,
+                mouseY,
+                removeX,
+                idY,
+                new TranslatableComponent("job_board.remove_work")
+        );
+        this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
+    }
+
+
+    private void highlightAndTooltip(
+            PoseStack poseStack,
+            int mouseX,
+            int mouseY,
+            int iconX,
+            int iconY,
+            Component tooltipText
+    ) {
+        if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
+            // transparent white square behind hovered item slot
+            fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
+            // render hovered item's name as a tooltip
+            renderTooltip(poseStack, tooltipText, mouseX, mouseY);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(
+            double x,
+            double y,
+            int p_97750_
+    ) {
+        for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
+            int buttonX = p.getKey().x;
+            int buttonY = p.getKey().z;
+            if (x >= buttonX && y >= buttonY && x < buttonX + 16 && y < buttonY + 17) {
+                p.getValue().run();
+                return true;
+            }
+        }
+        return super.mouseClicked(x, y, p_97750_);
+    }
+
+
     private List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderRecipeCardIcons(
             PoseStack poseStack,
             UIQuest recipe,
-            int x, int y, int mouseX, int mouseY
+            int x,
+            int y,
+            int mouseX,
+            int mouseY
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
@@ -237,8 +306,20 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
                 this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
                 if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-                    fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF); // transparent white square behind hovered item slot
-                    renderTooltip(poseStack, itemStack.getItem().getName(itemStack), mouseX, mouseY); // render hovered item's name as a tooltip
+                    fill(
+                            poseStack,
+                            iconX,
+                            y + 1,
+                            iconX + 16,
+                            y + 17,
+                            0x80FFFFFF
+                    ); // transparent white square behind hovered item slot
+                    renderTooltip(
+                            poseStack,
+                            itemStack.getItem().getName(itemStack),
+                            mouseX,
+                            mouseY
+                    ); // render hovered item's name as a tooltip
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);
                 element.set(itemStack);
@@ -260,7 +341,8 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 nextPage.y,
                 x + backgroundWidth - borderPadding - buttonWidth,
                 nextPage.y + buttonHeight,
-                0x30000000);
+                0x30000000
+        );
         int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
@@ -321,7 +403,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         );
     }
 
-    public ItemStack getHoveredIngredient(int mouseX, int mouseY) {
+    public ItemStack getHoveredIngredient(
+            int mouseX,
+            int mouseY
+    ) {
         Predicate<Slot> slotPredicate = s -> mouseX >= s.x && mouseX <= s.x + 16 && mouseY >= s.y + 1 && mouseY <= s.y + 17;
         Stream<Slot> matches = slots.stream().filter(slotPredicate);
         Optional<Slot> found = matches.findAny();
@@ -330,7 +415,11 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
 
     @Override
-    public boolean mouseScrolled(double scrollX, double scrollY, double scrollDelta) {
+    public boolean mouseScrolled(
+            double scrollX,
+            double scrollY,
+            double scrollDelta
+    ) {
         final double x = MouseUtil.getX();
         final double y = MouseUtil.getY();
         if (isMouseOver(x, y)) {
@@ -346,7 +435,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     }
 
     @Override
-    public boolean isMouseOver(double mouseX, double mouseY) {
+    public boolean isMouseOver(
+            double mouseX,
+            double mouseY
+    ) {
         return true;
     }
 }

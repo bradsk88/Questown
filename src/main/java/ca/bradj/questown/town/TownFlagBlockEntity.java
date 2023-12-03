@@ -19,6 +19,7 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
@@ -95,7 +96,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
-    private final TownQuests quests = new TownQuests();
+    final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     private final TownPois pois = new TownPois(subBlocks);
     private final MCMorningRewards morningRewards = new MCMorningRewards(this);
@@ -127,6 +128,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
     private final Stack<Long> mornings = new Stack<>();
     private final LinkedBlockingQueue<Consumer<TownFlagBlockEntity>> initializers = new LinkedBlockingQueue<>();
+
+    // TODO: Move all quest-related stuff into the handle
+    private TownQuestsHandle questsHandle = new TownQuestsHandle();
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -420,6 +424,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             t.roomsMap.addChangeListener(t);
             t.pois.setListener(t);
             t.workHandle.addChangeListener(t::setChanged);
+            t.questsHandle.initialize(t);
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
             if (!level.isClientSide()) {
                 TownFlags.register(uuid, t);
@@ -467,6 +472,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 }
             }
         });
+    }
+
+    @Override
+    public QuestsHolder getQuestHandle() {
+        return questsHandle;
     }
 
     private void setUpQuestsForNewlyPlacedFlag() {

@@ -150,7 +150,7 @@ public class Jobs {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                TownQuestsContainer questsMenu = new TownQuestsContainer(windowId, quests);
+                TownQuestsContainer questsMenu = new TownQuestsContainer(windowId, quests, e.getFlagPos());
                 return new InventoryAndStatusMenu(
                         windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, questsMenu, jobId
                 );

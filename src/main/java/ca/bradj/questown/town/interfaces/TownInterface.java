@@ -38,18 +38,30 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void addMorningReward(MCReward ev);
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID);
 
     Vec3 getVisitorJoinPos();
 
     BlockPos getRandomWanderTarget(BlockPos avoiding);
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     Collection<MCQuest> getQuestsForVillager(UUID uuid);
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     void addBatchOfQuests(
             MCQuestBatch batch
     );
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     ImmutableSet<UUID> getVillagersWithQuests();
 
     ImmutableSet<UUID> getVillagers();
@@ -98,8 +110,14 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     boolean isInitialized();
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards();
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     List<HashMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid);
 
     UUID getUUID();
@@ -110,6 +128,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     WorkHandle getWorkHandle();
 
+    /**
+     * @deprecated Use getQuestHandle
+     */
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
 
     ImmutableSet<ItemStack> getAllKnownGatherResults(
@@ -117,6 +138,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     );
 
     void registerFoundLoots(ImmutableList<MCHeldItem> items);
+
+    QuestsHolder getQuestHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

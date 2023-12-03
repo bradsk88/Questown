@@ -41,6 +41,10 @@ public class QuestBatches<
         }
     };
 
+    public boolean decline(BATCH b) {
+        return batches.remove(b);
+    }
+
     public interface Factory<BATCH, REWARD> {
         BATCH getNew(UUID owner, REWARD r);
     }

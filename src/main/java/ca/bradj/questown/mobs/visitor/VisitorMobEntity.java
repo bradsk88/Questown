@@ -985,6 +985,10 @@ public class VisitorMobEntity extends PathfinderMob {
         return job.getId();
     }
 
+    public BlockPos getFlagPos() {
+        return town.getTownFlagBasePos();
+    }
+
     public interface ChangeListener {
         void Changed();
 
