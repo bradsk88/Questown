@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,10 +14,10 @@ import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.textures.Textures;
 import mezz.jei.input.MouseUtil;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -28,11 +27,14 @@ import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
+public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemoveQuestsContainer> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -47,7 +49,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
     private static final int CARD_HEIGHT = 42;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    private int MAX_CARDS_PER_PAGE;
 
     private final List<UIQuest> quests;
     private final DrawableNineSliceTexture background;
@@ -55,11 +57,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
-    private final Map<Position, Runnable> removes = new HashMap<>();
     private int currentPage = 0;
 
-    public QuestsScreen(
-            TownQuestsContainer container,
+    public QuestRemoveConfirmScreen(
+            TownRemoveQuestsContainer container,
             Inventory playerInv,
             Component title
     ) {
@@ -94,6 +95,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
     @Override
     protected void init() {
+        int buttonHeight = 20;
+        int addedText = (font.lineHeight + CARD_PADDING) * 2;
+        int cardSpaceHeight = backgroundHeight - PAGE_PADDING - addedText - buttonHeight;
+        MAX_CARDS_PER_PAGE = cardSpaceHeight / (CARD_HEIGHT + CARD_PADDING);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + borderPadding;
         int x = ((this.width - backgroundWidth) / 2);
@@ -103,6 +108,26 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         this.nextPage.y = pageStringY;
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
+
+        int maybeX = (this.width / 2) + 32;
+        int cardsHeight = MAX_CARDS_PER_PAGE * (CARD_HEIGHT + CARD_PADDING);
+        int maybeY = pageStringY + this.previousPage.getHeight() + PAGE_PADDING + cardsHeight + (2 * this.font.lineHeight) + borderPadding;
+        this.addRenderableWidget(
+                new Button(
+                        x + borderPadding, maybeY,
+                        48, buttonHeight,
+                        new TranslatableComponent("menu.back"),
+                        (p_96776_) -> menu.sendOpenQuestsMenuRequest()
+                )
+        );
+        this.addRenderableWidget(
+                new Button(
+                        maybeX, maybeY,
+                        48, buttonHeight,
+                        new TranslatableComponent("menu.decline"),
+                        (p_96776_) -> menu.sendConfirmRemoveRequest()
+                )
+        );
     }
 
     @Override
@@ -142,6 +167,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
+        this.font.draw(poseStack, new TranslatableComponent("menu.quests.confirm_remove_top", quests.size()), x, y, TEXT_COLOR);
+
+        y = y + this.font.lineHeight + CARD_PADDING;
+
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
             final int index = i;
@@ -180,10 +209,6 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
             Component tooltip = new TranslatableComponent("quests.job_owner", vID);
 
-            if (recipe.getBatchUUID() != null) {
-                renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
-            }
-
             if (vID.isEmpty()) {
                 continue;
             }
@@ -211,74 +236,15 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         slots.clear();
         slots.addAll(b.build());
 
+        int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
+        this.font.draw(poseStack ,new TranslatableComponent("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
     }
 
-    private void renderRemovalButton(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            int idX,
-            int idY,
-            UUID index
-    ) {
-        int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-        this.font.drawShadow(
-                poseStack,
-                new TextComponent("x"),
-                removeX + borderPadding - 1,
-                idY + borderPadding - 1,
-                0xFFFFFF
-        );
-        highlightAndTooltip(
-                poseStack,
-                mouseX,
-                mouseY,
-                removeX,
-                idY,
-                new TranslatableComponent("job_board.remove_work")
-        );
-        this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
-    }
-
-
-    private void highlightAndTooltip(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            int iconX,
-            int iconY,
-            Component tooltipText
-    ) {
-        if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
-            // transparent white square behind hovered item slot
-            fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
-            // render hovered item's name as a tooltip
-            renderTooltip(poseStack, tooltipText, mouseX, mouseY);
-        }
-    }
-
-    @Override
-    public boolean mouseClicked(
-            double x,
-            double y,
-            int p_97750_
-    ) {
-        for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
-            int buttonX = p.getKey().x;
-            int buttonY = p.getKey().z;
-            if (x >= buttonX && y >= buttonY && x < buttonX + 16 && y < buttonY + 17) {
-                p.getValue().run();
-                return true;
-            }
-        }
-        return super.mouseClicked(x, y, p_97750_);
-    }
-
-
-    private List<Slot> slots = new ArrayList<>();
+    private final List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderRecipeCardIcons(
             PoseStack poseStack,

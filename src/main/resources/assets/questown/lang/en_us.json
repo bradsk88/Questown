@@ -186,5 +186,9 @@
   "job_board.default_name": "An item was requested",
   "job_board.remove_work": "Remove request",
   "job_board.add_work.title": "Request an item",
-  "menu.quests": "Quests"
+  "menu.quests": "Quests",
+  "menu.quests.confirm_remove_top": "Decline this batch of %d quests?",
+  "menu.quests.confirm_remove_bottom": "More will come after sleeping",
+  "menu.decline": "Decline",
+  "menu.back": "Back"
 }

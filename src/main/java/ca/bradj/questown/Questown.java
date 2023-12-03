@@ -8,7 +8,6 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -38,7 +37,6 @@ public class Questown {
             tab(ModItemGroup.QUESTOWN_GROUP);
 
     public Questown() {
-        Questown.LOGGER.info("Main load");
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the doClientStuff method for modloading
@@ -71,19 +69,16 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        Questown.LOGGER.info("Doing client stuff");
         ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
+        MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
-        Questown.LOGGER.info("Registered screens");
-        event.enqueueWork(() -> {
-            EntityRenderers.register(
-                    EntitiesInit.VISITOR.get(),
-                    VisitorMobRenderer::new
-            );
-        });
+        event.enqueueWork(() -> EntityRenderers.register(
+                EntitiesInit.VISITOR.get(),
+                VisitorMobRenderer::new
+        ));
     }
 
 }

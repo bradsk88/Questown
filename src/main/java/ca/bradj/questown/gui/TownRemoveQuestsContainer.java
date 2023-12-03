@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.OpenQuestsMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
 import ca.bradj.questown.town.quests.Quest;
@@ -17,36 +18,41 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-public class TownQuestsContainer extends AbstractContainerMenu {
+public class TownRemoveQuestsContainer extends AbstractContainerMenu {
 
     private final Collection<UIQuest> quests;
     private final BlockPos flagPos;
+    private final UUID batchUUID;
 
-    public TownQuestsContainer(
+    public TownRemoveQuestsContainer(
             int windowId,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            BlockPos flagPos,
+            UUID batchUUID
     ) {
-        super(MenuTypesInit.TOWN_QUESTS.get(), windowId);
+        super(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), windowId);
         this.quests = quests;
         this.flagPos = flagPos;
+        this.batchUUID = batchUUID;
     }
 
-    public TownQuestsContainer(
+    public static TownRemoveQuestsContainer read(
             int windowId,
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        this(windowId, readQuests(data), readFlagPos(data));
+        return new TownRemoveQuestsContainer(windowId, readQuests(data), readFlagPos(data), data.readUUID());
     }
 
     public static void write(
             FriendlyByteBuf data,
             List<UIQuest> quests,
-            BlockPos pos
+            BlockPos flagPos,
+            UUID batchUUID
     ) {
         writeQuests(data, quests);
-        writeFlagPos(data, pos);
+        writeFlagPos(data, flagPos);
+        data.writeUUID(batchUUID);
     }
 
     private static void writeQuests(
@@ -100,9 +106,15 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         return this.quests;
     }
 
-    public void sendRemoveRequest(UUID batchUUID) {
+    public void sendConfirmRemoveRequest() {
         QuestownNetwork.CHANNEL.sendToServer(
-                new RemoveQuestFromUIMessage(batchUUID, flagPos.getX(), flagPos.getY(), flagPos.getZ(), true)
+                new RemoveQuestFromUIMessage(batchUUID, flagPos.getX(), flagPos.getY(), flagPos.getZ(), false)
+        );
+    }
+
+    public void sendOpenQuestsMenuRequest() {
+        QuestownNetwork.CHANNEL.sendToServer(
+                new OpenQuestsMenuMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ())
         );
     }
 }

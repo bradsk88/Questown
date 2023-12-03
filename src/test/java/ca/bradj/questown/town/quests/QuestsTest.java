@@ -49,7 +49,7 @@ class QuestsTest {
                 } else {
                     testQuest = TestQuest.standalone(null, input.recipeId, Quest.QuestStatus.COMPLETED);
                 }
-                testQuest.uuid = input.uuid;
+                testQuest.ownerUUID = input.ownerUUID;
                 return testQuest;
             }
 
@@ -61,7 +61,7 @@ class QuestsTest {
                 } else {
                     testQuest = TestQuest.standalone(null, input.recipeId, Quest.QuestStatus.ACTIVE);
                 }
-                testQuest.uuid = input.uuid;
+                testQuest.ownerUUID = input.ownerUUID;
                 return testQuest;
             }
         }, new Reward() {
@@ -75,7 +75,7 @@ class QuestsTest {
                 return () -> {
                 };
             }
-        });
+        }, null);
     }
 
     @Test
@@ -119,7 +119,7 @@ class QuestsTest {
     @Test
     void initialize_throwsException_whenQuestsAlreadyInitialized() {
         quests.addNewQuest(null, 1);
-        assertThrows(IllegalStateException.class, () -> quests.initialize(ImmutableList.of(), null));
+        assertThrows(IllegalStateException.class, () -> quests.initialize(null, ImmutableList.of(), null));
     }
 
     @Test
@@ -194,7 +194,7 @@ class QuestsTest {
 class TestQuest extends Quest<Integer, Room> {
 
     TestQuest(UUID ownerId, Integer id, @Nullable Integer from) {
-        super(ownerId, id, from);
+        super(null, ownerId, id, from);
     }
 
     public static TestQuest standalone(UUID ownerId, Integer id, QuestStatus status) {
@@ -212,7 +212,7 @@ class TestQuest extends Quest<Integer, Room> {
     @Override
     public String toString() {
         return "TestQuest{" +
-                "uuid=" + uuid +
+                "uuid=" + ownerUUID +
                 ", recipeId=" + recipeId +
                 ", status=" + status +
                 ", completedOn=" + completedOn +

@@ -75,13 +75,15 @@ public class QuestBatch<
     }
 
     void initialize(
+            @Nullable UUID batchUUID,
             ImmutableList<QUEST> aqs,
             REWARD reward
     ) {
-        if (this.quests.size() > 0) {
+        if (!this.quests.isEmpty()) {
             throw new IllegalStateException("Quests already initialized");
         }
-        this.quests.addAll(aqs);
+        this.batchUUID = batchUUID;
+        this.quests.addAll(aqs.stream().peek(v -> v.batchUUID = batchUUID).toList());
         this.reward = reward;
     }
 
@@ -225,7 +227,7 @@ public class QuestBatch<
 
     public void assignTo(@NotNull UUID owner) {
         for (QUEST q : quests) {
-            q.uuid = owner;
+            q.ownerUUID = owner;
         }
     }
 

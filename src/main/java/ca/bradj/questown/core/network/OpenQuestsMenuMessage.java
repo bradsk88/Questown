@@ -9,30 +9,23 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Supplier;
 
-public record RemoveQuestFromUIMessage(
-        UUID questIndex,
-        int flagX, int flagY, int flagZ,
-        boolean promptForConfirmation
+public record OpenQuestsMenuMessage(
+        int flagX, int flagY, int flagZ
 ) {
 
-    public static void encode(RemoveQuestFromUIMessage msg, FriendlyByteBuf buffer) {
-        buffer.writeUUID(msg.questIndex);
+    public static void encode(OpenQuestsMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
         buffer.writeInt(msg.flagZ);
-        buffer.writeBoolean(msg.promptForConfirmation);
     }
 
-    public static RemoveQuestFromUIMessage decode(FriendlyByteBuf buffer) {
-        UUID questIndex = buffer.readUUID();
+    public static OpenQuestsMenuMessage decode(FriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
-        boolean prompt = buffer.readBoolean();
-        return new RemoveQuestFromUIMessage(questIndex, flagX, flagY, flagZ, prompt);
+        return new OpenQuestsMenuMessage(flagX, flagY, flagZ);
     }
 
 
@@ -49,7 +42,7 @@ public record RemoveQuestFromUIMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getQuestHandle().requestRemovalOfQuestAtIndex(questIndex, sender, promptForConfirmation);
+            flag.get().getQuestHandle().showQuestsUI(sender);
         });
         ctx.get().setPacketHandled(true);
 

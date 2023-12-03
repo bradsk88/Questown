@@ -2,9 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.town.quests.MCReward;
-import ca.bradj.questown.town.quests.MCRewardContainer;
-import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.ChangeJobReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
@@ -16,6 +14,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
@@ -56,8 +56,17 @@ public class UIQuest implements Comparable<UIQuest> {
     }
 
     public static List<UIQuest> fromLevel(
+            ServerLevel level,
+            QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> batch
+    ) {
+        ImmutableMap.Builder<Quest<ResourceLocation, MCRoom>, MCReward> b = ImmutableMap.builder();
+        batch.getAll().forEach(v -> b.put(v, batch.getReward()));
+        return fromLevel(level, b.build().entrySet());
+    }
+
+    public static List<UIQuest> fromLevel(
             Level level,
-            List<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -209,7 +218,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 jobName = p_44102_.jobName.toString();
             }
             buf.writeUtf(jobName);
-            buf.writeUUID(p_44102_.batchUUID);
+            buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
         }
 
         @Nullable
@@ -226,7 +235,11 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             String villagerUUID = buf.readUtf();
             String jobName = buf.readUtf();
-            UUID batchUUID = buf.readUUID();
+            String maybeBatchUUID = buf.readUtf();
+            UUID batchUUID = null;
+            if (!toString().isEmpty()) {
+                batchUUID = UUID.fromString(maybeBatchUUID);
+            }
             return new UIQuest(batchUUID, rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
         }
     }

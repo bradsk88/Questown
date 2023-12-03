@@ -1,7 +1,8 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
@@ -22,21 +23,35 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         this(null, null, null);
     }
 
-    public MCQuestBatch(UUID batchUUID, @Nullable UUID owner, @NotNull MCReward reward) {
+    public MCQuestBatch(
+            UUID batchUUID,
+            @Nullable UUID owner,
+            @NotNull MCReward reward
+    ) {
         super(new Quest.QuestFactory<ResourceLocation, MCRoom, MCQuest>() {
 
             @Override
-            public MCQuest newQuest(@Nullable UUID ownerID, ResourceLocation recipeId) {
+            public MCQuest newQuest(
+                    @Nullable UUID ownerID,
+                    ResourceLocation recipeId
+            ) {
                 return MCQuest.standalone(batchUUID, ownerID, recipeId);
             }
 
             @Override
-            public MCQuest newUpgradeQuest(@Nullable UUID ownerID, ResourceLocation oldRecipeId, ResourceLocation newRecipeId) {
+            public MCQuest newUpgradeQuest(
+                    @Nullable UUID ownerID,
+                    ResourceLocation oldRecipeId,
+                    ResourceLocation newRecipeId
+            ) {
                 return MCQuest.upgrade(batchUUID, ownerID, oldRecipeId, newRecipeId);
             }
 
             @Override
-            public MCQuest completed(MCRoom room, MCQuest input) {
+            public MCQuest completed(
+                    MCRoom room,
+                    MCQuest input
+            ) {
                 return input.completed(room);
             }
 
@@ -63,6 +78,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         private static final String NBT_QUESTS = "quests";
         private static final String NBT_REWARD = "reward";
         private static final String NBT_OWNER_UUID = "owner_uuid";
+        private static final String NBT_BATCH_UUID = "batch_uuid";
 
         public CompoundTag serializeNBT(
                 MCQuestBatch quests
@@ -79,10 +95,16 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
             ct.put(NBT_QUESTS, aq);
             ct.put(NBT_REWARD, MCReward.SERIALIZER.serializeNBT(quests.reward));
+            if (quests.getBatchUUID() != null) {
+                ct.putUUID(NBT_BATCH_UUID, quests.getBatchUUID());
+            }
             return ct;
         }
 
-        public MCQuestBatch deserializeNBT(TownInterface entity, CompoundTag nbt) {
+        public MCQuestBatch deserializeNBT(
+                TownInterface entity,
+                CompoundTag nbt
+        ) {
             MCQuestBatch quests = new MCQuestBatch();
             if (nbt.contains(NBT_OWNER_UUID)) {
                 quests.owner = nbt.getUUID(NBT_OWNER_UUID);
@@ -95,9 +117,30 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                 MCQuest q = MCQuest.SERIALIZER.deserializeNBT(tag);
                 aqs.add(q);
             }
+            ImmutableList<MCQuest> allQuests = aqs.build();
+            UUID batchUUID = backwardsCompatibleBatchUUIDLoader(nbt, allQuests);
             MCReward reward = MCReward.SERIALIZER.deserializeNBT(entity, nbt.getCompound(NBT_REWARD));
-            quests.initialize(aqs.build(), reward);
+            quests.initialize(batchUUID, allQuests, reward);
             return quests;
+        }
+
+        @Nullable
+        private static UUID backwardsCompatibleBatchUUIDLoader(
+                CompoundTag nbt,
+                ImmutableList<MCQuest> allQuests
+        ) {
+            UUID batchUUID = null;
+            if (nbt.contains(NBT_BATCH_UUID)) {
+                batchUUID = nbt.getUUID(NBT_BATCH_UUID);
+            }
+            if (batchUUID == null) {
+                if (allQuests.size() == 1 && SpecialQuests.isSpecialQuest(allQuests.get(0).getWantedId())) {
+                    return null;
+                }
+                batchUUID = UUID.randomUUID();
+                QT.QUESTS_LOGGER.warn("[Backwards Compatibility] Generating UUID for quest batch with missing UUID: {}", batchUUID);
+            }
+            return batchUUID;
         }
     }
 }

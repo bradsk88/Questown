@@ -11,8 +11,11 @@ import java.util.UUID;
 public interface QuestsHolder {
     void requestRemovalOfQuestAtIndex(
             UUID batchUUID,
-            ServerPlayer sender
+            ServerPlayer sender,
+            boolean promptUser
     );
 
     ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards();
+
+    void showQuestsUI(ServerPlayer player);
 }

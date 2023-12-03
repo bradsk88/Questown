@@ -10,7 +10,8 @@ import java.util.UUID;
 
 public class Quest<KEY, ROOM extends Room> {
 
-    @Nullable protected UUID uuid;
+    private final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
+    @Nullable protected UUID ownerUUID;
     protected UUID batchUUID;
     protected KEY recipeId;
     protected QuestStatus status;
@@ -24,7 +25,8 @@ public class Quest<KEY, ROOM extends Room> {
     @Override
     public String toString() {
         return "Quest{" +
-                "uuid=" + uuid +
+                "selfUUID=" + selfUUID +
+                "ownerUUID=" + ownerUUID +
                 ", recipeId=" + recipeId +
                 ", status=" + status +
                 ", completedOn=" + completedOn +
@@ -37,12 +39,12 @@ public class Quest<KEY, ROOM extends Room> {
         if (completedOn != null) {
             doorPos = completedOn.doorPos;
         }
-        return String.format("Quest{id=%s, owner=%s, on=%s, from=%s", recipeId, uuid, doorPos, fromRecipeID);
+        return String.format("Quest{id=%s, owner=%s, on=%s, from=%s", recipeId, ownerUUID, doorPos, fromRecipeID);
     }
 
     protected Quest(UUID batchUUID, @Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {
         this.batchUUID = batchUUID;
-        this.uuid = ownerId;
+        this.ownerUUID = ownerId;
         this.recipeId = recipe;
         this.status = QuestStatus.ACTIVE;
         this.fromRecipeID = oldRecipe;
@@ -61,19 +63,18 @@ public class Quest<KEY, ROOM extends Room> {
     }
 
     public UUID getUUID() {
-        return this.uuid;
+        return this.ownerUUID;
     }
 
     public void initialize(
-            UUID batchUUID,
             UUID uuid,
             KEY recipeId,
             QuestStatus status,
             @Nullable ROOM completedOn,
             @Nullable KEY fromRecipeID
     ) {
-        this.batchUUID = batchUUID;
-        this.uuid = uuid;
+        // Batch ID on this quest is initialized by the batch itself.
+        this.ownerUUID = uuid;
         this.recipeId = recipeId;
         this.status = status;
         this.completedOn = completedOn;
@@ -135,7 +136,10 @@ public class Quest<KEY, ROOM extends Room> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Quest<?, ?> quest = (Quest<?, ?>) o;
-        return Objects.equals(uuid, quest.uuid) && Objects.equals(
+        return Objects.equals(selfUUID, quest.selfUUID) && Objects.equals(
+                ownerUUID,
+                quest.ownerUUID
+        ) && Objects.equals(batchUUID, quest.batchUUID) && Objects.equals(
                 recipeId,
                 quest.recipeId
         ) && status == quest.status && Objects.equals(completedOn, quest.completedOn) && Objects.equals(
@@ -146,6 +150,6 @@ public class Quest<KEY, ROOM extends Room> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(uuid, recipeId, status, completedOn, fromRecipeID);
+        return Objects.hash(selfUUID, ownerUUID, batchUUID, recipeId, status, completedOn, fromRecipeID);
     }
 }

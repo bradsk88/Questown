@@ -34,9 +34,9 @@ class QuestBatchesTest {
         public TestQuest completed(Room room, TestQuest input) {
             TestQuest testQuest;
             if (input.fromRecipeID().isPresent()) {
-                testQuest = TestQuest.upgrade(input.uuid, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.COMPLETED);
+                testQuest = TestQuest.upgrade(input.ownerUUID, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.COMPLETED);
             } else {
-                testQuest = TestQuest.standalone(input.uuid, input.recipeId, Quest.QuestStatus.COMPLETED);
+                testQuest = TestQuest.standalone(input.ownerUUID, input.recipeId, Quest.QuestStatus.COMPLETED);
             }
             testQuest.completedOn = room;
             return testQuest;
@@ -47,9 +47,9 @@ class QuestBatchesTest {
 
             TestQuest testQuest;
             if (input.fromRecipeID().isPresent()) {
-                testQuest = TestQuest.upgrade(input.uuid, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
+                testQuest = TestQuest.upgrade(input.ownerUUID, input.recipeId, input.fromRecipeID().get(), Quest.QuestStatus.ACTIVE);
             } else {
-                testQuest = TestQuest.standalone(input.uuid, input.recipeId, Quest.QuestStatus.ACTIVE);
+                testQuest = TestQuest.standalone(input.ownerUUID, input.recipeId, Quest.QuestStatus.ACTIVE);
             }
             testQuest.completedOn = null;
             return testQuest;

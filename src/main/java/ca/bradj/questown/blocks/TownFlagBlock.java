@@ -6,34 +6,22 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
-import ca.bradj.questown.gui.TownQuestsContainer;
-import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.core.network.OpenQuestsMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.interfaces.QuestsHolder;
-import ca.bradj.questown.town.quests.MCQuest;
-import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
-import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -50,9 +38,7 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
-import net.minecraftforge.network.NetworkHooks;
 import org.apache.logging.log4j.util.Strings;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -310,37 +296,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        openQuestsUI(level, pos, (ServerPlayer) player, entity.getQuestHandle());
+        QuestownNetwork.CHANNEL.sendToServer(
+                new OpenQuestsMenuMessage(pos.getX(), pos.getY(), pos.getZ())
+        );
         return InteractionResult.sidedSuccess(false);
     }
-
-    public static void openQuestsUI(
-            Level level,
-            BlockPos pos,
-            ServerPlayer player,
-            QuestsHolder entity
-    ) {
-        ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = entity.getAllQuestsWithRewards();
-        List<UIQuest> quests = UIQuest.fromLevel(level, aQ);
-
-        NetworkHooks.openGui(player, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
-
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new TownQuestsContainer(windowId, quests, pos);
-            }
-        }, data -> {
-            TownQuestsContainer.write(data, quests, pos);
-        });
-    }
-
 
 }

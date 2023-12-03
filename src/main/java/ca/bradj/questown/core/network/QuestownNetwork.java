@@ -30,6 +30,11 @@ public class QuestownNetwork {
                 decoder(RemoveWorkFromUIMessage::decode).
                 consumer(RemoveWorkFromUIMessage::handle).
                 add();
+        registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(OpenQuestsMenuMessage::encode).
+                decoder(OpenQuestsMenuMessage::decode).
+                consumer(OpenQuestsMenuMessage::handle).
+                add();
         registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveQuestFromUIMessage::encode).
                 decoder(RemoveQuestFromUIMessage::decode).
