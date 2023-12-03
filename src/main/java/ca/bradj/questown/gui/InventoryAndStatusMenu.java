@@ -43,8 +43,8 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     ) {
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
-        TownQuestsContainer qMenu = new TownQuestsContainer(windowId, TownQuestsContainer.readQuests(buf), TownQuestsContainer.readFlagPos(buf));
         JobID id = new JobID(buf.readUtf(), buf.readUtf());
+        TownQuestsContainer qMenu = new TownQuestsContainer(windowId, TownQuestsContainer.readQuests(buf), TownQuestsContainer.readFlagPos(buf));
         return new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(size) {

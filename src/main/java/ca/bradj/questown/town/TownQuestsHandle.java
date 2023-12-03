@@ -6,7 +6,9 @@ import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,8 +33,10 @@ public class TownQuestsHandle implements QuestsHolder {
                     // TODO[ASAP]: Prompt the user to confirm
                     if (town.quests.questBatches.decline(b)) {
                         QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
+                        town.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(town, b.getOwner()));
                         town.setChanged();
                         TownFlagBlock.openQuestsUI(town.getServerLevel(), town.getBlockPos(), sender, town.getQuestHandle());
+                        town.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed"));
                     }
                     return;
                 }

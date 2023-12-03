@@ -158,27 +158,9 @@ public class Jobs {
         }, data -> {
             data.writeInt(capacity);
             data.writeInt(e.getId());
-            UIQuest.Serializer ser = new UIQuest.Serializer();
-            data.writeInt(quests.size());
-            data.writeCollection(quests, (buf, recipe) -> {
-                ResourceLocation id;
-                if (recipe == null) {
-                    id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(
-                            SpecialQuests.SPECIAL_QUESTS.get(id),
-                            Quest.QuestStatus.ACTIVE,
-                            null,
-                            null,
-                            null
-                    );
-                } else {
-                    id = recipe.getRecipeId();
-                }
-                buf.writeResourceLocation(id);
-                ser.toNetwork(buf, recipe);
-            });
             data.writeUtf(jobId.rootId());
             data.writeUtf(jobId.jobId());
+            TownQuestsContainer.write(data, quests, e.getFlagPos());
         });
         return true; // Different jobs might have screens or not
     }
