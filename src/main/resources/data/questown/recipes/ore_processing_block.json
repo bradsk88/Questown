@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SS",
+    "CJ"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:oak_planks"
+    },
+    "C": {
+      "item": "minecraft:crafting_table"
+    },
+    "J": {
+      "item": "minecraft:stone_pickaxe"
+    }
+  },
+  "result": {
+    "item": "questown:ore_processing_block"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "II",
+    "CJ"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
+      "item": "minecraft:crafting_table"
+    },
+    "J": {
+      "item": "minecraft:crafting_table"
+    }
+  },
+  "result": {
+    "item": "questown:blacksmiths_table"
+  }
+}

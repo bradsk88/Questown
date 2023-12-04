@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SS",
+    "CJ"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:cobblestone"
+    },
+    "C": {
+      "item": "minecraft:crafting_table"
+    },
+    "J": {
+      "item": "minecraft:furnace"
+    }
+  },
+  "result": {
+    "item": "questown:bread_oven_block"
+  }
+}
