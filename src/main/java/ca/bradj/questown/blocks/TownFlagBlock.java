@@ -6,8 +6,6 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
-import ca.bradj.questown.core.network.OpenQuestsMenuMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
@@ -17,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -296,9 +295,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        QuestownNetwork.CHANNEL.sendToServer(
-                new OpenQuestsMenuMessage(pos.getX(), pos.getY(), pos.getZ())
-        );
+        oEntity.get().getQuestHandle().showQuestsUI((ServerPlayer) player);
         return InteractionResult.sidedSuccess(false);
     }
 

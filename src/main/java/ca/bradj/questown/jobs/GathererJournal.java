@@ -3,16 +3,11 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
-
-import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
-import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL;
 
 public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<H>> implements LockSlotHaver {
     private final SignalSource sigs;
@@ -80,11 +75,6 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         this.inventory = new JournalItemList<>(inventoryCapacity, ef);
         this.tools = tools;
         updateItemListeners();
-    }
-
-    public static boolean debuggerReleaseControl() {
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        return true;
     }
 
     @Override

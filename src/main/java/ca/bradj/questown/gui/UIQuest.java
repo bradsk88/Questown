@@ -237,7 +237,7 @@ public class UIQuest implements Comparable<UIQuest> {
             String jobName = buf.readUtf();
             String maybeBatchUUID = buf.readUtf();
             UUID batchUUID = null;
-            if (!toString().isEmpty()) {
+            if (!maybeBatchUUID.isEmpty()) {
                 batchUUID = UUID.fromString(maybeBatchUUID);
             }
             return new UIQuest(batchUUID, rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
