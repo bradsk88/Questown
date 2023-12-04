@@ -17,6 +17,7 @@
   "message.baker.villagers_will_add_wheat": "Baker villagers can add wheat and coal to bake bread",
   "message.baker.villagers_will_add_coal": "Baker villagers can add coal to bake bread",
   "tooltips.villagers.job.inventory.locked": "This item was given by a player. Gatherer will not drop it.",
+  "tooltips.villagers.job.needs": "%s needs %s to do their job",
   "tooltips.villagers.job.gatherer.status_1.IDLE": "%s is deciding what to do.",
   "tooltips.villagers.job.gatherer.status_2.IDLE": "",
   "tooltips.villagers.job.gatherer.status_1.LEAVING": "%s is leaving",

@@ -17,7 +17,7 @@ public class DSmelterJob extends DeclarativeJob {
     public static final JobID ID = new JobID("smelter", "process_ore");
     public static final ItemStack RESULT = new ItemStack(Items.RAW_IRON, 2);
     private static final int MAX_STATE = 2;
-    private static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of(
             0, Ingredient.of(Items.IRON_ORE)
             // 1
             // 2

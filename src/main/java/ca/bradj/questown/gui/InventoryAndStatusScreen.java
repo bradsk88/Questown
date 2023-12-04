@@ -16,6 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -93,16 +94,21 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
         renderStatus(stack);
+        int yCoord = 0;
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
-            int yCoord = y - 1 + s.y;
+            yCoord = y - 1 + s.y;
             this.slot.draw(stack, xCoord, yCoord);
             if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
                 // TODO: Compute or provide this value (6)
                 int statusI = i - TE_INVENTORY_FIRST_SLOT_INDEX;
                 renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
             }
+        }
+        int iconX = x;
+        for (ItemStack i : menu.getWantedResources()) {
+            this.itemRenderer.renderAndDecorateItem(i, iconX += 16 + 4, yCoord + 32);
         }
     }
 
@@ -157,11 +163,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int topY = y + 16;
         int rightX = leftX + 32;
         int botY = topY + 32;
+
+        String jobId = menu.getRootJobId();
+        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
+
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 // TODO[ASAP]: Render root AND current job
-                String jobId = menu.getRootJobId();
-                TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
                 IStatus<?> status = menu.getStatus();
                 @Nullable String cat = status.getCategoryId();
                 if (cat == null) {
@@ -180,14 +188,22 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             }
         }
 
+        int yCoord = y - 1;
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
-            int yCoord = y - 1 + s.y;
+            yCoord = y - 1 + s.y;
             if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
                 if (renderLocksTooltip(stack, xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
                     return;
                 }
+            }
+        }
+
+        int iconX = x;
+        for (ItemStack i : menu.getWantedResources()) {
+            if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
+                return;
             }
         }
 
@@ -207,6 +223,28 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             if (mouseY > topY && mouseY < botY) {
                 TranslatableComponent component = new TranslatableComponent(
                         "tooltips.villagers.job.inventory.locked"
+                );
+                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean renderNeedsTooltip(
+            @NotNull PoseStack stack,
+            int leftX,
+            int topY,
+            int mouseX,
+            int mouseY,
+            ItemStack item
+    ) {
+        int rightX = leftX + 16;
+        int botY = topY + 16;
+        if (mouseX > leftX && mouseX < rightX) {
+            if (mouseY > topY && mouseY < botY) {
+                TranslatableComponent component = new TranslatableComponent(
+                        "tooltips.villagers.job.needs", menu.getRootJobId(), item.getItem().getName(item)
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
                 return true;

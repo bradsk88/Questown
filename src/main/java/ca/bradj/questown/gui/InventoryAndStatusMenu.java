@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.network.FriendlyByteBuf;
@@ -268,5 +269,9 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
 
     public String getRootJobId() {
         return this.jobId.rootId();
+    }
+
+    public Collection<ItemStack> getWantedResources() {
+        return JobsRegistry.getWantedResourcesProvider(this.jobId).apply(getStatus());
     }
 }

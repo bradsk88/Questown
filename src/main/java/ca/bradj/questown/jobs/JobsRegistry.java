@@ -126,6 +126,17 @@ public class JobsRegistry {
         return false;
     }
 
+    public static Function<IStatus<?>, Collection<ItemStack>> getWantedResourcesProvider(
+            JobID p
+    ) {
+        Work w = works.get(p);
+        if (w == null) {
+            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
+            return (s) -> ImmutableList.of();
+        }
+        return w.needs;
+    }
+
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
         Work w = works.get(v);
         if (w == null) {
@@ -171,7 +182,8 @@ public class JobsRegistry {
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<TownData, ImmutableSet<ItemStack>> results,
-            ItemStack initialRequest
+            ItemStack initialRequest,
+            Function<IStatus<?>, Collection<ItemStack>> needs
     ) {
     }
 
@@ -231,9 +243,10 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
                 GathererJournal.Status.IDLE,
-                // TODO: Load all possible results via loot tables and nearby biomes
                 t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
-                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
+                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST,
+                // TODO: Review this - probably should be different by status
+                (s) -> Arrays.asList(Ingredient.of(TagsInit.Items.VILLAGER_FOOD).getItems())
         ));
         // TODO[ASAP]: Bring back for the "outside" update
 //        b.put(ExplorerJob.ID, new Work(
@@ -252,7 +265,9 @@ public class JobsRegistry {
                 SpecialQuests.FARM,
                 GathererJournal.Status.IDLE,
                 t -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
-                Items.WHEAT.getDefaultInstance()
+                Items.WHEAT.getDefaultInstance(),
+                // TODO: Review this - probably should be different by status
+                (s) -> ImmutableList.of(Items.WHEAT_SEEDS.getDefaultInstance())
         ));
         b.put(BakerJob.ID, new Work(
                 (town, uuid) -> new BakerJob(uuid, 6),
@@ -261,7 +276,9 @@ public class JobsRegistry {
                 Questown.ResourceLocation("bakery"),
                 GathererJournal.Status.IDLE,
                 t -> ImmutableSet.of(Items.BREAD.getDefaultInstance()),
-                Items.BREAD.getDefaultInstance()
+                Items.BREAD.getDefaultInstance(),
+                // TODO: Review this - probably should be different by status
+                (s) -> ImmutableList.of(Items.COAL.getDefaultInstance(), Items.WHEAT.getDefaultInstance())
         ));
         b.put(DSmelterJob.ID, new Work(
                 (town, uuid) -> new DSmelterJob(uuid, 6),
@@ -270,7 +287,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("smeltery"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(DSmelterJob.RESULT),
-                DSmelterJob.RESULT
+                DSmelterJob.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, DSmelterJob.INGREDIENTS)
         ));
         b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
                 (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
@@ -280,7 +298,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("smithy"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
-                BlacksmithWoodenPickaxeJob.RESULT
+                BlacksmithWoodenPickaxeJob.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         b.put(CrafterBowlWork.ID, new Work(
                 (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -289,7 +308,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterBowlWork.RESULT),
-                CrafterBowlWork.RESULT
+                CrafterBowlWork.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         b.put(CrafterStickWork.ID, new Work(
                 (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -298,7 +318,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterStickWork.RESULT),
-                CrafterStickWork.RESULT
+                CrafterStickWork.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         b.put(CrafterPaperWork.ID, new Work(
                 (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -307,7 +328,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterPaperWork.RESULT),
-                CrafterPaperWork.RESULT
+                CrafterPaperWork.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         b.put(CrafterPlanksWork.ID, new Work(
                 (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -316,7 +338,8 @@ public class JobsRegistry {
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
-                CrafterPlanksWork.RESULT
+                CrafterPlanksWork.RESULT,
+                s -> getProductionNeeds((ProductionStatus) s, CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         // TODO[ASAP]: Bring back
 //        b.put(GathererMappedAxeWork.ID, new Work(
@@ -329,6 +352,18 @@ public class JobsRegistry {
 //                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
 //        ));
         works = b.build();
+    }
+
+    @NotNull
+    private static List<ItemStack> getProductionNeeds(
+            ProductionStatus s,
+            ImmutableMap<Integer, Ingredient> ing
+    ) {
+        ProductionStatus status = s;
+        if (!ing.containsKey(status) || ing.get(status) == null || ing.get(status).isEmpty()) {
+            return ImmutableList.of();
+        }
+        return Arrays.asList(ing.get(status.getProductionState()).getItems());
     }
 
     @NotNull
