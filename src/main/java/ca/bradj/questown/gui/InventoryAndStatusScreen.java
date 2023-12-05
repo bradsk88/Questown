@@ -17,6 +17,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -106,9 +107,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
             }
         }
-        int iconX = x;
-        for (ItemStack i : menu.getWantedResources()) {
-            this.itemRenderer.renderAndDecorateItem(i, iconX += 16 + 4, yCoord + 32);
+        int iconX = x - 12;
+        for (Ingredient i : menu.getWantedResources()) {
+            int curSeconds = (int) (System.currentTimeMillis() / 1000);
+            ItemStack[] matchingStacks = i.getItems();
+            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
+            this.itemRenderer.renderAndDecorateItem(itemStack, iconX += 16 + 4, yCoord + 32);
         }
     }
 
@@ -200,8 +204,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             }
         }
 
-        int iconX = x;
-        for (ItemStack i : menu.getWantedResources()) {
+        int iconX = x - 12;
+        for (Ingredient i : menu.getWantedResources()) {
             if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
                 return;
             }
@@ -237,14 +241,15 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int topY,
             int mouseX,
             int mouseY,
-            ItemStack item
+            Ingredient item
     ) {
         int rightX = leftX + 16;
         int botY = topY + 16;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
+                TranslatableComponent jPart = new TranslatableComponent(String.format("jobs.%s", menu.getRootJobId()));
                 TranslatableComponent component = new TranslatableComponent(
-                        "tooltips.villagers.job.needs", menu.getRootJobId(), item.getItem().getName(item)
+                        "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
                 return true;

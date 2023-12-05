@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
+import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -95,7 +96,7 @@ public class JobsRegistry {
         if (parts.length == 1) {
             return switch (parts[0]) {
                 case "gatherer" -> GathererJob.ID;
-                case "baker" -> BakerJob.ID;
+                case "baker" -> BakerBreadWork.ID;
                 case "smelter" -> DSmelterJob.ID;
                 default -> throw new IllegalArgumentException("Unknown single-part job ID: " + parts[0]);
             };
@@ -126,7 +127,7 @@ public class JobsRegistry {
         return false;
     }
 
-    public static Function<IStatus<?>, Collection<ItemStack>> getWantedResourcesProvider(
+    public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
         Work w = works.get(p);
@@ -183,7 +184,7 @@ public class JobsRegistry {
             IStatus<?> initialStatus,
             Function<TownData, ImmutableSet<ItemStack>> results,
             ItemStack initialRequest,
-            Function<IStatus<?>, Collection<ItemStack>> needs
+            Function<IStatus<?>, Collection<Ingredient>> needs
     ) {
     }
 
@@ -207,9 +208,9 @@ public class JobsRegistry {
                     ImmutableList.of(FarmerJob.ID),
                     ImmutableList.of(FarmerJob.ID)
             ),
-            BakerJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(BakerJob.ID),
-                    ImmutableList.of(BakerJob.ID)
+            BakerBreadWork.ID.rootId(), new Jerb(
+                    ImmutableList.of(BakerBreadWork.ID),
+                    ImmutableList.of(BakerBreadWork.ID)
             ),
             DSmelterJob.ID.rootId(), new Jerb(
                     ImmutableList.of(DSmelterJob.ID),
@@ -246,7 +247,7 @@ public class JobsRegistry {
                 t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST,
                 // TODO: Review this - probably should be different by status
-                (s) -> Arrays.asList(Ingredient.of(TagsInit.Items.VILLAGER_FOOD).getItems())
+                (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
         ));
         // TODO[ASAP]: Bring back for the "outside" update
 //        b.put(ExplorerJob.ID, new Work(
@@ -267,18 +268,17 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
                 Items.WHEAT.getDefaultInstance(),
                 // TODO: Review this - probably should be different by status
-                (s) -> ImmutableList.of(Items.WHEAT_SEEDS.getDefaultInstance())
+                (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
         ));
-        b.put(BakerJob.ID, new Work(
-                (town, uuid) -> new BakerJob(uuid, 6),
-                (jobId, status, items) -> new BakerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+        b.put(BakerBreadWork.ID, new Work(
+                (town, uuid) -> new BakerBreadWork(uuid, 6),
+                productionJobSnapshot(BakerBreadWork.ID),
+                (block) -> block instanceof BreadOvenBlock,
                 Questown.ResourceLocation("bakery"),
-                GathererJournal.Status.IDLE,
-                t -> ImmutableSet.of(Items.BREAD.getDefaultInstance()),
-                Items.BREAD.getDefaultInstance(),
-                // TODO: Review this - probably should be different by status
-                (s) -> ImmutableList.of(Items.COAL.getDefaultInstance(), Items.WHEAT.getDefaultInstance())
+                ProductionStatus.FACTORY.idle(),
+                t -> ImmutableSet.of(BakerBreadWork.RESULT),
+                BakerBreadWork.RESULT,
+                (s) -> getProductionNeeds((ProductionStatus) s, BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         b.put(DSmelterJob.ID, new Work(
                 (town, uuid) -> new DSmelterJob(uuid, 6),
@@ -355,7 +355,7 @@ public class JobsRegistry {
     }
 
     @NotNull
-    private static List<ItemStack> getProductionNeeds(
+    private static List<Ingredient> getProductionNeeds(
             ProductionStatus s,
             ImmutableMap<Integer, Ingredient> ing
     ) {
@@ -363,7 +363,7 @@ public class JobsRegistry {
         if (!ing.containsKey(status) || ing.get(status) == null || ing.get(status).isEmpty()) {
             return ImmutableList.of();
         }
-        return Arrays.asList(ing.get(status.getProductionState()).getItems());
+        return ImmutableList.of(ing.get(status.getProductionState()));
     }
 
     @NotNull

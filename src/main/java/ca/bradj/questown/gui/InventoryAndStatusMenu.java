@@ -15,6 +15,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
@@ -271,7 +272,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         return this.jobId.rootId();
     }
 
-    public Collection<ItemStack> getWantedResources() {
+    public Collection<Ingredient> getWantedResources() {
         return JobsRegistry.getWantedResourcesProvider(this.jobId).apply(getStatus());
     }
 }

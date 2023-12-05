@@ -76,6 +76,14 @@
   "tooltips.villagers.job.crafter.status_2.2": "",
   "tooltips.villagers.job.crafter.status_1.16": "%s is taking their finished products.",
   "tooltips.villagers.job.crafter.status_2.16": "They will deposit them in storage.",
+  "tooltips.villagers.job.baker.status_1.0": "%s is putting wheat in oven",
+  "tooltips.villagers.job.baker.status_2.0": "",
+  "tooltips.villagers.job.baker.status_1.1": "%s is putting fuel in oven",
+  "tooltips.villagers.job.baker.status_2.1": "",
+  "tooltips.villagers.job.baker.status_1.2": "%s is taking bread from oven",
+  "tooltips.villagers.job.baker.status_2.2": "",
+  "tooltips.villagers.job.baker.status_1.16": "%s is taking their finished products.",
+  "tooltips.villagers.job.baker.status_2.16": "They will deposit them in storage.",
   "quests.build_a": "Build a %s",
   "quests.upgrade": "%s -> %s",
   "quests.completed_suffix": "%s ✓",
@@ -197,5 +205,7 @@
   "menu.quests.confirm_remove_top": "Decline this batch of %d quests?",
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
   "menu.decline": "Decline",
-  "menu.back": "Back"
+  "menu.back": "Back",
+  "#questown:villager_food": "Food",
+  "#minecraft:coals": "Coal"
 }

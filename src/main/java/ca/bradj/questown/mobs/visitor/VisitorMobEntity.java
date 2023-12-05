@@ -925,7 +925,7 @@ public class VisitorMobEntity extends PathfinderMob {
                 town.changeJobForVisitor(uuid, FarmerJob.ID);
             }
             if (itemInHand.is(Items.BREAD)) {
-                town.changeJobForVisitor(uuid, BakerJob.ID);
+                town.changeJobForVisitor(uuid, BakerBreadWork.ID);
             }
             if (itemInHand.is(Items.IRON_INGOT)) {
                 town.changeJobForVisitor(uuid, DSmelterJob.ID);
