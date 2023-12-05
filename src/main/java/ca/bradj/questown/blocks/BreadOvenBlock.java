@@ -1,9 +1,9 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.jobs.BakerBreadWork;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.town.TownWorkStatusStore;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Random;
 
-public class BreadOvenBlock extends HorizontalDirectionalBlock implements ScheduledBlock {
+public class BreadOvenBlock extends HorizontalDirectionalBlock implements StatefulJobBlock {
     public static final String ITEM_ID = "bread_oven_block";
 
     public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
@@ -46,10 +46,6 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
     private static final int BAKE_STATE_BAKING = 3;
     private static final int BAKE_STATE_BAKED = 4;
 
-    public static final IntegerProperty STARTED_BAKING_AT = IntegerProperty.create(
-            "stared_baking_at", 0, 24
-    );
-
     public BreadOvenBlock(
     ) {
         super(
@@ -61,7 +57,6 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(BAKE_STATE, 0)
                 .setValue(FACING, Direction.NORTH)
-                .setValue(STARTED_BAKING_AT, 0)
         );
     }
 
@@ -83,10 +78,6 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             item.shrink(1);
             int val = curValue + 1;
             BlockState blockState = oldState.setValue(BAKE_STATE, val);
-            if (val == BAKE_STATE_BAKING) {
-                int dayHour = (int) (level.getDayTime() % 24000) / 1000;
-                blockState = setBakingHour(blockState, dayHour);
-            }
             return blockState;
         }
         return oldState;
@@ -157,12 +148,11 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             return blockState;
         }
         return blockState
-                .setValue(FACING, ctx.getHorizontalDirection().getOpposite())
-                .setValue(STARTED_BAKING_AT, 0);
+                .setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(BAKE_STATE, FACING, STARTED_BAKING_AT);
+        p_51385_.add(BAKE_STATE, FACING);
     }
 
 
@@ -235,61 +225,29 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Schedu
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
-        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
-            if (isBaking(blockState)) {
-                blockState = setBakingHour(blockState, calculateCurrentHour(sl));
-                level.setBlock(pos, blockState, 11);
-            } else {
-                return InteractionResult.sidedSuccess(level.isClientSide);
-            }
-        }
-
-        int startTick = blockState.getValue(STARTED_BAKING_AT) * 1000;
-        int endTick = startTick + Config.BAKING_TIME.get();
-        long ticksLeft = endTick - (level.getDayTime() % 24000);
-
-        player.sendMessage(
-                new TranslatableComponent("message.baker.bread_still_baking", ticksLeft),
-                player.getUUID()
-        );
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
-    public @Nullable BlockState tryAdvance(
-            ServerLevel level,
-            BlockState blockState
+    public void setProcessingState(
+            ServerLevel sl,
+            BlockPos pp,
+            TownWorkStatusStore.State bs
     ) {
-        int hour = calculateCurrentHour(level);
-        if (!blockState.hasProperty(STARTED_BAKING_AT)) {
-            if (isBaking(blockState)) {
-                return setBakingHour(blockState, hour);
+        BlockState state = sl.getBlockState(pp);
+        switch (bs.processingState()) {
+            case (BakerBreadWork.BLOCK_STATE_NEED_WHEAT) -> {
+                if (bs.ingredientCount() <= 0) {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
+                } else if (bs.ingredientCount() < 2) {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_HALF_FILLED);
+                } else {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
+                }
             }
+            case (BakerBreadWork.BLOCK_STATE_NEED_WORK) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+            case (BakerBreadWork.BLOCK_STATE_DONE) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKED);
         }
-
-        Integer started = blockState.getValue(STARTED_BAKING_AT);
-
-        if (isBaking(blockState)) {
-            if (started == 0) {
-                return setBakingHour(blockState, hour);
-            }
-
-            int plus = Config.BAKING_TIME.get() / 1000;
-            int doneHour = started + plus;
-            if (hour >= doneHour) {
-                return blockState.setValue(BAKE_STATE, BAKE_STATE_BAKED);
-            }
-        }
-
-        return null;
-    }
-
-    private static BlockState setBakingHour(BlockState bs, int hour) {
-        QT.BLOCK_LOGGER.debug("Set baking hour to {}", hour);
-        return bs.setValue(STARTED_BAKING_AT, hour);
-    }
-
-    private static int calculateCurrentHour(ServerLevel level) {
-        return (int) (level.getDayTime() % 24000) / 1000;
+        sl.setBlockAndUpdate(pp, state);
     }
 }

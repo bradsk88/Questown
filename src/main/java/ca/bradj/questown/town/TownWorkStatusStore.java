@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -174,10 +175,15 @@ public class TownWorkStatusStore implements WorkStatusHandle {
         for (InclusiveSpace s : o.getSpaces()) {
             for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
                 BlockPos pp = Positions.ToBlock(p, o.yCoord);
+                BlockState mbs = sl.getBlockState(pp);
                 if (jobStatuses.containsKey(pp)) {
+                    if (mbs.isAir()) {
+                        QT.BLOCK_LOGGER.debug("Block is gone from {}. Clearing status.", pp);
+                        jobStatuses.remove(pp);
+                    }
                     continue;
                 }
-                Block b = sl.getBlockState(pp).getBlock();
+                Block b = mbs.getBlock();
                 if (JobsRegistry.isJobBlock(b)) {
                     State bs = new State(0, 0, 0);
                     jobStatuses.put(pp, bs);

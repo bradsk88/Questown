@@ -6,6 +6,7 @@ import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
@@ -114,6 +115,10 @@ public class JobsRegistry {
             JobID p,
             Ingredient requestedResult
     ) {
+        if (WorkSeekerJob.isSeekingWork(p)) {
+            return false;
+        }
+
         Work w = works.get(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
@@ -130,6 +135,10 @@ public class JobsRegistry {
     public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
+        if (WorkSeekerJob.isSeekingWork(p)) {
+            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get().asItem()));
+        }
+
         Work w = works.get(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
@@ -139,6 +148,9 @@ public class JobsRegistry {
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
+        if (WorkSeekerJob.isSeekingWork(v)) {
+            return ItemStack.EMPTY;
+        }
         Work w = works.get(v);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", v);

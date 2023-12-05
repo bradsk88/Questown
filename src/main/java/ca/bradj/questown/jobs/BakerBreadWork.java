@@ -33,7 +33,7 @@ public class BakerBreadWork extends DeclarativeJob {
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, 0,
-            BLOCK_STATE_NEED_WORK, 100,
+            BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
     public static final ItemStack RESULT = Items.BREAD.getDefaultInstance();
