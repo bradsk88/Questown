@@ -185,7 +185,7 @@ public class TownWorkStatusStore implements WorkStatusHandle {
                 }
                 Block b = mbs.getBlock();
                 if (JobsRegistry.isJobBlock(b)) {
-                    State bs = new State(0, 0, 0);
+                    State bs = JobsRegistry.getDefaultJobBlockState(b);
                     jobStatuses.put(pp, bs);
 
                     if (b instanceof StatefulJobBlock sjb) {

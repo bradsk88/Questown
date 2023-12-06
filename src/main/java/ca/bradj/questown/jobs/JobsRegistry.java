@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.blocks.BreadOvenBlock;
+import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -17,6 +18,7 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
+import ca.bradj.questown.town.TownWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -103,6 +105,13 @@ public class JobsRegistry {
             };
         }
         throw new IllegalArgumentException("Unexpected job ID format: " + jobID);
+    }
+
+    public static TownWorkStatusStore.State getDefaultJobBlockState(Block b) {
+        if (b instanceof JobBoardBlock) {
+            return new TownWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
+        }
+        return new TownWorkStatusStore.State(0, 0, 0);
     }
 
     public record TownData(
