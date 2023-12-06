@@ -13,7 +13,7 @@ import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
@@ -37,6 +37,7 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 
@@ -148,7 +149,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (Ingredient.of(ItemTags.SIGNS).test(itemInHand)) {
             converted = ItemsInit.JOB_BOARD_BLOCK.get().getDefaultInstance();
         }
-        if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
+        if (Ingredient.of(ItemTags.WOOL_CARPETS).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
             player.giveExperiencePoints(100);
             // TODO: Advancement
@@ -173,7 +174,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             player.setItemInHand(hand, converted);
             QT.FLAG_LOGGER.debug(
                     "{} created at {}",
-                    converted.getItem().getRegistryName(),
+                    ForgeRegistries.ITEMS.getKey(converted.getItem()),
                     entity.getTownFlagBasePos()
             );
             ItemStack toDrop = null;
@@ -188,7 +189,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             StoreParentOnNBT(converted, entity.getTownFlagBasePos());
             QT.FLAG_LOGGER.debug(
                     "{} has been paired with {} at {}",
-                    converted.getItem().getRegistryName(), entity.getUUID(), entity.getTownFlagBasePos()
+                    ForgeRegistries.ITEMS.getKey(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
             );
             return InteractionResult.sidedSuccess(false);
         }
@@ -239,8 +240,8 @@ public class TownFlagBlock extends BaseEntityBlock {
                 return;
             }
         }
-        player.sendMessage(
-                new TranslatableComponent("messages.town_flag.damaged"), null
+        player.displayClientMessage(
+                Component.translatable("messages.town_flag.damaged"), true
         );
         informedPlayers.put(player, level.getGameTime());
     }

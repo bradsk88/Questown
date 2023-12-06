@@ -132,7 +132,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, new TranslatableComponent("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        this.font.draw(poseStack, new TranslatableContents("job_board.add_work.title"), idX, idY, TEXT_COLOR);
         slots.clear();
         slots.addAll(b.build());
 

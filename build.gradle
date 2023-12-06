@@ -45,7 +45,7 @@ minecraft {
     //
     // Use non-default mappings at your own risk. they may not always work.
     // Simply re-run your setup task after changing the mappings to update your workspace.
-    mappings channel: 'official', version: '1.18.2'
+    mappings channel: 'official', version: '1.19.2'
     // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
     
      accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
@@ -125,14 +125,14 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:3.12.4'
     testImplementation 'junit:junit:4.13.1'
 
-    minecraft 'net.minecraftforge:forge:1.18.2-40.1.51'
+    minecraft 'net.minecraftforge:forge:1.19.2-43.3.0'
 
-    implementation fg.deobf("mezz.jei:jei-1.18.2:9.7.0.195")
+    implementation fg.deobf("mezz.jei:jei-1.19.2-forge:11.5.0.297")
 
-    implementation 'ca.bradj:RoomRecipes:1.18.2-0.0.3-alpha.2'
+    implementation 'ca.bradj:RoomRecipes:1.19.2-0.0.4-beta.1'
 
-    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.18.2-71.1:api")
-    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.18.2-71.1")
+    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77:api")
+    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77")
 }
 
 test {

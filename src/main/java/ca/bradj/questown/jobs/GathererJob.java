@@ -310,7 +310,7 @@ public class GathererJob extends LeaverJob {
 
     @Override
     public TranslatableComponent getJobName() {
-        return new TranslatableComponent("jobs.gatherer");
+        return new TranslatableContents("jobs.gatherer");
     }
 
     @Override

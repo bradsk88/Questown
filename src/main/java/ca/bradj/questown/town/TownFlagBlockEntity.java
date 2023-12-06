@@ -44,9 +44,8 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.*;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -70,6 +69,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -162,10 +162,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             e.morningTick(e.mornings.pop());
         }
 
-        boolean stateChanged = e.state.tick(e, e.getTileData(), sl);
+        boolean stateChanged = e.state.tick(e, e.getPersistentData(), sl);
 
         if ((stateChanged || e.changed) && e.everScanned) {
-            e.state.putStateOnTile(e.getTileData(), e.uuid);
+            e.state.putStateOnTile(e.getPersistentData(), e.uuid);
             e.changed = false;
             setChanged(level, blockPos, state);
         }
@@ -225,7 +225,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         for (LivingEntity e : entities) {
             e.stopSleeping();
         }
-        getTileData().putLong(NBT_LAST_TICK, newTime);
+        getPersistentData().putLong(NBT_LAST_TICK, newTime);
     }
 
     private static void profileTick(
@@ -481,25 +481,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         setChanged();
     }
 
-    void broadcastMessage(TranslatableComponent msg) {
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", msg.getKey(), msg.getArgs());
+    void broadcastMessage(TranslatableContents c) {
+
+        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", c.getKey(), c.getArgs());
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            p.sendMessage(msg, ChatType.CHAT, p.getUUID());
+            p.displayClientMessage(MutableComponent.create(c), false);
         }
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
         return quests.getAll();
-    }
-
-    private void broadcastQuestToChat(
-            ServerLevel level,
-            RoomRecipe recipe
-    ) {
-        Component recipeName = RoomRecipes.getName(recipe.getId());
-        TranslatableComponent questName = new TranslatableComponent("quests.build_a", recipeName);
-        TranslatableComponent questAdded = new TranslatableComponent("messages.town_flag.quest_added", questName);
-        level.getServer().getPlayerList().broadcastMessage(questAdded, ChatType.CHAT, null);
     }
 
     @Override
@@ -508,7 +499,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             RoomRecipeMatch<MCRoom> match
     ) {
         swapBlocks(getServerLevel(), match);
-        broadcastMessage(new TranslatableComponent(
+        broadcastMessage(new TranslatableContents(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match.getRecipeID()),
                 roomDoorPos.getDoorPos().getUIString()
@@ -556,10 +547,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         ResourceLocation oldMatchID = oldMatch.getRecipeID();
         ResourceLocation newMatchID = newMatch.getRecipeID();
-        broadcastMessage(new TranslatableComponent(
+        broadcastMessage(new TranslatableContents(
                 "messages.building.room_changed",
-                new TranslatableComponent("room." + oldMatchID.getPath()),
-                new TranslatableComponent("room." + newMatchID.getPath()),
+                new TranslatableContents("room." + oldMatchID.getPath()),
+                new TranslatableContents("room." + newMatchID.getPath()),
                 newRoom.getDoorPos().getUIString()
         ));
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
@@ -588,9 +579,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             MCRoom roomDoorPos,
             RoomRecipeMatch oldRecipeId
     ) {
-        broadcastMessage(new TranslatableComponent(
+        broadcastMessage(new TranslatableContents(
                 "messages.building.room_destroyed",
-                new TranslatableComponent("room." + oldRecipeId.getRecipeID().getPath()),
+                new TranslatableContents("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getDoorPos().getUIString()
         ));
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
@@ -599,7 +590,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void questCompleted(MCQuest quest) {
-        broadcastMessage(new TranslatableComponent(
+        broadcastMessage(new TranslatableContents(
                 "messages.town_flag.quest_completed",
                 RoomRecipes.getName(quest.getWantedId())
         )); // TODO: Do this in a different quest listener (specialized in "messaging")
@@ -616,7 +607,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void questLost(MCQuest quest) {
-        broadcastMessage(new TranslatableComponent(
+        broadcastMessage(new TranslatableContents(
                 "messages.town_flag.quest_lost",
                 RoomRecipes.getName(quest.getWantedId())
         )); // TODO: Do this in a different quest listener (specialized in "messaging")
@@ -994,7 +985,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         if (nearbyBiomes.isEmpty()) {
             computeNearbyBiomes(level, getBlockPos(), this);
         }
-        return nearbyBiomes.get(getServerLevel().getRandom().nextInt(nearbyBiomes.size())).getRegistryName();
+        Biome biome = nearbyBiomes.get(getServerLevel().getRandom().nextInt(nearbyBiomes.size()));
+        return ForgeRegistries.BIOMES.getKey(biome);
     }
 
     @Override
@@ -1036,13 +1028,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             VisitorMobEntity visitorMobEntity,
             ServerLevel sl
     ) {
-        if (!getTileData().contains(NBT_TOWN_STATE)) {
+        if (!getPersistentData().contains(NBT_TOWN_STATE)) {
             QT.FLAG_LOGGER.error(
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
         TownState<MCContainer, MCTownItem, MCHeldItem> state = TownStateSerializer.INSTANCE.load(
-                getTileData().getCompound(NBT_TOWN_STATE),
+                getPersistentData().getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats().contains(bp)
         );
         Optional<TownState.VillagerData<MCHeldItem>> match = state.villagers.stream()

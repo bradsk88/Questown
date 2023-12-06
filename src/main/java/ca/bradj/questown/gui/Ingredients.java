@@ -13,7 +13,7 @@ public class Ingredients {
         JsonElement j = item.toJson();
         if (j.getAsJsonObject().has("tag")) {
             String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
-            return new TranslatableComponent(tKey);
+            return new TranslatableContents(tKey);
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -22,6 +22,6 @@ public class Ingredients {
                 return i.getName(i.getDefaultInstance());
             }
         }
-        return new TranslatableComponent("this");
+        return new TranslatableContents("this");
     }
 }

@@ -127,8 +127,8 @@ public class TownQuestsHandle implements QuestsHolder {
                     } else {
                         sender.closeContainer();
                     }
-                    t.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_1"));
-                    t.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_2"));
+                    t.broadcastMessage(new TranslatableContents("messages.town_flag.quest_batch_removed_1"));
+                    t.broadcastMessage(new TranslatableContents("messages.town_flag.quest_batch_removed_2"));
                 }
                 return;
             }

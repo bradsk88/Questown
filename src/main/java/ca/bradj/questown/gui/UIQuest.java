@@ -144,7 +144,7 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public Component getName() {
         if (SpecialQuests.isSpecialQuest(recipe.getId())) {
-            return new TranslatableComponent(recipe.getId().getPath());
+            return new TranslatableContents(recipe.getId().getPath());
         }
         return RoomRecipes.getName(recipe.getId());
     }

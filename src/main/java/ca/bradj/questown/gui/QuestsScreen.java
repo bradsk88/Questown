@@ -155,12 +155,12 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             Component recipeName = recipe.getName();
             if (recipe.fromRecipe != null) {
                 Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = new TranslatableComponent("quests.upgrade", fromName, recipeName);
+                recipeName = new TranslatableContents("quests.upgrade", fromName, recipeName);
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);
+                recipeName = new TranslatableContents("quests.completed_suffix", recipeName);
             }
             if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
@@ -178,7 +178,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = new TranslatableComponent("quests.job_owner", vID);
+            Component tooltip = new TranslatableContents("quests.job_owner", vID);
 
             if (recipe.getBatchUUID() != null) {
                 renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
@@ -190,7 +190,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
             boolean hasJob = jobName.isEmpty();
             if (!hasJob) {
-                tooltip = new TranslatableComponent("quests.job_change", vID, jobName);
+                tooltip = new TranslatableContents("quests.job_change", vID, jobName);
             }
 
             boolean showHead = !hasJob;
@@ -238,7 +238,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 mouseY,
                 removeX,
                 idY,
-                new TranslatableComponent("job_board.remove_work")
+                new TranslatableContents("job_board.remove_work")
         );
         this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
     }

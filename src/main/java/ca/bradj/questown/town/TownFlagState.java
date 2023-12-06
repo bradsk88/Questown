@@ -83,9 +83,9 @@ public class TownFlagState {
         e.advancedTimeOnTick = dayTime;
 
         MCTownState storedState;
-        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+        if (e.getPersistentData().contains(NBT_TOWN_STATE)) {
             storedState = TownStateSerializer.INSTANCE.load(
-                    e.getTileData().getCompound(NBT_TOWN_STATE),
+                    e.getPersistentData().getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
             QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
@@ -144,9 +144,9 @@ public class TownFlagState {
             entity.remove(Entity.RemovalReason.DISCARDED);
         }
 
-        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+        if (e.getPersistentData().contains(NBT_TOWN_STATE)) {
             MCTownState storedState = TownStateSerializer.INSTANCE.load(
-                    e.getTileData().getCompound(NBT_TOWN_STATE),
+                    e.getPersistentData().getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
             for (TownState.VillagerData<MCHeldItem> v : storedState.villagers) {
@@ -193,7 +193,7 @@ public class TownFlagState {
             if (newState != null) {
                 TownFlagState.recoverMobs(parent, level);
                 Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
-                e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+                e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             }
             // TODO: Make sure chests get filled/empty
             flagTag.putLong(NBT_LAST_TICK, gt);

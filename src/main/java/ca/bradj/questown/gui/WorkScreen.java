@@ -181,11 +181,11 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            this.font.draw(poseStack, new TranslatableComponent("job_board.default_name"), idX, idY, TEXT_COLOR);
+            this.font.draw(poseStack, new TranslatableContents("job_board.default_name"), idX, idY, TEXT_COLOR);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
             this.font.drawShadow(poseStack, new TextComponent("x"), removeX + borderPadding - 1, iconY + borderPadding - 1, 0xFFFFFF);
-            highlightAndTooltip(poseStack, mouseX, mouseY, removeX, iconY, new TranslatableComponent("job_board.remove_work"));
+            highlightAndTooltip(poseStack, mouseX, mouseY, removeX, iconY, new TranslatableContents("job_board.remove_work"));
             this.removes.put(new Position(removeX, iconY), () -> menu.sendRemoveRequest(jobPosting));
         }
         slots.clear();

@@ -100,7 +100,7 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
 
     private BaseComponent getGenericVisitorMessage(Random random) {
         String intro = String.format("dialog.visitors.generic.%d", random.nextInt(45)+1);
-        return new TranslatableComponent(intro);
+        return new TranslatableContents(intro);
     }
 
     private BaseComponent getNewVisitorMessage() {
@@ -110,19 +110,19 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
         String instruction = "dialog.visitors.instruction.flag_quests";
         return new TextComponent(String.format(
                 "%s%n%n%s%n%n%s%n%n(%s)",
-                new TranslatableComponent(intro).getString(),
-                new TranslatableComponent(request).getString(),
-                new TranslatableComponent(closing).getString(),
-                new TranslatableComponent(instruction).getString()
+                new TranslatableContents(intro).getString(),
+                new TranslatableContents(request).getString(),
+                new TranslatableContents(closing).getString(),
+                new TranslatableContents(instruction).getString()
         ));
     }
 
     @NotNull
     private static BaseComponent getVisitorMidQuestsMessage() {
-        TranslatableComponent intro = new TranslatableComponent(
+        TranslatableComponent intro = new TranslatableContents(
                 "dialog.visitors.some_quests_done.1"
         );
-        TranslatableComponent instruction = new TranslatableComponent(
+        TranslatableComponent instruction = new TranslatableContents(
                 "dialog.visitors.instruction.flag_quests"
         );
         return new TextComponent(String.format(
@@ -134,13 +134,13 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
 
     @NotNull
     private static BaseComponent getVisitorDoneQuestsMessage() {
-        TranslatableComponent intro = new TranslatableComponent(
+        TranslatableComponent intro = new TranslatableContents(
                 "dialog.visitors.all_quests_done.thanks.1"
         );
-        TranslatableComponent outcome = new TranslatableComponent(
+        TranslatableComponent outcome = new TranslatableContents(
                 "dialog.visitors.all_quests_done.outcome.1"
         );
-        TranslatableComponent instruction = new TranslatableComponent(
+        TranslatableComponent instruction = new TranslatableContents(
                 "dialog.visitors.instruction.sleep_visitors"
         );
         return new TextComponent(String.format(
@@ -153,16 +153,16 @@ public class VisitorDialogScreen extends AbstractContainerScreen<VisitorQuestsCo
 
     @NotNull
     private static BaseComponent getFirstVisitorMessage() {
-        TranslatableComponent intro = new TranslatableComponent(
+        TranslatableComponent intro = new TranslatableContents(
                 "dialog.visitors.first_contact.intro"
         );
-        TranslatableComponent request = new TranslatableComponent(
+        TranslatableComponent request = new TranslatableContents(
                 "dialog.visitors.first_contact.request"
         );
-        TranslatableComponent page = new TranslatableComponent(
+        TranslatableComponent page = new TranslatableContents(
                 "dialog.visitors.first_contact.page"
         );
-        TranslatableComponent instruction = new TranslatableComponent(
+        TranslatableComponent instruction = new TranslatableContents(
                 "dialog.visitors.instruction.flag_quests"
         );
         return new TextComponent(String.format(

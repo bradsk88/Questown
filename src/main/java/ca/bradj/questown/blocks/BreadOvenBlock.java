@@ -211,7 +211,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
 
         if (canAcceptWheat(blockState)) {
             player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_wheat"),
+                    new TranslatableContents("message.baker.villagers_will_add_wheat"),
                     player.getUUID()
             );
             return InteractionResult.sidedSuccess(level.isClientSide);
@@ -219,7 +219,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
 
         if (canAcceptCoal(blockState)) {
             player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_coal"),
+                    new TranslatableContents("message.baker.villagers_will_add_coal"),
                     player.getUUID()
             );
             return InteractionResult.sidedSuccess(level.isClientSide);

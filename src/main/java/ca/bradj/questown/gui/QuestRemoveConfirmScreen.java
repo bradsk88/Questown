@@ -116,7 +116,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 new Button(
                         x + borderPadding, maybeY,
                         48, buttonHeight,
-                        new TranslatableComponent("menu.back"),
+                        new TranslatableContents("menu.back"),
                         (p_96776_) -> menu.sendOpenQuestsMenuRequest()
                 )
         );
@@ -124,7 +124,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 new Button(
                         maybeX, maybeY,
                         48, buttonHeight,
-                        new TranslatableComponent("menu.decline"),
+                        new TranslatableContents("menu.decline"),
                         (p_96776_) -> menu.sendConfirmRemoveRequest()
                 )
         );
@@ -167,7 +167,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
-        this.font.draw(poseStack, new TranslatableComponent("menu.quests.confirm_remove_top", quests.size()), x, y, TEXT_COLOR);
+        this.font.draw(poseStack, new TranslatableContents("menu.quests.confirm_remove_top", quests.size()), x, y, TEXT_COLOR);
 
         y = y + this.font.lineHeight + CARD_PADDING;
 
@@ -184,12 +184,12 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             Component recipeName = recipe.getName();
             if (recipe.fromRecipe != null) {
                 Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = new TranslatableComponent("quests.upgrade", fromName, recipeName);
+                recipeName = new TranslatableContents("quests.upgrade", fromName, recipeName);
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);
+                recipeName = new TranslatableContents("quests.completed_suffix", recipeName);
             }
             if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
@@ -207,7 +207,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = new TranslatableComponent("quests.job_owner", vID);
+            Component tooltip = new TranslatableContents("quests.job_owner", vID);
 
             if (vID.isEmpty()) {
                 continue;
@@ -215,7 +215,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
 
             boolean hasJob = jobName.isEmpty();
             if (!hasJob) {
-                tooltip = new TranslatableComponent("quests.job_change", vID, jobName);
+                tooltip = new TranslatableContents("quests.job_change", vID, jobName);
             }
 
             boolean showHead = !hasJob;
@@ -237,7 +237,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         slots.addAll(b.build());
 
         int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
-        this.font.draw(poseStack ,new TranslatableComponent("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+        this.font.draw(poseStack ,new TranslatableContents("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
 
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);

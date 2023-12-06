@@ -106,11 +106,11 @@ public class WorkRequest {
 
     public Component getName() {
         if (tag != null) {
-            return new TranslatableComponent("#" + tag.location());
+            return new TranslatableContents("#" + tag.location());
         }
         if (item != null) {
-            return new TranslatableComponent(item.getRegistryName().toString());
+            return new TranslatableContents(item.getRegistryName().toString());
         }
-        return new TranslatableComponent("invalid.workrequest");
+        return new TranslatableContents("invalid.workrequest");
     }
 }

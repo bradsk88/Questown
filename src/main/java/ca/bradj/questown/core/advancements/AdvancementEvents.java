@@ -30,12 +30,12 @@ public class AdvancementEvents {
         }
         String path = event.getAdvancement().getId().getPath();
         if ("root".equals(path)){
-            sp.sendMessage(new TranslatableComponent("messages.town_flag.first_visit_journal"), sp.getUUID());
+            sp.sendMessage(new TranslatableContents("messages.town_flag.first_visit_journal"), sp.getUUID());
             sp.addItem(PatchouliAPI.get().getBookStack(new ResourceLocation(Questown.MODID, "intro")));
             return;
         }
         if (ADVANCEMENTS_WITH_PAGES.contains(path)) {
-            sp.sendMessage(new TranslatableComponent("messages.town_flag.journal_page"), sp.getUUID());
+            sp.sendMessage(new TranslatableContents("messages.town_flag.journal_page"), sp.getUUID());
         }
     }
 

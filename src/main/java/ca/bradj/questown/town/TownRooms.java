@@ -16,7 +16,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -95,7 +95,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
         );
-        entity.broadcastMessage(new TranslatableComponent(
+        entity.broadcastMessage(new TranslatableContents(
                 "messages.building.room_created",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
@@ -142,7 +142,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
                 )
         );
-        entity.broadcastMessage(new TranslatableComponent(
+        entity.broadcastMessage(new TranslatableContents(
                 "messages.building.room_size_changed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
@@ -155,7 +155,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             MCRoom room
     ) {
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
-        entity.broadcastMessage(new TranslatableComponent(
+        entity.broadcastMessage(new TranslatableContents(
                 "messages.building.room_destroyed",
                 RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()

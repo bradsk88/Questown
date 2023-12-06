@@ -58,7 +58,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 new Button(
                         maybeX, maybeY,
                         48, 20,
-                        new TranslatableComponent("menu.quests"),
+                        new TranslatableContents("menu.quests"),
                         (p_96776_) -> {
                             openQuestsScreen();
                         }
@@ -169,7 +169,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 32;
 
         String jobId = menu.getRootJobId();
-        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
+        TranslatableComponent jobName = new TranslatableContents("jobs." + jobId);
 
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
@@ -179,11 +179,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 if (cat == null) {
                     cat = jobId;
                 }
-                TranslatableComponent component = new TranslatableComponent(
+                TranslatableComponent component = new TranslatableContents(
                         String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.name()),
                         jobName
                 );
-                TranslatableComponent component2 = new TranslatableComponent(
+                TranslatableComponent component2 = new TranslatableContents(
                         String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.name()),
                         jobName
                 );
@@ -225,7 +225,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 8;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent component = new TranslatableComponent(
+                TranslatableComponent component = new TranslatableContents(
                         "tooltips.villagers.job.inventory.locked"
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
@@ -247,8 +247,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 16;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent jPart = new TranslatableComponent(String.format("jobs.%s", menu.getRootJobId()));
-                TranslatableComponent component = new TranslatableComponent(
+                TranslatableComponent jPart = new TranslatableContents(String.format("jobs.%s", menu.getRootJobId()));
+                TranslatableComponent component = new TranslatableContents(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);

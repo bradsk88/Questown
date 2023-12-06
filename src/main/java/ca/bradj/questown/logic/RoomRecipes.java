@@ -60,14 +60,14 @@ public class RoomRecipes {
 
     public static Component getName(ResourceLocation id) {
         if (id.getPath().startsWith("special_quest")) {
-            return new TranslatableComponent(id.getPath());
+            return new TranslatableContents(id.getPath());
         }
-        return new TranslatableComponent(String.format("room.%s", id.getPath()));
+        return new TranslatableContents(String.format("room.%s", id.getPath()));
     }
 
     public static Component getName(Optional<ResourceLocation> recipe) {
         return recipe.map(RoomRecipes::getName)
-                .orElseGet(() -> new TranslatableComponent("room.no_recipe"));
+                .orElseGet(() -> new TranslatableContents("room.no_recipe"));
     }
 
     public static Map<ResourceLocation, RoomRecipe> hydrate(ServerLevel sl) {

@@ -437,6 +437,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     public TranslatableComponent getJobName() {
-        return new TranslatableComponent("jobs." + jobId);
+        return new TranslatableContents("jobs." + jobId);
     }
 }
