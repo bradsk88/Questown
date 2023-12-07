@@ -17,10 +17,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,7 +56,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     private static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
-        Random rand = town.getServerLevel().getRandom();
+        RandomSource rand = town.getServerLevel().getRandom();
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList newVisitor = new MCRewardList(
                 town,
@@ -131,7 +133,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
             UUID visitorUUID
     ) {
         List<String> jobs = ImmutableList.copyOf(town.getAvailableRootJobs());
-        Random random = town.getServerLevel().getRandom();
+        RandomSource random = town.getServerLevel().getRandom();
         int jobIdx = random.nextInt(jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
@@ -189,7 +191,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         return ing.stream()
                 .map(v -> Arrays.stream(v.getItems())
                         .map(ItemStack::getItem)
-                        .map(Item::getRegistryName)
+                        .map(ForgeRegistries.ITEMS::getKey)
                         .filter(Objects::nonNull)
                         .map(ResourceLocation::toString)
                         .toList())

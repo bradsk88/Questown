@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -73,10 +74,11 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
     public String toShortString() {
         ImmutableList.Builder<String> names = ImmutableList.builder();
         for (int i = 0; i < container.getContainerSize(); i++) {
-            if (container.getItem(i).getItem().getRegistryName() == null) {
+            if (ForgeRegistries.ITEMS.getKey(container.getItem(i).getItem()) == null) {
                 names.add("<No ID>");
+            } else {
+                names.add(ForgeRegistries.ITEMS.getKey(container.getItem(i).getItem()).getPath());
             }
-            names.add(container.getItem(i).getItem().getRegistryName().getPath());
         }
         return String.join(", ", names.build());
     }

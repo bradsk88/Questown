@@ -13,14 +13,6 @@ import org.jetbrains.annotations.Nullable;
 
 public class JobBlock {
 
-    public static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
-            "processing_state", 0, 4
-    );
-
-    public static final IntegerProperty WORK_LEFT = IntegerProperty.create(
-            "work_left", 0, Config.SMELTER_WORK_REQUIRED.get()
-    );
-
     public static @Nullable Integer getState(
             WorkStatusHandle sl,
             BlockPos bp

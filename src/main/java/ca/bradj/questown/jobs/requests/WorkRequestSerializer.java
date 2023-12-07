@@ -16,7 +16,7 @@ public class WorkRequestSerializer {
             QTNBT.put(t, "tag", v.tag.location());
         }
         if (v.item != null) {
-            QTNBT.put(t, "item", v.item.getRegistryName());
+            QTNBT.put(t, "item", ForgeRegistries.ITEMS.getKey(v.item));
         }
         return t;
     }

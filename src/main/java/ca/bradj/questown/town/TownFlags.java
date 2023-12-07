@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
-import net.minecraftforge.event.world.SleepFinishedTimeEvent;
+import net.minecraftforge.event.level.SleepFinishedTimeEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 

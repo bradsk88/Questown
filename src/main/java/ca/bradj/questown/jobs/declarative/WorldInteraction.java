@@ -7,8 +7,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.TownWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -17,6 +17,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
@@ -200,7 +201,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             }
             String invBefore = inventory.toString();
             String name = "[unknown]";
-            ResourceLocation registryName = item.getItem().getRegistryName();
+            ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(item.getItem());
             if (registryName != null) {
                 name = registryName.toString();
             }

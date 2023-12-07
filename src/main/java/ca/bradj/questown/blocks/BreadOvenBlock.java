@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -210,17 +210,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         }
 
         if (canAcceptWheat(blockState)) {
-            player.sendMessage(
-                    new TranslatableContents("message.baker.villagers_will_add_wheat"),
-                    player.getUUID()
+            player.sendSystemMessage(
+                    Component.translatable("message.baker.villagers_will_add_wheat")
             );
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
         if (canAcceptCoal(blockState)) {
-            player.sendMessage(
-                    new TranslatableContents("message.baker.villagers_will_add_coal"),
-                    player.getUUID()
+            player.sendSystemMessage(
+                    Component.translatable("message.baker.villagers_will_add_coal")
             );
             return InteractionResult.sidedSuccess(level.isClientSide);
         }

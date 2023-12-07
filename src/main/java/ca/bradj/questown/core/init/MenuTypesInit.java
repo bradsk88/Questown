@@ -14,7 +14,7 @@ public class MenuTypesInit {
     // NOTE: You can't have more than one menu per container type.
 
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(
-            ForgeRegistries.CONTAINERS, Questown.MODID
+            ForgeRegistries.MENU_TYPES, Questown.MODID
     );
     public static RegistryObject<MenuType<TownQuestsContainer>> TOWN_QUESTS = MENUS.register(
             "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::new)

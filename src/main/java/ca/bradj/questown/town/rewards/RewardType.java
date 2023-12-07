@@ -2,18 +2,26 @@ package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
-import net.minecraftforge.registries.ForgeRegistryEntry;
+import net.minecraft.resources.ResourceLocation;
 
-public class RewardType<T extends MCReward> extends ForgeRegistryEntry<RewardType<? extends MCReward>> {
+public class RewardType<T extends MCReward> {
 
     private final Factory<T> factory;
+    private final ResourceLocation id;
 
-    public RewardType(Factory<T> factory) {
+    public RewardType(Factory<T> factory,
+                      ResourceLocation id
+    ) {
         this.factory = factory;
+        this.id = id;
     }
 
     public T create(RewardType<? extends MCReward> rType, TownInterface entity) {
         return factory.newReward(rType, entity);
+    }
+
+    public ResourceLocation getRegistryName() {
+        return id;
     }
 
     public interface Factory<PT extends MCReward> {
@@ -34,8 +42,8 @@ public class RewardType<T extends MCReward> extends ForgeRegistryEntry<RewardTyp
             return new Builder<>(o);
         }
 
-        public RewardType<BT> build(String string) {
-            return new RewardType<>(this.provider);
+        public RewardType<BT> build(ResourceLocation id) {
+            return new RewardType<>(this.provider, id);
         }
     }
 

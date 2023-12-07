@@ -4,14 +4,13 @@ import ca.bradj.questown.jobs.IStatus;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.gui.textures.Textures;
+import mezz.jei.common.Internal;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.gui.textures.Textures;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
@@ -58,7 +57,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 new Button(
                         maybeX, maybeY,
                         48, 20,
-                        new TranslatableContents("menu.quests"),
+                        Component.translatable("menu.quests"),
                         (p_96776_) -> {
                             openQuestsScreen();
                         }
@@ -169,7 +168,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 32;
 
         String jobId = menu.getRootJobId();
-        TranslatableComponent jobName = new TranslatableContents("jobs." + jobId);
+        Component jobName = Component.translatable("jobs." + jobId);
 
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
@@ -179,11 +178,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 if (cat == null) {
                     cat = jobId;
                 }
-                TranslatableComponent component = new TranslatableContents(
+                Component component = Component.translatable(
                         String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.name()),
                         jobName
                 );
-                TranslatableComponent component2 = new TranslatableContents(
+                Component component2 = Component.translatable(
                         String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.name()),
                         jobName
                 );
@@ -225,7 +224,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 8;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent component = new TranslatableContents(
+                Component component = Component.translatable(
                         "tooltips.villagers.job.inventory.locked"
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
@@ -247,8 +246,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 16;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent jPart = new TranslatableContents(String.format("jobs.%s", menu.getRootJobId()));
-                TranslatableComponent component = new TranslatableContents(
+                Component jPart = Component.translatable(String.format("jobs.%s", menu.getRootJobId()));
+                Component component = Component.translatable(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);

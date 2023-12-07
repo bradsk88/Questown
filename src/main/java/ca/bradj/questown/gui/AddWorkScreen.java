@@ -2,18 +2,17 @@ package ca.bradj.questown.gui;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
+import mezz.jei.common.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.gui.textures.Textures;
-import mezz.jei.input.MouseUtil;
+import mezz.jei.common.gui.textures.Textures;
+import mezz.jei.gui.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -69,10 +68,10 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         IDrawableStatic arrowPrevious = textures.getArrowPrevious();
 
         this.nextPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
+                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage(), textures
         );
         this.previousPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
+                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage(), textures
         );
     }
 
@@ -132,7 +131,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, new TranslatableContents("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        this.font.draw(poseStack, Component.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
         slots.clear();
         slots.addAll(b.build());
 

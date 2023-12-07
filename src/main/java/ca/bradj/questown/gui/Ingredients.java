@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import com.google.gson.JsonElement;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -13,7 +12,7 @@ public class Ingredients {
         JsonElement j = item.toJson();
         if (j.getAsJsonObject().has("tag")) {
             String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
-            return new TranslatableContents(tKey);
+            return Component.translatable(tKey);
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -22,6 +21,6 @@ public class Ingredients {
                 return i.getName(i.getDefaultInstance());
             }
         }
-        return new TranslatableContents("this");
+        return Component.translatable("this");
     }
 }

@@ -68,4 +68,12 @@ public class AddWorkContainer extends AbstractContainerMenu {
                 new AddWorkFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ())
         );
     }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player p_38941_,
+            int p_38942_
+    ) {
+        return ItemStack.EMPTY;
+    }
 }

@@ -9,6 +9,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -59,7 +60,10 @@ public class TownWorkContainer extends AbstractContainerMenu {
         );
     }
 
-    public static void writeWork(Collection<WorkRequest> requestedResults, FriendlyByteBuf data) {
+    public static void writeWork(
+            Collection<WorkRequest> requestedResults,
+            FriendlyByteBuf data
+    ) {
         data.writeInt(requestedResults.size());
         data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
     }
@@ -84,5 +88,13 @@ public class TownWorkContainer extends AbstractContainerMenu {
         QuestownNetwork.CHANNEL.sendToServer(
                 new RemoveWorkFromUIMessage(jobPosting.getResultWanted(), flag.getX(), flag.getY(), flag.getZ())
         );
+    }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player p_38941_,
+            int p_38942_
+    ) {
+        return ItemStack.EMPTY;
     }
 }

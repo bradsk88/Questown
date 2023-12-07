@@ -14,7 +14,7 @@ import net.minecraftforge.registries.RegistryObject;
 public class EntitiesInit {
 
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(
-            ForgeRegistries.ENTITIES,
+            ForgeRegistries.ENTITY_TYPES,
             Questown.MODID
     );
 

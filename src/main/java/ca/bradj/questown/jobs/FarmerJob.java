@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -322,7 +322,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @NotNull
     private BlockPos getRandomFarmSpot(@NotNull ServerLevel sl) {
         return Positions.ToBlock(
-                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
+                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), (bound) -> sl.getRandom().nextInt(bound)),
                 selectedFarm.yCoord
         );
     }
@@ -624,8 +624,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public TranslatableComponent getJobName() {
-        return new TranslatableContents("jobs.farmer");
+    public JobName getJobName() {
+        return new JobName("jobs.farmer");
     }
 
     @Override

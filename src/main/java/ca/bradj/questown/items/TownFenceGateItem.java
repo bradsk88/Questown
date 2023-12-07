@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 public class TownFenceGateItem extends Item {
@@ -22,7 +23,7 @@ public class TownFenceGateItem extends Item {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
                 ctx.getItemInHand());
         if (input == null) {
-            QT.BLOCK_LOGGER.error("{} is missing flag input", ctx.getItemInHand().getItem().getRegistryName());
+            QT.BLOCK_LOGGER.error("{} is missing flag input", ForgeRegistries.ITEMS.getKey(ctx.getItemInHand().getItem()));
             return InteractionResult.FAIL;
         }
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));

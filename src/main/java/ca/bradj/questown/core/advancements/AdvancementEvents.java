@@ -2,7 +2,7 @@ package ca.bradj.questown.core.advancements;
 
 import ca.bradj.questown.Questown;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
@@ -30,12 +30,12 @@ public class AdvancementEvents {
         }
         String path = event.getAdvancement().getId().getPath();
         if ("root".equals(path)){
-            sp.sendMessage(new TranslatableContents("messages.town_flag.first_visit_journal"), sp.getUUID());
+            sp.sendSystemMessage(Component.translatable("messages.town_flag.first_visit_journal"), true);
             sp.addItem(PatchouliAPI.get().getBookStack(new ResourceLocation(Questown.MODID, "intro")));
             return;
         }
         if (ADVANCEMENTS_WITH_PAGES.contains(path)) {
-            sp.sendMessage(new TranslatableContents("messages.town_flag.journal_page"), sp.getUUID());
+            sp.sendSystemMessage(Component.translatable("messages.town_flag.journal_page"), true);
         }
     }
 

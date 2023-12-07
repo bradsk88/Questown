@@ -12,10 +12,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
@@ -144,7 +142,7 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public Component getName() {
         if (SpecialQuests.isSpecialQuest(recipe.getId())) {
-            return new TranslatableContents(recipe.getId().getPath());
+            return Component.translatable(recipe.getId().getPath());
         }
         return RoomRecipes.getName(recipe.getId());
     }

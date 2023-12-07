@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -67,7 +66,7 @@ public class WorkRequest {
     }
 
     public void toNetwork(FriendlyByteBuf buffer) {
-        buffer.writeUtf(item == null ? "" : item.getRegistryName().toString());
+        buffer.writeUtf(item == null ? "" : ForgeRegistries.ITEMS.getKey(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());
     }
 
@@ -106,11 +105,11 @@ public class WorkRequest {
 
     public Component getName() {
         if (tag != null) {
-            return new TranslatableContents("#" + tag.location());
+            return Component.translatable("#" + tag.location());
         }
         if (item != null) {
-            return new TranslatableContents(item.getRegistryName().toString());
+            return Component.translatable(ForgeRegistries.ITEMS.getKey(item).toString());
         }
-        return new TranslatableContents("invalid.workrequest");
+        return Component.translatable("invalid.workrequest");
     }
 }

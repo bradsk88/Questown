@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -116,5 +117,13 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
         QuestownNetwork.CHANNEL.sendToServer(
                 new OpenQuestsMenuMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ())
         );
+    }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player p_38941_,
+            int p_38942_
+    ) {
+        return ItemStack.EMPTY;
     }
 }

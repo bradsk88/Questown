@@ -12,8 +12,6 @@ import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -70,10 +68,10 @@ public class TownQuestsHandle implements QuestsHolder {
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = unsafeGetTown().getAllQuestsWithRewards();
         List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
 
-        NetworkHooks.openGui(player, new MenuProvider() {
+        NetworkHooks.openScreen(player, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
+                return Component.empty();
             }
 
             @Override
@@ -92,10 +90,10 @@ public class TownQuestsHandle implements QuestsHolder {
     private void showConfirmUI(ServerPlayer sp, MCQuestBatch batch) {
         final TownInterface t = unsafeGetTown();
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);
-        NetworkHooks.openGui(sp, new MenuProvider() {
+        NetworkHooks.openScreen(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
+                return Component.empty();
             }
 
             @Override
@@ -127,8 +125,8 @@ public class TownQuestsHandle implements QuestsHolder {
                     } else {
                         sender.closeContainer();
                     }
-                    t.broadcastMessage(new TranslatableContents("messages.town_flag.quest_batch_removed_1"));
-                    t.broadcastMessage(new TranslatableContents("messages.town_flag.quest_batch_removed_2"));
+                    t.broadcastMessage("messages.town_flag.quest_batch_removed_1");
+                    t.broadcastMessage("messages.town_flag.quest_batch_removed_2");
                 }
                 return;
             }

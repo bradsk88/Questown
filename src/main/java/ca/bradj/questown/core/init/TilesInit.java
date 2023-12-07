@@ -11,7 +11,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public class TilesInit {
     public static final DeferredRegister<BlockEntityType<?>> TILES = DeferredRegister.create(
-            ForgeRegistries.BLOCK_ENTITIES, Questown.MODID
+            ForgeRegistries.BLOCK_ENTITY_TYPES, Questown.MODID
     );
 
     public static final RegistryObject<BlockEntityType<TownFlagBlockEntity>> TOWN_FLAG = TILES.register(

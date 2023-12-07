@@ -29,12 +29,12 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -65,6 +65,7 @@ import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Inventory;
@@ -105,8 +106,8 @@ public class VisitorMobEntity extends PathfinderMob {
             .changeActivityAt(10, Activity.IDLE)
             .changeActivityAt(12500, Activity.REST)
             .build();
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
-            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
+            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
@@ -232,10 +233,10 @@ public class VisitorMobEntity extends PathfinderMob {
             Collection<UIQuest> quests,
             VisitorQuestsContainer.VisitorContext ctx
     ) {
-        NetworkHooks.openGui(sp, new MenuProvider() {
+        NetworkHooks.openScreen(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
+                return Component.empty();
             }
 
             @Override
@@ -291,7 +292,7 @@ public class VisitorMobEntity extends PathfinderMob {
     public void setJob(Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> initializedJob) {
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
-        entityData.set(jobName, job.getJobName().getKey());
+        entityData.set(jobName, job.getJobName().translationKey());
         QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", job.getId(), uuid);
         this.cleanupJobListeners.add(
                 this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
@@ -353,7 +354,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     private void visitorTick() {
         if (isInWall()) {
-            Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
+            Vec3 nudged = position().add(-1.0 + (random.nextDouble() * 2.0), 0, -1.0 + (random.nextDouble() * 2.0));
             QT.VILLAGER_LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
             moveTo(nudged);
         }
@@ -762,8 +763,8 @@ public class VisitorMobEntity extends PathfinderMob {
                 ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
                 if (serverlevel != null) {
                     PoiManager poimanager = serverlevel.getPoiManager();
-                    Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
-                    BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
+                    Optional<Holder<PoiType>> optional = poimanager.getType(p_186306_.pos());
+                    BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
                     if (optional.isPresent() && bipredicate.test(this, optional.get())) {
                         poimanager.release(p_186306_.pos());
                         DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());
@@ -890,7 +891,7 @@ public class VisitorMobEntity extends PathfinderMob {
         return job.getLockSlot(i);
     }
 
-    public Component getJobName() {
+    public JobName getJobName() {
         return job.getJobName();
     }
 

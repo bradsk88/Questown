@@ -26,14 +26,14 @@ public class RewardsInit {
             MCRewardList.ID,
             () -> RewardType.Builder
                     .of(MCRewardList::new)
-                    .build(new ResourceLocation(Questown.MODID, MCRewardList.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, MCRewardList.ID))
     );
 
     public static final RegistryObject<RewardType<MCDelayedReward>> DELAYED = REWARD_TYPES.register(
             MCDelayedReward.ID,
             () -> RewardType.Builder
                     .of(MCDelayedReward::new)
-                    .build(new ResourceLocation(Questown.MODID, MCDelayedReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, MCDelayedReward.ID))
     );
 
 
@@ -41,14 +41,14 @@ public class RewardsInit {
             MCInstantReward.ID,
             () -> RewardType.Builder
                     .of(MCInstantReward::new)
-                    .build(new ResourceLocation(Questown.MODID, MCInstantReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, MCInstantReward.ID))
     );
 
     public static final RegistryObject<RewardType<SpawnVisitorReward>> VISITOR = REWARD_TYPES.register(
             SpawnVisitorReward.ID,
             () -> RewardType.Builder
                     .of((rType, flag) -> new SpawnVisitorReward(rType, flag, null))
-                    .build(new ResourceLocation(Questown.MODID, SpawnVisitorReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, SpawnVisitorReward.ID))
     );
 
     public static final RegistryObject<RewardType<AddBatchOfRandomQuestsForVisitorReward>> RANDOM_BATCH_FOR_VILLAGER
@@ -56,7 +56,7 @@ public class RewardsInit {
             AddBatchOfRandomQuestsForVisitorReward.ID,
             () -> RewardType.Builder
                     .of((rType, flag) -> new AddBatchOfRandomQuestsForVisitorReward(rType, flag, null))
-                    .build(new ResourceLocation(Questown.MODID, AddBatchOfRandomQuestsForVisitorReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, AddBatchOfRandomQuestsForVisitorReward.ID))
     );
 
     public static final RegistryObject<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
@@ -64,7 +64,7 @@ public class RewardsInit {
             AddRandomUpgradeQuest.ID,
             () -> RewardType.Builder
                     .of((rType, flag) -> new AddRandomUpgradeQuest(rType, flag, INSTANCE))
-                    .build(new ResourceLocation(Questown.MODID, AddRandomUpgradeQuest.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, AddRandomUpgradeQuest.ID))
     );
 
     public static final RegistryObject<RewardType<AddRandomJobQuestReward>> RANDOM_JOB_FOR_VILLAGER
@@ -72,7 +72,7 @@ public class RewardsInit {
             AddRandomJobQuestReward.ID,
             () -> RewardType.Builder
                     .of((rType, flag) -> new AddRandomJobQuestReward(rType, flag, INSTANCE))
-                    .build(new ResourceLocation(Questown.MODID, AddRandomJobQuestReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, AddRandomJobQuestReward.ID))
     );
 
     public static final RegistryObject<RewardType<ChangeJobReward>> CHANGE_JOB
@@ -80,7 +80,7 @@ public class RewardsInit {
             ChangeJobReward.ID,
             () -> RewardType.Builder
                     .of((rType, flag) -> new ChangeJobReward(rType, flag, null, null))
-                    .build(new ResourceLocation(Questown.MODID, ChangeJobReward.ID).toString())
+                    .build(new ResourceLocation(Questown.MODID, ChangeJobReward.ID))
     );
 
     public static void register(IEventBus bus) {

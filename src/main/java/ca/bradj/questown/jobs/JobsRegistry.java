@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -59,7 +60,7 @@ public class JobsRegistry {
     }
 
     public static ResourceLocation getRoomForJobRootId(
-            Random rand,
+            RandomSource rand,
             String rootId
     ) {
         List<Map.Entry<JobID, Work>> x = works.entrySet()

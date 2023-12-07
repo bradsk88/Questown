@@ -32,7 +32,6 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -44,7 +43,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.*;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -481,11 +480,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         setChanged();
     }
 
-    void broadcastMessage(TranslatableContents c) {
-
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", c.getKey(), c.getArgs());
+    void broadcastMessage(String key, Object... args) {
+        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            p.displayClientMessage(MutableComponent.create(c), false);
+            p.displayClientMessage(Component.translatable(key, args), false);
         }
     }
 
@@ -499,11 +497,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             RoomRecipeMatch<MCRoom> match
     ) {
         swapBlocks(getServerLevel(), match);
-        broadcastMessage(new TranslatableContents(
+        broadcastMessage(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match.getRecipeID()),
                 roomDoorPos.getDoorPos().getUIString()
-        ));
+        );
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
@@ -547,12 +545,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         ResourceLocation oldMatchID = oldMatch.getRecipeID();
         ResourceLocation newMatchID = newMatch.getRecipeID();
-        broadcastMessage(new TranslatableContents(
+        broadcastMessage(
                 "messages.building.room_changed",
                 new TranslatableContents("room." + oldMatchID.getPath()),
                 new TranslatableContents("room." + newMatchID.getPath()),
                 newRoom.getDoorPos().getUIString()
-        ));
+        );
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         if (oldMatch == null && newMatch != null) {
             quests.markQuestAsComplete(newRoom, newMatchID);
@@ -579,21 +577,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             MCRoom roomDoorPos,
             RoomRecipeMatch oldRecipeId
     ) {
-        broadcastMessage(new TranslatableContents(
+        broadcastMessage(
                 "messages.building.room_destroyed",
                 new TranslatableContents("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getDoorPos().getUIString()
-        ));
+        );
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
         quests.markQuestAsLost(roomDoorPos, oldRecipeId.getRecipeID());
     }
 
     @Override
     public void questCompleted(MCQuest quest) {
-        broadcastMessage(new TranslatableContents(
+        broadcastMessage(
                 "messages.town_flag.quest_completed",
                 RoomRecipes.getName(quest.getWantedId())
-        )); // TODO: Do this in a different quest listener (specialized in "messaging")
+        ); // TODO: Do this in a different quest listener (specialized in "messaging")
         setChanged();
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
@@ -607,10 +605,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void questLost(MCQuest quest) {
-        broadcastMessage(new TranslatableContents(
+        broadcastMessage(
                 "messages.town_flag.quest_lost",
                 RoomRecipes.getName(quest.getWantedId())
-        )); // TODO: Do this in a different quest listener (specialized in "messaging")
+        ); // TODO: Do this in a different quest listener (specialized in "messaging")
         setChanged();
     }
 
