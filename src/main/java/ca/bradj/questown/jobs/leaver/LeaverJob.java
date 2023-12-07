@@ -40,6 +40,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
 
     private boolean dropping;
     private final Jobs.LootDropper<MCHeldItem> dropper = new LeaverLootDropper(this);
+    private boolean lootRegistered = true;
 
     public LeaverJob(
             TownInterface town,
@@ -123,9 +124,9 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
                 gateTarget = null;
             }
         }
+        town.getKnowledgeHandle().registerFoundLoots(journal.getItems());
         tryDropLoot(entityPos);
         tryTakeFood(entityPos);
-        town.registerFoundLoots(journal.getItems());
     }
 
     protected abstract Collection<MCHeldItem> getLoot(GathererJournal.Tools tools);
@@ -198,7 +199,10 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
          */
 
         e.signal = Signals.fromGameTime(level.getDayTime());
-        e.journal.tick(loot);
+        e.journal.tick((tools) -> {
+            e.lootRegistered = false;
+            return loot.getLoot(tools);
+        });
     }
 
     @Override

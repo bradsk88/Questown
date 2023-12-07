@@ -1,10 +1,15 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -13,6 +18,7 @@ class JobStatusesTest {
     public static class TestStatus implements IStatus<TestStatus> {
 
         static final TestStatus DROPPING_LOOT = new TestStatus("dropping_loot");
+
         static final TestStatus NO_SPACE = new TestStatus("no_space");
         static final TestStatus GOING_TO_JOB = new TestStatus("going_to_job");
         static final TestStatus NO_SUPPLIES = new TestStatus("no_supplies");
@@ -23,7 +29,7 @@ class JobStatusesTest {
         static final TestStatus ITEM_WORK_2 = new TestStatus("item_work_2");
         static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
         static final TestStatus RELAXING = new TestStatus("relaxing");
-
+        static final TestStatus WAITING_FOR_TIMED_STATE = new TestStatus("waiting");
         static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
             @Override
             public TestStatus droppingLoot() {
@@ -63,6 +69,11 @@ class JobStatusesTest {
             @Override
             public TestStatus relaxing() {
                 return RELAXING;
+            }
+
+            @Override
+            public TestStatus waitingForTimedState() {
+                return WAITING_FOR_TIMED_STATE;
             }
         };
 
@@ -113,6 +124,11 @@ class JobStatusesTest {
         }
 
         @Override
+        public boolean canWork() {
+            return !isAllowedToTakeBreaks();
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -129,6 +145,7 @@ class JobStatusesTest {
         public String toString() {
             return inner;
         }
+
     }
 
     public static final ImmutableMap<TestStatus, Boolean> HAS_ALL_SUPPLIES = ImmutableMap.of(
@@ -141,6 +158,7 @@ class JobStatusesTest {
             boolean hasNonSupplyItems,
             Map<TestStatus, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<TestStatus> {
+
     }
 
     record ConstTown(
@@ -148,9 +166,15 @@ class JobStatusesTest {
             boolean hasSpace,
             boolean canUseMoreSupplies
     ) implements TownStateProvider {
+
+        @Override
+        public boolean isUnfinishedTimeWorkPresent() {
+            return false;
+        }
     }
 
     static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
+
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return null;
@@ -160,9 +184,11 @@ class JobStatusesTest {
         public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             return null;
         }
+
     }
 
     static class FailJob implements JobStatuses.Job<TestStatus, TestStatus> {
+
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
@@ -172,6 +198,7 @@ class JobStatusesTest {
         public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
         }
+
     }
 
     private static final JobStatuses.Job<TestStatus, TestStatus> jobWithItemlessWork = new JobStatuses.Job<>() {
@@ -394,5 +421,30 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.IDLE, s);
+    }
+
+    @Test
+    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfBothAreNeeded() {
+        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
+        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
+            0, ImmutableList.of(sameRoom),
+            1, ImmutableList.of(sameRoom)
+        ));
+
+        Assertions.assertEquals(1, s.size());
+        Assertions.assertNotNull(s.get(0));
+    }
+
+    @Test
+    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfAllAreNeeded() {
+        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
+        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
+            0, ImmutableList.of(sameRoom),
+            1, ImmutableList.of(sameRoom),
+            2, ImmutableList.of(sameRoom)
+        ));
+
+        Assertions.assertEquals(1, s.size());
+        Assertions.assertNotNull(s.get(0));
     }
 }

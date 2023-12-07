@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.production;
 
-import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;

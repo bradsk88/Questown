@@ -70,7 +70,7 @@ class QuestBatchesTest {
                     return () -> {
                     };
                 }
-            });
+            }, UUID.randomUUID());
         }
     }
 
@@ -79,7 +79,7 @@ class QuestBatchesTest {
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
-                > qbs = new QuestBatches<>((owner, reward) -> new QuestBatch<>(factory, reward));
+                > qbs = new QuestBatches<>((batchUUID, owner, reward) -> new QuestBatch<>(factory, reward, batchUUID));
 
         Room sameRoom = new Room(
                 new Position(1, 2),
@@ -112,7 +112,7 @@ class QuestBatchesTest {
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
-                > qbs = new QuestBatches<>((i, r) -> new QuestBatch<>(factory, r));
+                > qbs = new QuestBatches<>((batchUUID, i, r) -> new QuestBatch<>(factory, r, batchUUID));
 
         Room sameRoom = new Room(
                 new Position(1, 2),
@@ -155,7 +155,7 @@ class QuestBatchesTest {
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
-                > qbs = new QuestBatches<>((i, r) -> new QuestBatch<>(factory, r));
+                > qbs = new QuestBatches<>((batchUUID, i, r) -> new QuestBatch<>(factory, r, batchUUID));
 
         Room sameRoom = new Room(
                 new Position(1, 2),

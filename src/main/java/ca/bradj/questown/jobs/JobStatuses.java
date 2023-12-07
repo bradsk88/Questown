@@ -4,9 +4,13 @@ import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,8 +45,9 @@ public class JobStatuses {
             STATUS useStatus = job.tryUsingSupplies(supplyItemStatus);
             if (useStatus != null) {
                 s = useStatus;
-            } else {
-                hasWorkItems = false;
+                // TODO[Testing]: This "else" breaks jobs that use tools at multiple stages
+//            } else {
+//                hasWorkItems = false;
             }
         }
         if (s == null && inventory.inventoryFull()) {
@@ -115,78 +120,127 @@ public class JobStatuses {
             IProductionJob<STATUS> job,
             IProductionStatusFactory<STATUS> factory
     ) {
-        return usualRoutine(
-                currentStatus, prioritizeExtraction, inventory,
-                new TownStateProvider() {
-                    @Override
-                    public boolean hasSupplies() {
-                        return town.hasSupplies();
-                    }
-
-                    @Override
-                    public boolean hasSpace() {
-                        return town.hasSpace();
-                    }
-
-                    @Override
-                    public boolean canUseMoreSupplies() {
-                        return !town.roomsNeedingIngredientsByState()
-                                .entrySet()
-                                .stream()
-                                .allMatch(v -> v.getValue().isEmpty());
-                    }
-                },
-                new Job<>() {
-                    @Override
-                    public @Nullable STATUS tryChoosingItemlessWork() {
-                        Collection<ROOM> rooms = town.roomsWithCompletedProduct();
-                        if (rooms.isEmpty()) {
-                            return null;
-                        }
-
-                        RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
-                        if (location != null) {
-                            if (rooms.contains(location.room)) {
-                                return factory.extractingProduct();
+                STATUS status = usualRoutine(
+                        currentStatus, prioritizeExtraction, inventory,
+                        new TownStateProvider() {
+                            @Override
+                            public boolean hasSupplies() {
+                                return town.hasSupplies();
                             }
-                        }
 
-                        return factory.goingToJobSite();
-                    }
+                            @Override
+                            public boolean hasSpace() {
+                                return town.hasSpace();
+                            }
 
-                    @Override
-                    public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
-                        if (supplyItemStatus.isEmpty()) {
-                            return null;
-                        }
-                        RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
-                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
+                            @Override
+                            public boolean canUseMoreSupplies() {
+                                return !town.roomsNeedingIngredientsByState()
+                                        .entrySet()
+                                        .stream()
+                                        .allMatch(v -> v.getValue().isEmpty());
+                            }
 
-                        boolean foundWork = false;
+                            @Override
+                            public boolean isUnfinishedTimeWorkPresent() {
+                                return town.isUnfinishedTimeWorkPresent();
+                            }
+                        },
+                        new Job<>() {
+                            @Override
+                            public @Nullable STATUS tryChoosingItemlessWork() {
+                                Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                                if (rooms.isEmpty()) {
+                                    return null;
+                                }
 
-                        List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
-                                .stream()
-                                .filter(work -> supplyItemStatus.getOrDefault(work, false))
-                                .toList();
-
-                        for (Integer s : orderedWithSupplies) {
-                            if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s).isEmpty()) { // TODO: Unit test the second leg of this condition
-                                foundWork = true;
+                                RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
                                 if (location != null) {
-                                    if (roomNeedsMap.get(s).contains(location.room)) {
-                                        return factory.fromJobBlockState(s);
+                                    if (rooms.contains(location.room)) {
+                                        return factory.extractingProduct();
                                     }
                                 }
-                            }
-                        }
 
-                        if (foundWork) {
-                            return factory.goingToJobSite();
-                        }
-                        return job.tryUsingSupplies(supplyItemStatus);
+                                return factory.goingToJobSite();
+                            }
+
+                            @Override
+                            public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+                                if (supplyItemStatus.isEmpty()) {
+                                    return null;
+                                }
+                                RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
+                                Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
+
+                                roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
+
+                                boolean foundWork = false;
+
+                                List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
+                                        .stream()
+                                        .filter(work -> supplyItemStatus.getOrDefault(work, false))
+                                        .toList();
+
+                                for (Integer s : orderedWithSupplies) {
+                                    if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
+                                            .isEmpty()) { // TODO: Unit test the second leg of this condition
+                                        foundWork = true;
+                                        if (location != null) {
+                                            if (roomNeedsMap.get(s).contains(location.room)) {
+                                                return factory.fromJobBlockState(s);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (foundWork) {
+                                    return factory.goingToJobSite();
+                                }
+                                // TODO: Return null here. This call to `try` might be needed for the farmer job.
+                                //  Let's convert that into a production job.
+                                return job.tryUsingSupplies(supplyItemStatus);
+                            }
+                        }, factory
+                );
+                // TODO: For "no supplies" status, ignore rooms that only need tools
+                // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
+                if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {
+                    if (town.isUnfinishedTimeWorkPresent()) {
+                        return factory.waitingForTimedState();
                     }
-                }, factory
-        );
+                }
+                return status;
+    }
+
+    public static <ROOM extends Room> Map<Integer, ? extends Collection<ROOM>> sanitizeRoomNeeds(
+            Map<Integer, ? extends Collection<ROOM>> roomNeedsMap
+    ) {
+        // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
+        // show up as "needing" 0.
+        Map<Integer, Collection<ROOM>> b = new HashMap<>();
+        roomNeedsMap.forEach((k, rooms) -> {
+            ImmutableSet.Builder<ROOM> allPrevRooms = ImmutableSet.builder();
+            for (int i = 0; i < k; i++) {
+                Collection<ROOM> elements = b.get(i);
+                if (elements == null) {
+                    elements = ImmutableList.of();
+                }
+                allPrevRooms.addAll(elements);
+            }
+            ImmutableSet<ROOM> prevRooms = allPrevRooms.build();
+            ImmutableList.Builder<ROOM> bld = ImmutableList.builder();
+            rooms.forEach(room -> {
+                if (prevRooms.contains(room)) {
+                    return;
+                }
+                bld.add(room);
+            });
+            ImmutableList<ROOM> build = bld.build();
+            if (!build.isEmpty()) {
+                b.put(k, build);
+            }
+        });
+        return ImmutableMap.copyOf(b);
     }
 
 

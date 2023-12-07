@@ -37,6 +37,7 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 
@@ -173,7 +174,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             player.setItemInHand(hand, converted);
             QT.FLAG_LOGGER.debug(
                     "{} created at {}",
-                    converted.getItem().getRegistryName(),
+                    ForgeRegistries.ITEMS.getKey(converted.getItem()),
                     entity.getTownFlagBasePos()
             );
             ItemStack toDrop = null;
@@ -188,7 +189,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             StoreParentOnNBT(converted, entity.getTownFlagBasePos());
             QT.FLAG_LOGGER.debug(
                     "{} has been paired with {} at {}",
-                    converted.getItem().getRegistryName(), entity.getUUID(), entity.getTownFlagBasePos()
+                    ForgeRegistries.ITEMS.getKey(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
             );
             return InteractionResult.sidedSuccess(false);
         }

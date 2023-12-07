@@ -1,9 +1,10 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.BakerBreadWork;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -60,29 +61,6 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         );
     }
 
-    public static boolean canAddIngredients(BlockState blockState) {
-        return canAcceptWheat(blockState) || canAcceptCoal(blockState);
-    }
-
-    public static BlockState insertItem(
-            ServerLevel level,
-            BlockState oldState,
-            ItemStack item
-    ) {
-        // FIXME: Check item type and state
-        int curValue = oldState.getValue(BAKE_STATE);
-        if (
-                canAcceptWheat(oldState) && item.is(Items.WHEAT) ||
-                        canAcceptCoal(oldState) && item.is(Items.COAL)
-        ) {
-            item.shrink(1);
-            int val = curValue + 1;
-            BlockState blockState = oldState.setValue(BAKE_STATE, val);
-            return blockState;
-        }
-        return oldState;
-    }
-
     public static boolean canAcceptWheat(BlockState oldState) {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
@@ -128,8 +106,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             BlockPos b,
             @Nullable TakeFn takeFn
     ) {
-        ItemStack is = new ItemStack(Items.BREAD, 1);
-        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
+        MCHeldItem is = MCHeldItem.fromMCItemStack(new ItemStack(Items.BREAD, 1));
+        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is, false);
         level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
 
@@ -155,19 +133,19 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         p_51385_.add(BAKE_STATE, FACING);
     }
 
-
+    @Override
     public void animateTick(
-            BlockState p_53635_,
-            Level p_53636_,
-            BlockPos p_53637_,
-            Random p_53638_
+            BlockState bs,
+            Level level,
+            BlockPos pos,
+            Random random
     ) {
-        if (p_53635_.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
-            double d0 = (double) p_53637_.getX() + 0.5D;
-            double d1 = (double) p_53637_.getY();
-            double d2 = (double) p_53637_.getZ() + 0.5D;
-            if (p_53638_.nextDouble() < 0.1D) {
-                p_53636_.playSound(
+        if (bs.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
+            double d0 = (double) pos.getX() + 0.5D;
+            double d1 = (double) pos.getY();
+            double d2 = (double) pos.getZ() + 0.5D;
+            if (random.nextDouble() < 0.1D) {
+                level.playSound(
                         null,
                         d0,
                         d1,
@@ -179,15 +157,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                 );
             }
 
-            Direction direction = p_53635_.getValue(FACING);
+            Direction direction = bs.getValue(FACING);
             Direction.Axis direction$axis = direction.getAxis();
             double d3 = 0.52D;
-            double d4 = p_53638_.nextDouble() * 0.6D - 0.3D;
+            double d4 = random.nextDouble() * 0.6D - 0.3D;
             double d5 = direction$axis == Direction.Axis.X ? (double) direction.getStepX() * 0.52D : d4;
-            double d6 = p_53638_.nextDouble() * 6.0D / 16.0D;
+            double d6 = random.nextDouble() * 6.0D / 16.0D;
             double d7 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
-            p_53636_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-            p_53636_.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
+            level.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
+            level.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
         }
     }
 
@@ -205,7 +183,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         }
 
         if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is));
+            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toItemStack()));
+            // FIXME: Set state to 0
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
@@ -232,10 +211,17 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     public void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            TownWorkStatusStore.State bs
+            AbstractWorkStatusStore.State bs
     ) {
         BlockState state = sl.getBlockState(pp);
         switch (bs.processingState()) {
+            case (BakerBreadWork.BLOCK_STATE_NEED_COAL) -> {
+                if (bs.ingredientCount() < 1) {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
+                } else {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+                }
+            }
             case (BakerBreadWork.BLOCK_STATE_NEED_WHEAT) -> {
                 if (bs.ingredientCount() <= 0) {
                     state = state.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
@@ -245,7 +231,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                     state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
                 }
             }
-            case (BakerBreadWork.BLOCK_STATE_NEED_WORK) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+            case (BakerBreadWork.BLOCK_STATE_NEED_TIME) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
             case (BakerBreadWork.BLOCK_STATE_DONE) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKED);
         }
         sl.setBlockAndUpdate(pp, state);

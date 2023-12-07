@@ -1,17 +1,18 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
+import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.TownWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,24 +22,34 @@ import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
-public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
-    private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
+public class WorldInteraction
+        extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCCoupledHeldItem> {
+
+    private final boolean nullifyExcessProduct;
+
+    public boolean tryWorking(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            LivingEntity entity,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        return tryWorking(new MCExtra(town, work, entity), workSpot);
+    }
+
+    private final Marker marker = MarkerManager.getMarker("WI");
 
     // TODO: Can we deal with the inventory OR the journal (both causes confusion)
     private final Container inventory;
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
-    private final int maxState;
-    private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final int interval;
-    private int ticksSinceLastAction;
+    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
+    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult;
 
     public WorldInteraction(
             Container inventory,
@@ -47,188 +58,138 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct,
             int interval
     ) {
+        super(
+                journal.getJobId(),
+                interval,
+                maxState,
+                stripMC2(toolsRequiredAtStates),
+                workRequiredAtStates,
+                stripMC(ingredientsRequiredAtStates),
+                ingredientQtyRequiredAtStates,
+                timeRequiredAtStates,
+                () -> journal.getItems().stream().map(MCHeldItem::get).toList(),
+                new InventoryHandle<>() {
+                    @Override
+                    public Collection<MCCoupledHeldItem> getItems() {
+                        ImmutableList.Builder<MCCoupledHeldItem> b = ImmutableList.builder();
+                        for (int i = 0; i < inventory.getContainerSize(); i++) {
+                            final int ii = i;
+                            b.add(MCCoupledHeldItem.fromMCItemStack(inventory.getItem(i), (shrunk) -> {
+                                inventory.setItem(ii, shrunk.toItem().toItemStack());
+                            }));
+                        }
+                        return b.build();
+                    }
+
+                    @Override
+                    public void set(
+                            int ii,
+                            MCCoupledHeldItem shrink
+                    ) {
+                        inventory.setItem(ii, shrink.get().toItemStack());
+                        inventory.setChanged();
+                    }
+                }
+        );
         this.inventory = inventory;
         this.journal = journal;
-        this.maxState = maxState;
-        this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
-        this.workRequiredAtStates = workRequiredAtStates;
-        this.toolsRequiredAtStates = toolsRequiredAtStates;
+        this.timeRequiredAtStates = timeRequiredAtStates;
         this.workResult = workResult;
-        this.interval = interval;
+        this.nullifyExcessProduct = nullifyExcessProduct;
     }
 
-    public boolean tryWorking(
-            TownInterface town,
-            LivingEntity entity,
-            WorkSpot<Integer, BlockPos> workSpot
+    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
-        if (town.getServerLevel() == null) {
-            return false;
-        }
-        WorkStatusHandle jh = town.getWorkStatusHandle();
+        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toItemStack())));
+        return b.build();
+    }
 
-        ticksSinceLastAction++;
-        if (ticksSinceLastAction < interval) {
-            return false;
-        }
-        ticksSinceLastAction = 0;
+    private static ImmutableMap<Integer, Function<MCCoupledHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<Integer, Function<MCCoupledHeldItem, Boolean>> b = ImmutableMap.builder();
+        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toItemStack())));
+        return b.build();
+    }
 
-        if (workSpot == null) {
-            return false;
-        }
-
-        if (!Jobs.isCloseTo(entity.blockPosition(), workSpot.position)) {
-            return false;
-        }
-
-        if (workSpot.action == maxState) {
-            return tryExtractOre(town, workSpot.position);
-        }
-
-        if (this.workRequiredAtStates.containsKey(workSpot.action)) {
-            Integer work = this.workRequiredAtStates.get(workSpot.action);
-            if (work != null && work > 0) {
-                if (workSpot.action == 0) {
-                    TownWorkStatusStore.State jobBlockState = jh.getJobBlockState(workSpot.position);
-                    if (jobBlockState == null) {
-                        jobBlockState = new TownWorkStatusStore.State(0, 0, 0);
-                    }
-                    if (jobBlockState.workLeft() == 0) {
-                        jh.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
-                    }
-                }
-                if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-                    tryInsertIngredients(jh, workSpot);
-                }
-                return tryProcessOre(jh, entity, workSpot);
-            }
-        }
-
-        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return tryInsertIngredients(jh, workSpot);
-        }
-
-        return false;
+    @Override
+    protected boolean tryExtractOre(
+            MCExtra extra,
+            BlockPos position
+    ) {
+        return tryExtractOre(extra.town(), extra.work(), position);
     }
 
     protected boolean tryExtractOre(
             TownInterface town,
+            WorkStateContainer<BlockPos> jh,
             BlockPos oldPos
     ) {
-        WorkStatusHandle jh = town.getWorkStatusHandle();
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
-            @Nullable TownWorkStatusStore.State newState = JobBlock.extractRawProduct(
+            @Nullable AbstractWorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
-                    is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
+                    journal::addItemIfSlotAvailable, nullifyExcessProduct
             );
             return newState != null;
         }
         return false;
     }
 
-    private boolean tryProcessOre(
-            WorkStatusHandle sl,
-            LivingEntity entity,
-            WorkSpot<Integer, BlockPos> ws
+    @Override
+    protected void degradeTool(
+            MCExtra mcExtra,
+            Function<MCTownItem, Boolean> toolCheck
     ) {
-        BlockPos bp = ws.position;
-        @Nullable Integer s = JobBlock.getState(sl, bp);
-        if (ws.action.equals(s)) {
-            Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
-            );
-            if (nextStepWork == null) {
-                nextStepWork = 0;
-            }
-            TownWorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork);
-            boolean didWork = blockState != null;
-            if (didWork) {
-                degradeTool(entity, JobBlock.getState(sl, bp));
-            }
-            return didWork;
-        }
-        return false;
-    }
-
-    private void degradeTool(
-            LivingEntity entity,
-            @Nullable Integer state
-    ) {
-        if (state == null) {
-            QT.JOB_LOGGER.warn("Block state is null while trying to degrade tool");
-            return;
-        }
-        Ingredient tool = toolsRequiredAtStates.get(state);
-        if (tool == null) {
-            QT.JOB_LOGGER.warn("Tool requirement is null while trying to degrade tool");
-            return;
-        }
-
+        // FIXME: This tool degradation seem to work
         Optional<MCHeldItem> foundTool = journal.getItems()
                 .stream()
-                .filter(v -> tool.test(v.get().toItemStack()))
+                .filter(v -> toolCheck.apply(v.get()))
                 .findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toItemStack();
-            is.hurtAndBreak(1, entity, (x) -> {
-            });
+            is.hurtAndBreak(1, mcExtra.entity(), (x) -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
         }
     }
 
-    private boolean tryInsertIngredients(
-            WorkStatusHandle sl,
-            WorkSpot<Integer, BlockPos> ws
-    ) {
-        BlockPos bp = ws.position;
-        Integer state = JobBlock.getState(sl, bp);
-        if (state == null || !state.equals(ws.action)) {
-            return false;
-        }
-
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            ItemStack item = inventory.getItem(i);
-            if (item.isEmpty()) {
-                continue;
-            }
-            String invBefore = inventory.toString();
-            String name = "[unknown]";
-            ResourceLocation registryName = item.getItem().getRegistryName();
-            if (registryName != null) {
-                name = registryName.toString();
-            }
-            if (!sl.canInsertItem(item, bp)) {
-                continue;
-            }
-            Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
-            );
-            if (nextStepWork == null) {
-                nextStepWork = 0;
-            }
-            if (sl.tryInsertItem(this, item, bp, nextStepWork)) {
-                QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
-                inventory.setChanged();
-                return true;
-            }
-        }
-        return false;
+    @Override
+    protected WorkStateContainer<BlockPos> getWorkStatuses(MCExtra extra) {
+        return extra.work();
     }
 
     @Override
-    public Map<Integer, Ingredient> ingredientsRequiredAtStates() {
-        return ingredientsRequiredAtStates;
+    protected boolean canInsertItem(
+            MCExtra mcExtra,
+            MCCoupledHeldItem item,
+            BlockPos bp
+    ) {
+        return mcExtra.work().canInsertItem(item, bp);
     }
 
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQtyRequiredAtStates;
+    }
+
+    @Override
+    protected boolean isEntityClose(
+            MCExtra extra,
+            BlockPos position
+    ) {
+        return Jobs.isCloseTo(extra.entity().blockPosition(), position);
+    }
+
+    @Override
+    protected boolean isReady(MCExtra extra) {
+        return extra.town() != null && extra.town().getServerLevel() != null;
     }
 }

@@ -23,25 +23,52 @@ import java.util.List;
 public class Loots {
 
     @NotNull
-    static List<ItemStack> getFromLootTables(
+    static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Journal<?, MCHeldItem, ?> journal,
-            GathererTools.LootTablePrefix ltPrefix,
-            GathererTools.LootTablePath defaultLT
+            GathererTools.LootTableParameters lt
     ) {
+        final ResourceLocation biome = finalizeBiome(journal);
+        int maxAmount = journal.getCapacity();
+        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+    }
+
+    @NotNull
+    static List<MCHeldItem> getFromLootTables(
+            ServerLevel level,
+            Journal<?, MCHeldItem, ?> journal,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome
+    ) {
+        int maxAmount = journal.getCapacity();
+        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+    }
+
+    @NotNull
+    static List<MCHeldItem> getFromLootTables(
+            ServerLevel level,
+            int minAmount, int maxAmount,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome
+    ) {
+        String id = String.format("%s/%s/%s", lt.prefix().value(), biome.getNamespace(), biome.getPath());
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
+        LootTables tables = level.getServer().getLootTables();
+        if (!tables.getIds().contains(rl)) {
+            rl = new ResourceLocation(Questown.MODID, lt.path().path());
+        }
+        LootTable lootTable = tables.get(rl);
+        List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
+        return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
+    }
+
+    @NotNull
+    private static ResourceLocation finalizeBiome(Journal<?, MCHeldItem, ?> journal) {
         @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
         if (biome == null) {
             biome = new ResourceLocation("forest"); // TODO: Something better?
         }
-        String id = String.format("%s/%s/%s", ltPrefix, biome.getNamespace(), biome.getPath());
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = level.getServer().getLootTables();
-        if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, defaultLT.path());
-        }
-        LootTable lootTable = tables.get(rl);
-        List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
-        return loot.stream().map(MCTownItem::toItemStack).toList();
+        return biome;
     }
 
     @NotNull

@@ -16,4 +16,6 @@ public interface IStatusFactory<STATUS extends IStatus<STATUS>> {
     STATUS extractingProduct();
 
     STATUS relaxing();
+
+    STATUS waitingForTimedState();
 }

@@ -27,7 +27,7 @@ public class VisitorMobEntityContainer implements Container {
 
     @Override
     public ItemStack getItem(int p_18941_) {
-        return new ItemStack(journal.getItems().get(p_18941_).get().get(), 1);
+        return journal.getItems().get(p_18941_).get().toItemStack();
     }
 
     @Override
@@ -38,7 +38,7 @@ public class VisitorMobEntityContainer implements Container {
         if (amount > 1) {
             throw new IllegalArgumentException("Gatherers do not support stacking");
         }
-        return new ItemStack(journal.removeItem(idx).get().get(), 1);
+        return journal.removeItem(idx).get().toItemStack();
     }
 
     @Override

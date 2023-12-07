@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -10,9 +11,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.quests.Quest;
-import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -43,6 +43,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
@@ -96,7 +97,7 @@ public class Jobs {
             if (newItem.equals(curItem)) {
                 continue;
             }
-            inventory.setItem(i, new ItemStack(newItem, 1));
+            inventory.setItem(i, items.get(i).get().toItemStack());
         }
     }
 
@@ -141,7 +142,7 @@ public class Jobs {
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
+                return new TextComponent("");
             }
 
             @Override
@@ -169,13 +170,17 @@ public class Jobs {
             ServerLevel level,
             BlockPos b,
             TakeFn takeFn,
-            ItemStack is
+            MCHeldItem is,
+            boolean nullifyExcess
     ) {
         while (!is.isEmpty()) {
             if (takeFn == null || !takeFn.Take(is)) {
-                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+                if (nullifyExcess) {
+                    return;
+                }
+                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is.toItem().toItemStack()));
             }
-            is.shrink(1);
+            is = is.shrink();
         }
     }
 
@@ -219,12 +224,37 @@ public class Jobs {
                 .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
-    public interface StateCheck {
-        boolean Check(ServerLevel sl, BlockPos bp);
+    public static boolean isUnfinishedTimeWorkPresent(
+            RoomsHolder town,
+            ResourceLocation workRoomId,
+            Function<BlockPos, @Nullable Integer> ticksSource
+    ) {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
+        return rooms.stream()
+                .anyMatch(v -> {
+                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                        @Nullable Integer apply = ticksSource.apply(e.getKey());
+                        if (apply != null && apply > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
     }
 
-    public static Collection<MCRoom> roomsWithState(TownInterface town, ResourceLocation roomType, StateCheck check) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(roomType);
+    public interface StateCheck {
+        boolean Check(
+                ServerLevel sl,
+                BlockPos bp
+        );
+    }
+
+    public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
+            TownInterface town,
+            ResourceLocation roomType,
+            StateCheck check
+    ) {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {
                     for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
@@ -234,7 +264,6 @@ public class Jobs {
                     }
                     return false;
                 })
-                .map(v -> v.room)
                 .toList();
     }
 
@@ -260,10 +289,9 @@ public class Jobs {
             QT.JOB_LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
             return false;
         }
-        if (isFarFromChest(entityPos, target)) {
-            QT.JOB_LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
-            return false;
-        }
+
+
+        boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
@@ -271,9 +299,19 @@ public class Jobs {
             }
             // TODO: Unit tests of this logic!
             if (mct.isLocked()) {
-                QT.JOB_LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
+                QT.JOB_LOGGER.trace("Villager is not putting away {} because it is locked", mct);
                 continue;
             }
+
+            if (ItemsInit.KNOWLEDGE.get().equals(mct.get().get())) {
+                dropper.removeItem(mct);
+                continue;
+            }
+
+            if (farFromChest) {
+                continue;
+            }
+
             QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, target.getBlockPos());
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
@@ -292,46 +330,5 @@ public class Jobs {
             }
         }
         return true;
-    }
-
-    public interface ContainerItemTaker {
-
-        void addItem(MCHeldItem mcHeldItem);
-
-        boolean isInventoryFull();
-    }
-
-    public static void tryTakeContainerItems(
-            ContainerItemTaker farmerJob,
-            BlockPos entityPos,
-            ContainerTarget<MCContainer, MCTownItem> suppliesTarget,
-            ContainerTarget.CheckFn<MCTownItem> check
-    ) {
-        if (isFarFromChest(entityPos, suppliesTarget)) {
-            return;
-        }
-        if (farmerJob.isInventoryFull()) {
-            return;
-        }
-        String start = suppliesTarget.toShortString();
-        for (int i = 0; i < suppliesTarget.size(); i++) {
-            MCTownItem mcTownItem = suppliesTarget.getItem(i);
-            if (check.Matches(mcTownItem)) {
-                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
-                farmerJob.addItem(MCHeldItem.fromTown(mcTownItem));
-                suppliesTarget.getContainer().removeItem(i, 1);
-                break;
-            }
-        }
-    }
-
-    private static boolean isFarFromChest(
-            BlockPos entityPos,
-            ContainerTarget<?, ? extends Item<?>> chest
-    ) {
-        if (chest == null) {
-            return true;
-        }
-        return !Jobs.isCloseTo(entityPos, chest.getBlockPos());
     }
 }

@@ -57,6 +57,11 @@ public class SessionUniqueOrdinals {
         public String getCategoryId() {
             return null;
         }
+
+        @Override
+        public boolean canWork() {
+            return false;
+        }
     };
 
     public static IStatus<?> getStatus(int i) {

@@ -158,7 +158,7 @@ public class GathererJob extends LeaverJob {
             int maxItems
     ) {
         GathererTools.LootTablePrefix prefix = GathererTools.NO_TOOL_TABLE_PREFIX;
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.path());
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.value());
         LootTable lootTable = level.getServer().getLootTables().get(rl);
         return getLoots(level, lootTable, minItems, maxItems, prefix, null);
     }
@@ -246,7 +246,7 @@ public class GathererJob extends LeaverJob {
         List<MCHeldItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(MCTownItem::fromMCItemStack)
-                .map(v -> MCHeldItem.fromLootTable(v, prefix.path(), fBiome))
+                .map(v -> MCHeldItem.fromLootTable(v, prefix, fBiome))
                 .toList()
                 .subList(0, subLen);
         return list;
@@ -254,7 +254,7 @@ public class GathererJob extends LeaverJob {
 
 
     private BlockPos setupForLeaveTown(TownInterface town) {
-        Questown.LOGGER.debug("Visitor is searching for a town gate");
+        QT.JOB_LOGGER.debug("Visitor is searching for a town gate");
         // TODO: Get the CLOSEST gate?
         return town.getEnterExitPos();
     }

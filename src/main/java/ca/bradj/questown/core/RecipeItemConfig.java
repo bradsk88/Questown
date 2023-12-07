@@ -8,6 +8,7 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Collections;
 
@@ -94,19 +95,19 @@ public class RecipeItemConfig {
         // TODO: Tags that allow for you to choose from a range of easy-to-hard blocks should use the weight of the easiest block
         // In this case, we know that "light sources" contains torches, so we use torch weight for now
         defaultItemWeights.add(String.format("#%s", TagsInit.Items.LIGHT_SOURCES.location()), TORCH_SCORE);
-        defaultItemWeights.add(Items.TORCH.getRegistryName().toString(), TORCH_SCORE);
-        defaultItemWeights.add(Items.CRAFTING_TABLE.getRegistryName().toString(), CRAFTING_TABLE);
-        defaultItemWeights.add(Items.LANTERN.getRegistryName().toString(), LANTERN);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.TORCH).toString(), TORCH_SCORE);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.CRAFTING_TABLE).toString(), CRAFTING_TABLE);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.LANTERN).toString(), LANTERN);
         defaultItemWeights.add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
-        defaultItemWeights.add(Items.CHEST.getRegistryName().toString(), CHEST);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.CHEST).toString(), CHEST);
         defaultItemWeights.add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
-        defaultItemWeights.add(Items.FURNACE.getRegistryName().toString(), FURNACE);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.FURNACE).toString(), FURNACE);
         defaultItemWeights.add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
-        defaultItemWeights.add(Items.BOOKSHELF.getRegistryName().toString(), BOOKSHELF);
-        defaultItemWeights.add(Items.ENCHANTING_TABLE.getRegistryName().toString(), ENCH_TABLE);
-        defaultItemWeights.add(Items.BREWING_STAND.getRegistryName().toString(), BREW_STAND);
-        defaultItemWeights.add(Items.TARGET.getRegistryName().toString(), TARGET);
-        defaultItemWeights.add(Items.CACTUS.getRegistryName().toString(), CAULDRON);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.BOOKSHELF).toString(), BOOKSHELF);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.ENCHANTING_TABLE).toString(), ENCH_TABLE);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.BREWING_STAND).toString(), BREW_STAND);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.TARGET).toString(), TARGET);
+        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.CACTUS).toString(), CAULDRON);
     }
 
     // TODO: How can mod pack builders add weights to this?

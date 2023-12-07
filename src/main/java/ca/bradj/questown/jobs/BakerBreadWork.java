@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
@@ -15,27 +16,36 @@ public class BakerBreadWork extends DeclarativeJob {
     public static final JobID ID = new JobID("baker", "bread");
 
     public static final int BLOCK_STATE_NEED_WHEAT = 0;
-    public static final int BLOCK_STATE_NEED_WORK = 1; // TODO[ASAP]: TIME, not WORK
-    public static final int BLOCK_STATE_DONE = 2;
+    public static final int BLOCK_STATE_NEED_COAL = 1;
+    public static final int BLOCK_STATE_NEED_TIME = 2;
+    public static final int BLOCK_STATE_DONE = 3;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, Ingredient.of(Items.WHEAT),
-            BLOCK_STATE_NEED_WORK, Ingredient.of(ItemTags.COALS)
+            BLOCK_STATE_NEED_COAL, Ingredient.of(ItemTags.COALS)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, 2,
-            BLOCK_STATE_NEED_WORK, 1
+            BLOCK_STATE_NEED_COAL, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            // TODO: Add support for work without a tool or ingredient
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, 0,
-            BLOCK_STATE_NEED_WORK, 10,
+            BLOCK_STATE_NEED_COAL, 0,
+            BLOCK_STATE_NEED_TIME, 0,
             BLOCK_STATE_DONE, 0
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_WHEAT, 0,
+            BLOCK_STATE_NEED_COAL, 0,
+            BLOCK_STATE_NEED_TIME, 100, // FIXME: 6000?
+            BLOCK_STATE_DONE, 0
+    );
+    private static final boolean TIMER_SHARING = false;
+
     public static final ItemStack RESULT = Items.BREAD.getDefaultInstance();
 
     public BakerBreadWork(
@@ -54,7 +64,11 @@ public class BakerBreadWork extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                TIME_REQUIRED_AT_STATES,
+                TIMER_SHARING,
+                ImmutableMap.of(),
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
+                false
         );
     }
 }

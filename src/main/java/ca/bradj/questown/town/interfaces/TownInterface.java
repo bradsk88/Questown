@@ -1,10 +1,10 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.WorkHandle;
@@ -81,6 +81,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Override
     boolean isVillagerMissing(UUID uuid);
 
+    /** @deprecated Use getRoomHandle **/
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 
     Collection<MCRoom> getFarms();
@@ -124,7 +125,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    WorkStatusHandle getWorkStatusHandle();
+    WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
 
     WorkHandle getWorkHandle();
 
@@ -133,13 +134,11 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
      */
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
 
-    ImmutableSet<ItemStack> getAllKnownGatherResults(
-            GathererTools.LootTablePrefix ltPrefix
-    );
-
-    void registerFoundLoots(ImmutableList<MCHeldItem> items);
+    KnowledgeHolder<ResourceLocation, MCHeldItem, MCTownItem> getKnowledgeHandle();
 
     QuestsHolder getQuestHandle();
+
+    RoomsHolder getRoomHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

@@ -37,7 +37,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         throw new IllegalStateException("should not get called");
@@ -87,7 +87,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -145,7 +145,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -203,7 +203,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return false;
@@ -254,7 +254,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -307,7 +307,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -360,7 +360,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;
@@ -413,7 +413,7 @@ class GathererStatusesTest {
                         return true;
                     }
                 },
-                new GathererTimeWarper.Town<GathererJournalTest.TestItem>() {
+                new GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>() {
                     @Override
                     public boolean IsStorageAvailable() {
                         return true;

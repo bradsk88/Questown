@@ -338,6 +338,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             public Status relaxing() {
                 return RELAXING;
             }
+
+            @Override
+            public Status waitingForTimedState() {
+                throw new UnsupportedOperationException("Gatherers do not generate products");
+            }
         };
 
         public static Status from(String s) {
@@ -465,6 +470,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         @Override
         public boolean isUnset() {
             return this == UNSET;
+        }
+
+        @Override
+        public boolean canWork() {
+            return !isAllowedToTakeBreaks();
         }
     }
 

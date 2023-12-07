@@ -47,6 +47,10 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     private static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
             new ProductionStatus("RELAXING", nextIndex++)
     );
+    private static final ProductionStatus WAITING_FOR_TIMED_STATE = SessionUniqueOrdinals.register(
+            new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
+    );
+
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -87,6 +91,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         @Override
         public ProductionStatus relaxing() {
             return RELAXING;
+        }
+
+        @Override
+        public ProductionStatus waitingForTimedState() {
+            return WAITING_FOR_TIMED_STATE;
         }
     };
     private final String name;
@@ -159,6 +168,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
                 COLLECTING_SUPPLIES,
                 EXTRACTING_PRODUCT
         ).contains(this);
+    }
+
+    @Override
+    public boolean canWork() {
+        return !isAllowedToTakeBreaks();
     }
 
     @Override

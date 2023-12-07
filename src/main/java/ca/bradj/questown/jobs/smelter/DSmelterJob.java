@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.smelter;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -16,7 +17,7 @@ import java.util.UUID;
 public class DSmelterJob extends DeclarativeJob {
     public static final JobID ID = new JobID("smelter", "process_ore");
     public static final ItemStack RESULT = new ItemStack(Items.RAW_IRON, 2);
-    private static final int MAX_STATE = 2;
+    public static final int MAX_STATE = 2;
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of(
             0, Ingredient.of(Items.IRON_ORE)
             // 1
@@ -27,7 +28,7 @@ public class DSmelterJob extends DeclarativeJob {
             // 1
             // 2
     );
-    private static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
             // 0
             1, Ingredient.of(TagsInit.Items.PICKAXES)
             // 2
@@ -37,6 +38,12 @@ public class DSmelterJob extends DeclarativeJob {
             1, 10,
             2, 0
     );
+    private static final ImmutableMap<Integer, Integer> TIME = ImmutableMap.of(
+            0, 0,
+            1, 0,
+            2, 0
+    );
+    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
 
     public DSmelterJob(
             UUID ownerUUID,
@@ -54,7 +61,11 @@ public class DSmelterJob extends DeclarativeJob {
                 INGREDIENTS_QTY,
                 TOOLS,
                 WORK,
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                TIME,
+                SHARED_TIMERS_NOT_APPLICABLE,
+                ImmutableMap.of(),
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
+                false
         );
     }
 }

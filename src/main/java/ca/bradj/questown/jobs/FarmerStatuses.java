@@ -84,6 +84,11 @@ public class FarmerStatuses {
                     public boolean canUseMoreSupplies() {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
                     }
+
+                    @Override
+                    public boolean isUnfinishedTimeWorkPresent() {
+                        return false;
+                    }
                 },
                 new JobStatuses.Job<GathererJournal.Status, GathererJournal.Status>() {
                     @Override

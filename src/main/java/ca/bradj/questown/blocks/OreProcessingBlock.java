@@ -1,7 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -10,16 +10,23 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 import java.util.List;
 
-import static ca.bradj.questown.blocks.JobBlock.*;
-
 public class OreProcessingBlock extends Block implements StatefulJobBlock {
     public static final String ITEM_ID = "ore_processing_block";
+
+    private static final IntegerProperty PROCESSING_STATE = IntegerProperty.create(
+            "processing_state", 0, 2
+    );
+
+    private static final IntegerProperty WORK_LEFT = IntegerProperty.create(
+            "work_left", 0, 10
+    );
 
     public OreProcessingBlock(
     ) {
@@ -38,7 +45,8 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     public void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            TownWorkStatusStore.State bs) {
+            AbstractWorkStatusStore.State bs
+    ) {
         BlockState oldState = sl.getBlockState(pp);
         oldState.setValue(PROCESSING_STATE, bs.processingState());
         oldState.setValue(WORK_LEFT, bs.workLeft());

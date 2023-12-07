@@ -17,4 +17,6 @@ public interface HeldItem<
     @Nullable String acquiredViaLootTablePrefix();
 
     @Nullable String foundInBiome();
+
+    String toShortString();
 }

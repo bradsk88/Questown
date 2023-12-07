@@ -67,7 +67,7 @@ public class WorkRequest {
     }
 
     public void toNetwork(FriendlyByteBuf buffer) {
-        buffer.writeUtf(item == null ? "" : item.getRegistryName().toString());
+        buffer.writeUtf(item == null ? "" : ForgeRegistries.ITEMS.getKey(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());
     }
 

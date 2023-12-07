@@ -143,8 +143,9 @@ public class WorldInteraction {
         if (bs.getBlock() instanceof GrassBlock gb || bs.getBlock() instanceof FarmBlock fb) {
             Jobs.getOrCreateItemFromBlock(
                     level, groundPos,
-                    item -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(item)),
-                    new ItemStack(Items.GRASS, 1)
+                    journal::addItemIfSlotAvailable,
+                    MCHeldItem.fromMCItemStack(new ItemStack(Items.GRASS, 1)),
+                    false
             );
             playSound(level, groundPos, SoundEvents.GRASS_BREAK);
             town.markBlockWeeded(groundPos);

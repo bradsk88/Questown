@@ -17,10 +17,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -189,7 +189,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         return ing.stream()
                 .map(v -> Arrays.stream(v.getItems())
                         .map(ItemStack::getItem)
-                        .map(Item::getRegistryName)
+                        .map(ForgeRegistries.ITEMS::getKey)
                         .filter(Objects::nonNull)
                         .map(ResourceLocation::toString)
                         .toList())

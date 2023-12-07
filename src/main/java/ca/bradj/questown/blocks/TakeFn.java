@@ -1,7 +1,7 @@
 package ca.bradj.questown.blocks;
 
-import net.minecraft.world.item.ItemStack;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 
 public interface TakeFn {
-    boolean Take(ItemStack is);
+    boolean Take(MCHeldItem is);
 }

@@ -13,7 +13,6 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -127,8 +126,8 @@ public class TownQuestsHandle implements QuestsHolder {
                     } else {
                         sender.closeContainer();
                     }
-                    t.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_1"));
-                    t.broadcastMessage(new TranslatableComponent("messages.town_flag.quest_batch_removed_2"));
+                    t.broadcastMessage("messages.town_flag.quest_batch_removed_1");
+                    t.broadcastMessage("messages.town_flag.quest_batch_removed_2");
                 }
                 return;
             }

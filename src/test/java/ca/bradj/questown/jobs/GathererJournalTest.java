@@ -37,6 +37,11 @@ public class GathererJournalTest {
         }
 
         @Override
+        public String getShortName() {
+            return value;
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -72,6 +77,21 @@ public class GathererJournalTest {
         @Override
         public TestItem unlocked() {
             throw new IllegalCallerException("Locking is not expected here");
+        }
+
+        @Override
+        public @Nullable String acquiredViaLootTablePrefix() {
+            return null;
+        }
+
+        @Override
+        public @Nullable String foundInBiome() {
+            return null;
+        }
+
+        @Override
+        public String toShortString() {
+            return value;
         }
     }
 
@@ -114,7 +134,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -339,7 +358,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -407,7 +425,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -457,7 +474,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -487,7 +503,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -517,7 +532,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -567,7 +581,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -602,7 +615,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -644,7 +656,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -688,7 +699,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -722,7 +732,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -764,7 +773,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 noSpaceInTown,
                 6,
                 noTools()
@@ -807,7 +815,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 noSpace,
                 6,
                 noTools()
@@ -853,7 +860,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 hasSpace,
                 6,
                 noTools()
@@ -950,7 +956,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -988,7 +993,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {
@@ -1043,7 +1047,6 @@ public class GathererJournalTest {
         GathererJournal<TestItem, TestItem> gatherer = new GathererJournal<TestItem, TestItem>(
                 sigs,
                 () -> new TestItem(""),
-                t -> t,
                 new GathererStatuses.TownStateProvider() {
                     @Override
                     public boolean IsStorageAvailable() {

@@ -3,7 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
@@ -38,7 +38,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
         return r;
     }
 
-    public static void writeWorkResults(ImmutableList<Ingredient> allOutputs, FriendlyByteBuf data) {
+    public static void writeWorkResults(ImmutableCollection<Ingredient> allOutputs, FriendlyByteBuf data) {
         data.writeInt(allOutputs.size());
         data.writeCollection(allOutputs, (v, i) -> i.toNetwork(v));
     }

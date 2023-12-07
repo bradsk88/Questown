@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
-public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker {
+public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
 
     public static final JobID ID = new JobID("farmer", "farm_field");
     private final Marker marker = MarkerManager.getMarker("Farmer");
@@ -169,16 +169,6 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public void addItem(MCHeldItem mcHeldItem) {
-        journal.addItem(mcHeldItem);
-    }
-
-    @Override
-    public boolean isInventoryFull() {
-        return journal.isInventoryFull();
-    }
-
-    @Override
     public void tick(
             TownInterface town,
             LivingEntity entity,
@@ -275,7 +265,31 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
 //            return;
 //        }
-        Jobs.tryTakeContainerItems(this, entityPos, suppliesTarget, (item) -> holdItems.contains(item.get()));
+        // FIXME: UNcomment
+//        JobsClean.tryTakeContainerItems(this, entityPos, new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+//            @Override
+//            public boolean isCloseTo() {
+//                if (suppliesTarget == null) {
+//                    return false;
+//                }
+//                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+//            }
+//
+//            @Override
+//            public String toShortString() {
+//                return suppliesTarget.toShortString();
+//            }
+//
+//            @Override
+//            public List<MCTownItem> getItems() {
+//                return suppliesTarget.getItems();
+//            }
+//
+//            @Override
+//            public void removeItem(int i, int quantity) {
+//                suppliesTarget.getContainer().removeItem(i, quantity);
+//            }
+//        }, (item) -> holdItems.contains(item));
     }
 
     @Override

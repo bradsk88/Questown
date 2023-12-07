@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,6 +35,12 @@ public class WorkSeekerJob extends DeclarativeJob {
             BLOCK_STATE_NO_JOBS, 0,
             BLOCK_STATE_JOBS_AVAIlABLE, 1
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NO_JOBS, 0,
+            BLOCK_STATE_JOBS_AVAIlABLE, 0
+    );
+    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
+
     private static final String WORK_ID = "seeking_work";
 
     public WorkSeekerJob(
@@ -53,7 +60,11 @@ public class WorkSeekerJob extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                (a, b) -> ImmutableSet.of()
+                TIME_REQUIRED_AT_STATES,
+                SHARED_TIMERS_NOT_APPLICABLE,
+                ImmutableMap.of(),
+                (a, b) -> ImmutableSet.of(),
+                false
         );
     }
 
@@ -76,7 +87,9 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct,
             int interval
     ) {
         return new WorldInteraction(
@@ -86,17 +99,19 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 workRequiredAtStates,
+                timeRequiredAtStates,
                 toolsRequiredAtStates,
                 workResult,
+                nullifyExcessProduct,
                 interval
         ) {
 
             @Override
             protected boolean tryExtractOre(
-                    TownInterface town,
-                    BlockPos oldPos
+                    MCExtra extra,
+                    BlockPos position
             ) {
-                town.changeJobForVisitorFromBoard(ownerUUID);
+                extra.town().changeJobForVisitorFromBoard(ownerUUID);
                 return true;
             }
         };

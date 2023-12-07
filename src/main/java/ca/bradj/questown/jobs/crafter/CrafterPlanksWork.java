@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.crafter;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -34,6 +35,12 @@ public class CrafterPlanksWork extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_WORK, 0,
+            BLOCK_STATE_DONE, 0
+    );
+    private static final boolean TIMER_SHARING = false;
+
     // TODO: Figure out how handle the "logs" tag and spit out planks of the same type as the input
     public static final ItemStack RESULT = new ItemStack(Items.OAK_PLANKS, 1);
 
@@ -53,7 +60,11 @@ public class CrafterPlanksWork extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                TIME_REQUIRED_AT_STATES,
+                TIMER_SHARING,
+                ImmutableMap.of(),
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
+                false
         );
     }
 }

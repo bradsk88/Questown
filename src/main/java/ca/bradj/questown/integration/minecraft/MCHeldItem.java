@@ -2,6 +2,7 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +19,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     private final String prefix;
     private final String biome;
 
-    private MCHeldItem(
+    protected MCHeldItem(
             MCTownItem item,
             boolean locked,
             @Nullable String prefix,
@@ -30,8 +31,8 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         this.biome = biome;
     }
 
-    public static MCHeldItem fromLootTable(MCTownItem item, String lootTablePrefix, ResourceLocation biome) {
-        return new MCHeldItem(item, false, lootTablePrefix, biome.toString());
+    public static MCHeldItem fromLootTable(MCTownItem item, GathererTools.LootTablePrefix lootTablePrefix, ResourceLocation biome) {
+        return new MCHeldItem(item, false, lootTablePrefix.value(), biome.toString());
     }
 
     public static MCHeldItem fromTag(CompoundTag tag) {
@@ -81,6 +82,16 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         return new MCHeldItem(delegate.shrink(), locked, prefix, biome);
     }
 
+    @Override
+    public String getShortName() {
+        String name = "[unknown]";
+        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(delegate.get());
+        if (registryName != null) {
+            name = registryName.toString();
+        }
+        return name;
+    }
+
     public static MCHeldItem Air() {
         return new MCHeldItem(MCTownItem.Air(), false, null, null);
     }
@@ -112,7 +123,30 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     public Tag serializeNBT() {
         CompoundTag tag = delegate.serializeNBT();
         tag.putBoolean("locked", locked);
+        if (biome != null) {
+            tag.putString("biome", biome);
+        }
+        if (prefix != null) {
+            tag.putString("prefix", prefix);
+        }
         return tag;
+    }
+
+    public static MCHeldItem deserialize(CompoundTag v) {
+        ItemStack del = ItemStack.of(v.getCompound("item"));
+        boolean locked = false;
+        if (v.contains("locked")) {
+            locked = v.getBoolean("locked");
+        }
+        String biome = null;
+        if (v.contains("biome")) {
+            biome = v.getString("biome");
+        }
+        String prefix = null;
+        if (v.contains("prefix")) {
+            prefix = v.getString("prefix");
+        }
+        return new MCHeldItem(MCTownItem.fromMCItemStack(del), locked, prefix, biome);
     }
 
     public MCTownItem toItem() {

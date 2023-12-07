@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -43,14 +44,23 @@ public class TownContainers {
         if (level == null) {
             return Stream.empty();
         }
-        Stream<ContainerTarget<MCContainer, MCTownItem>> allContainers = townFlagBlockEntity
+        Stream<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainersStream(townFlagBlockEntity, level);
+        return allContainers.filter(v -> v.hasItem(c));
+    }
+
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {
+        return getAllContainersStream(townFlagBlockEntity, level).toList();
+    }
+
+        @NotNull
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {
+        return townFlagBlockEntity
                 .getMatches()
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())
                 .filter(v -> v.getValue() instanceof ChestBlock)
                 .map(v -> fromChestBlockMaybe(v.getKey(), (ChestBlock) v.getValue(), level))
                 .filter(Objects::nonNull);
-        return allContainers.filter(v -> v.hasItem(c));
     }
 
     @NotNull

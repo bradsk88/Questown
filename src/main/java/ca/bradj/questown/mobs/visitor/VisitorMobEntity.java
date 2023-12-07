@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -333,6 +334,10 @@ public class VisitorMobEntity extends PathfinderMob {
         super.tick();
 
         if (!initialized) {
+            return;
+        }
+
+        if (!town.isInitialized()) {
             return;
         }
 
@@ -916,28 +921,6 @@ public class VisitorMobEntity extends PathfinderMob {
             DamageSource p_21016_,
             float p_21017_
     ) {
-        if (p_21016_.getEntity() instanceof Player p) {
-            if (p.getLevel().isClientSide()) {
-                return super.hurt(p_21016_, p_21017_);
-            }
-            ItemStack itemInHand = p.getItemInHand(InteractionHand.MAIN_HAND);
-            if (itemInHand.is(Items.WHEAT_SEEDS)) {
-                town.changeJobForVisitor(uuid, FarmerJob.ID);
-            }
-            if (itemInHand.is(Items.BREAD)) {
-                town.changeJobForVisitor(uuid, BakerBreadWork.ID);
-            }
-            if (itemInHand.is(Items.IRON_INGOT)) {
-                town.changeJobForVisitor(uuid, DSmelterJob.ID);
-            }
-            if (itemInHand.is(Items.WOODEN_PICKAXE)) {
-                town.changeJobForVisitor(uuid, BlacksmithWoodenPickaxeJob.ID);
-            }
-            if (itemInHand.is(Items.GLASS)) {
-                town.changeJobForVisitor(uuid, WorkSeekerJob.getIDForRoot(CrafterStickWork.ID));
-            }
-        }
-
         if (this.job.shouldBeNoClip(town, blockPosition())) {
             return false;
         }
@@ -982,6 +965,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public BlockPos getFlagPos() {
         return town.getTownFlagBasePos();
+    }
+
+    public TownInterface getTown() {
+        return town;
     }
 
     public interface ChangeListener {
