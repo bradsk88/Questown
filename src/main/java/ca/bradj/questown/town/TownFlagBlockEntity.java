@@ -696,11 +696,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 return;
             }
             GathererTools.LootTablePrefix ltp = new GathererTools.LootTablePrefix(lootPrefix);
-            Set<MCTownItem> known = new HashSet<>(biome.get(ltp));
+            ImmutableSet<MCTownItem> knownBiomeItems = biome.get(ltp);
+            if (knownBiomeItems == null) {
+                knownBiomeItems = ImmutableSet.of();
+            }
+            Set<MCTownItem> known = new HashSet<>(knownBiomeItems);
             int sizeBefore = known.size();
             known.add(item.get());
             if (sizeBefore != known.size()) {
-                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", item);
+                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", item.toShortString());
             }
             biome.put(ltp, ImmutableSet.copyOf(known));
         });
