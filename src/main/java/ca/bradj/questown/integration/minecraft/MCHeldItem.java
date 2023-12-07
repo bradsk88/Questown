@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -126,6 +127,11 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
                 ", prefix=" + prefix +
                 ", biome=" + biome +
                 '}';
+    }
+
+    public String toShortString() {
+        String itemName = ForgeRegistries.ITEMS.getKey(delegate.get()).toString();
+        return String.format("{item=%s, prefix=%s, biome=%s}", itemName, prefix, biome);
     }
 
     @Override
