@@ -547,8 +547,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         ResourceLocation newMatchID = newMatch.getRecipeID();
         broadcastMessage(
                 "messages.building.room_changed",
-                new TranslatableContents("room." + oldMatchID.getPath()),
-                new TranslatableContents("room." + newMatchID.getPath()),
+                Component.translatable("room." + oldMatchID.getPath()),
+                Component.translatable("room." + newMatchID.getPath()),
                 newRoom.getDoorPos().getUIString()
         );
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
@@ -579,7 +579,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         broadcastMessage(
                 "messages.building.room_destroyed",
-                new TranslatableContents("room." + oldRecipeId.getRecipeID().getPath()),
+                Component.translatable("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getDoorPos().getUIString()
         );
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
