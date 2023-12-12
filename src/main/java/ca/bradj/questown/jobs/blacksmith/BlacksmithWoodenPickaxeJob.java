@@ -70,6 +70,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
+                ImmutableMap.of(),
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

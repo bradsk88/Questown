@@ -33,7 +33,7 @@ public class Loots {
         if (biome == null) {
             biome = new ResourceLocation("forest"); // TODO: Something better?
         }
-        String id = String.format("%s/%s/%s", ltPrefix, biome.getNamespace(), biome.getPath());
+        String id = String.format("%s/%s/%s", ltPrefix.value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = level.getServer().getLootTables();
         if (!tables.getIds().contains(rl)) {

@@ -27,7 +27,7 @@ public class DSmelterJob extends DeclarativeJob {
             // 1
             // 2
     );
-    private static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
             // 0
             1, Ingredient.of(TagsInit.Items.PICKAXES)
             // 2
@@ -62,6 +62,7 @@ public class DSmelterJob extends DeclarativeJob {
                 WORK,
                 TIME,
                 SHARED_TIMERS_NOT_APPLICABLE,
+                ImmutableMap.of(),
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

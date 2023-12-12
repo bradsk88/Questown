@@ -62,6 +62,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 SHARED_TIMERS_NOT_APPLICABLE,
+                ImmutableMap.of(),
                 (a, b) -> ImmutableSet.of()
         );
     }

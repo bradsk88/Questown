@@ -681,6 +681,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             GathererTools.LootTablePrefix ltPrefix
     ) {
         ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
+        b.add(Items.WHEAT_SEEDS.getDefaultInstance());
         knownGatherResults.values()
                 .stream()
                 .flatMap(v -> v.getOrDefault(ltPrefix, ImmutableSet.of()).stream())

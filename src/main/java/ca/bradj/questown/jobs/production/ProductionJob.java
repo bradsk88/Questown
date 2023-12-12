@@ -10,6 +10,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -53,6 +54,7 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
     private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
     private final boolean sharedTimers;
+    public final ImmutableMap<STATUS, String> specialRules;
 
     @Override
     public abstract Signals getSignal();
@@ -69,7 +71,8 @@ public abstract class ProductionJob<
             RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
-            IProductionStatusFactory<STATUS> sFac
+            IProductionStatusFactory<STATUS> sFac,
+            ImmutableMap<STATUS, String> specialRules
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -94,6 +97,8 @@ public abstract class ProductionJob<
         this.journal.addItemListener(this);
 
         this.statusFactory = sFac;
+
+        this.specialRules = specialRules;
     }
 
     @Override
@@ -248,6 +253,10 @@ public abstract class ProductionJob<
             }
         }
 
+        if (shouldDisappear(town, entityPos)) {
+            return entityBlockPos;
+        }
+
         return findNonWorkTarget(entityBlockPos, entityPos, town);
     }
 
@@ -327,8 +336,11 @@ public abstract class ProductionJob<
             TownInterface town,
             Vec3 entityPosition
     ) {
-        // Since production workers don't leave town. They don't need to disappear.
-        return false;
+        String rule = specialRules.get(getStatus());
+        if (rule == null) {
+            return false;
+        }
+        return SpecialRules.REMOVE_FROM_WORLD.equals(rule);
     }
 
     @Override

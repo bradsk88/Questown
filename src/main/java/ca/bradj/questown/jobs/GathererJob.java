@@ -155,7 +155,7 @@ public class GathererJob extends LeaverJob {
             int maxItems
     ) {
         GathererTools.LootTablePrefix prefix = GathererTools.NO_TOOL_TABLE_PREFIX;
-        ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.path());
+        ResourceLocation rl = new ResourceLocation(Questown.MODID, prefix.value());
         LootTable lootTable = level.getServer().getLootTables().get(rl);
         return getLoots(level, lootTable, minItems, maxItems, prefix, null);
     }
@@ -243,7 +243,7 @@ public class GathererJob extends LeaverJob {
         List<MCHeldItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(MCTownItem::fromMCItemStack)
-                .map(v -> MCHeldItem.fromLootTable(v, prefix.path(), fBiome))
+                .map(v -> MCHeldItem.fromLootTable(v, prefix.value(), fBiome))
                 .toList()
                 .subList(0, subLen);
         return list;

@@ -125,6 +125,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             boolean sharedTimers,
+            ImmutableMap<ProductionStatus, String> specialRules,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult
     ) {
         super(
@@ -138,7 +139,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                         MCHeldItem::Air,
                         STATUS_FACTORY
                 ),
-                STATUS_FACTORY
+                STATUS_FACTORY,
+                specialRules
         );
         this.jobId = jobId;
         this.prioritizeExtraction = prioritizeExtraction;

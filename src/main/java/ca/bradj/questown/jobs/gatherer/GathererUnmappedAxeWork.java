@@ -5,6 +5,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Journal;
+import ca.bradj.questown.jobs.SpecialRules;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
@@ -41,6 +43,12 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
             BLOCK_STATE_NEED_ROAM, 100 // TODO: 16000?
     );
     private static final boolean TIMER_SHARING = false;
+    public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
+            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
+            ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
+    );
+
+
     public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
 
     public GathererUnmappedAxeWork(
@@ -61,6 +69,7 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
+                SPECIAL_RULES,
                 GathererUnmappedAxeWork::getFromLootTables
         );
     }

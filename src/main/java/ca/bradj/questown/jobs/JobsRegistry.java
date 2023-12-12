@@ -239,6 +239,7 @@ public class JobsRegistry {
             GathererJob.ID.rootId(), new Jerb(
                     ImmutableList.of(
                             //ExplorerJob.ID, // TODO[ASAP]: Bring back
+                            GathererUnmappedAxeWork.ID,
                             GathererJob.ID
                     ),
                     ImmutableList.of(GathererJob.ID)
@@ -297,7 +298,7 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(BakerBreadWork.RESULT),
                 BakerBreadWork.RESULT,
-                (s) -> getProductionNeeds((ProductionStatus) s, BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES)
+                (s) -> getProductionNeeds((ProductionStatus) s, BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
         ));
         b.put(DSmelterJob.ID, new Work(
                 (town, uuid) -> new DSmelterJob(uuid, 6),
@@ -307,7 +308,7 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(DSmelterJob.RESULT),
                 DSmelterJob.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, DSmelterJob.INGREDIENTS)
+                s -> getProductionNeeds((ProductionStatus) s, DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
         ));
         b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
                 (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
@@ -318,7 +319,11 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
                 BlacksmithWoodenPickaxeJob.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
+                        BlacksmithWoodenPickaxeJob.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         b.put(CrafterBowlWork.ID, new Work(
                 (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -328,7 +333,11 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterBowlWork.RESULT),
                 CrafterBowlWork.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
+                        CrafterBowlWork.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         b.put(CrafterStickWork.ID, new Work(
                 (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -338,7 +347,11 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterStickWork.RESULT),
                 CrafterStickWork.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
+                        CrafterStickWork.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         b.put(CrafterPaperWork.ID, new Work(
                 (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -348,7 +361,11 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterPaperWork.RESULT),
                 CrafterPaperWork.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
+                        CrafterPaperWork.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         b.put(CrafterPlanksWork.ID, new Work(
                 (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
@@ -358,24 +375,32 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
                 CrafterPlanksWork.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
+                        CrafterPlanksWork.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         b.put(GathererUnmappedAxeWork.ID, new Work(
                 (town, uuid) -> new GathererUnmappedAxeWork(uuid, 6),
                 productionJobSnapshot(GathererUnmappedAxeWork.ID),
                 (block) -> block instanceof WelcomeMatBlock,
-                GathererUnmappedAxeWork.JOB_SITE, // TODO[ASAP]: Confirm this works
+                GathererUnmappedAxeWork.JOB_SITE,
                 ProductionStatus.FACTORY.idle(),
                 t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
                 Items.WHEAT_SEEDS.getDefaultInstance(),
-                s -> getProductionNeeds((ProductionStatus) s, GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(
+                        (ProductionStatus) s,
+                        GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES,
+                        GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
+                )
         ));
         // TODO[ASAP]: Bring back
 //        b.put(GathererMappedAxeWork.ID, new Work(
 //                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
 //                productionJobSnapshot(GathererMappedAxeWork.ID),
 //                (block) -> block instanceof WelcomeMatBlock,
-//                SpecialQuests.TOWN_GATE, // TODO[ASAP]: Confirm this works
+//                SpecialQuests.TOWN_GATE,
 //                ProductionStatus.FACTORY.idle(),
 //                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
 //                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
@@ -385,14 +410,23 @@ public class JobsRegistry {
 
     @NotNull
     private static List<Ingredient> getProductionNeeds(
-            ProductionStatus s,
-            ImmutableMap<Integer, Ingredient> ing
+            ProductionStatus status,
+            ImmutableMap<Integer, Ingredient> ing,
+            ImmutableMap<Integer, Ingredient> tools
     ) {
-        ProductionStatus status = s;
-        if (!ing.containsKey(status) || ing.get(status) == null || ing.get(status).isEmpty()) {
-            return ImmutableList.of();
+        if (!status.isWorkingOnProduction()) {
+            status = ProductionStatus.fromJobBlockStatus(0);
+        } // TODO[ASAP]: Maybe just show needs across all states all the time
+        ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
+        Ingredient ingredient = ing.get(status.getProductionState());
+        if (ingredient != null && !ingredient.isEmpty()) {
+            b.add(ingredient);
         }
-        return ImmutableList.of(ing.get(status.getProductionState()));
+        Ingredient tool = tools.get(status.getProductionState());
+        if (tool != null && !tool.isEmpty()) {
+            b.add(tool);
+        }
+        return b.build();
     }
 
     @NotNull
