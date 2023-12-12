@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -38,6 +39,8 @@ public class WorkSeekerJob extends DeclarativeJob {
             BLOCK_STATE_NO_JOBS, 0,
             BLOCK_STATE_JOBS_AVAIlABLE, 0
     );
+    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
+
     private static final String WORK_ID = "seeking_work";
 
     public WorkSeekerJob(
@@ -58,6 +61,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
+                SHARED_TIMERS_NOT_APPLICABLE,
                 (a, b) -> ImmutableSet.of()
         );
     }
@@ -101,6 +105,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             @Override
             protected boolean tryExtractOre(
                     TownInterface town,
+                    WorkStatusHandle<BlockPos, ItemStack> jh,
                     BlockPos oldPos
             ) {
                 town.changeJobForVisitorFromBoard(ownerUUID);

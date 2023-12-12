@@ -42,6 +42,7 @@ public class DSmelterJob extends DeclarativeJob {
             1, 0,
             2, 0
     );
+    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
 
     public DSmelterJob(
             UUID ownerUUID,
@@ -60,6 +61,7 @@ public class DSmelterJob extends DeclarativeJob {
                 TOOLS,
                 WORK,
                 TIME,
+                SHARED_TIMERS_NOT_APPLICABLE,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

@@ -2,10 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.BlacksmithsTableBlock;
-import ca.bradj.questown.blocks.BreadOvenBlock;
-import ca.bradj.questown.blocks.JobBoardBlock;
-import ca.bradj.questown.blocks.OreProcessingBlock;
+import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -16,6 +13,7 @@ import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.WorkStatusStore;
@@ -257,7 +255,6 @@ public class JobsRegistry {
 
     private static final ImmutableMap<JobID, Work> works;
 
-
     static {
         ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
         b.put(GathererJob.ID, new Work(
@@ -362,6 +359,16 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
                 CrafterPlanksWork.RESULT,
                 s -> getProductionNeeds((ProductionStatus) s, CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES)
+        ));
+        b.put(GathererUnmappedAxeWork.ID, new Work(
+                (town, uuid) -> new GathererUnmappedAxeWork(uuid, 6),
+                productionJobSnapshot(GathererUnmappedAxeWork.ID),
+                (block) -> block instanceof WelcomeMatBlock,
+                GathererUnmappedAxeWork.JOB_SITE, // TODO[ASAP]: Confirm this works
+                ProductionStatus.FACTORY.idle(),
+                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
+                Items.WHEAT_SEEDS.getDefaultInstance(),
+                s -> getProductionNeeds((ProductionStatus) s, GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES)
         ));
         // TODO[ASAP]: Bring back
 //        b.put(GathererMappedAxeWork.ID, new Work(

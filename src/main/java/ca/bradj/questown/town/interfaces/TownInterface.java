@@ -125,7 +125,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle();
+    WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
 
     WorkHandle getWorkHandle();
 

@@ -1,11 +1,11 @@
 package ca.bradj.questown.jobs.gatherer;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Journal;
+import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -19,7 +19,7 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_ROAM = 1;
-    public static final int BLOCK_STATE_DONE = 1;
+    public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -38,8 +38,10 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_ROAM, 14000
+            BLOCK_STATE_NEED_ROAM, 100 // TODO: 16000?
     );
+    private static final boolean TIMER_SHARING = false;
+    public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
 
     public GathererUnmappedAxeWork(
             UUID ownerUUID,
@@ -49,15 +51,16 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 ID,
-                new ResourceLocation(Questown.MODID, "crafting_room"),
+                JOB_SITE,
                 MAX_STATE,
                 true,
-                16000, // The number of ticks between MORNING and EVENING (if they leave late, they get back late)
+                0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
+                TIMER_SHARING,
                 GathererUnmappedAxeWork::getFromLootTables
         );
     }

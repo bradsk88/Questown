@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -937,6 +938,9 @@ public class VisitorMobEntity extends PathfinderMob {
             }
             if (itemInHand.is(Items.WOODEN_PICKAXE)) {
                 town.changeJobForVisitor(uuid, BlacksmithWoodenPickaxeJob.ID);
+            }
+            if (itemInHand.is(Items.LEATHER_BOOTS)) {
+                town.changeJobForVisitor(uuid, GathererUnmappedAxeWork.ID);
             }
             if (itemInHand.is(Items.GLASS)) {
                 town.changeJobForVisitor(uuid, WorkSeekerJob.getIDForRoot(CrafterStickWork.ID));

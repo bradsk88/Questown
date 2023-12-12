@@ -124,10 +124,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            boolean sharedTimers,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult
     ) {
         super(
-                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
+                ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
@@ -208,6 +209,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected void tick(
             TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> work,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
@@ -217,7 +219,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(town.getWorkStatusHandle(), bp)));
+                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(work, bp)));
             }
 
             @Override
@@ -229,7 +231,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             public boolean isUnfinishedTimeWorkPresent() {
                 return Jobs.isUnfinishedTimeWorkPresent(
                         town.getRoomHandle(), workRoomId,
-                        (bp) -> town.getWorkStatusHandle().getTimeToNextState(bp)
+                        work::getTimeToNextState
                 );
             }
 
@@ -256,7 +258,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
 
         if (entityCurrentJobSite != null) {
-            tryWorking(town, entity, entityCurrentJobSite);
+            tryWorking(town, work, entity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
         tryGetSupplies(jtp, entityBlockPos);
@@ -264,12 +266,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private void tryWorking(
             TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> work,
             LivingEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
-                town.getWorkStatusHandle(),
-                entityCurrentJobSite.room
+                work, entityCurrentJobSite.room
         );
 
         ProductionStatus status = getStatus();
@@ -287,7 +289,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
         }
 
-        boolean worked = this.world.tryWorking(town, entity, workSpot);
+        boolean worked = this.world.tryWorking(town, work, entity, workSpot);
         boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
         boolean finishedWork = workSpot.action.equals(maxState);
         if (hasWork && worked && finishedWork) {
@@ -373,7 +375,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     @Override
-    protected BlockPos findJobSite(TownInterface town) {
+    protected BlockPos findJobSite(TownInterface town, WorkStatusHandle<BlockPos, ItemStack> work) {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (sl == null) {
             return null;
@@ -387,7 +389,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         // TODO: Sort by distance and choose the closest
         for (RoomRecipeMatch<MCRoom> match : bakeries) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
-                @Nullable Integer blockState = JobBlock.getState(town.getWorkStatusHandle(), blocks.getKey());
+                @Nullable Integer blockState = JobBlock.getState(work, blocks.getKey());
                 if (blockState == null) {
                     continue;
                 }
@@ -405,8 +407,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     @Override
-    protected Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(TownInterface town) {
-        WorkStatusHandle th = town.getWorkStatusHandle();
+    protected Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+            TownInterface town, WorkStatusHandle<BlockPos, ItemStack> th
+    ) {
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {

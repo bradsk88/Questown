@@ -29,10 +29,12 @@ import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
+import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -76,6 +78,7 @@ import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
@@ -110,16 +113,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final ArrayList<BlockPos> blocksWithWeeds = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
-    private final MCRoom flagMetaRoom = new MCRoom(
-            Positions.FromBlockPos(getBlockPos().offset(1, 0, 0)),
-            ImmutableList.of(new InclusiveSpace(
-                    // TODO: Add 2 to config?
-                    Positions.FromBlockPos(getBlockPos()).offset(-2, -2),
-                    Positions.FromBlockPos(getBlockPos()).offset(2, 2)
-            )),
-            getBlockPos().getY()
-    );
+    private final MCRoom flagMetaRoom = metaRoomAround(getBlockPos());
+
+    @NotNull
+    private MCRoom metaRoomAround(BlockPos p) {
+        return new MCRoom(
+                Positions.FromBlockPos(p.offset(1, 0, 0)),
+                ImmutableList.of(new InclusiveSpace(
+                        // TODO: Add 2 to config?
+                        Positions.FromBlockPos(p).offset(-2, -2),
+                        Positions.FromBlockPos(p).offset(2, 2)
+                )),
+                p.getY()
+        );
+    }
+
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
+    private final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
+
     final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
     private final Stack<Long> mornings = new Stack<>();
     private final LinkedBlockingQueue<Consumer<TownFlagBlockEntity>> initializers = new LinkedBlockingQueue<>();
@@ -185,8 +196,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.roomsMap.tick(sl, blockPos);
 
-        // TODO: Do this less often?
-        e.jobHandle.tick(sl, e.roomsMap.getAllRooms());
+        // TODO[Speed]: Do this less often? (JobHandles is now dependent on accurate ticks, so maybe not?)
+        Collection<MCRoom> allRooms = new ArrayList<>(e.roomsMap.getAllRooms());
+        e.getWelcomeMatMetaRooms().forEach(v -> allRooms.add(v.room));
+        e.jobHandle.tick(sl, allRooms);
+        e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms));
 
         advanceScheduledBlocks(sl, e.roomsMap, e.blocksWithWeeds);
 
@@ -892,7 +906,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
+        if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
+            return getWelcomeMatMetaRooms();
+        }
+
         return roomsMap.getRoomsMatching(recipeId);
+    }
+
+    @NotNull
+    private List<RoomRecipeMatch<MCRoom>> getWelcomeMatMetaRooms() {
+        // TODO[ASAP]: Cache these
+        Function<MCRoom, ImmutableMap<BlockPos, Block>> fn = room -> RecipeDetection.getBlocksInRoom(getServerLevel(), room, false);
+        return getWelcomeMats()
+                .stream()
+                .map(this::metaRoomAround)
+                .map(v -> new RoomRecipeMatch<>(v, SpecialQuests.TOWN_GATE, fn.apply(v).entrySet()))
+                .toList();
     }
 
     @Override
@@ -906,8 +935,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle() {
-        return jobHandle;
+    public WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle(
+            @Nullable UUID ownerIDOrNullForGlobal
+    ) {
+        if (ownerIDOrNullForGlobal == null) {
+            return jobHandle;
+        }
+        TownWorkStatusStore jh = jobHandles.get(ownerIDOrNullForGlobal);
+        if (jh != null) {
+            return jh;
+        }
+        jh = new TownWorkStatusStore();
+        jobHandles.put(ownerIDOrNullForGlobal, jh);
+        return jh;
     }
 
     @Override

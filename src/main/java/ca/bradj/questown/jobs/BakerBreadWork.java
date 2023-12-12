@@ -44,6 +44,8 @@ public class BakerBreadWork extends DeclarativeJob {
             BLOCK_STATE_NEED_TIME, 100, // FIXME: 6000?
             BLOCK_STATE_DONE, 0
     );
+    private static final boolean TIMER_SHARING = false;
+
     public static final ItemStack RESULT = Items.BREAD.getDefaultInstance();
 
     public BakerBreadWork(
@@ -63,6 +65,7 @@ public class BakerBreadWork extends DeclarativeJob {
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
+                TIMER_SHARING,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

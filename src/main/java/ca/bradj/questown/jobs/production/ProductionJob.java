@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -51,6 +52,7 @@ public abstract class ProductionJob<
 
     protected final UUID ownerUUID;
     private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
+    private final boolean sharedTimers;
 
     @Override
     public abstract Signals getSignal();
@@ -61,6 +63,7 @@ public abstract class ProductionJob<
 
     public ProductionJob(
             UUID ownerUUID,
+            boolean sharedTimers,
             int inventoryCapacity,
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
@@ -76,6 +79,7 @@ public abstract class ProductionJob<
             }
         };
         this.ownerUUID = ownerUUID;
+        this.sharedTimers = sharedTimers;
         this.allowedToPickUp = allowedToPickUp;
         this.marker = logMarker;
         this.recipe = recipe;
@@ -223,7 +227,7 @@ public abstract class ProductionJob<
 
         STATUS status = journal.getStatus();
         if (status.isGoingToJobsite()) {
-            return findJobSite(town);
+            return findJobSite(town, getWorkStatusHandle(town));
         }
 
         if (status.isWorkingOnProduction()) {
@@ -255,9 +259,11 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findProductionSpot(ServerLevel level);
 
-    protected abstract BlockPos findJobSite(TownInterface town);
+    protected abstract BlockPos findJobSite(TownInterface town, WorkStatusHandle<BlockPos, ItemStack> work);
 
-    protected abstract Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(TownInterface town);
+    protected abstract Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+            TownInterface town, WorkStatusHandle<BlockPos, ItemStack> work
+    );
 
     @Override
     public void tick(
@@ -265,12 +271,25 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.roomsNeedingIngredients = roomsNeedingIngredientsOrTools(town);
-        this.tick(town, entity, facingPos, roomsNeedingIngredients, statusFactory);
+        this.roomsNeedingIngredients = roomsNeedingIngredientsOrTools(town, getWorkStatusHandle(town));
+
+        WorkStatusHandle<BlockPos, ItemStack> work = getWorkStatusHandle(town);
+        this.tick(town, work, entity, facingPos, roomsNeedingIngredients, statusFactory);
+    }
+
+    private WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle(TownInterface town) {
+        WorkStatusHandle<BlockPos, ItemStack> work;
+        if (this.sharedTimers) {
+            work = town.getWorkStatusHandle(null);
+        } else {
+            work = town.getWorkStatusHandle(ownerUUID);
+        }
+        return work;
     }
 
     protected abstract void tick(
             TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> workStatus,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,

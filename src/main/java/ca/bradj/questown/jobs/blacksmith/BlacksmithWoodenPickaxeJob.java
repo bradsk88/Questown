@@ -48,6 +48,8 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 0,
             BLOCK_STATE_DONE, 0
     );
+    private static final boolean TIMER_SHARING = false;
+
     public static final ItemStack RESULT = Items.WOODEN_PICKAXE.getDefaultInstance();
 
     public BlacksmithWoodenPickaxeJob(
@@ -67,6 +69,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
+                TIMER_SHARING,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

@@ -29,7 +29,7 @@ import java.util.function.Function;
 
 // TODO[ASAP]: Break ties to MC and unit test this
 public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStack> {
-    private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
+    private final Marker marker = MarkerManager.getMarker("WI");
 
     // TODO: Can we deal with the inventory OR the journal (both causes confusion)
     private final Container inventory;
@@ -76,13 +76,13 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
 
     public boolean tryWorking(
             TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> jh,
             LivingEntity entity,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
         if (town.getServerLevel() == null) {
             return false;
         }
-        WorkStatusHandle<BlockPos, ItemStack> jh = town.getWorkStatusHandle();
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
@@ -99,7 +99,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
         }
 
         if (workSpot.action == maxState) {
-            return tryExtractOre(town, workSpot.position);
+            return tryExtractOre(town, jh, workSpot.position);
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
@@ -130,9 +130,9 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
 
     protected boolean tryExtractOre(
             TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> jh,
             BlockPos oldPos
     ) {
-        WorkStatusHandle<BlockPos, ItemStack> jh = town.getWorkStatusHandle();
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
             @Nullable WorkStatusStore.State newState = JobBlock.extractRawProduct(
@@ -238,7 +238,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
                 nextStepTime = 0;
             }
             if (sl.tryInsertItem(this, item, bp, nextStepWork, nextStepTime)) {
-                QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
+                QT.JOB_LOGGER.debug(marker, "Villager removed {} from their inventory {}", name, invBefore);
                 inventory.setChanged();
                 return true;
             }
