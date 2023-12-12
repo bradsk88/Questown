@@ -1,6 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -74,12 +75,12 @@ public class JobBlock {
             ServerLevel sl,
             WorkStatusHandle<BlockPos, ItemStack> jh,
             BlockPos block,
-            Iterable<ItemStack> is,
+            Iterable<MCHeldItem> is,
             @Nullable TakeFn takeFn
     ) {
         WorkStatusStore.State oldState = jh.getJobBlockState(block);
         WorkStatusStore.State bs = oldState.setProcessing(0);
-        for (ItemStack i : is) {
+        for (MCHeldItem i : is) {
             // TODO[ASAP]: Don't drop items for gatherers - just skip them
             releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
         }
@@ -95,7 +96,7 @@ public class JobBlock {
             WorkStatusHandle<BlockPos, ItemStack> level,
             BlockPos b,
             WorkStatusStore.State currentState,
-            ItemStack is,
+            MCHeldItem is,
             @Nullable TakeFn takeFn
     ) {
         Jobs.getOrCreateItemFromBlock(sl, b, takeFn, is);

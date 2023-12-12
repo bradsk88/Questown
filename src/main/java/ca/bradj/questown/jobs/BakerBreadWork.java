@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
@@ -67,7 +68,7 @@ public class BakerBreadWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
                 ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy()))
         );
     }
 }

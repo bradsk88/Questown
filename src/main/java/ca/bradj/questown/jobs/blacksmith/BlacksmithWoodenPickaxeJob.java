@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -71,7 +72,7 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
                 ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy()))
         );
     }
 }

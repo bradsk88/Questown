@@ -11,7 +11,6 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
@@ -78,7 +77,7 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
     // - Strategy: "loot_tables"
     // - Prefix: "jobs/axe"
     // - Default "jobs/axe/default"
-    private static Iterable<ItemStack> getFromLootTables(
+    private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Journal<?, MCHeldItem, ?> journal
     ) {

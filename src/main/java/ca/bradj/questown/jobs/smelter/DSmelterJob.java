@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.smelter;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -63,7 +64,7 @@ public class DSmelterJob extends DeclarativeJob {
                 TIME,
                 SHARED_TIMERS_NOT_APPLICABLE,
                 ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(RESULT.copy())
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy()))
         );
     }
 }

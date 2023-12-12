@@ -718,6 +718,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", item.toShortString());
             }
             biome.put(ltp, ImmutableSet.copyOf(known));
+            knownGatherResults.put(bId, biome);
         });
     }
 

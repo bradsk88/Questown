@@ -10,10 +10,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.WorkHandle;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -43,7 +41,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class Jobs {
@@ -171,13 +168,13 @@ public class Jobs {
             ServerLevel level,
             BlockPos b,
             TakeFn takeFn,
-            ItemStack is
+            MCHeldItem is
     ) {
         while (!is.isEmpty()) {
             if (takeFn == null || !takeFn.Take(is)) {
-                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is));
+                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is.toItem().toItemStack()));
             }
-            is.shrink(1);
+            is = is.shrink();
         }
     }
 

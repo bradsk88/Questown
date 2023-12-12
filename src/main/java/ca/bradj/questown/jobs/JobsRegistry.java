@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
@@ -15,6 +16,7 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -167,14 +169,17 @@ public class JobsRegistry {
         return w.initialRequest;
     }
 
-    public static ImmutableList<Ingredient> getAllOutputs(TownData t) {
-        return ImmutableList.copyOf(
-                works.values().stream()
-                        .map(v -> v.results.apply(t))
-                        .flatMap(Collection::stream)
-                        .map(Ingredient::of)
-                        .toList()
-        );
+    public static ImmutableSet<Ingredient> getAllOutputs(TownData t) {
+        List<Ingredient> list = works.values().stream()
+                .map(v -> v.results.apply(t))
+                .flatMap(Collection::stream)
+                .map(Ingredient::of)
+                .map(Ingredients::asWorkRequest)
+                .collect(Collectors.toSet())
+                .stream()
+                .map(WorkRequest::asIngredient)
+                .toList();
+        return ImmutableSet.copyOf(list);
     }
 
     private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
@@ -414,18 +419,10 @@ public class JobsRegistry {
             ImmutableMap<Integer, Ingredient> ing,
             ImmutableMap<Integer, Ingredient> tools
     ) {
-        if (!status.isWorkingOnProduction()) {
-            status = ProductionStatus.fromJobBlockStatus(0);
-        } // TODO[ASAP]: Maybe just show needs across all states all the time
+        // TODO: Is it okay that we ignore status here?
         ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
-        Ingredient ingredient = ing.get(status.getProductionState());
-        if (ingredient != null && !ingredient.isEmpty()) {
-            b.add(ingredient);
-        }
-        Ingredient tool = tools.get(status.getProductionState());
-        if (tool != null && !tool.isEmpty()) {
-            b.add(tool);
-        }
+        ing.values().forEach(b::add);
+        tools.values().forEach(b::add);
         return b.build();
     }
 

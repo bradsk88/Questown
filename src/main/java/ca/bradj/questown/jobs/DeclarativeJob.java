@@ -126,7 +126,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             boolean sharedTimers,
             ImmutableMap<ProductionStatus, String> specialRules,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult
     ) {
         super(
                 ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -173,7 +173,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
             int interval
     ) {
         return new WorldInteraction(
@@ -295,6 +295,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
         boolean finishedWork = workSpot.action.equals(maxState);
         if (hasWork && worked && finishedWork) {
+            town.registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
             town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
         }
     }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.BakerBreadWork;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.WorkStatusStore;
@@ -32,7 +33,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Random;
 
 public class BreadOvenBlock extends HorizontalDirectionalBlock implements StatefulJobBlock {
     public static final String ITEM_ID = "bread_oven_block";
@@ -129,7 +129,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             BlockPos b,
             @Nullable TakeFn takeFn
     ) {
-        ItemStack is = new ItemStack(Items.BREAD, 1);
+        MCHeldItem is = MCHeldItem.fromMCItemStack(new ItemStack(Items.BREAD, 1));
         Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
         level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
@@ -206,7 +206,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         }
 
         if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is));
+            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toItemStack()));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 

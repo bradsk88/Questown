@@ -23,16 +23,13 @@ import java.util.List;
 public class Loots {
 
     @NotNull
-    static List<ItemStack> getFromLootTables(
+    static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Journal<?, MCHeldItem, ?> journal,
             GathererTools.LootTablePrefix ltPrefix,
             GathererTools.LootTablePath defaultLT
     ) {
-        @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
-        if (biome == null) {
-            biome = new ResourceLocation("forest"); // TODO: Something better?
-        }
+        final ResourceLocation biome = finalizeBiome(journal);
         String id = String.format("%s/%s/%s", ltPrefix.value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = level.getServer().getLootTables();
@@ -41,7 +38,16 @@ public class Loots {
         }
         LootTable lootTable = tables.get(rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
-        return loot.stream().map(MCTownItem::toItemStack).toList();
+        return loot.stream().map(v -> MCHeldItem.fromLootTable(v, ltPrefix, biome)).toList();
+    }
+
+    @NotNull
+    private static ResourceLocation finalizeBiome(Journal<?, MCHeldItem, ?> journal) {
+        @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
+        if (biome == null) {
+            biome = new ResourceLocation("forest"); // TODO: Something better?
+        }
+        return biome;
     }
 
     @NotNull

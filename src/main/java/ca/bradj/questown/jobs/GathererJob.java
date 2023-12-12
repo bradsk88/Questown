@@ -243,7 +243,7 @@ public class GathererJob extends LeaverJob {
         List<MCHeldItem> list = rItems.stream()
                 .filter(v -> !v.isEmpty())
                 .map(MCTownItem::fromMCItemStack)
-                .map(v -> MCHeldItem.fromLootTable(v, prefix.value(), fBiome))
+                .map(v -> MCHeldItem.fromLootTable(v, prefix, fBiome))
                 .toList()
                 .subList(0, subLen);
         return list;
@@ -251,7 +251,7 @@ public class GathererJob extends LeaverJob {
 
 
     private BlockPos setupForLeaveTown(TownInterface town) {
-        Questown.LOGGER.debug("Visitor is searching for a town gate");
+        QT.JOB_LOGGER.debug("Visitor is searching for a town gate");
         // TODO: Get the CLOSEST gate?
         return town.getEnterExitPos();
     }

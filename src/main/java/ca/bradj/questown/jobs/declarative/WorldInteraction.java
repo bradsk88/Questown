@@ -39,7 +39,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult;
+    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final int interval;
     private int ticksSinceLastAction;
@@ -53,7 +53,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
             int interval
     ) {
         this.inventory = inventory;
@@ -137,7 +137,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
             @Nullable WorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
-                    is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
+                    journal::addItemIfSlotAvailable
             );
             return newState != null;
         }

@@ -2,6 +2,7 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -30,8 +31,8 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         this.biome = biome;
     }
 
-    public static MCHeldItem fromLootTable(MCTownItem item, String lootTablePrefix, ResourceLocation biome) {
-        return new MCHeldItem(item, false, lootTablePrefix, biome.toString());
+    public static MCHeldItem fromLootTable(MCTownItem item, GathererTools.LootTablePrefix lootTablePrefix, ResourceLocation biome) {
+        return new MCHeldItem(item, false, lootTablePrefix.value(), biome.toString());
     }
 
     public static MCHeldItem fromTag(CompoundTag tag) {

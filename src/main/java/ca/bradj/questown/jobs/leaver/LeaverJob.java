@@ -124,10 +124,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
                 gateTarget = null;
             }
         }
-        if (!lootRegistered) {
-            town.registerFoundLoots(journal.getItems());
-            lootRegistered = true;
-        }
+        town.registerFoundLoots(journal.getItems());
         tryDropLoot(entityPos);
         tryTakeFood(entityPos);
     }

@@ -87,7 +87,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
             int interval
     ) {
         return new WorldInteraction(
