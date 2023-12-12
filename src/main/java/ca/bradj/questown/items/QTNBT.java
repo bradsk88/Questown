@@ -67,4 +67,11 @@ public class QTNBT {
     ) {
         return t.contains(keyify(item));
     }
+
+    public static CompoundTag getCompound(
+            CompoundTag tag,
+            String knowledge
+    ) {
+        return tag.getCompound(keyify(knowledge));
+    }
 }

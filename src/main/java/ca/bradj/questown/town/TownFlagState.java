@@ -185,7 +185,7 @@ public class TownFlagState {
         this.initialized = true;
 
         if (waking && e.isInitialized()) {
-            Questown.LOGGER.debug(
+            QT.FLAG_LOGGER.debug(
                     "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
                     timeSinceWake, gt, lastTick
             );
@@ -270,10 +270,10 @@ public class TownFlagState {
     void putStateOnTile(CompoundTag flagTag, UUID uuid) {
         @Nullable MCTownState state = captureState();
         if (state == null) {
-            Questown.LOGGER.warn("TownState was null. Will not store.");
+            QT.FLAG_LOGGER.warn("TownState was null. Will not store.");
             return;
         }
-        Questown.LOGGER.trace("[Tile] Storing state on {}: {}", uuid, state);
+        QT.FLAG_LOGGER.trace("[Tile] Storing state on {}: {}", uuid, state);
         CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
         flagTag.put(NBT_TOWN_STATE, cereal);
     }

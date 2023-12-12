@@ -7,6 +7,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
@@ -116,7 +117,7 @@ public class JobsRegistry {
     }
 
     public record TownData(
-            Function<GathererTools.LootTablePrefix, ImmutableSet<ItemStack>> allKnownGatherItemsFn
+            Function<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> allKnownGatherItemsFn
     ) {
     }
 
@@ -134,8 +135,8 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return false;
         }
-        for (ItemStack r : w.results.apply(town)) {
-            if (requestedResult.test(r)) {
+        for (MCTownItem r : w.results.apply(town)) {
+            if (requestedResult.test(r.toItemStack())) {
                 return true;
             }
         }
@@ -173,6 +174,7 @@ public class JobsRegistry {
         List<Ingredient> list = works.values().stream()
                 .map(v -> v.results.apply(t))
                 .flatMap(Collection::stream)
+                .map(MCTownItem::toItemStack)
                 .map(Ingredient::of)
                 .map(Ingredients::asWorkRequest)
                 .collect(Collectors.toSet())
@@ -207,7 +209,7 @@ public class JobsRegistry {
             BlockCheckFunc blockCheckFunc,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
-            Function<TownData, ImmutableSet<ItemStack>> results,
+            Function<TownData, ImmutableSet<MCTownItem>> results,
             ItemStack initialRequest,
             Function<IStatus<?>, Collection<Ingredient>> needs
     ) {
@@ -290,7 +292,10 @@ public class JobsRegistry {
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 SpecialQuests.FARM,
                 GathererJournal.Status.IDLE,
-                t -> ImmutableSet.of(Items.WHEAT.getDefaultInstance(), Items.WHEAT_SEEDS.getDefaultInstance()),
+                t -> ImmutableSet.of(
+                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
+                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+                ),
                 Items.WHEAT.getDefaultInstance(),
                 // TODO: Review this - probably should be different by status
                 (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
@@ -301,7 +306,7 @@ public class JobsRegistry {
                 (block) -> block instanceof BreadOvenBlock,
                 Questown.ResourceLocation("bakery"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(BakerBreadWork.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),
                 BakerBreadWork.RESULT,
                 (s) -> getProductionNeeds((ProductionStatus) s, BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
         ));
@@ -311,7 +316,7 @@ public class JobsRegistry {
                 (block) -> block instanceof OreProcessingBlock,
                 Questown.ResourceLocation("smeltery"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(DSmelterJob.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
                 DSmelterJob.RESULT,
                 s -> getProductionNeeds((ProductionStatus) s, DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
         ));
@@ -322,7 +327,7 @@ public class JobsRegistry {
                 (block) -> block instanceof BlacksmithsTableBlock,
                 Questown.ResourceLocation("smithy"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(BlacksmithWoodenPickaxeJob.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
                 BlacksmithWoodenPickaxeJob.RESULT,
                 s -> getProductionNeeds(
                         (ProductionStatus) s,
@@ -336,7 +341,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(CrafterBowlWork.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
                 CrafterBowlWork.RESULT,
                 s -> getProductionNeeds(
                         (ProductionStatus) s,
@@ -350,7 +355,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(CrafterStickWork.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
                 CrafterStickWork.RESULT,
                 s -> getProductionNeeds(
                         (ProductionStatus) s,
@@ -364,7 +369,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(CrafterPaperWork.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
                 CrafterPaperWork.RESULT,
                 s -> getProductionNeeds(
                         (ProductionStatus) s,
@@ -378,7 +383,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(CrafterPlanksWork.RESULT),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
                 CrafterPlanksWork.RESULT,
                 s -> getProductionNeeds(
                         (ProductionStatus) s,

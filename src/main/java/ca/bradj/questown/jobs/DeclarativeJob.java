@@ -295,7 +295,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
         boolean finishedWork = workSpot.action.equals(maxState);
         if (hasWork && worked && finishedWork) {
-            town.registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+            town.getKnowledgeHandle().registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
             town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
         }
     }

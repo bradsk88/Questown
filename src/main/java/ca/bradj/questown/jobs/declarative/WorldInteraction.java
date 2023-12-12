@@ -102,6 +102,16 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             return tryExtractOre(town, jh, workSpot.position);
         }
 
+        Ingredient tool = toolsRequiredAtStates.get(workSpot.action);
+        if (tool != null) {
+            boolean foundTool = journal.getItems()
+                    .stream()
+                    .anyMatch(v -> tool.test(v.get().toItemStack()));
+            if (!foundTool) {
+                return false;
+            }
+        }
+
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
@@ -166,7 +176,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             }
             WorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork, nextStepTime);
             boolean didWork = blockState != null;
-            if (didWork) {
+            if (didWork && toolsRequiredAtStates.get(s) != null) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
             }
             return didWork;

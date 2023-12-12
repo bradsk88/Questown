@@ -134,11 +134,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
      */
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
 
-    ImmutableSet<ItemStack> getAllKnownGatherResults(
-            GathererTools.LootTablePrefix ltPrefix
-    );
-
-    void registerFoundLoots(ImmutableList<MCHeldItem> items);
+    KnowledgeHolder<MCHeldItem, ItemStack> getKnowledgeHandle();
 
     QuestsHolder getQuestHandle();
 

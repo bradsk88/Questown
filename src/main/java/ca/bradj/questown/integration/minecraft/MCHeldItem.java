@@ -113,7 +113,30 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     public Tag serializeNBT() {
         CompoundTag tag = delegate.serializeNBT();
         tag.putBoolean("locked", locked);
+        if (biome != null) {
+            tag.putString("biome", biome);
+        }
+        if (prefix != null) {
+            tag.putString("prefix", prefix);
+        }
         return tag;
+    }
+
+    public static MCHeldItem deserialize(CompoundTag v) {
+        ItemStack del = ItemStack.of(v.getCompound("item"));
+        boolean locked = false;
+        if (v.contains("locked")) {
+            locked = v.getBoolean("locked");
+        }
+        String biome = null;
+        if (v.contains("biome")) {
+            biome = v.getString("biome");
+        }
+        String prefix = null;
+        if (v.contains("prefix")) {
+            prefix = v.getString("prefix");
+        }
+        return new MCHeldItem(MCTownItem.fromMCItemStack(del), locked, prefix, biome);
     }
 
     public MCTownItem toItem() {

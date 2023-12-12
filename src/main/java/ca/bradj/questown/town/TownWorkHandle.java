@@ -85,7 +85,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         }
 
         BlockPos flagPos = parent.getTownFlagBasePos();
-        JobsRegistry.TownData td = new JobsRegistry.TownData(parent::getAllKnownGatherResults);
+        JobsRegistry.TownData td = new JobsRegistry.TownData(parent.getKnowledgeHandle()::getAllKnownGatherResults);
         ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
         NetworkHooks.openScreen(sp, new MenuProvider() {
             @Override
