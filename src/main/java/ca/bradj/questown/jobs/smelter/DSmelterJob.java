@@ -37,6 +37,11 @@ public class DSmelterJob extends DeclarativeJob {
             1, 10,
             2, 0
     );
+    private static final ImmutableMap<Integer, Integer> TIME = ImmutableMap.of(
+            0, 0,
+            1, 0,
+            2, 0
+    );
 
     public DSmelterJob(
             UUID ownerUUID,
@@ -54,6 +59,7 @@ public class DSmelterJob extends DeclarativeJob {
                 INGREDIENTS_QTY,
                 TOOLS,
                 WORK,
+                TIME,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

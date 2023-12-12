@@ -1,28 +1,35 @@
 package ca.bradj.questown.town.interfaces;
 
-import ca.bradj.questown.town.TownWorkStatusStore;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemStack;
+import ca.bradj.questown.town.WorkStatusStore;
 import org.jetbrains.annotations.Nullable;
 
-public interface WorkStatusHandle {
+public interface WorkStatusHandle<POS, ITEM> {
 
-    @Nullable TownWorkStatusStore.State getJobBlockState(BlockPos bp);
+    @Nullable WorkStatusStore.State getJobBlockState(POS bp);
 
     void setJobBlockState(
-            BlockPos bp,
-            TownWorkStatusStore.State bs
+            POS bp,
+            WorkStatusStore.State bs
+    );
+
+    void setJobBlockStateWithTimer(
+            POS bp,
+            WorkStatusStore.State bs,
+            int ticksToNextState
     );
 
     boolean tryInsertItem(
-            TownWorkStatusStore.InsertionRules rules,
-            ItemStack item,
-            BlockPos bp,
-            int workToNextStep
+            WorkStatusStore.InsertionRules<ITEM> rules,
+            ITEM item,
+            POS bp,
+            int workToNextStep,
+            int timeToNextStep
     );
 
     boolean canInsertItem(
-            ItemStack item,
-            BlockPos bp
+            ITEM item,
+            POS bp
     );
+
+    @Nullable Integer getTimeToNextState(POS bp);
 }

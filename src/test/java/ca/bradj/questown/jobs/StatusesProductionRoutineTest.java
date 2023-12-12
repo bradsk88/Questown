@@ -42,12 +42,17 @@ public class StatusesProductionRoutineTest {
     ) implements EntityInvStateProvider<Integer> {
     }
 
+    /** @deprecated Use TestJobTownWithTime **/
     private record TestJobTown(
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
             Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState
     ) implements JobTownProvider<Room> {
+        @Override
+        public boolean isUnfinishedTimeWorkPresent() {
+            return false;
+        }
     }
 
     private record TestEntityLoc(
@@ -67,6 +72,7 @@ public class StatusesProductionRoutineTest {
         static final PTestStatus ITEM_WORK = new PTestStatus("item_work");
         static final PTestStatus COLLECTING_PRODUCT = new PTestStatus("collecting_product");
         static final PTestStatus RELAXING = new PTestStatus("relaxing");
+        static final PTestStatus WAITING = new PTestStatus("waiting");
 
         static final IProductionStatusFactory<PTestStatus> FACTORY = new IProductionStatusFactory<>() {
             @Override
@@ -77,6 +83,11 @@ public class StatusesProductionRoutineTest {
                     case BLOCK_READY_TO_EXTRACT_PRODUCT -> COLLECTING_PRODUCT;
                     default -> throw new IllegalStateException("Unexpected state " + s);
                 };
+            }
+
+            @Override
+            public PTestStatus waitingForTimedState() {
+                return WAITING;
             }
 
             @Override
@@ -574,7 +585,7 @@ public class StatusesProductionRoutineTest {
     }
 
     @Test
-    void StatusShouldBe_CollectingProduct_OverAllOtherStatuses_EvenWhenOutOfSite() {
+    void StatusShouldBe_GoingToJobSite_InsteadOfCollectingProduct_WhenOutOfSite() {
         boolean hasSupplies = true; // Town has supplies
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
@@ -600,7 +611,7 @@ public class StatusesProductionRoutineTest {
                 new FailProductionJob(), // Shouldn't do any non-standard work
                 PTestStatus.FACTORY
         );
-        Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
+        Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
     }
 
     @Test
@@ -658,4 +669,45 @@ public class StatusesProductionRoutineTest {
         );
         Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
     }
+
+    private record TestJobTownWithTime(
+            boolean hasSupplies,
+            boolean hasSpace,
+            Collection<Room> roomsWithCompletedProduct,
+            Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState,
+            boolean isUnfinishedTimeWorkPresent
+    ) implements JobTownProvider<Room> {
+    }
+
+    @Test
+    void StatusShouldBe_WaitingForNextStage_IfRoomNeedsTime() {
+        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                // Villager has no items (otherwise would choose status: dropping loot)
+                BLOCK_READY_FOR_INGREDIENTS, false,
+                BLOCK_READY_FOR_WORK, false
+        );
+        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
+                BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
+        );
+
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true,
+                new TestInventory(false, false, invItemsForWork),
+                new TestEntityLoc(null), // <- Entity is NOT in job site
+                new TestJobTownWithTime(
+                        hasSupplies, true,
+                        ImmutableList.of(), // There are no finished products available to pick up
+                        workToBeDone,
+                        true // A time-based job is ticking away
+                ),
+                new NoOpProductionJob(), // Causes us to skip the "use supplies" work
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.WAITING, s);
+    }
+
 }

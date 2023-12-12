@@ -6,7 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import com.google.common.collect.ImmutableMap;
@@ -25,16 +25,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
-public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
+// TODO[ASAP]: Break ties to MC and unit test this
+public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStack> {
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Smelter"));
 
     // TODO: Can we deal with the inventory OR the journal (both causes confusion)
     private final Container inventory;
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final int maxState;
-    private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, Function<ItemStack, Boolean>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
+    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
@@ -48,6 +51,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
@@ -55,12 +59,19 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
         this.inventory = inventory;
         this.journal = journal;
         this.maxState = maxState;
-        this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
+        this.ingredientsRequiredAtStates = stripMC(ingredientsRequiredAtStates);
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
+        this.timeRequiredAtStates = timeRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workResult = workResult;
         this.interval = interval;
+    }
+
+    private ImmutableMap<Integer, Function<ItemStack, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<Integer, Function<ItemStack, Boolean>> b = ImmutableMap.builder();
+        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, v::test));
+        return b.build();
     }
 
     public boolean tryWorking(
@@ -71,7 +82,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
         if (town.getServerLevel() == null) {
             return false;
         }
-        WorkStatusHandle jh = town.getWorkStatusHandle();
+        WorkStatusHandle<BlockPos, ItemStack> jh = town.getWorkStatusHandle();
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
@@ -95,9 +106,9 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
                 if (workSpot.action == 0) {
-                    TownWorkStatusStore.State jobBlockState = jh.getJobBlockState(workSpot.position);
+                    WorkStatusStore.State jobBlockState = jh.getJobBlockState(workSpot.position);
                     if (jobBlockState == null) {
-                        jobBlockState = new TownWorkStatusStore.State(0, 0, 0);
+                        jobBlockState = new WorkStatusStore.State(0, 0, 0);
                     }
                     if (jobBlockState.workLeft() == 0) {
                         jh.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
@@ -121,10 +132,10 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             TownInterface town,
             BlockPos oldPos
     ) {
-        WorkStatusHandle jh = town.getWorkStatusHandle();
+        WorkStatusHandle<BlockPos, ItemStack> jh = town.getWorkStatusHandle();
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
-            @Nullable TownWorkStatusStore.State newState = JobBlock.extractRawProduct(
+            @Nullable WorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
                     is -> journal.addItemIfSlotAvailable(MCHeldItem.fromMCItemStack(is))
             );
@@ -134,7 +145,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
     }
 
     private boolean tryProcessOre(
-            WorkStatusHandle sl,
+            WorkStatusHandle<BlockPos, ItemStack> sl,
             LivingEntity entity,
             WorkSpot<Integer, BlockPos> ws
     ) {
@@ -147,7 +158,13 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             if (nextStepWork == null) {
                 nextStepWork = 0;
             }
-            TownWorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork);
+            Integer nextStepTime = timeRequiredAtStates.getOrDefault(
+                    ws.action + 1, 0
+            );
+            if (nextStepTime == null) {
+                nextStepWork = 0;
+            }
+            WorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork, nextStepTime);
             boolean didWork = blockState != null;
             if (didWork) {
                 degradeTool(entity, JobBlock.getState(sl, bp));
@@ -185,7 +202,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
     }
 
     private boolean tryInsertIngredients(
-            WorkStatusHandle sl,
+            WorkStatusHandle<BlockPos, ItemStack> sl,
             WorkSpot<Integer, BlockPos> ws
     ) {
         BlockPos bp = ws.position;
@@ -214,7 +231,13 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
             if (nextStepWork == null) {
                 nextStepWork = 0;
             }
-            if (sl.tryInsertItem(this, item, bp, nextStepWork)) {
+            Integer nextStepTime = timeRequiredAtStates.getOrDefault(
+                    ws.action + 1, 0
+            );
+            if (nextStepTime == null) {
+                nextStepTime = 0;
+            }
+            if (sl.tryInsertItem(this, item, bp, nextStepWork, nextStepTime)) {
                 QT.JOB_LOGGER.debug(marker, "Smelter removed {} from their inventory {}", name, invBefore);
                 inventory.setChanged();
                 return true;
@@ -224,7 +247,7 @@ public class WorldInteraction implements TownWorkStatusStore.InsertionRules {
     }
 
     @Override
-    public Map<Integer, Ingredient> ingredientsRequiredAtStates() {
+    public Map<Integer, Function<ItemStack, Boolean>> ingredientsRequiredAtStates() {
         return ingredientsRequiredAtStates;
     }
 

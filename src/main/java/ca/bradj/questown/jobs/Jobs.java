@@ -10,7 +10,10 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.WorkHandle;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -40,6 +43,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
@@ -216,11 +221,36 @@ public class Jobs {
                 .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
-    public interface StateCheck {
-        boolean Check(ServerLevel sl, BlockPos bp);
+    public static boolean isUnfinishedTimeWorkPresent(
+            RoomsHolder town,
+            ResourceLocation workRoomId,
+            Function<BlockPos, @Nullable Integer> ticksSource
+    ) {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
+        return rooms.stream()
+                .anyMatch(v -> {
+                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                        @Nullable Integer apply = ticksSource.apply(e.getKey());
+                        if (apply != null && apply > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
     }
 
-    public static Collection<MCRoom> roomsWithState(TownInterface town, ResourceLocation roomType, StateCheck check) {
+    public interface StateCheck {
+        boolean Check(
+                ServerLevel sl,
+                BlockPos bp
+        );
+    }
+
+    public static Collection<MCRoom> roomsWithState(
+            TownInterface town,
+            ResourceLocation roomType,
+            StateCheck check
+    ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {

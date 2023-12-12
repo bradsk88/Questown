@@ -337,6 +337,10 @@ public class VisitorMobEntity extends PathfinderMob {
             return;
         }
 
+        if (!town.isInitialized()) {
+            return;
+        }
+
         long start = System.currentTimeMillis();
         visitorTick();
         long end = System.currentTimeMillis();

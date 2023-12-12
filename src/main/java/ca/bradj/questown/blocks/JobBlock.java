@@ -1,37 +1,36 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.town.TownWorkStatusStore;
+import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import org.jetbrains.annotations.Nullable;
 
 public class JobBlock {
 
     public static @Nullable Integer getState(
-            WorkStatusHandle sl,
+            WorkStatusHandle<BlockPos, ItemStack> sl,
             BlockPos bp
     ) {
-        TownWorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        WorkStatusStore.State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             return null;
         }
         return oldState.processingState();
     }
 
-    public static TownWorkStatusStore.State applyWork(
-            WorkStatusHandle sl,
+    public static WorkStatusStore.State applyWork(
+            WorkStatusHandle<BlockPos, ItemStack> sl,
             BlockPos bp,
-            int nextWork
+            int nextWork,
+            int nextTicks
     ) {
-        TownWorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        WorkStatusStore.State oldState = sl.getJobBlockState(bp);
         int workLeft = oldState.workLeft();
-        TownWorkStatusStore.State bs;
+        WorkStatusStore.State bs;
         if (workLeft <= 0) {
             Integer state = getState(sl, bp);
             if (state == null) {
@@ -47,35 +46,39 @@ public class JobBlock {
         if (bs.workLeft() == 0) {
             bs = bs.setProcessing(bs.processingState() + 1).setWorkLeft(nextWork).setCount(0);
         }
-        sl.setJobBlockState(bp, bs);
+        if (nextTicks <= 0) {
+            sl.setJobBlockState(bp, bs);
+        } else {
+            sl.setJobBlockStateWithTimer(bp, bs, nextTicks);
+        }
         return bs;
     }
 
-    private static TownWorkStatusStore.State reduceWorkLeft(TownWorkStatusStore.State oldState) {
+    private static WorkStatusStore.State reduceWorkLeft(WorkStatusStore.State oldState) {
         int l = oldState.workLeft();
         int newVal = l - 1;
         QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
         return oldState.setWorkLeft(newVal);
     }
 
-    private static TownWorkStatusStore.State setProcessingState(
-            TownWorkStatusStore.State oldState,
+    private static WorkStatusStore.State setProcessingState(
+            WorkStatusStore.State oldState,
             int s
     ) {
-        TownWorkStatusStore.State newState = oldState.setProcessing(s);
+        WorkStatusStore.State newState = oldState.setProcessing(s);
         QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
         return newState;
     }
 
-    public static @Nullable TownWorkStatusStore.State extractRawProduct(
+    public static @Nullable WorkStatusStore.State extractRawProduct(
             ServerLevel sl,
-            WorkStatusHandle jh,
+            WorkStatusHandle<BlockPos, ItemStack> jh,
             BlockPos block,
             Iterable<ItemStack> is,
             @Nullable TakeFn takeFn
     ) {
-        TownWorkStatusStore.State oldState = jh.getJobBlockState(block);
-        TownWorkStatusStore.State bs = oldState.setProcessing(0);
+        WorkStatusStore.State oldState = jh.getJobBlockState(block);
+        WorkStatusStore.State bs = oldState.setProcessing(0);
         for (ItemStack i : is) {
             // TODO[ASAP]: Don't drop items for gatherers - just skip them
             releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
@@ -89,9 +92,9 @@ public class JobBlock {
 
     private static void releaseOreFromBlock(
             ServerLevel sl,
-            WorkStatusHandle level,
+            WorkStatusHandle<BlockPos, ItemStack> level,
             BlockPos b,
-            TownWorkStatusStore.State currentState,
+            WorkStatusStore.State currentState,
             ItemStack is,
             @Nullable TakeFn takeFn
     ) {

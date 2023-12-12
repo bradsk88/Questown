@@ -21,8 +21,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -41,12 +39,18 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
+// TODO[ASAP]: Break ties to MC and unit test
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
         public ProductionStatus fromJobBlockState(int s) {
             return ProductionStatus.fromJobBlockStatus(s);
+        }
+
+        @Override
+        public ProductionStatus waitingForTimedState() {
+            return ProductionStatus.FACTORY.waitingForTimedState();
         }
 
         @Override
@@ -119,6 +123,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult
     ) {
         super(
@@ -142,6 +147,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 ingredientsQtyRequiredAtStates,
                 toolsRequiredAtStates,
                 workRequiredAtStates,
+                timeRequiredAtStates,
                 workResult,
                 workInterval
         );
@@ -163,6 +169,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
     ) {
@@ -173,6 +180,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
                 workRequiredAtStates,
+                timeRequiredAtStates,
                 toolsRequiredAtStates,
                 workResult,
                 interval
@@ -215,6 +223,14 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @Override
             public Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsByState() {
                 return roomsNeedingIngredients;
+            }
+
+            @Override
+            public boolean isUnfinishedTimeWorkPresent() {
+                return Jobs.isUnfinishedTimeWorkPresent(
+                        town.getRoomHandle(), workRoomId,
+                        (bp) -> town.getWorkStatusHandle().getTimeToNextState(bp)
+                );
             }
 
             @Override

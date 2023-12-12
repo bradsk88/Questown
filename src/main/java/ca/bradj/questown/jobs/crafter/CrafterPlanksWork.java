@@ -34,6 +34,10 @@ public class CrafterPlanksWork extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_WORK, 0,
+            BLOCK_STATE_DONE, 0
+    );
     // TODO: Figure out how handle the "logs" tag and spit out planks of the same type as the input
     public static final ItemStack RESULT = new ItemStack(Items.OAK_PLANKS, 1);
 
@@ -53,6 +57,7 @@ public class CrafterPlanksWork extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }

@@ -81,6 +81,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Override
     boolean isVillagerMissing(UUID uuid);
 
+    /** @deprecated Use getRoomHandle **/
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
 
     Collection<MCRoom> getFarms();
@@ -124,7 +125,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    WorkStatusHandle getWorkStatusHandle();
+    WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle();
 
     WorkHandle getWorkHandle();
 
@@ -140,6 +141,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     void registerFoundLoots(ImmutableList<MCHeldItem> items);
 
     QuestsHolder getQuestHandle();
+
+    RoomsHolder getRoomHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

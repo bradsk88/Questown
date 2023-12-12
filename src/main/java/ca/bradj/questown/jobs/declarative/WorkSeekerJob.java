@@ -34,6 +34,10 @@ public class WorkSeekerJob extends DeclarativeJob {
             BLOCK_STATE_NO_JOBS, 0,
             BLOCK_STATE_JOBS_AVAIlABLE, 1
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NO_JOBS, 0,
+            BLOCK_STATE_JOBS_AVAIlABLE, 0
+    );
     private static final String WORK_ID = "seeking_work";
 
     public WorkSeekerJob(
@@ -53,6 +57,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
                 (a, b) -> ImmutableSet.of()
         );
     }
@@ -76,6 +81,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<ItemStack>> workResult,
             int interval
     ) {
@@ -86,6 +92,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 workRequiredAtStates,
+                timeRequiredAtStates,
                 toolsRequiredAtStates,
                 workResult,
                 interval

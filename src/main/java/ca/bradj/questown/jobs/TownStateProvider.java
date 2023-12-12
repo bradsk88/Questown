@@ -6,4 +6,6 @@ public interface TownStateProvider {
     boolean hasSpace();
 
     boolean canUseMoreSupplies();
+
+    boolean isUnfinishedTimeWorkPresent();
 }

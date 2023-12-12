@@ -20,6 +20,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.quests.*;
@@ -44,7 +45,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -125,7 +125,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final LinkedBlockingQueue<Consumer<TownFlagBlockEntity>> initializers = new LinkedBlockingQueue<>();
 
     // TODO: Move all quest-related stuff into the handle
-    private TownQuestsHandle questsHandle = new TownQuestsHandle();
+    private final TownQuestsHandle questsHandle = new TownQuestsHandle();
+    private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -420,6 +421,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             t.pois.setListener(t);
             t.workHandle.addChangeListener(t::setChanged);
             t.questsHandle.initialize(t);
+            t.roomsHandle.initialize(t);
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
             if (!level.isClientSide()) {
                 TownFlags.register(uuid, t);
@@ -472,6 +474,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public QuestsHolder getQuestHandle() {
         return questsHandle;
+    }
+
+    @Override
+    public RoomsHolder getRoomHandle() {
+        return roomsHandle;
     }
 
     private void setUpQuestsForNewlyPlacedFlag() {
@@ -531,7 +538,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
             registerJobsBoard(e.getKey());
-            jobHandle.setJobBlockState(e.getKey(), new TownWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
+            jobHandle.setJobBlockState(e.getKey(), new WorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
         }
         return null;
     }
@@ -899,7 +906,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public WorkStatusHandle getWorkStatusHandle() {
+    public WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle() {
         return jobHandle;
     }
 

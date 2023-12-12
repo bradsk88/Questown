@@ -6,4 +6,6 @@ public interface IProductionStatusFactory<
         STATUS extends IProductionStatus<STATUS>
 > extends IStatusFactory<STATUS> {
     STATUS fromJobBlockState(int s);
+
+    STATUS waitingForTimedState();
 }

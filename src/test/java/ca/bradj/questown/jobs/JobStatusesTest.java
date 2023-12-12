@@ -23,6 +23,7 @@ class JobStatusesTest {
         static final TestStatus ITEM_WORK_2 = new TestStatus("item_work_2");
         static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
         static final TestStatus RELAXING = new TestStatus("relaxing");
+        static final TestStatus WAITING_FOR_TIMED_STATE = new TestStatus("waiting");
 
         static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
             @Override
@@ -63,6 +64,11 @@ class JobStatusesTest {
             @Override
             public TestStatus relaxing() {
                 return RELAXING;
+            }
+
+            @Override
+            public TestStatus waitingForTimedState() {
+                return WAITING_FOR_TIMED_STATE;
             }
         };
 
@@ -148,6 +154,10 @@ class JobStatusesTest {
             boolean hasSpace,
             boolean canUseMoreSupplies
     ) implements TownStateProvider {
+        @Override
+        public boolean isUnfinishedTimeWorkPresent() {
+            return false;
+        }
     }
 
     static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {

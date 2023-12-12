@@ -38,6 +38,11 @@ public class CrafterBowlWork extends DeclarativeJob {
             BLOCK_STATE_NEED_WORK, 10,
             BLOCK_STATE_DONE, 0
     );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_PLANKS, 0,
+            BLOCK_STATE_NEED_WORK, 0,
+            BLOCK_STATE_DONE, 0
+    );
     public static final ItemStack RESULT = new ItemStack(Items.BOWL, 3);
 
     public CrafterBowlWork(
@@ -56,6 +61,7 @@ public class CrafterBowlWork extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
                 (s, j) -> ImmutableSet.of(RESULT.copy())
         );
     }
