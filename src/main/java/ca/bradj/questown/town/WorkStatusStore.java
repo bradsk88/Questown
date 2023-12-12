@@ -96,11 +96,14 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
             POS bp,
             State bs
     ) {
-        jobStatuses.put(bp, bs);
-        QT.FLAG_LOGGER.debug("Job state set to {} at {}", bs.toShortString(), bp);
+        modifyJobBlockState(bp, (p, s) -> bs);
+    }
 
-        if (cascading.containsKey(bp)) {
-            cascading.get(bp).accept(bs);
+    private void modifyJobBlockState(POS pos, BiFunction<POS, State, State> mutator) {
+        State newV = jobStatuses.compute(pos, mutator);
+        QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
+        if (cascading.containsKey(pos)) {
+            cascading.get(pos).accept(newV);
         }
     }
 
@@ -124,8 +127,8 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
     public @Nullable Integer getTimeToNextState(POS bp) {
         return timeJobStatuses.get(bp);
     }
-
     public interface InsertionRules<ITEM> {
+
 
         Map<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates();
 
@@ -225,7 +228,7 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
                 .forEach(
                         e -> {
                             QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
-                            jobStatuses.compute(e.getKey(), (k, v) -> v.setProcessing(v.processingState + 1));
+                            modifyJobBlockState(e.getKey(), (pos, state) -> state.setProcessing(state.processingState + 1));
                             timeJobStatuses.remove(e.getKey());
                         }
                 );

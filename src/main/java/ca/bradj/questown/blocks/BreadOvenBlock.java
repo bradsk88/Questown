@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -155,19 +156,19 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         p_51385_.add(BAKE_STATE, FACING);
     }
 
-
+    @Override
     public void animateTick(
-            BlockState p_53635_,
-            Level p_53636_,
-            BlockPos p_53637_,
-            Random p_53638_
+            BlockState bs,
+            Level level,
+            BlockPos pos,
+            RandomSource random
     ) {
-        if (p_53635_.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
-            double d0 = (double) p_53637_.getX() + 0.5D;
-            double d1 = (double) p_53637_.getY();
-            double d2 = (double) p_53637_.getZ() + 0.5D;
-            if (p_53638_.nextDouble() < 0.1D) {
-                p_53636_.playSound(
+        if (bs.getValue(BAKE_STATE) == BAKE_STATE_BAKING) {
+            double d0 = (double) pos.getX() + 0.5D;
+            double d1 = (double) pos.getY();
+            double d2 = (double) pos.getZ() + 0.5D;
+            if (random.nextDouble() < 0.1D) {
+                level.playSound(
                         null,
                         d0,
                         d1,
@@ -179,15 +180,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                 );
             }
 
-            Direction direction = p_53635_.getValue(FACING);
+            Direction direction = bs.getValue(FACING);
             Direction.Axis direction$axis = direction.getAxis();
             double d3 = 0.52D;
-            double d4 = p_53638_.nextDouble() * 0.6D - 0.3D;
+            double d4 = random.nextDouble() * 0.6D - 0.3D;
             double d5 = direction$axis == Direction.Axis.X ? (double) direction.getStepX() * 0.52D : d4;
-            double d6 = p_53638_.nextDouble() * 6.0D / 16.0D;
+            double d6 = random.nextDouble() * 6.0D / 16.0D;
             double d7 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
-            p_53636_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-            p_53636_.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
+            level.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
+            level.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
         }
     }
 
@@ -234,6 +235,13 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     ) {
         BlockState state = sl.getBlockState(pp);
         switch (bs.processingState()) {
+            case (BakerBreadWork.BLOCK_STATE_NEED_COAL) -> {
+                if (bs.ingredientCount() < 1) {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
+                } else {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+                }
+            }
             case (BakerBreadWork.BLOCK_STATE_NEED_WHEAT) -> {
                 if (bs.ingredientCount() <= 0) {
                     state = state.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
