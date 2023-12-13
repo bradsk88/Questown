@@ -20,7 +20,7 @@ class AbstractWorldInteractionTest {
         private boolean processed;
         private boolean inserted;
         private boolean extracted;
-        private HashMap<Position, State> state = new HashMap<>();
+        private final HashMap<Position, State> state = new HashMap<>();
 
         public TestWI(
                 int maxState,
@@ -50,13 +50,12 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected boolean tryInsertIngredients(
-                Void unused,
-                WorkSpot<Integer, Position> workSpot
-        ) {
-            inserted = true;
-            advance(workSpot);
-            return true;
+        protected ItemWI<Position, Void> getItemWI() {
+            return (unused, workSpot) -> {
+                inserted = true;
+                advance(workSpot);
+                return true;
+            };
         }
 
         private void advance(WorkSpot<Integer, Position> workSpot) {

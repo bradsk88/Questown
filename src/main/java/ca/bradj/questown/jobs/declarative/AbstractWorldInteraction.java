@@ -84,18 +84,20 @@ public abstract class AbstractWorldInteraction<
                     }
                 }
                 if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-                    tryInsertIngredients(extra, workSpot);
+                    this.getItemWI().tryInsertIngredients(extra, workSpot);
                 }
                 return tryProcessOre(extra, workSpot);
             }
         }
 
         if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return tryInsertIngredients(extra, workSpot);
+            return this.getItemWI().tryInsertIngredients(extra, workSpot);
         }
 
         return false;
     }
+
+    protected abstract ItemWI<POS,EXTRA> getItemWI();
 
     @Override
     public Map<Integer, Function<T, Boolean>> ingredientsRequiredAtStates() {
@@ -103,11 +105,6 @@ public abstract class AbstractWorldInteraction<
     }
 
     protected abstract boolean tryProcessOre(
-            EXTRA extra,
-            WorkSpot<Integer, POS> workSpot
-    );
-
-    protected abstract boolean tryInsertIngredients(
             EXTRA extra,
             WorkSpot<Integer, POS> workSpot
     );

@@ -27,7 +27,9 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class WorldInteraction extends AbstractWorldInteraction<WorldInteraction.Extra, BlockPos, ItemStack, MCHeldItem> {
+public class WorldInteraction
+        extends AbstractWorldInteraction<WorldInteraction.Extra, BlockPos, ItemStack, MCHeldItem>
+        implements ItemWI<BlockPos, WorldInteraction.Extra> {
 
     public boolean tryWorking(
             TownInterface town,
@@ -185,7 +187,12 @@ public class WorldInteraction extends AbstractWorldInteraction<WorldInteraction.
     }
 
     @Override
-    protected boolean tryInsertIngredients(
+    protected ItemWI<BlockPos, Extra> getItemWI() {
+        return this;
+    }
+
+    @Override
+    public boolean tryInsertIngredients(
             Extra extra,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
