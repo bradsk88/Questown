@@ -196,6 +196,7 @@ public class WorldInteraction extends AbstractWorldInteraction<WorldInteraction.
             WorkStatusHandle<BlockPos, ItemStack> sl,
             WorkSpot<Integer, BlockPos> ws
     ) {
+        // TODO[ASAP]: Move this logic into the Abstract (tested) class
         BlockPos bp = ws.position;
         Integer state = JobBlock.getState(sl, bp);
         if (state == null || !state.equals(ws.action)) {

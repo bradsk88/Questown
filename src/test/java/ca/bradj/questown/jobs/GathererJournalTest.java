@@ -83,6 +83,11 @@ public class GathererJournalTest {
         public @Nullable String foundInBiome() {
             return null;
         }
+
+        @Override
+        public String toShortString() {
+            return value;
+        }
     }
 
     static class TestInventory extends TownInventory<List<TestItem>, TestItem> {

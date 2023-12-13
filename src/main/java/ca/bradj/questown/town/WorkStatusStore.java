@@ -35,6 +35,10 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
             int workLeft
     ) {
 
+        public static State fresh() {
+            return new State(0, 0, 0);
+        }
+
         public State setProcessing(int s) {
             return new State(s, ingredientCount, workLeft);
         }
@@ -64,6 +68,13 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
                     ']';
         }
 
+        public State incrProcessing() {
+            return setProcessing(processingState + 1);
+        }
+
+        public State incrIngredientCount() {
+            return setCount(ingredientCount + 1);
+        }
     }
 
     private final HashSet<ROOM> rooms = new HashSet<>();
