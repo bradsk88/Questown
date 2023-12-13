@@ -27,22 +27,32 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-// TODO[ASAP]: Break ties to MC and unit test this
-public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStack> {
+public class WorldInteraction extends AbstractWorldInteraction<WorldInteraction.Extra, BlockPos, ItemStack, MCHeldItem> {
+
+    public boolean tryWorking(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> work,
+            LivingEntity entity,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        return tryWorking(new Extra(town, work, entity), workSpot);
+    }
+
+    public record Extra(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, ItemStack> work,
+            LivingEntity entity
+    ) {
+    }
+
     private final Marker marker = MarkerManager.getMarker("WI");
 
     // TODO: Can we deal with the inventory OR the journal (both causes confusion)
     private final Container inventory;
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
-    private final int maxState;
-    private final ImmutableMap<Integer, Function<ItemStack, Boolean>> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
-    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final int interval;
-    private int ticksSinceLastAction;
+    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
+    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult;
 
     public WorldInteraction(
             Container inventory,
@@ -56,86 +66,41 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
             int interval
     ) {
+        super(
+                interval,
+                maxState,
+                stripMC2(toolsRequiredAtStates),
+                workRequiredAtStates,
+                stripMC(ingredientsRequiredAtStates),
+                journal
+        );
         this.inventory = inventory;
         this.journal = journal;
-        this.maxState = maxState;
-        this.ingredientsRequiredAtStates = stripMC(ingredientsRequiredAtStates);
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
-        this.workRequiredAtStates = workRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
-        this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workResult = workResult;
-        this.interval = interval;
     }
 
-    private ImmutableMap<Integer, Function<ItemStack, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
+    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC2(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toItemStack())));
+        return b.build();
+    }
+
+    private static ImmutableMap<Integer, Function<ItemStack, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
         ImmutableMap.Builder<Integer, Function<ItemStack, Boolean>> b = ImmutableMap.builder();
         ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, v::test));
         return b.build();
     }
 
-    public boolean tryWorking(
-            TownInterface town,
-            WorkStatusHandle<BlockPos, ItemStack> jh,
-            LivingEntity entity,
-            WorkSpot<Integer, BlockPos> workSpot
+    @Override
+    protected boolean tryExtractOre(
+            Extra extra,
+            BlockPos position
     ) {
-        if (town.getServerLevel() == null) {
-            return false;
-        }
-
-        ticksSinceLastAction++;
-        if (ticksSinceLastAction < interval) {
-            return false;
-        }
-        ticksSinceLastAction = 0;
-
-        if (workSpot == null) {
-            return false;
-        }
-
-        if (!Jobs.isCloseTo(entity.blockPosition(), workSpot.position)) {
-            return false;
-        }
-
-        if (workSpot.action == maxState) {
-            return tryExtractOre(town, jh, workSpot.position);
-        }
-
-        Ingredient tool = toolsRequiredAtStates.get(workSpot.action);
-        if (tool != null) {
-            boolean foundTool = journal.getItems()
-                    .stream()
-                    .anyMatch(v -> tool.test(v.get().toItemStack()));
-            if (!foundTool) {
-                return false;
-            }
-        }
-
-        if (this.workRequiredAtStates.containsKey(workSpot.action)) {
-            Integer work = this.workRequiredAtStates.get(workSpot.action);
-            if (work != null && work > 0) {
-                if (workSpot.action == 0) {
-                    WorkStatusStore.State jobBlockState = jh.getJobBlockState(workSpot.position);
-                    if (jobBlockState == null) {
-                        jobBlockState = new WorkStatusStore.State(0, 0, 0);
-                    }
-                    if (jobBlockState.workLeft() == 0) {
-                        jh.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
-                    }
-                }
-                if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-                    tryInsertIngredients(jh, workSpot);
-                }
-                return tryProcessOre(jh, entity, workSpot);
-            }
-        }
-
-        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return tryInsertIngredients(jh, workSpot);
-        }
-
-        return false;
+        return tryExtractOre(extra.town, extra.work, position);
     }
 
     protected boolean tryExtractOre(
@@ -152,6 +117,14 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             return newState != null;
         }
         return false;
+    }
+
+    @Override
+    protected boolean tryProcessOre(
+            Extra extra,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        return tryProcessOre(extra.work, extra.entity, workSpot);
     }
 
     private boolean tryProcessOre(
@@ -192,7 +165,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             QT.JOB_LOGGER.warn("Block state is null while trying to degrade tool");
             return;
         }
-        Ingredient tool = toolsRequiredAtStates.get(state);
+        Function<MCHeldItem, Boolean> tool = toolsRequiredAtStates.get(state);
         if (tool == null) {
             QT.JOB_LOGGER.warn("Tool requirement is null while trying to degrade tool");
             return;
@@ -200,7 +173,7 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
 
         Optional<MCHeldItem> foundTool = journal.getItems()
                 .stream()
-                .filter(v -> tool.test(v.get().toItemStack()))
+                .filter(tool::apply)
                 .findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
@@ -209,6 +182,14 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
             });
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
         }
+    }
+
+    @Override
+    protected boolean tryInsertIngredients(
+            Extra extra,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        return tryInsertIngredients(extra.work, workSpot);
     }
 
     private boolean tryInsertIngredients(
@@ -257,12 +238,34 @@ public class WorldInteraction implements WorkStatusStore.InsertionRules<ItemStac
     }
 
     @Override
-    public Map<Integer, Function<ItemStack, Boolean>> ingredientsRequiredAtStates() {
-        return ingredientsRequiredAtStates;
+    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
+        return ingredientQtyRequiredAtStates;
     }
 
     @Override
-    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return ingredientQtyRequiredAtStates;
+    protected void setJobBlockState(
+            Extra extra,
+            BlockPos position,
+            WorkStatusStore.State state
+    ) {
+        extra.work.setJobBlockState(position, state);
+    }
+
+    @Override
+    protected WorkStatusStore.State getJobBlockState(
+            Extra extra,
+            BlockPos position
+    ) {
+        return extra.work.getJobBlockState(position);
+    }
+
+    @Override
+    protected boolean isEntityClose(Extra extra, BlockPos position) {
+        return Jobs.isCloseTo(extra.entity.blockPosition(), position);
+    }
+
+    @Override
+    protected boolean isReady(Extra extra) {
+        return extra.town != null && extra.town.getServerLevel() != null;
     }
 }
