@@ -105,11 +105,10 @@ public class WorkSeekerJob extends DeclarativeJob {
 
             @Override
             protected boolean tryExtractOre(
-                    TownInterface town,
-                    WorkStatusHandle<BlockPos, ItemStack> jh,
-                    BlockPos oldPos
+                    MCExtra extra,
+                    BlockPos position
             ) {
-                town.changeJobForVisitorFromBoard(ownerUUID);
+                extra.town().changeJobForVisitorFromBoard(ownerUUID);
                 return true;
             }
         };

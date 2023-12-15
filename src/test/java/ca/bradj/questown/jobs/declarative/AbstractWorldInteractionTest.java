@@ -4,14 +4,17 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.WorkStatusStore.State;
 import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
@@ -27,7 +30,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
-                ProductionJournal<?, GathererJournalTest.TestItem> journal
+                Supplier<Collection<GathererJournalTest.TestItem>> journal
         ) {
             super(
                     0,
@@ -132,13 +135,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
@@ -156,13 +153,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
@@ -182,13 +173,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
@@ -209,13 +194,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
@@ -236,13 +215,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
         WorkSpot<Integer, Position> spot = arbitrarySpot(0);
 
@@ -268,13 +241,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
@@ -297,13 +264,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
@@ -328,13 +289,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> true // Villager has all the items needed
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
@@ -361,13 +316,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                new J(
-                        new JobID("test", "test"),
-                        null,
-                        3,
-                        () -> new GathererJournalTest.TestItem(""),
-                        ProductionStatus.FACTORY
-                )
+                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
         );
 
         wi.tryWorking(null, arbitrarySpot(0));

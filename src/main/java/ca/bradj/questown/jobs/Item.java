@@ -6,4 +6,6 @@ public interface Item<I extends Item<I>> {
     boolean isFood();
 
     I shrink();
+
+    String getShortName();
 }

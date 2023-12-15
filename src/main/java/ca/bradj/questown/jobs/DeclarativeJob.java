@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
+import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
@@ -11,6 +12,7 @@ import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -211,7 +213,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected void tick(
             TownInterface town,
-            WorkStatusHandle<BlockPos, ItemStack> work,
+            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
@@ -268,7 +270,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private void tryWorking(
             TownInterface town,
-            WorkStatusHandle<BlockPos, ItemStack> work,
+            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
             LivingEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
@@ -378,7 +380,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     @Override
-    protected BlockPos findJobSite(TownInterface town, WorkStatusHandle<BlockPos, ItemStack> work) {
+    protected BlockPos findJobSite(TownInterface town, WorkStateContainer<BlockPos> work) {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (sl == null) {
             return null;
@@ -411,7 +413,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(
-            TownInterface town, WorkStatusHandle<BlockPos, ItemStack> th
+            TownInterface town, WorkStateContainer<BlockPos> th
     ) {
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {

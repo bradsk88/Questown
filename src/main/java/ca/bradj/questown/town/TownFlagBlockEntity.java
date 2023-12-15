@@ -10,10 +10,7 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.integration.minecraft.MCContainer;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.integration.minecraft.TownStateSerializer;
+import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
@@ -928,7 +925,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle(
+    public WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(
             @Nullable UUID ownerIDOrNullForGlobal
     ) {
         if (ownerIDOrNullForGlobal == null) {

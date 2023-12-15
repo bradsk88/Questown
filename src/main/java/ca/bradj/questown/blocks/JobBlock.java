@@ -4,16 +4,15 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.WorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 public class JobBlock {
 
     public static @Nullable Integer getState(
-            WorkStatusHandle<BlockPos, ItemStack> sl,
+            WorkStateContainer<BlockPos> sl,
             BlockPos bp
     ) {
         WorkStatusStore.State oldState = sl.getJobBlockState(bp);
@@ -24,7 +23,7 @@ public class JobBlock {
     }
 
     public static WorkStatusStore.State applyWork(
-            WorkStatusHandle<BlockPos, ItemStack> sl,
+            WorkStateContainer<BlockPos> sl,
             BlockPos bp,
             int nextWork,
             int nextTicks
@@ -73,7 +72,7 @@ public class JobBlock {
 
     public static @Nullable WorkStatusStore.State extractRawProduct(
             ServerLevel sl,
-            WorkStatusHandle<BlockPos, ItemStack> jh,
+            WorkStateContainer<BlockPos> jh,
             BlockPos block,
             Iterable<MCHeldItem> is,
             @Nullable TakeFn takeFn
@@ -93,7 +92,7 @@ public class JobBlock {
 
     private static void releaseOreFromBlock(
             ServerLevel sl,
-            WorkStatusHandle<BlockPos, ItemStack> level,
+            WorkStateContainer<BlockPos> level,
             BlockPos b,
             WorkStatusStore.State currentState,
             MCHeldItem is,

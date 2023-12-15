@@ -1,10 +1,10 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.WorkHandle;
@@ -125,7 +125,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    WorkStatusHandle<BlockPos, ItemStack> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
+    WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
 
     WorkHandle getWorkHandle();
 

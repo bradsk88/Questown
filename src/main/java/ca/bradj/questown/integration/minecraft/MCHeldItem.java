@@ -19,7 +19,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     private final String prefix;
     private final String biome;
 
-    private MCHeldItem(
+    protected MCHeldItem(
             MCTownItem item,
             boolean locked,
             @Nullable String prefix,
@@ -80,6 +80,16 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     @Override
     public MCHeldItem shrink() {
         return new MCHeldItem(delegate.shrink(), locked, prefix, biome);
+    }
+
+    @Override
+    public String getShortName() {
+        String name = "[unknown]";
+        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(delegate.get());
+        if (registryName != null) {
+            name = registryName.toString();
+        }
+        return name;
     }
 
     public static MCHeldItem Air() {
