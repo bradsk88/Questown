@@ -148,63 +148,6 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
     }
 
     @Override
-    public boolean tryInsertItem(
-            InsertionRules<ITEM> rules,
-            ITEM item,
-            POS bp,
-            int workToNextStep,
-            int timeToNextStep
-    ) {
-        State oldState = getJobBlockState(bp);
-        int curValue = oldState.processingState();
-        boolean canDo = false;
-        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);
-        if (ingredient != null) {
-            canDo = ingredient.apply(item);
-        }
-        Integer qtyRequired = rules.ingredientQuantityRequiredAtStates().getOrDefault(curValue, 0);
-        if (qtyRequired == null) {
-            qtyRequired = 0;
-        }
-        int curCount = oldState.ingredientCount();
-        if (canDo && curCount >= qtyRequired) {
-            QT.BLOCK_LOGGER.error(
-                    "Somehow exceeded required quantity: can accept up to {}, had {}",
-                    qtyRequired,
-                    curCount
-            );
-        }
-
-        if (canDo && curCount < qtyRequired) {
-            this.shrinker.accept(item);
-            int count = curCount + 1;
-            State blockState = oldState.setCount(count);
-            if (timeToNextStep > 0) {
-                setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
-            } else {
-                setJobBlockState(bp, blockState);
-            }
-            if (count < qtyRequired) {
-                return true;
-            }
-
-            if (oldState.workLeft == 0) {
-                int val = curValue + 1;
-                blockState = blockState.setProcessing(val);
-                blockState = blockState.setWorkLeft(workToNextStep);
-                blockState = blockState.setCount(0);
-                if (timeToNextStep > 0) {
-                    setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
-                } else {
-                    setJobBlockState(bp, blockState);
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    @Override
     public boolean canInsertItem(
             ITEM item,
             POS bp

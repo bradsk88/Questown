@@ -1,9 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
-import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 
@@ -18,7 +16,13 @@ public class MCItemWI extends AbstractItemWI<BlockPos, MCExtra, MCCoupledHeldIte
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             InventoryHandle<MCCoupledHeldItem> inventory
     ) {
-        super(ingredientsRequiredAtStates, ingredientQtyRequiredAtStates, workRequiredAtStates, timeRequiredAtStates, inventory);
+        super(
+                ingredientsRequiredAtStates,
+                ingredientQtyRequiredAtStates,
+                workRequiredAtStates,
+                timeRequiredAtStates,
+                inventory
+        );
     }
 
     @Override
@@ -31,23 +35,7 @@ public class MCItemWI extends AbstractItemWI<BlockPos, MCExtra, MCCoupledHeldIte
     }
 
     @Override
-    protected boolean tryInsertItem(
-            MCExtra extra,
-            WorkStatusStore.InsertionRules<MCCoupledHeldItem> rules,
-            MCCoupledHeldItem item,
-            BlockPos bp,
-            Integer nextStepWork,
-            Integer nextStepTime
-    ) {
-        return extra.work().tryInsertItem(rules, item, bp, nextStepWork, nextStepTime);
+    protected WorkStateContainer<BlockPos> getWorkStatuses(MCExtra extra) {
+        return extra.work();
     }
-
-    @Override
-    protected Integer getState(
-            MCExtra extra,
-            WorkSpot<Integer, BlockPos> ws
-    ) {
-        return JobBlock.getState(extra.work(), ws.position);
-    }
-
 }

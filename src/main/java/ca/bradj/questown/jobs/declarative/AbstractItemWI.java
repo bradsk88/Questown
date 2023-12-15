@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
@@ -14,14 +15,14 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
-    private final InventoryHandle<? extends ITEM> inventory;
+    private final InventoryHandle<ITEM> inventory;
 
     public AbstractItemWI(
             ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            InventoryHandle<? extends ITEM> inventory
+            InventoryHandle<ITEM> inventory
     ) {
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
@@ -35,10 +36,9 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             EXTRA extra,
             WorkSpot<Integer, POS> ws
     ) {
-        // TODO[ASAP]: Move this logic into the Abstract (tested) class
         POS bp = ws.position;
-        Integer state = getState(extra, ws);
-        if (state == null || !state.equals(ws.action)) {
+        WorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position);
+        if (state == null || state.processingState() != ws.action) {
             return false;
         }
 
@@ -72,24 +72,73 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
         return false;
     }
 
-    protected abstract boolean canInsertItem(
-            EXTRA extra,
-            ITEM item,
-            POS bp
-    );
-
-    protected abstract boolean tryInsertItem(
+    private boolean tryInsertItem(
             EXTRA extra,
             WorkStatusStore.InsertionRules<ITEM> rules,
             ITEM item,
             POS bp,
-            Integer nextStepWork,
-            Integer nextStepTime
-    );
+            Integer workToNextStep,
+            Integer timeToNextStep
+    ) {
+        WorkStateContainer<POS> ws = getWorkStatuses(extra);
+        WorkStatusStore.State oldState = ws.getJobBlockState(bp);
+        if (oldState == null) {
+            oldState = WorkStatusStore.State.fresh();
+        }
+        int curValue = oldState.processingState();
+        boolean canDo = false;
+        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);
+        if (ingredient != null) {
+            canDo = ingredient.apply(item);
+        }
+        Integer qtyRequired = rules.ingredientQuantityRequiredAtStates().getOrDefault(curValue, 0);
+        if (qtyRequired == null) {
+            qtyRequired = 0;
+        }
+        int curCount = oldState.ingredientCount();
+        if (canDo && curCount >= qtyRequired) {
+            QT.BLOCK_LOGGER.error(
+                    "Somehow exceeded required quantity: can accept up to {}, had {}",
+                    qtyRequired,
+                    curCount
+            );
+        }
 
-    protected abstract Integer getState(
+        if (canDo && curCount < qtyRequired) {
+            item.shrink();
+            int count = curCount + 1;
+            WorkStatusStore.State blockState = oldState.setCount(count);
+            if (timeToNextStep > 0) {
+                ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
+            } else {
+                ws.setJobBlockState(bp, blockState);
+            }
+            if (count < qtyRequired) {
+                return true;
+            }
+
+            if (oldState.workLeft() == 0) {
+                int val = curValue + 1;
+                blockState = blockState.setProcessing(val);
+                blockState = blockState.setWorkLeft(workToNextStep);
+                blockState = blockState.setCount(0);
+                if (timeToNextStep > 0) {
+                    ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
+                } else {
+                    ws.setJobBlockState(bp, blockState);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);
+
+    protected abstract boolean canInsertItem(
             EXTRA extra,
-            WorkSpot<Integer,POS> ws
+            ITEM item,
+            POS bp
     );
 
     @Override
