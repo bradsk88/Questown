@@ -51,6 +51,11 @@ class AbstractItemWITest {
             ) {
                 map.put(bp, new StateWithTimer(bs, ticksToNextState));
             }
+
+            @Override
+            public void clearState(Position bp) {
+                map.remove(bp);
+            }
         };
 
         public TestItemWI(

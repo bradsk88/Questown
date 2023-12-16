@@ -24,7 +24,6 @@ class AbstractWorldInteractionTest {
 
     private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
 
-        private boolean processed;
         private boolean extracted;
         private final WorkStateContainer<Position> workStatuses;
 
@@ -51,65 +50,6 @@ class AbstractWorldInteractionTest {
                     inventory
             );
             this.workStatuses = workStatuses;
-        }
-
-        public static TestWI old(
-                int i,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
-                ImmutableMap<Integer, Integer> workRequired,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
-                Supplier<Collection<GathererJournalTest.TestItem>> inventory
-        ) {
-
-            ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
-            ingredients.forEach((k, v) -> alwaysOneBuilder.put(k, 1));
-
-            ImmutableMap.Builder<Integer, Integer> alwaysZeroBuilder = ImmutableMap.builder();
-            ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
-
-
-            InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
-                @Override
-                public Collection<GathererJournalTest.TestItem> getItems() {
-                    return inventory.get();
-                }
-
-                @Override
-                public void set(
-                        int ii,
-                        GathererJournalTest.TestItem shrink
-                ) {
-                    throw new UnsupportedOperationException("Old tests didn't expect inventory changes");
-                }
-            };
-            WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
-                @Override
-                public @Nullable State getJobBlockState(Position bp) {
-                    return State.fresh();
-                }
-
-                @Override
-                public void setJobBlockState(
-                        Position bp,
-                        State bs
-                ) {
-                    throw new UnsupportedOperationException("Old tests didn't expect state changes");
-                }
-
-                @Override
-                public void setJobBlockStateWithTimer(
-                        Position bp,
-                        State bs,
-                        int ticksToNextState
-                ) {
-                    throw new UnsupportedOperationException("Old tests didn't expect state changes");
-                }
-            };
-            return new TestWI(
-                    i, toolsNeeded, workRequired, ingredients,
-                    alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
-                    inventory, inventoryHandle, statuses
-            );
         }
 
         public static TestWI noMemoryInventory(
@@ -166,6 +106,11 @@ class AbstractWorldInteractionTest {
                 ) {
                     ztate.put(bp, bs); // Ignoring time
                 }
+
+                @Override
+                public void clearState(Position bp) {
+                    ztate.remove(bp);
+                }
             };
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
@@ -175,33 +120,12 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected boolean tryProcessOre(
-                Void unused,
-                WorkSpot<Integer, Position> workSpot
-        ) {
-            processed = true;
-            advance(workSpot);
-            return true;
-        }
-
-        private void advance(WorkSpot<Integer, Position> workSpot) {
-            @Nullable WorkStatusStore.State current = getWorkStatuses(null).getJobBlockState(workSpot.position);
-            if (current == null) {
-                current = State.fresh();
-            }
-            if (current.workLeft() > 0) {
-                getWorkStatuses(null).setJobBlockState(workSpot.position, current.decrWork());
-            } else {
-                getWorkStatuses(null).setJobBlockState(workSpot.position, current.incrProcessing());
-            }
-        }
-
-        @Override
         protected boolean tryExtractOre(
                 Void unused,
                 Position position
         ) {
             extracted = true;
+            getWorkStatuses(null).clearState(position);
             return true;
         }
 
@@ -221,6 +145,13 @@ class AbstractWorldInteractionTest {
         @Override
         public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
             return null;
+        }
+
+        @Override
+        protected void degradeTool(
+                Void unused,
+                Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+        ) {
         }
 
         @Override
@@ -249,11 +180,16 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
                 () -> inserted.set(true)
         );
+
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+
         wi.tryWorking(null, arbitrarySpot(0));
 
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(inserted.get());
-        Assertions.assertFalse(wi.processed);
+        Assertions.assertNull(state);
     }
 
     @Test
@@ -269,10 +205,15 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+
         wi.tryWorking(null, arbitrarySpot(0));
 
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertFalse(wi.processed);
+
+        Assertions.assertEquals(State.fresh().incrProcessing(), state);
         Assertions.assertTrue(inserted.get());
     }
 
@@ -291,10 +232,19 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+        Assertions.assertFalse(wi.extracted);
+        Assertions.assertFalse(inserted.get());
+
         wi.tryWorking(null, arbitrarySpot(0));
 
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(0, state.processingState());
+        Assertions.assertEquals(100, state.workLeft());
+        Assertions.assertEquals(1, state.ingredientCount());
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertFalse(wi.processed);
         Assertions.assertTrue(inserted.get());
     }
 
@@ -315,9 +265,12 @@ class AbstractWorldInteractionTest {
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
         wi.tryWorking(null, arbitrarySpot(0)); // Process
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(0, state.processingState());
+        Assertions.assertEquals(99, state.workLeft());
+        Assertions.assertEquals(1, state.ingredientCount());
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertTrue(inserted.get());
-        Assertions.assertTrue(wi.processed);
     }
 
     @Test
@@ -336,10 +289,12 @@ class AbstractWorldInteractionTest {
                 () -> inserted.set(true)
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
+
         wi.tryWorking(null, arbitrarySpot(0)); // Process (see test above)
+
         wi.tryWorking(null, arbitrarySpot(0)); // Extract
-        Assertions.assertTrue(inserted.get());
-        Assertions.assertTrue(wi.processed);
+        @Nullable State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
         Assertions.assertTrue(wi.extracted);
     }
 
@@ -359,10 +314,19 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertFalse(wi.processed);
+
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(1, state.processingState());
+        Assertions.assertEquals(100, state.workLeft());
+        Assertions.assertEquals(0, state.ingredientCount());
+
         Assertions.assertTrue(inserted.get());
     }
 
@@ -388,8 +352,11 @@ class AbstractWorldInteractionTest {
 
         wi.tryWorking(null, spot);
 
-        Assertions.assertEquals(1, wi.getJobBlockState(null, spot.position).processingState());
-        Assertions.assertFalse(wi.processed);
+        State state = wi.getJobBlockState(null, spot.position);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(1, state.processingState());
+        Assertions.assertEquals(100, state.workLeft()); // Not processed
+        Assertions.assertFalse(wi.extracted);
         Assertions.assertTrue(inserted.get());
     }
 
@@ -414,9 +381,12 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(0));
         wi.tryWorking(null, arbitrarySpot(1));
 
+        State state = wi.getJobBlockState(null, arbitrarySpot(1).position);
+        Assertions.assertNotNull(state);
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertTrue(wi.processed);
-        Assertions.assertTrue(inserted.get());
+        Assertions.assertEquals(1, state.processingState());
+        Assertions.assertEquals(99, state.workLeft()); // Processed
+        Assertions.assertTrue(inserted.get()); // Inserted
     }
 
     @Test
@@ -441,9 +411,10 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        Assertions.assertTrue(inserted.get());
-        Assertions.assertTrue(wi.processed);
-        Assertions.assertTrue(wi.extracted);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+        Assertions.assertTrue(inserted.get()); // Inserted
+        Assertions.assertTrue(wi.extracted); // Extracted
     }
 
     @Test
@@ -466,9 +437,10 @@ class AbstractWorldInteractionTest {
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        Assertions.assertFalse(inserted.get());
-        Assertions.assertFalse(wi.processed);
-        Assertions.assertFalse(wi.extracted);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state); // Not processed
+        Assertions.assertFalse(inserted.get()); // Not inserted
+        Assertions.assertFalse(wi.extracted); // Not extracted
     }
 
     @Test
@@ -497,9 +469,10 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        Assertions.assertTrue(inserted.get());
-        Assertions.assertTrue(wi.processed);
-        Assertions.assertTrue(wi.extracted);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNull(state);
+        Assertions.assertTrue(inserted.get()); // Inserted
+        Assertions.assertTrue(wi.extracted); // Extracted
     }
 
     @NotNull

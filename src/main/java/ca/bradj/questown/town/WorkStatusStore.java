@@ -77,7 +77,7 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
         }
 
         public State decrWork() {
-            return setWorkLeft(workLeft - 1);
+            return setWorkLeft(Math.max(workLeft - 1, 0));
         }
     }
 
@@ -136,6 +136,12 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
 
         QT.BLOCK_LOGGER.debug("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
         this.timeJobStatuses.put(bp, ticksToNextState);
+    }
+
+    @Override
+    public void clearState(POS bp) {
+        this.timeJobStatuses.remove(bp);
+        this.jobStatuses.remove(bp);
     }
 
     @Override

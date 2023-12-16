@@ -94,9 +94,6 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             Runnable shrinker
     ) {
         WorkStateContainer<POS> ws = getWorkStatuses(extra);
-        if (oldState == null) {
-            oldState = WorkStatusStore.State.fresh();
-        }
         int curValue = oldState.processingState();
         boolean canDo = false;
         Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);

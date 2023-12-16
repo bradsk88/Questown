@@ -140,67 +140,19 @@ public class WorldInteraction
     }
 
     @Override
-    protected boolean tryProcessOre(
-            MCExtra extra,
-            WorkSpot<Integer, BlockPos> workSpot
+    protected void degradeTool(
+            MCExtra mcExtra,
+            Function<MCTownItem, Boolean> toolCheck
     ) {
-        return tryProcessOre(extra.work(), extra.entity(), workSpot);
-    }
-
-    private boolean tryProcessOre(
-            WorkStateContainer<BlockPos> sl,
-            LivingEntity entity,
-            WorkSpot<Integer, BlockPos> ws
-    ) {
-        BlockPos bp = ws.position;
-        @Nullable Integer s = JobBlock.getState(sl, bp);
-        if (ws.action.equals(s)) {
-            Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
-            );
-            if (nextStepWork == null) {
-                nextStepWork = 0;
-            }
-            Integer nextStepTime = timeRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
-            );
-            if (nextStepTime == null) {
-                nextStepTime = 0;
-            }
-            WorkStatusStore.State blockState = JobBlock.applyWork(sl, bp, nextStepWork, nextStepTime);
-            boolean didWork = blockState != null;
-            if (didWork && toolsRequiredAtStates.get(s) != null) {
-                degradeTool(entity, JobBlock.getState(sl, bp));
-            }
-            return didWork;
-        }
-        return false;
-    }
-
-    private void degradeTool(
-            LivingEntity entity,
-            @Nullable Integer state
-    ) {
-        if (state == null) {
-            QT.JOB_LOGGER.warn("Block state is null while trying to degrade tool");
-            return;
-        }
-        Function<MCTownItem, Boolean> tool = toolsRequiredAtStates.get(state);
-        if (tool == null) {
-            QT.JOB_LOGGER.warn("Tool requirement is null while trying to degrade tool");
-            return;
-        }
-
-        Optional<MCTownItem> foundTool = journal.getItems()
+        // FIXME: This tool degradation seem to work
+        Optional<MCHeldItem> foundTool = journal.getItems()
                 .stream()
-                .map(MCHeldItem::get)
-                .filter(tool::apply)
+                .filter(v -> toolCheck.apply(v.get()))
                 .findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
-            ItemStack is = foundTool.get().toItemStack();
-            is.hurtAndBreak(1, entity, (x) -> {
-            });
+            ItemStack is = foundTool.get().get().toItemStack();
+            is.hurtAndBreak(1, mcExtra.entity(), (x) -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
         }
     }

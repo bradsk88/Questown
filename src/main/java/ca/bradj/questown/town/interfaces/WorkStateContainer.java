@@ -17,4 +17,6 @@ public interface WorkStateContainer<POS> {
             WorkStatusStore.State bs,
             int ticksToNextState
     );
+
+    void clearState(POS bp);
 }

@@ -17,6 +17,7 @@ public abstract class AbstractWorldInteraction<
         EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>
 > implements WorkStatusStore.InsertionRules<HELD_ITEM> {
     private final AbstractItemWI<POS, EXTRA, HELD_ITEM> itemWI;
+    private final AbstractWorkWI<POS, EXTRA, INNER_ITEM> workWI;
     private int ticksSinceLastAction;
     private final int interval;
     protected final int maxState;
@@ -66,7 +67,30 @@ public abstract class AbstractWorldInteraction<
                 return self.canInsertItem(extra, item, bp);
             }
         };
+        this.workWI = new AbstractWorkWI<>(
+                workRequiredAtStates,
+                timeRequiredAtStates,
+                toolsRequiredAtStates
+        ) {
+            @Override
+            protected void degradeTool(
+                    EXTRA extra,
+                    Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+            ) {
+                self.degradeTool(extra, heldItemBooleanFunction); // TODO: Implement generically and test
+            }
+
+            @Override
+            protected WorkStateContainer<POS> getWorkStatuses(EXTRA extra) {
+                return self.getWorkStatuses(extra);
+            }
+        };
     }
+
+    protected abstract void degradeTool(
+            EXTRA extra,
+            Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+    );
 
     protected abstract boolean canInsertItem(
             EXTRA extra,
@@ -134,7 +158,7 @@ public abstract class AbstractWorldInteraction<
                         return true;
                     }
                 }
-                return tryProcessOre(extra, workSpot);
+                return workWI.tryWork(extra, workSpot);
             }
         }
 
@@ -145,11 +169,6 @@ public abstract class AbstractWorldInteraction<
     public Map<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates() {
         return ingredientsRequiredAtStates;
     }
-
-    protected abstract boolean tryProcessOre(
-            EXTRA extra,
-            WorkSpot<Integer, POS> workSpot
-    );
 
     protected abstract boolean tryExtractOre(
             EXTRA extra,
