@@ -32,8 +32,6 @@ import java.util.function.Function;
 public class WorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCCoupledHeldItem> {
 
-    private final MCItemWI itemWI;
-
     public boolean tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
@@ -70,18 +68,9 @@ public class WorldInteraction
                 stripMC2(toolsRequiredAtStates),
                 workRequiredAtStates,
                 stripMC(ingredientsRequiredAtStates),
-                () -> journal.getItems().stream().map(MCHeldItem::get).toList()
-        );
-        this.inventory = inventory;
-        this.journal = journal;
-        this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
-        this.timeRequiredAtStates = timeRequiredAtStates;
-        this.workResult = workResult;
-        this.itemWI = new MCItemWI(
-                stripMC(ingredientsRequiredAtStates),
                 ingredientQtyRequiredAtStates,
-                workRequiredAtStates,
                 timeRequiredAtStates,
+                () -> journal.getItems().stream().map(MCHeldItem::get).toList(),
                 new InventoryHandle<>() {
                     @Override
                     public Collection<MCCoupledHeldItem> getItems() {
@@ -105,6 +94,11 @@ public class WorldInteraction
                     }
                 }
         );
+        this.inventory = inventory;
+        this.journal = journal;
+        this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
+        this.timeRequiredAtStates = timeRequiredAtStates;
+        this.workResult = workResult;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -212,30 +206,22 @@ public class WorldInteraction
     }
 
     @Override
-    protected ItemWI<BlockPos, MCExtra> getItemWI() {
-        return itemWI;
+    protected WorkStateContainer<BlockPos> getWorkStatuses(MCExtra extra) {
+        return extra.work();
+    }
+
+    @Override
+    protected boolean canInsertItem(
+            MCExtra mcExtra,
+            MCCoupledHeldItem item,
+            BlockPos bp
+    ) {
+        return mcExtra.work().canInsertItem(item, bp);
     }
 
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQtyRequiredAtStates;
-    }
-
-    @Override
-    protected void setJobBlockState(
-            MCExtra extra,
-            BlockPos position,
-            WorkStatusStore.State state
-    ) {
-        extra.work().setJobBlockState(position, state);
-    }
-
-    @Override
-    protected WorkStatusStore.State getJobBlockState(
-            MCExtra extra,
-            BlockPos position
-    ) {
-        return extra.work().getJobBlockState(position);
     }
 
     @Override

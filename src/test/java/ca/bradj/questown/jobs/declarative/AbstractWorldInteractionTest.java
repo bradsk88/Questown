@@ -1,18 +1,22 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.WorkStatusStore.State;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -21,16 +25,19 @@ class AbstractWorldInteractionTest {
     private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
 
         private boolean processed;
-        private boolean inserted;
         private boolean extracted;
-        private final HashMap<Position, State> state = new HashMap<>();
+        private final WorkStateContainer<Position> workStatuses;
 
         public TestWI(
                 int maxState,
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
-                Supplier<Collection<GathererJournalTest.TestItem>> journal
+                ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
+                ImmutableMap<Integer, Integer> timeRequiredAtStates,
+                Supplier<Collection<GathererJournalTest.TestItem>> journal,
+                InventoryHandle<GathererJournalTest.TestItem> inventory,
+                WorkStateContainer<Position> workStatuses
         ) {
             super(
                     0,
@@ -38,7 +45,132 @@ class AbstractWorldInteractionTest {
                     toolsRequiredAtStates,
                     workRequiredAtStates,
                     ingredientsRequiredAtStates,
-                    journal
+                    ingredientQuantityRequiredAtStates,
+                    timeRequiredAtStates,
+                    journal,
+                    inventory
+            );
+            this.workStatuses = workStatuses;
+        }
+
+        public static TestWI old(
+                int i,
+                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
+                ImmutableMap<Integer, Integer> workRequired,
+                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
+                Supplier<Collection<GathererJournalTest.TestItem>> inventory
+        ) {
+
+            ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
+            ingredients.forEach((k, v) -> alwaysOneBuilder.put(k, 1));
+
+            ImmutableMap.Builder<Integer, Integer> alwaysZeroBuilder = ImmutableMap.builder();
+            ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
+
+
+            InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
+                @Override
+                public Collection<GathererJournalTest.TestItem> getItems() {
+                    return inventory.get();
+                }
+
+                @Override
+                public void set(
+                        int ii,
+                        GathererJournalTest.TestItem shrink
+                ) {
+                    throw new UnsupportedOperationException("Old tests didn't expect inventory changes");
+                }
+            };
+            WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+                @Override
+                public @Nullable State getJobBlockState(Position bp) {
+                    return State.fresh();
+                }
+
+                @Override
+                public void setJobBlockState(
+                        Position bp,
+                        State bs
+                ) {
+                    throw new UnsupportedOperationException("Old tests didn't expect state changes");
+                }
+
+                @Override
+                public void setJobBlockStateWithTimer(
+                        Position bp,
+                        State bs,
+                        int ticksToNextState
+                ) {
+                    throw new UnsupportedOperationException("Old tests didn't expect state changes");
+                }
+            };
+            return new TestWI(
+                    i, toolsNeeded, workRequired, ingredients,
+                    alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
+                    inventory, inventoryHandle, statuses
+            );
+        }
+
+        public static TestWI noMemoryInventory(
+                int i,
+                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
+                ImmutableMap<Integer, Integer> workRequired,
+                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
+                Supplier<Collection<GathererJournalTest.TestItem>> inventory,
+                Runnable onInventoryChange
+        ) {
+            ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
+            ingredients.forEach((k, v) -> alwaysOneBuilder.put(k, 1));
+
+            ImmutableMap.Builder<Integer, Integer> alwaysZeroBuilder = ImmutableMap.builder();
+            ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
+
+
+            InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
+                @Override
+                public Collection<GathererJournalTest.TestItem> getItems() {
+                    return inventory.get();
+                }
+
+                @Override
+                public void set(
+                        int ii,
+                        GathererJournalTest.TestItem shrink
+                ) {
+                    onInventoryChange.run();
+                }
+            };
+
+            HashMap<Position, State> ztate = new HashMap<>();
+
+            WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+                @Override
+                public @Nullable State getJobBlockState(Position bp) {
+                    return ztate.get(bp);
+                }
+
+                @Override
+                public void setJobBlockState(
+                        Position bp,
+                        State bs
+                ) {
+                    ztate.put(bp, bs);
+                }
+
+                @Override
+                public void setJobBlockStateWithTimer(
+                        Position bp,
+                        State bs,
+                        int ticksToNextState
+                ) {
+                    ztate.put(bp, bs); // Ignoring time
+                }
+            };
+            return new TestWI(
+                    i, toolsNeeded, workRequired, ingredients,
+                    alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
+                    inventory, inventoryHandle, statuses
             );
         }
 
@@ -52,39 +184,16 @@ class AbstractWorldInteractionTest {
             return true;
         }
 
-        @Override
-        protected ItemWI<Position, Void> getItemWI() {
-            return (unused, workSpot) -> {
-                inserted = true;
-                advance(workSpot);
-                return true;
-            };
-        }
-
         private void advance(WorkSpot<Integer, Position> workSpot) {
-            state.compute(workSpot.position, (k, v) -> {
-                if (v == null) {
-                    v = State.fresh();
-                }
-                return v.incrProcessing();
-            });
-        }
-
-        @Override
-        protected void setJobBlockState(
-                Void unused,
-                Position position,
-                State state
-        ) {
-            this.state.put(position, state);
-        }
-
-        @Override
-        protected State getJobBlockState(
-                Void unused,
-                Position position
-        ) {
-            return this.state.get(position);
+            @Nullable WorkStatusStore.State current = getWorkStatuses(null).getJobBlockState(workSpot.position);
+            if (current == null) {
+                current = State.fresh();
+            }
+            if (current.workLeft() > 0) {
+                getWorkStatuses(null).setJobBlockState(workSpot.position, current.decrWork());
+            } else {
+                getWorkStatuses(null).setJobBlockState(workSpot.position, current.incrProcessing());
+            }
         }
 
         @Override
@@ -113,59 +222,65 @@ class AbstractWorldInteractionTest {
         public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
             return null;
         }
-    }
 
-    private static class J extends ProductionJournal<GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
-
-        public J(
-                @NotNull JobID jobId,
-                SignalSource sigs,
-                int capacity,
-                EmptyFactory<GathererJournalTest.TestItem> ef,
-                IStatusFactory<ProductionStatus> sf
+        @Override
+        protected boolean canInsertItem(
+                Void unused,
+                GathererJournalTest.TestItem item,
+                Position bp
         ) {
-            super(jobId, sigs, capacity, ef, sf);
+            return true;
+        }
+
+        @Override
+        protected WorkStateContainer<Position> getWorkStatuses(Void unused) {
+            return workStatuses;
         }
     }
 
     @Test
     void Test_ShouldDoNothingForCompletelyEmptyWork() {
-        TestWI wi = new TestWI(
-                3,
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                0, // max state (only one state here)
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
+                () -> inserted.set(true)
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertFalse(wi.inserted);
+        Assertions.assertFalse(inserted.get());
         Assertions.assertFalse(wi.processed);
     }
 
     @Test
     void Test_ShouldInsertForWorklessToollessJob() {
-        TestWI wi = new TestWI(
-                3,
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(), // No work required
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(wi.processed);
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
     }
 
     @Test
-    void Test_ShouldInsertAndProcessForToollessJob() {
-        TestWI wi = new TestWI(
-                3,
+    void Test_ShouldInsertFirst_IfBlockRequiresIngredientsAndWork() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
                         0, 100 // 100 work required
@@ -173,18 +288,65 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertFalse(wi.processed);
+        Assertions.assertTrue(inserted.get());
+    }
+
+    @Test
+    void Test_ShouldInsertThenProcessForToollessJob() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                0, // max state (only one state here)
+                ImmutableMap.of(), // No tools required
+                ImmutableMap.of(
+                        0, 100 // 100 work required
+                ),
+                ImmutableMap.of(
+                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                ),
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
+        );
+        wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
+        wi.tryWorking(null, arbitrarySpot(0)); // Process
+        Assertions.assertFalse(wi.extracted);
+        Assertions.assertTrue(inserted.get());
         Assertions.assertTrue(wi.processed);
     }
 
     @Test
+    void Test_ShouldInsertThenProcessThenExtractForToollessJob() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                0, // max state (only one state here)
+                ImmutableMap.of(), // No tools required
+                ImmutableMap.of(
+                        0, 1 // 1 work required
+                ),
+                ImmutableMap.of(
+                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                ),
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
+        );
+        wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
+        wi.tryWorking(null, arbitrarySpot(0)); // Process (see test above)
+        wi.tryWorking(null, arbitrarySpot(0)); // Extract
+        Assertions.assertTrue(inserted.get());
+        Assertions.assertTrue(wi.processed);
+        Assertions.assertTrue(wi.extracted);
+    }
+
+    @Test
     void Test_ShouldInsertAndNotProcess_ForJobWithTwoStages_OnFirstTry() {
-        TestWI wi = new TestWI(
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 3,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -194,18 +356,20 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(wi.processed);
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
     }
 
     @Test
-    void Test_MetaShouldMoveToStage2_AfterFirstTry() {
-        TestWI wi = new TestWI(
+    void Test_ShouldMoveToStage2_AfterFirstTry() {
+        final AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 3,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -215,23 +379,25 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
         WorkSpot<Integer, Position> spot = arbitrarySpot(0);
 
-        Assertions.assertEquals(0, wi.state.getOrDefault(spot.position, State.fresh()).processingState());
+        Assertions.assertNull(wi.getJobBlockState(null, spot.position));
 
         wi.tryWorking(null, spot);
 
-        Assertions.assertEquals(1, wi.state.get(spot.position).processingState());
+        Assertions.assertEquals(1, wi.getJobBlockState(null, spot.position).processingState());
         Assertions.assertFalse(wi.processed);
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
     }
 
 
     @Test
     void Test_ShouldInsertAndProcess_ForJobWithTwoStages_AfterSecondTry() {
-        TestWI wi = new TestWI(
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 2,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -241,7 +407,8 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
@@ -249,60 +416,65 @@ class AbstractWorldInteractionTest {
 
         Assertions.assertFalse(wi.extracted);
         Assertions.assertTrue(wi.processed);
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
     }
 
     @Test
     void Test_ShouldInsertAndProcessAndExtract_ForJobWithThreeStages_AfterThirdTry() {
-        TestWI wi = new TestWI(
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 2,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
                         0, 0, // No work required at stage 0
-                        1, 100 // 100 work required
+                        1, 1, // 1 work required at stage 1
+                        2, 0 // No work requred at stage 2
                 ),
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
         Assertions.assertTrue(wi.processed);
         Assertions.assertTrue(wi.extracted);
     }
 
     @Test
     void Test_ShouldDoNothingIfToolIsRequiredButNotHad() {
-        TestWI wi = new TestWI(
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 2,
                 ImmutableMap.of(
                         0, (i) -> false // Villager does not have the needed tool
                 ),
                 ImmutableMap.of(
-                        0, 0 // No work required at stage 0
+                        0, 1 // Work required at stage 0
                 ),
                 ImmutableMap.of(
                         0, (i) -> true // Villager has all the items needed
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
+                () -> inserted.set(true)
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        Assertions.assertFalse(wi.inserted);
+        Assertions.assertFalse(inserted.get());
         Assertions.assertFalse(wi.processed);
         Assertions.assertFalse(wi.extracted);
     }
 
-
     @Test
     void Test_ShouldInsertAndProcessAndExtract_WhenToolsRequiredAndPossessed_ForJobWithThreeStages_AfterThirdTry() {
-        TestWI wi = new TestWI(
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
                 2,
                 ImmutableMap.of(
                         0, (i) -> true, // Villager has the needed tools
@@ -311,19 +483,21 @@ class AbstractWorldInteractionTest {
                 ),
                 ImmutableMap.of(
                         0, 0, // No work required at stage 0
-                        1, 100 // 100 work required
+                        1, 1, // 1 work required at stage 1
+                        2, 0 // No work required at stage 2
                 ),
                 ImmutableMap.of(
                         0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem(""))
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> inserted.set(true)
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        Assertions.assertTrue(wi.inserted);
+        Assertions.assertTrue(inserted.get());
         Assertions.assertTrue(wi.processed);
         Assertions.assertTrue(wi.extracted);
     }

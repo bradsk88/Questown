@@ -37,27 +37,18 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             WorkSpot<Integer, POS> ws
     ) {
         POS bp = ws.position;
+        int curState = ws.action;
         WorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position);
         if (state == null) {
-            state = WorkStatusStore.State.fresh();
+            Integer initWork = workRequiredAtStates.get(curState);
+            if (initWork == null) {
+                initWork = 0;
+            }
+            state = WorkStatusStore.State.fresh().setWorkLeft(initWork);
         }
-        int curState = ws.action;
 
         if (state.processingState() != curState) {
             return false;
-        }
-        Integer count = ingredientQtyRequiredAtStates.get(curState);
-        if (count == null) {
-            count = 0;
-        }
-
-        Integer work = workRequiredAtStates.get(curState);
-        if (work == null) {
-            work = 0;
-        }
-        state = state.setCount(count).setWorkLeft(work);
-        if (state.workLeft() != 0) {
-            throw new IllegalStateException();
         }
 
         int i = -1;
@@ -84,7 +75,7 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
                 nextStepTime = 0;
             }
             final int ii = i;
-            if (tryInsertItem(extra, this, item, bp, nextStepWork, nextStepTime, () -> inventory.set(ii, item.shrink()))) {
+            if (tryInsertItem(extra, this, state, item, bp, nextStepWork, nextStepTime, () -> inventory.set(ii, item.shrink()))) {
                 QT.JOB_LOGGER.debug("Villager removed {} from their inventory {}", name, invBefore);
                 return true;
             }
@@ -95,6 +86,7 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
     private boolean tryInsertItem(
             EXTRA extra,
             WorkStatusStore.InsertionRules<ITEM> rules,
+            WorkStatusStore.State oldState,
             ITEM item,
             POS bp,
             Integer workToNextStep,
@@ -102,7 +94,6 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             Runnable shrinker
     ) {
         WorkStateContainer<POS> ws = getWorkStatuses(extra);
-        WorkStatusStore.State oldState = ws.getJobBlockState(bp);
         if (oldState == null) {
             oldState = WorkStatusStore.State.fresh();
         }
@@ -117,7 +108,7 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             qtyRequired = 0;
         }
         int curCount = oldState.ingredientCount();
-        if (canDo && curCount >= qtyRequired) {
+        if (canDo && curCount > qtyRequired) {
             QT.BLOCK_LOGGER.error(
                     "Somehow exceeded required quantity: can accept up to {}, had {}",
                     qtyRequired,
@@ -125,31 +116,42 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             );
         }
 
-        if (canDo && curCount < qtyRequired) {
+        int count = curCount + 1;
+        if (canDo && count <= qtyRequired) {
             shrinker.run();
-            int count = curCount + 1;
+        }
+
+
+        if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
             WorkStatusStore.State blockState = oldState.setCount(count);
-            if (timeToNextStep > 0) {
+            ws.setJobBlockState(bp, blockState);
+            return true;
+        }
+
+        if (canDo && count <= qtyRequired) {
+            WorkStatusStore.State blockState = oldState.setCount(count);
+            if (count == qtyRequired) {
+                blockState = blockState.setWorkLeft(workToNextStep).setCount(0).setProcessing(oldState.processingState() + 1);
+            }
+            if (count == qtyRequired && timeToNextStep > 0) {
                 ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
             } else {
                 ws.setJobBlockState(bp, blockState);
             }
-            if (count < qtyRequired) {
-                return true;
-            }
-
-            if (oldState.workLeft() == 0) {
-                int val = curValue + 1;
-                blockState = blockState.setProcessing(val);
-                blockState = blockState.setWorkLeft(workToNextStep);
-                blockState = blockState.setCount(0);
-                if (timeToNextStep > 0) {
-                    ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
-                } else {
-                    ws.setJobBlockState(bp, blockState);
-                }
-            }
             return true;
+//
+//            if (oldState.workLeft() == 0) {
+//                int val = curValue + 1;
+//                blockState = blockState.setProcessing(val);
+//                blockState = blockState.setWorkLeft(workToNextStep);
+//                blockState = blockState.setCount(0);
+//                if (timeToNextStep > 0) {
+//                    ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
+//                } else {
+//                    ws.setJobBlockState(bp, blockState);
+//                }
+//            }
+//            return true;
         }
         return false;
     }

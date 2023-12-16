@@ -4,7 +4,9 @@ import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.function.Supplier;
 public abstract class AbstractWorldInteraction<
         EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>
 > implements WorkStatusStore.InsertionRules<HELD_ITEM> {
+    private final AbstractItemWI<POS, EXTRA, HELD_ITEM> itemWI;
     private int ticksSinceLastAction;
     private final int interval;
     protected final int maxState;
@@ -30,7 +33,10 @@ public abstract class AbstractWorldInteraction<
             ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates,
-            Supplier<Collection<INNER_ITEM>> journalItems
+            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            Supplier<Collection<INNER_ITEM>> journalItems,
+            InventoryHandle<HELD_ITEM> inventory
     ) {
         this.interval = interval;
         this.maxState = maxState;
@@ -38,7 +44,37 @@ public abstract class AbstractWorldInteraction<
         this.workRequiredAtStates = workRequiredAtStates;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.journalItems = journalItems;
+        AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM> self = this;
+        this.itemWI = new AbstractItemWI<>(
+                ingredientsRequiredAtStates,
+                ingredientQuantityRequiredAtStates,
+                workRequiredAtStates,
+                timeRequiredAtStates,
+                inventory
+        ) {
+            @Override
+            protected WorkStateContainer<POS> getWorkStatuses(EXTRA extra) {
+                return self.getWorkStatuses(extra);
+            }
+
+            @Override
+            protected boolean canInsertItem(
+                    EXTRA extra,
+                    HELD_ITEM item,
+                    POS bp
+            ) {
+                return self.canInsertItem(extra, item, bp);
+            }
+        };
     }
+
+    protected abstract boolean canInsertItem(
+            EXTRA extra,
+            HELD_ITEM item,
+            POS bp
+    );
+
+    protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);
 
     public boolean tryWorking(
             EXTRA extra,
@@ -62,8 +98,13 @@ public abstract class AbstractWorldInteraction<
             return false;
         }
 
+        WorkStateContainer<POS> workStatuses = getWorkStatuses(extra);
+        WorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position);
+
         if (workSpot.action == maxState) {
-            return tryExtractOre(extra, workSpot.position);
+            if (jobBlockState != null && jobBlockState.workLeft() == 0) {
+                return tryExtractOre(extra, workSpot.position);
+            }
         }
 
         Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(workSpot.action);
@@ -75,33 +116,30 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
+        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
+            if (itemWI.tryInsertIngredients(extra, workSpot)) {
+                return true;
+            }
+        }
+
         if (this.workRequiredAtStates.containsKey(workSpot.action)) {
             Integer work = this.workRequiredAtStates.get(workSpot.action);
             if (work != null && work > 0) {
                 if (workSpot.action == 0) {
-                    WorkStatusStore.State jobBlockState = getJobBlockState(extra, workSpot.position);
                     if (jobBlockState == null) {
                         jobBlockState = new WorkStatusStore.State(0, 0, 0);
                     }
                     if (jobBlockState.workLeft() == 0) {
-                        setJobBlockState(extra, workSpot.position, jobBlockState.setWorkLeft(work));
+                        workStatuses.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
+                        return true;
                     }
-                }
-                if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-                    this.getItemWI().tryInsertIngredients(extra, workSpot);
                 }
                 return tryProcessOre(extra, workSpot);
             }
         }
 
-        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            return this.getItemWI().tryInsertIngredients(extra, workSpot);
-        }
-
         return false;
     }
-
-    protected abstract ItemWI<POS,EXTRA> getItemWI();
 
     @Override
     public Map<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates() {
@@ -113,17 +151,6 @@ public abstract class AbstractWorldInteraction<
             WorkSpot<Integer, POS> workSpot
     );
 
-    protected abstract void setJobBlockState(
-            EXTRA extra,
-            POS position,
-            WorkStatusStore.State state
-    );
-
-    protected abstract WorkStatusStore.State getJobBlockState(
-            EXTRA extra,
-            POS position
-    );
-
     protected abstract boolean tryExtractOre(
             EXTRA extra,
             POS position
@@ -133,4 +160,10 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract boolean isReady(EXTRA extra);
 
+    public @Nullable WorkStatusStore.State getJobBlockState(
+            EXTRA extra,
+            POS bp
+    ) {
+        return itemWI.getWorkStatuses(extra).getJobBlockState(bp);
+    }
 }

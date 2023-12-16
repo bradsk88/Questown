@@ -75,6 +75,10 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
         public State incrIngredientCount() {
             return setCount(ingredientCount + 1);
         }
+
+        public State decrWork() {
+            return setWorkLeft(workLeft - 1);
+        }
     }
 
     private final HashSet<ROOM> rooms = new HashSet<>();

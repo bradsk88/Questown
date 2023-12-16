@@ -469,33 +469,4 @@ class AbstractItemWITest {
         Assertions.assertEquals(1, state.processingState());
         Assertions.assertEquals(1, wi.timeLeft(arbitraryPosition));
     }
-
-    @Test
-    void tryInsertIngredients_shouldThrowIfWorkStillRequired() {
-        TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                ))
-        );
-        TestItemWI wi = new TestItemWI(
-                ImmutableMap.of(
-                        0, (item) -> true // All items in inventory were wanted at current stage (0)
-                ),
-                ImmutableMap.of(
-                        0, 1 // Want up to 1 item
-                ),
-                ImmutableMap.of(
-                        0, 1 // Work of 1 required at current stage (0)
-                ),
-                ImmutableMap.of(
-                        0, 0 // No time required
-                ),
-                inventory
-        );
-
-        Assertions.assertThrows(
-                IllegalStateException.class,
-                () -> wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0))
-        );
-    }
 }
