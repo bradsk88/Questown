@@ -202,9 +202,16 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             if (ingr != null) {
                 bb.add(item -> ingr.test(item.toItemStack()));
             }
-            Ingredient tool = toolsRequiredAtStates.get(s);
-            if (tool != null) {
-                bb.add(item -> tool.test(item.toItemStack()));
+            // Hold on to tools required for this state and all previous states
+            for (int i = 0; i <= s; i++) {
+                final int ii = i;
+                Ingredient tool = toolsRequiredAtStates.get(ii);
+                if (tool != null) {
+                    bb.add(item -> {
+                        ItemStack itemStack = item.toItemStack();
+                        return tool.test(itemStack);
+                    });
+                }
             }
             return bb.build();
         };
@@ -290,7 +297,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         if (workSpot == null) {
-            this.workSpot = workSpots.getOrDefault(status.getProductionState(), null);
+            WorkSpot<Integer, BlockPos> workSpot1 = workSpots.get(status.getProductionState());
+            if (workSpot1 == null) {
+                QT.JOB_LOGGER.error("Worker somehow has different status than all existing work spots. This is probably a bug.");
+                return;
+            }
+            this.workSpot = workSpot1;
         }
 
         boolean worked = this.world.tryWorking(town, work, entity, workSpot);
@@ -426,19 +438,21 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             )));
             // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
-        toolsRequiredAtStates.forEach((state, ingrs) -> {
-            if (ingrs.isEmpty()) {
-                if (!b.containsKey(state)) {
-                    b.put(state, new ArrayList<>());
-                }
-                return;
-            }
+        HashMap<Integer, Ingredient> stateTools = new HashMap<>();
+        for (int i = 0; i < maxState; i++) {
+            stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
+        }
+        stateTools.forEach((state, ingrs) -> {
             if (!b.containsKey(state)) {
                 b.put(state, new ArrayList<>());
             }
-            b.get(state).addAll((Jobs.roomsWithState(
-                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
-            )));
+            // Hold on to tools that are required at this state and any previous states
+            for (int i = 0; i <= state; i++) {
+                final Integer ii = i;
+                b.get(state).addAll((Jobs.roomsWithState(
+                        town, workRoomId, (sl, bp) -> ii.equals(JobBlock.getState(th, bp))
+                )));
+            }
         });
         return ImmutableMap.copyOf(b);
     }

@@ -4,9 +4,13 @@ import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -167,6 +171,8 @@ public class JobStatuses {
                                 RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
                                 Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
 
+                                roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
+
                                 boolean foundWork = false;
 
                                 List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
@@ -195,12 +201,45 @@ public class JobStatuses {
                             }
                         }, factory
                 );
-                if (factory.idle().equals(status)) {
+                // TODO: For "no supplies" status, ignore rooms that only need tools
+                // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
+                if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {
                     if (town.isUnfinishedTimeWorkPresent()) {
                         return factory.waitingForTimedState();
                     }
                 }
                 return status;
+    }
+
+    public static <ROOM extends Room> Map<Integer, ? extends Collection<ROOM>> sanitizeRoomNeeds(
+            Map<Integer, ? extends Collection<ROOM>> roomNeedsMap
+    ) {
+        // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
+        // show up as "needing" 0.
+        Map<Integer, Collection<ROOM>> b = new HashMap<>();
+        roomNeedsMap.forEach((k, rooms) -> {
+            ImmutableSet.Builder<ROOM> allPrevRooms = ImmutableSet.builder();
+            for (int i = 0; i < k; i++) {
+                Collection<ROOM> elements = b.get(i);
+                if (elements == null) {
+                    elements = ImmutableList.of();
+                }
+                allPrevRooms.addAll(elements);
+            }
+            ImmutableSet<ROOM> prevRooms = allPrevRooms.build();
+            ImmutableList.Builder<ROOM> bld = ImmutableList.builder();
+            rooms.forEach(room -> {
+                if (prevRooms.contains(room)) {
+                    return;
+                }
+                bld.add(room);
+            });
+            ImmutableList<ROOM> build = bld.build();
+            if (!build.isEmpty()) {
+                b.put(k, build);
+            }
+        });
+        return ImmutableMap.copyOf(b);
     }
 
 
