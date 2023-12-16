@@ -1,7 +1,9 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
@@ -29,6 +31,7 @@ public abstract class AbstractWorldInteraction<
     private final Supplier<Collection<INNER_ITEM>> journalItems;
 
     public AbstractWorldInteraction(
+            JobID jobId,
             int interval,
             int maxState,
             ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates,
@@ -39,6 +42,9 @@ public abstract class AbstractWorldInteraction<
             Supplier<Collection<INNER_ITEM>> journalItems,
             InventoryHandle<HELD_ITEM> inventory
     ) {
+        if (toolsRequiredAtStates.isEmpty() && workRequiredAtStates.isEmpty() && ingredientQuantityRequiredAtStates.isEmpty() && timeRequiredAtStates.isEmpty()) {
+            QT.JOB_LOGGER.error("{} requires no tools, work, time, or ingredients. This will lead to strange game behaviour.", jobId);
+        }
         this.interval = interval;
         this.maxState = maxState;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
@@ -158,11 +164,10 @@ public abstract class AbstractWorldInteraction<
                         return true;
                     }
                 }
-                return workWI.tryWork(extra, workSpot);
             }
         }
 
-        return false;
+        return workWI.tryWork(extra, workSpot);
     }
 
     @Override

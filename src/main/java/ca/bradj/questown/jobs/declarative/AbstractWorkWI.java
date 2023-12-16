@@ -78,7 +78,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
             return null;
         }
         if (bs.workLeft() == 0) {
-            bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
+            bs = bs.setWorkLeft(nextStepWork).setCount(0);
         }
         if (nextStepTime <= 0) {
             sl.setJobBlockState(bp, bs);
@@ -93,7 +93,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         if (work == null) {
             work = 0;
         }
-        return WorkStatusStore.State.fresh().setWorkLeft(work);
+        return WorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
     protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);

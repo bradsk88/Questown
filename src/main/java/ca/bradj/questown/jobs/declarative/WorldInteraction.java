@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -63,6 +62,7 @@ public class WorldInteraction
             int interval
     ) {
         super(
+                journal.getJobId(),
                 interval,
                 maxState,
                 stripMC2(toolsRequiredAtStates),

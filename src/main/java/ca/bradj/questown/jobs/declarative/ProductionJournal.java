@@ -181,4 +181,8 @@ public class ProductionJournal<
         // TODO: Remove this, but make VisitorMobEntity into an itemlistener instead
         changeStatus(ProductionStatus.FACTORY.idle());
     }
+
+    public JobID getJobId() {
+        return jobId;
+    }
 }

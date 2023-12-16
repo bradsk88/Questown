@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
 import ca.bradj.questown.town.WorkStatusStore.State;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -39,6 +39,7 @@ class AbstractWorldInteractionTest {
                 WorkStateContainer<Position> workStatuses
         ) {
             super(
+                    new JobID("test", "test"),
                     0,
                     maxState,
                     toolsRequiredAtStates,
@@ -82,36 +83,7 @@ class AbstractWorldInteractionTest {
                 }
             };
 
-            HashMap<Position, State> ztate = new HashMap<>();
-
-            WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
-                @Override
-                public @Nullable State getJobBlockState(Position bp) {
-                    return ztate.get(bp);
-                }
-
-                @Override
-                public void setJobBlockState(
-                        Position bp,
-                        State bs
-                ) {
-                    ztate.put(bp, bs);
-                }
-
-                @Override
-                public void setJobBlockStateWithTimer(
-                        Position bp,
-                        State bs,
-                        int ticksToNextState
-                ) {
-                    ztate.put(bp, bs); // Ignoring time
-                }
-
-                @Override
-                public void clearState(Position bp) {
-                    ztate.remove(bp);
-                }
-            };
+            WorkStateContainer<Position> statuses = testWorkStateContainer();
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
                     alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
@@ -169,8 +141,43 @@ class AbstractWorldInteractionTest {
         }
     }
 
+    @NotNull
+    private static WorkStateContainer<Position> testWorkStateContainer() {
+        HashMap<Position, State> ztate = new HashMap<>();
+
+        WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+            @Override
+            public @Nullable State getJobBlockState(Position bp) {
+                return ztate.get(bp);
+            }
+
+            @Override
+            public void setJobBlockState(
+                    Position bp,
+                    State bs
+            ) {
+                ztate.put(bp, bs);
+            }
+
+            @Override
+            public void setJobBlockStateWithTimer(
+                    Position bp,
+                    State bs,
+                    int ticksToNextState
+            ) {
+                ztate.put(bp, bs); // Ignoring time
+            }
+
+            @Override
+            public void clearState(Position bp) {
+                ztate.remove(bp);
+            }
+        };
+        return statuses;
+    }
+
     @Test
-    void Test_ShouldDoNothingForCompletelyEmptyWork() {
+    void Test_ShouldExtractForCompletelyEmptyWork() {
         AtomicBoolean inserted = new AtomicBoolean(false);
         TestWI wi = TestWI.noMemoryInventory(
                 0, // max state (only one state here)
@@ -184,11 +191,12 @@ class AbstractWorldInteractionTest {
         State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
         Assertions.assertNull(state);
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpot(0)); // Try doing work
+        wi.tryWorking(null, arbitrarySpot(0)); // Run once more to extract and reset state
 
         state = wi.getJobBlockState(null, arbitrarySpot(0).position);
-        Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(inserted.get());
+        Assertions.assertTrue(wi.extracted); // Extracted
         Assertions.assertNull(state);
     }
 
@@ -444,6 +452,36 @@ class AbstractWorldInteractionTest {
     }
 
     @Test
+    void Test_ShouldAdvanceProgress_IfNoIngredientsAreNeeded_AndToolIsHad() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = TestWI.noMemoryInventory(
+                2,
+                ImmutableMap.of(
+                        0, (i) -> true // Villager has the needed tool
+                ),
+                ImmutableMap.of(
+                        // No work required
+                ),
+                ImmutableMap.of(
+                        // No items required
+                ),
+                // This is not actually important because we've overloaded the item check, above
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("axe")),
+                () -> inserted.set(true)
+        );
+
+        wi.tryWorking(null, arbitrarySpot(0));
+
+        Assertions.assertFalse(inserted.get()); // Not inserted
+        Assertions.assertFalse(wi.extracted); // Not extracted
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(0, state.workLeft());
+        Assertions.assertEquals(0, state.ingredientCount());
+        Assertions.assertEquals(1, state.processingState());
+    }
+
+    @Test
     void Test_ShouldInsertAndProcessAndExtract_WhenToolsRequiredAndPossessed_ForJobWithThreeStages_AfterThirdTry() {
         AtomicBoolean inserted = new AtomicBoolean(false);
         TestWI wi = TestWI.noMemoryInventory(
@@ -473,6 +511,54 @@ class AbstractWorldInteractionTest {
         Assertions.assertNull(state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
+    }
+
+    @Test
+    void Test_ShouldNotSetTimerIfToolIsRequired() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWI wi = new TestWI(
+                2,
+                ImmutableMap.of(
+                        1, (i) -> false // Villager does not have the tool
+                ),
+                ImmutableMap.of(
+                        // No work required
+                ),
+                ImmutableMap.of(
+                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                ),
+                ImmutableMap.of(
+                        0, 1
+                ),
+                ImmutableMap.of(
+                        0, 0, // No timer at stage 0
+                        1, 100 // Timer applies to stage 1
+                ),
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                new InventoryHandle<GathererJournalTest.TestItem>() {
+                    @Override
+                    public Collection<GathererJournalTest.TestItem> getItems() {
+                        return ImmutableList.of(new GathererJournalTest.TestItem("grapes"));
+                    }
+
+                    @Override
+                    public void set(
+                            int ii,
+                            GathererJournalTest.TestItem shrink
+                    ) {
+                        inserted.set(true);
+                    }
+                },
+                testWorkStateContainer()
+        );
+
+        wi.tryWorking(null, arbitrarySpot(0));
+
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        Assertions.assertFalse(wi.extracted); // Not Extracted
+        Assertions.assertTrue(inserted.get()); // Inserted
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(State.fresh().incrProcessing(), state);
     }
 
     @NotNull

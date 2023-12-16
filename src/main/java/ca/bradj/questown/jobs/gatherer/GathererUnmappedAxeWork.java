@@ -19,8 +19,9 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
     public static final JobID ID = new JobID("gatherer", "axe");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_ROAM = 1;
-    public static final int BLOCK_STATE_DONE = 2;
+    public static final int BLOCK_STATE_NEED_TOOL = 1;
+    public static final int BLOCK_STATE_NEED_ROAM = 2;
+    public static final int BLOCK_STATE_DONE = 3;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -31,15 +32,13 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
             BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_ROAM, Ingredient.of(TagsInit.Items.AXES)
+            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_ROAM, 0
+            // No work required
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_ROAM, 10 // TODO: 16000?
+            BLOCK_STATE_NEED_ROAM, 6000
     );
     private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
