@@ -7,5 +7,8 @@ import java.util.Collection;
 public interface InventoryHandle<ITEM extends Item<ITEM>> {
     Collection<ITEM> getItems();
 
-    void setChanged();
+    void set(
+            int ii,
+            ITEM shrink
+    );
 }

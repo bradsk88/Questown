@@ -96,7 +96,11 @@ public class WorldInteraction
                     }
 
                     @Override
-                    public void setChanged() {
+                    public void set(
+                            int ii,
+                            MCCoupledHeldItem shrink
+                    ) {
+                        inventory.setItem(ii, shrink.get().toItemStack());
                         inventory.setChanged();
                     }
                 }

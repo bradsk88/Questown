@@ -38,11 +38,31 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
     ) {
         POS bp = ws.position;
         WorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position);
-        if (state == null || state.processingState() != ws.action) {
+        if (state == null) {
+            state = WorkStatusStore.State.fresh();
+        }
+        int curState = ws.action;
+
+        if (state.processingState() != curState) {
             return false;
         }
+        Integer count = ingredientQtyRequiredAtStates.get(curState);
+        if (count == null) {
+            count = 0;
+        }
 
+        Integer work = workRequiredAtStates.get(curState);
+        if (work == null) {
+            work = 0;
+        }
+        state = state.setCount(count).setWorkLeft(work);
+        if (state.workLeft() != 0) {
+            throw new IllegalStateException();
+        }
+
+        int i = -1;
         for (ITEM item : inventory.getItems()) {
+            i++;
             if (item.isEmpty()) {
                 continue;
             }
@@ -52,20 +72,20 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
                 continue;
             }
             Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
+                    curState + 1, 0
             );
             if (nextStepWork == null) {
                 nextStepWork = 0;
             }
             Integer nextStepTime = timeRequiredAtStates.getOrDefault(
-                    ws.action + 1, 0
+                    curState + 1, 0
             );
             if (nextStepTime == null) {
                 nextStepTime = 0;
             }
-            if (tryInsertItem(extra, this, item, bp, nextStepWork, nextStepTime)) {
+            final int ii = i;
+            if (tryInsertItem(extra, this, item, bp, nextStepWork, nextStepTime, () -> inventory.set(ii, item.shrink()))) {
                 QT.JOB_LOGGER.debug("Villager removed {} from their inventory {}", name, invBefore);
-                inventory.setChanged();
                 return true;
             }
         }
@@ -78,7 +98,8 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
             ITEM item,
             POS bp,
             Integer workToNextStep,
-            Integer timeToNextStep
+            Integer timeToNextStep,
+            Runnable shrinker
     ) {
         WorkStateContainer<POS> ws = getWorkStatuses(extra);
         WorkStatusStore.State oldState = ws.getJobBlockState(bp);
@@ -105,7 +126,7 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
         }
 
         if (canDo && curCount < qtyRequired) {
-            item.shrink();
+            shrinker.run();
             int count = curCount + 1;
             WorkStatusStore.State blockState = oldState.setCount(count);
             if (timeToNextStep > 0) {
