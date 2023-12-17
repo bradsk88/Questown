@@ -18,7 +18,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.UUID;
 
 import static ca.bradj.questown.jobs.JobsRegistry.getProductionNeeds;
@@ -104,11 +106,23 @@ public class ExplorerWork extends DeclarativeJob {
 
         QTNBT.putString(map, "biome", biome.toString());
 
-        ImmutableList<MCHeldItem> list = ImmutableList.of(MCHeldItem.fromTown(map));
+        ImmutableList.Builder<MCHeldItem> list = ImmutableList.builder();
+        list.add(MCHeldItem.fromTown(map));
 
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", list);
 
-        return list;
+        List<GathererTools.LootTableParameters> all = NewLeaverWork.getAllParameters();
+
+        @NotNull List<MCHeldItem> knowledge = Loots.getFromLootTables(
+                level, journal,
+                all.get(level.getRandom().nextInt(all.size())),
+                biome
+        );
+
+        QT.JOB_LOGGER.debug("Presenting knowledge of item to explorer: {}", knowledge.get(0));
+        list.add(knowledge.get(0));
+
+        return list.build();
     }
 
     public static JobsRegistry.Work asWork() {

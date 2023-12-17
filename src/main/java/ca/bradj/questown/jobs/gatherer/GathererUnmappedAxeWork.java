@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Journal;
 import ca.bradj.questown.jobs.SpecialRules;
@@ -15,7 +14,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
-public class GathererUnmappedAxeWork extends DeclarativeJob {
+public class GathererUnmappedAxeWork extends NewLeaverWork {
     public static final JobID ID = new JobID("gatherer", "axe");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
@@ -55,6 +54,8 @@ public class GathererUnmappedAxeWork extends DeclarativeJob {
     ) {
         super(
                 ownerUUID,
+                GathererTools.AXE_LOOT_TABLE_PREFIX,
+                GathererTools.AXE_LOOT_TABLE_DEFAULT,
                 inventoryCapacity,
                 ID,
                 JOB_SITE,

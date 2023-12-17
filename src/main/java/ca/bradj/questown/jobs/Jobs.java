@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -284,7 +285,10 @@ public class Jobs {
             QT.JOB_LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
             return false;
         }
-        if (isFarFromChest(entityPos, target)) {
+
+
+        boolean farFromChest = isFarFromChest(entityPos, target);
+        if (farFromChest) {
             QT.JOB_LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
             return false;
         }
@@ -295,9 +299,15 @@ public class Jobs {
             }
             // TODO: Unit tests of this logic!
             if (mct.isLocked()) {
-                QT.JOB_LOGGER.trace("Gatherer is not putting away {} because it is locked", mct);
+                QT.JOB_LOGGER.trace("Villager is not putting away {} because it is locked", mct);
                 continue;
             }
+
+            if (ItemsInit.KNOWLEDGE.get().equals(mct.get().get())) {
+                dropper.removeItem(mct);
+                continue;
+            }
+
             QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, target.getBlockPos());
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {

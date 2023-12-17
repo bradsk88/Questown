@@ -26,19 +26,28 @@ public class Loots {
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Journal<?, MCHeldItem, ?> journal,
-            GathererTools.LootTablePrefix ltPrefix,
-            GathererTools.LootTablePath defaultLT
+            GathererTools.LootTableParameters lt
     ) {
         final ResourceLocation biome = finalizeBiome(journal);
-        String id = String.format("%s/%s/%s", ltPrefix.value(), biome.getNamespace(), biome.getPath());
+        return getFromLootTables(level, journal, lt, biome);
+    }
+
+    @NotNull
+    static List<MCHeldItem> getFromLootTables(
+            ServerLevel level,
+            Journal<?, MCHeldItem, ?> journal,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome
+    ) {
+        String id = String.format("%s/%s/%s", lt.prefix().value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = level.getServer().getLootTables();
         if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, defaultLT.path());
+            rl = new ResourceLocation(Questown.MODID, lt.path().path());
         }
         LootTable lootTable = tables.get(rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
-        return loot.stream().map(v -> MCHeldItem.fromLootTable(v, ltPrefix, biome)).toList();
+        return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
     }
 
     @NotNull
