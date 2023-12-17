@@ -288,10 +288,6 @@ public class Jobs {
 
 
         boolean farFromChest = isFarFromChest(entityPos, target);
-        if (farFromChest) {
-            QT.JOB_LOGGER.trace("{} is not dropping because they are not close to an empty chest", ownerUUID);
-            return false;
-        }
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
@@ -305,6 +301,10 @@ public class Jobs {
 
             if (ItemsInit.KNOWLEDGE.get().equals(mct.get().get())) {
                 dropper.removeItem(mct);
+                continue;
+            }
+
+            if (farFromChest) {
                 continue;
             }
 

@@ -15,6 +15,16 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.UUID;
 
 public class GathererUnmappedAxeWork extends NewLeaverWork {
+
+    private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
+            GathererTools.AXE_LOOT_TABLE_PREFIX,
+            GathererTools.AXE_LOOT_TABLE_DEFAULT
+    );
+
+    static {
+        allParameters.add(PARAMS);
+    }
+
     public static final JobID ID = new JobID("gatherer", "axe");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
@@ -54,8 +64,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
     ) {
         super(
                 ownerUUID,
-                GathererTools.AXE_LOOT_TABLE_PREFIX,
-                GathererTools.AXE_LOOT_TABLE_DEFAULT,
+                PARAMS,
                 inventoryCapacity,
                 ID,
                 JOB_SITE,
@@ -81,8 +90,8 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             ServerLevel level,
             Journal<?, MCHeldItem, ?> journal
     ) {
-        GathererTools.LootTablePrefix ltPrefix = GathererTools.AXE_LOOT_TABLE_PREFIX;
-        GathererTools.LootTablePath defaultLT = GathererTools.AXE_LOOT_TABLE_DEFAULT;
-        return Loots.getFromLootTables(level, journal, ltPrefix, defaultLT);
+        return Loots.getFromLootTables(level, journal, new GathererTools.LootTableParameters(
+                GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
+        ));
     }
 }

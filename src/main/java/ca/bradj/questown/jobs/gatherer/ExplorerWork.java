@@ -6,6 +6,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -112,15 +113,25 @@ public class ExplorerWork extends DeclarativeJob {
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", list);
 
         List<GathererTools.LootTableParameters> all = NewLeaverWork.getAllParameters();
+        if (all.isEmpty()) {
+            all = ImmutableList.of(new GathererTools.LootTableParameters(
+                    GathererTools.NO_TOOL_TABLE_PREFIX,
+                    GathererTools.AXE_LOOT_TABLE_DEFAULT
+            ));
+        }
 
+        GathererTools.LootTableParameters lootParams = all.get(level.getRandom().nextInt(all.size()));
         @NotNull List<MCHeldItem> knowledge = Loots.getFromLootTables(
-                level, journal,
-                all.get(level.getRandom().nextInt(all.size())),
+                level, 1, 1,
+                lootParams,
                 biome
         );
 
-        QT.JOB_LOGGER.debug("Presenting knowledge of item to explorer: {}", knowledge.get(0));
-        list.add(knowledge.get(0));
+        QT.JOB_LOGGER.debug(
+                "Presenting knowledge of item to explorer: {} [prefix: {}, biome: {}]",
+                knowledge.get(0), lootParams.prefix(), biome
+        );
+        list.add(KnowledgeMetaItem.wrap(knowledge.get(0), lootParams.prefix(), biome));
 
         return list.build();
     }

@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.town.interfaces.KnowledgeHolder;
 import com.google.common.collect.ImmutableList;
@@ -14,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OUT> implements KnowledgeHolder<ITEM_IN, ITEM_OUT> {
+public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OUT extends Item<?>> implements KnowledgeHolder<ITEM_IN, ITEM_OUT> {
 
 
     private final ImmutableSet<ITEM_OUT> baseKnowledge;
@@ -86,9 +87,10 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
             }
             Set<ITEM_OUT> known = new HashSet<>(knownBiomeItems);
             int sizeBefore = known.size();
-            known.add(stripper.apply(item));
+            ITEM_OUT stripped = stripper.apply(item);
+            known.add(stripped);
             if (sizeBefore != known.size()) {
-                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", item.toShortString());
+                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", stripped.getShortName());
             }
             biome.put(ltp, ImmutableSet.copyOf(known));
             knownGatherResults.put(bId, biome);

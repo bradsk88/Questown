@@ -23,12 +23,11 @@ public class NewLeaverWork extends DeclarativeJob {
         return allParameters;
     }
 
-    private static final List<GathererTools.LootTableParameters> allParameters = new ArrayList<>();
+    protected static final List<GathererTools.LootTableParameters> allParameters = new ArrayList<>();
 
     public NewLeaverWork(
             UUID ownerUUID,
-            GathererTools.LootTablePrefix lootTablePrefix,
-            GathererTools.LootTablePath defaultLootTablePath,
+            GathererTools.LootTableParameters lootTableParams,
             int inventoryCapacity,
             @NotNull JobID jobId,
             ResourceLocation workRoomId,
@@ -61,8 +60,8 @@ public class NewLeaverWork extends DeclarativeJob {
                 specialRules,
                 workResult
         );
-        allParameters.add(new GathererTools.LootTableParameters(
-                lootTablePrefix, defaultLootTablePath
-        ));
+        if (!allParameters.contains(lootTableParams)) {
+            throw new IllegalStateException("Descendents of NewLeaveWork must register selves from a static context");
+        }
     }
 }

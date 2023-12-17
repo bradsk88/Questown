@@ -29,13 +29,14 @@ public class Loots {
             GathererTools.LootTableParameters lt
     ) {
         final ResourceLocation biome = finalizeBiome(journal);
-        return getFromLootTables(level, journal, lt, biome);
+        int maxAmount = journal.getCapacity();
+        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
     }
 
     @NotNull
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal,
+            int minAmount, int maxAmount,
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
     ) {
@@ -46,7 +47,7 @@ public class Loots {
             rl = new ResourceLocation(Questown.MODID, lt.path().path());
         }
         LootTable lootTable = tables.get(rl);
-        List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, 3, journal.getCapacity());
+        List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
         return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
     }
 
