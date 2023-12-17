@@ -14,12 +14,13 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.ExplorerWork;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -109,11 +110,11 @@ public class JobsRegistry {
         throw new IllegalArgumentException("Unexpected job ID format: " + jobID);
     }
 
-    public static WorkStatusStore.State getDefaultJobBlockState(Block b) {
+    public static AbstractWorkStatusStore.State getDefaultJobBlockState(Block b) {
         if (b instanceof JobBoardBlock) {
-            return new WorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
+            return new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
         }
-        return new WorkStatusStore.State(0, 0, 0);
+        return new AbstractWorkStatusStore.State(0, 0, 0);
     }
 
     public record TownData(
@@ -184,7 +185,7 @@ public class JobsRegistry {
         return ImmutableSet.copyOf(list);
     }
 
-    private interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
+    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }
 
@@ -192,7 +193,7 @@ public class JobsRegistry {
 
     }
 
-    private interface BlockCheckFunc extends Function<Block, Boolean> {
+    public interface BlockCheckFunc extends Function<Block, Boolean> {
 
     }
 
@@ -203,7 +204,7 @@ public class JobsRegistry {
 
     }
 
-    private record Work(
+    public record Work(
             JobFunc jobFunc,
             SnapshotFunc snapshotFunc,
             BlockCheckFunc blockCheckFunc,
@@ -245,7 +246,7 @@ public class JobsRegistry {
             ),
             GathererJob.ID.rootId(), new Jerb(
                     ImmutableList.of(
-                            //ExplorerJob.ID, // TODO[ASAP]: Bring back
+                            ExplorerWork.ID,
                             GathererUnmappedAxeWork.ID,
                             GathererJob.ID
                     ),
@@ -276,16 +277,6 @@ public class JobsRegistry {
                 // TODO: Review this - probably should be different by status
                 (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
         ));
-        // TODO[ASAP]: Bring back for the "outside" update
-//        b.put(ExplorerJob.ID, new Work(
-//                (town, uuid) -> new ExplorerJob(town, 6, uuid),
-//                (id, status, items) -> new GathererJournal.Snapshot<>(id, GathererJournal.Status.from(status), items),
-//                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-//                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
-//                GathererJournal.Status.IDLE,
-//                t -> ImmutableSet.of(ItemsInit.GATHERER_MAP.get().getDefaultInstance()),
-//                ItemsInit.GATHERER_MAP.get().getDefaultInstance()
-//        ));
         b.put(FarmerJob.ID, new Work(
                 (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
@@ -405,6 +396,7 @@ public class JobsRegistry {
                         GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
                 )
         ));
+        b.put(ExplorerWork.ID, ExplorerWork.asWork());
         // TODO[ASAP]: Bring back
 //        b.put(GathererMappedAxeWork.ID, new Work(
 //                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
@@ -419,7 +411,7 @@ public class JobsRegistry {
     }
 
     @NotNull
-    private static List<Ingredient> getProductionNeeds(
+    public static List<Ingredient> getProductionNeeds(
             ProductionStatus status,
             ImmutableMap<Integer, Ingredient> ing,
             ImmutableMap<Integer, Ingredient> tools
@@ -432,7 +424,7 @@ public class JobsRegistry {
     }
 
     @NotNull
-    private static SnapshotFunc productionJobSnapshot(JobID id) {
+    public static SnapshotFunc productionJobSnapshot(JobID id) {
         return (jobId, status, items) -> new SimpleSnapshot<>(
                 id,
                 ProductionStatus.from(status),

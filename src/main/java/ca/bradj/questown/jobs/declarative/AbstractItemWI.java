@@ -3,14 +3,14 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 import java.util.function.Function;
 
-public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>> implements ItemWI<POS, EXTRA>, WorkStatusStore.InsertionRules<ITEM> {
+public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>> implements ItemWI<POS, EXTRA>, AbstractWorkStatusStore.InsertionRules<ITEM> {
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -38,13 +38,13 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
     ) {
         POS bp = ws.position;
         int curState = ws.action;
-        WorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position);
+        AbstractWorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position);
         if (state == null) {
             Integer initWork = workRequiredAtStates.get(curState);
             if (initWork == null) {
                 initWork = 0;
             }
-            state = WorkStatusStore.State.fresh().setWorkLeft(initWork);
+            state = AbstractWorkStatusStore.State.fresh().setWorkLeft(initWork);
         }
 
         if (state.processingState() != curState) {
@@ -85,8 +85,8 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
 
     private boolean tryInsertItem(
             EXTRA extra,
-            WorkStatusStore.InsertionRules<ITEM> rules,
-            WorkStatusStore.State oldState,
+            AbstractWorkStatusStore.InsertionRules<ITEM> rules,
+            AbstractWorkStatusStore.State oldState,
             ITEM item,
             POS bp,
             Integer workToNextStep,
@@ -120,13 +120,13 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>>
 
 
         if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
-            WorkStatusStore.State blockState = oldState.setCount(count);
+            AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             ws.setJobBlockState(bp, blockState);
             return true;
         }
 
         if (canDo && count <= qtyRequired) {
-            WorkStatusStore.State blockState = oldState.setCount(count);
+            AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             if (count == qtyRequired) {
                 blockState = blockState.setWorkLeft(workToNextStep).setCount(0).setProcessing(oldState.processingState() + 1);
             }

@@ -6,7 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -130,7 +130,7 @@ public class WorldInteraction
     ) {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
-            @Nullable WorkStatusStore.State newState = JobBlock.extractRawProduct(
+            @Nullable AbstractWorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
                     journal::addItemIfSlotAvailable
             );

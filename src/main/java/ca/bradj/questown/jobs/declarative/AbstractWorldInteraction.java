@@ -5,7 +5,7 @@ import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 
 public abstract class AbstractWorldInteraction<
         EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>
-> implements WorkStatusStore.InsertionRules<HELD_ITEM> {
+> implements AbstractWorkStatusStore.InsertionRules<HELD_ITEM> {
     private final AbstractItemWI<POS, EXTRA, HELD_ITEM> itemWI;
     private final AbstractWorkWI<POS, EXTRA, INNER_ITEM> workWI;
     private int ticksSinceLastAction;
@@ -129,7 +129,7 @@ public abstract class AbstractWorldInteraction<
         }
 
         WorkStateContainer<POS> workStatuses = getWorkStatuses(extra);
-        WorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position);
+        AbstractWorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position);
 
         if (workSpot.action == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
@@ -157,7 +157,7 @@ public abstract class AbstractWorldInteraction<
             if (work != null && work > 0) {
                 if (workSpot.action == 0) {
                     if (jobBlockState == null) {
-                        jobBlockState = new WorkStatusStore.State(0, 0, 0);
+                        jobBlockState = new AbstractWorkStatusStore.State(0, 0, 0);
                     }
                     if (jobBlockState.workLeft() == 0) {
                         workStatuses.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
@@ -184,7 +184,7 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract boolean isReady(EXTRA extra);
 
-    public @Nullable WorkStatusStore.State getJobBlockState(
+    public @Nullable AbstractWorkStatusStore.State getJobBlockState(
             EXTRA extra,
             POS bp
     ) {

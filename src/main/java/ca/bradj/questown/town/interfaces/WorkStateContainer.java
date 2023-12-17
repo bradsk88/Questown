@@ -1,20 +1,20 @@
 package ca.bradj.questown.town.interfaces;
 
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import org.jetbrains.annotations.Nullable;
 
 public interface WorkStateContainer<POS> {
 
-    @Nullable WorkStatusStore.State getJobBlockState(POS bp);
+    @Nullable AbstractWorkStatusStore.State getJobBlockState(POS bp);
 
     void setJobBlockState(
             POS bp,
-            WorkStatusStore.State bs
+            AbstractWorkStatusStore.State bs
     );
 
     void setJobBlockStateWithTimer(
             POS bp,
-            WorkStatusStore.State bs,
+            AbstractWorkStatusStore.State bs,
             int ticksToNextState
     );
 

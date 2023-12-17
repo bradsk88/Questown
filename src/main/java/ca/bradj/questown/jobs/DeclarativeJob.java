@@ -315,7 +315,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
-            WorkStatusHandle town,
+            WorkStateContainer<BlockPos> town,
             @Nullable MCRoom jobSite
     ) {
         if (jobSite == null) {
@@ -328,6 +328,14 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 .forEach(v -> {
                     BlockPos bp = Positions.ToBlock(v, jobSite.yCoord);
                     @Nullable Integer blockAction = JobBlock.getState(town, bp);
+                    if (blockAction != null && !b.containsKey(blockAction)) {
+                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
+                    }
+                    // TODO: Depend on job and/or villager?
+                    //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
+                    //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
+                    bp = Positions.ToBlock(v, jobSite.yCoord + 1);
+                    blockAction = JobBlock.getState(town, bp);
                     if (blockAction != null && !b.containsKey(blockAction)) {
                         b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
                     }
@@ -439,8 +447,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
-        for (int i = 0; i < maxState; i++) {
-            stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
+        if (toolsRequiredAtStates.values().stream().anyMatch(v -> !v.isEmpty())) {
+            for (int i = 0; i < maxState; i++) {
+                stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
+            }
         }
         stateTools.forEach((state, ingrs) -> {
             if (!b.containsKey(state)) {

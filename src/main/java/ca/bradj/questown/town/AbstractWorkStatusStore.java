@@ -17,13 +17,13 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
+public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
 
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
     // visual indication of progress). This map facilitates that.
     private final Map<POS, Consumer<State>> cascading = new HashMap<>();
-    private final BiFunction<ROOM, Position, POS> posFactory;
+    private final BiFunction<ROOM, Position, Collection<POS>> posFactory;
     private final BiFunction<TICK_SOURCE, POS, Boolean> airCheck;
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
@@ -87,8 +87,8 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
     private final HashMap<POS, Integer> timeJobStatuses = new HashMap<>();
     int curIdx = 0;
 
-    public WorkStatusStore(
-            BiFunction<ROOM, Position, POS> posFactory,
+    public AbstractWorkStatusStore(
+            BiFunction<ROOM, Position, Collection<POS>> posFactory,
             BiFunction<TICK_SOURCE, POS, Boolean> airCheck,
             BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory,
             BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer,
@@ -114,7 +114,10 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
         modifyJobBlockState(bp, (p, s) -> bs);
     }
 
-    private void modifyJobBlockState(POS pos, BiFunction<POS, State, State> mutator) {
+    private void modifyJobBlockState(
+            POS pos,
+            BiFunction<POS, State, State> mutator
+    ) {
         State newV = jobStatuses.compute(pos, mutator);
         QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
@@ -148,6 +151,7 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
     public @Nullable Integer getTimeToNextState(POS bp) {
         return timeJobStatuses.get(bp);
     }
+
     public interface InsertionRules<ITEM> {
 
 
@@ -192,30 +196,34 @@ public class WorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implemen
                 .forEach(
                         e -> {
                             QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
-                            modifyJobBlockState(e.getKey(), (pos, state) -> state.setProcessing(state.processingState + 1));
+                            modifyJobBlockState(
+                                    e.getKey(),
+                                    (pos, state) -> state.setProcessing(state.processingState + 1)
+                            );
                             timeJobStatuses.remove(e.getKey());
                         }
                 );
 
         for (InclusiveSpace s : o.getSpaces()) {
             for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
-                POS pp = posFactory.apply(o, p);
-                if (jobStatuses.containsKey(pp)) {
-                    if (airCheck.apply(tickSource, pp)) {
-                        QT.BLOCK_LOGGER.debug("Block is gone from {}. Clearing status.", pp);
-                        jobStatuses.remove(pp);
+                posFactory.apply(o, p).forEach(pp -> {
+                    if (jobStatuses.containsKey(pp)) {
+                        if (airCheck.apply(tickSource, pp)) {
+                            QT.BLOCK_LOGGER.debug("Block is gone from {}. Clearing status.", pp);
+                            jobStatuses.remove(pp);
+                        }
+                        return;
                     }
-                    continue;
-                }
-                State def = this.defaultStateFactory.apply(tickSource, pp);
-                if (def != null) {
-                    jobStatuses.put(pp, def);
-                }
+                    State def = this.defaultStateFactory.apply(tickSource, pp);
+                    if (def != null) {
+                        jobStatuses.put(pp, def);
+                    }
 
-                @Nullable Consumer<State> cas = cascadingBlockRevealer.apply(tickSource, pp);
-                if (cas != null) {
-                    cascading.put(pp, cas);
-                }
+                    @Nullable Consumer<State> cas = cascadingBlockRevealer.apply(tickSource, pp);
+                    if (cas != null) {
+                        cascading.put(pp, cas);
+                    }
+                });
             }
         }
     }

@@ -2,12 +2,11 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.compress.utils.Lists;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,7 @@ class AbstractItemWITest {
     public static final Position arbitraryPosition = new Position(1, 2);
 
     private record StateWithTimer(
-            WorkStatusStore.State state,
+            AbstractWorkStatusStore.State state,
             int timer
     ) {
     }
@@ -30,7 +29,7 @@ class AbstractItemWITest {
 
         private final WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
             @Override
-            public WorkStatusStore.@Nullable State getJobBlockState(Position bp) {
+            public AbstractWorkStatusStore.@Nullable State getJobBlockState(Position bp) {
                 StateWithTimer stateWithTimer = map.get(bp);
                 return stateWithTimer == null ? null : stateWithTimer.state();
             }
@@ -38,7 +37,7 @@ class AbstractItemWITest {
             @Override
             public void setJobBlockState(
                     Position bp,
-                    WorkStatusStore.State bs
+                    AbstractWorkStatusStore.State bs
             ) {
                 map.put(bp, new StateWithTimer(bs, 0));
             }
@@ -46,7 +45,7 @@ class AbstractItemWITest {
             @Override
             public void setJobBlockStateWithTimer(
                     Position bp,
-                    WorkStatusStore.State bs,
+                    AbstractWorkStatusStore.State bs,
                     int ticksToNextState
             ) {
                 map.put(bp, new StateWithTimer(bs, ticksToNextState));
@@ -367,7 +366,7 @@ class AbstractItemWITest {
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
-        WorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
+        AbstractWorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());
         Assertions.assertEquals(0, wi.timeLeft(arbitraryPosition));
@@ -433,7 +432,7 @@ class AbstractItemWITest {
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
-        WorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
+        AbstractWorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, wi.timeLeft(arbitraryPosition));
         Assertions.assertEquals(1, state.processingState());
@@ -468,7 +467,7 @@ class AbstractItemWITest {
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
-        WorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
+        AbstractWorkStatusStore.State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());
         Assertions.assertEquals(1, state.processingState());

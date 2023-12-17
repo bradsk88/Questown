@@ -31,7 +31,6 @@ public class BakerBreadWork extends DeclarativeJob {
             BLOCK_STATE_NEED_COAL, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            // TODO: Add support for work without a tool or ingredient
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, 0,

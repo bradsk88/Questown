@@ -584,7 +584,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
             registerJobsBoard(e.getKey());
-            jobHandle.setJobBlockState(e.getKey(), new WorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
+            jobHandle.setJobBlockState(e.getKey(), new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
         }
         return null;
     }

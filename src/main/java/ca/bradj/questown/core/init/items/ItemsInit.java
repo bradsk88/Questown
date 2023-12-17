@@ -74,11 +74,11 @@ public class ItemsInit {
             TownFenceGateItem::new
     );
 
-//
-//    public static final RegistryObject<Item> GATHERER_MAP = ITEMS.register(
-//            GathererMap.ITEM_ID,
-//            GathererMap::new
-//    );
+
+    public static final RegistryObject<Item> GATHERER_MAP = ITEMS.register(
+            GathererMap.ITEM_ID,
+            GathererMap::new
+    );
 
     public static void register(IEventBus bus) {
         ITEMS.register(bus);

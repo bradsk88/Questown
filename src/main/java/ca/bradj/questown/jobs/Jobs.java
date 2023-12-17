@@ -248,7 +248,7 @@ public class Jobs {
             ResourceLocation roomType,
             StateCheck check
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(roomType);
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {
                     for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {

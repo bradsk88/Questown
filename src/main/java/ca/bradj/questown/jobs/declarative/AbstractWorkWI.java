@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 
@@ -41,7 +41,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         if (nextStepTime == null) {
             nextStepTime = 0;
         }
-        WorkStatusStore.State blockState = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
+        AbstractWorkStatusStore.State blockState = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = blockState != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
         if (didWork && itemBooleanFunction != null) {
@@ -55,7 +55,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
             Function<ITEM, Boolean> itemBooleanFunction
     );
 
-    private WorkStatusStore.State applyWork(
+    private AbstractWorkStatusStore.State applyWork(
             EXTRA extra,
             POS bp,
             Integer curState,
@@ -63,12 +63,12 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
             Integer nextStepTime
     ) {
         WorkStateContainer<POS> sl = getWorkStatuses(extra);
-        WorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             oldState = initForState(curState);
         }
         int workLeft = oldState.workLeft();
-        WorkStatusStore.State bs;
+        AbstractWorkStatusStore.State bs;
         if (workLeft <= 0) {
             bs = initForState(curState + 1);
         } else {
@@ -88,12 +88,12 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         return bs;
     }
 
-    private WorkStatusStore.State initForState(Integer curState) {
+    private AbstractWorkStatusStore.State initForState(Integer curState) {
         Integer work = workRequiredAtStates.get(curState);
         if (work == null) {
             work = 0;
         }
-        return WorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
+        return AbstractWorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
     protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);

@@ -3,7 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -15,22 +15,22 @@ public class JobBlock {
             WorkStateContainer<BlockPos> sl,
             BlockPos bp
     ) {
-        WorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             return null;
         }
         return oldState.processingState();
     }
 
-    public static WorkStatusStore.State applyWork(
+    public static AbstractWorkStatusStore.State applyWork(
             WorkStateContainer<BlockPos> sl,
             BlockPos bp,
             int nextWork,
             int nextTicks
     ) {
-        WorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         int workLeft = oldState.workLeft();
-        WorkStatusStore.State bs;
+        AbstractWorkStatusStore.State bs;
         if (workLeft <= 0) {
             Integer state = getState(sl, bp);
             if (state == null) {
@@ -54,31 +54,31 @@ public class JobBlock {
         return bs;
     }
 
-    private static WorkStatusStore.State reduceWorkLeft(WorkStatusStore.State oldState) {
+    private static AbstractWorkStatusStore.State reduceWorkLeft(AbstractWorkStatusStore.State oldState) {
         int l = oldState.workLeft();
         int newVal = l - 1;
         QT.BLOCK_LOGGER.debug("Setting work_left to {}", newVal);
         return oldState.setWorkLeft(newVal);
     }
 
-    private static WorkStatusStore.State setProcessingState(
-            WorkStatusStore.State oldState,
+    private static AbstractWorkStatusStore.State setProcessingState(
+            AbstractWorkStatusStore.State oldState,
             int s
     ) {
-        WorkStatusStore.State newState = oldState.setProcessing(s);
+        AbstractWorkStatusStore.State newState = oldState.setProcessing(s);
         QT.BLOCK_LOGGER.debug("Processing state set to {}", s);
         return newState;
     }
 
-    public static @Nullable WorkStatusStore.State extractRawProduct(
+    public static @Nullable AbstractWorkStatusStore.State extractRawProduct(
             ServerLevel sl,
             WorkStateContainer<BlockPos> jh,
             BlockPos block,
             Iterable<MCHeldItem> is,
             @Nullable TakeFn takeFn
     ) {
-        WorkStatusStore.State oldState = jh.getJobBlockState(block);
-        WorkStatusStore.State bs = oldState.setProcessing(0);
+        AbstractWorkStatusStore.State oldState = jh.getJobBlockState(block);
+        AbstractWorkStatusStore.State bs = oldState.setProcessing(0);
         for (MCHeldItem i : is) {
             // TODO[ASAP]: Don't drop items for gatherers - just skip them
             releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
@@ -94,7 +94,7 @@ public class JobBlock {
             ServerLevel sl,
             WorkStateContainer<BlockPos> level,
             BlockPos b,
-            WorkStatusStore.State currentState,
+            AbstractWorkStatusStore.State currentState,
             MCHeldItem is,
             @Nullable TakeFn takeFn
     ) {

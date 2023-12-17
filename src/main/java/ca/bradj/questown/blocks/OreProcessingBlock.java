@@ -1,7 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.town.WorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -45,7 +45,7 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     public void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            WorkStatusStore.State bs
+            AbstractWorkStatusStore.State bs
     ) {
         BlockState oldState = sl.getBlockState(pp);
         oldState.setValue(PROCESSING_STATE, bs.processingState());
