@@ -36,6 +36,17 @@ public class Loots {
     @NotNull
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
+            Journal<?, MCHeldItem, ?> journal,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome
+    ) {
+        int maxAmount = journal.getCapacity();
+        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+    }
+
+    @NotNull
+    static List<MCHeldItem> getFromLootTables(
+            ServerLevel level,
             int minAmount, int maxAmount,
             GathererTools.LootTableParameters lt,
             ResourceLocation biome

@@ -57,7 +57,7 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
             int i,
             MCTownItem item
     ) {
-        container.setItem(i, new ItemStack(item.get(), 1));
+        container.setItem(i, item.toItemStack());
     }
 
     @Override

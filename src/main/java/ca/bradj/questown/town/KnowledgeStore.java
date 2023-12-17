@@ -90,7 +90,7 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
             ITEM_OUT stripped = stripper.apply(item);
             known.add(stripped);
             if (sizeBefore != known.size()) {
-                QT.FLAG_LOGGER.debug("New item recorded as 'known': {}", stripped.getShortName());
+                QT.FLAG_LOGGER.debug("New item recorded as 'known': {} in biome {}", stripped.getShortName(), biome);
             }
             biome.put(ltp, ImmutableSet.copyOf(known));
             knownGatherResults.put(bId, biome);

@@ -116,7 +116,7 @@ public class ExplorerWork extends DeclarativeJob {
         if (all.isEmpty()) {
             all = ImmutableList.of(new GathererTools.LootTableParameters(
                     GathererTools.NO_TOOL_TABLE_PREFIX,
-                    GathererTools.AXE_LOOT_TABLE_DEFAULT
+                    GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
             ));
         }
 
@@ -146,7 +146,6 @@ public class ExplorerWork extends DeclarativeJob {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
                 RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         ExplorerWork.INGREDIENTS_REQUIRED_AT_STATES,
                         ExplorerWork.TOOLS_REQUIRED_AT_STATES
                 )

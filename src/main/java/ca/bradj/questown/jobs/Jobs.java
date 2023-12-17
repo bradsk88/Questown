@@ -96,7 +96,7 @@ public class Jobs {
             if (newItem.equals(curItem)) {
                 continue;
             }
-            inventory.setItem(i, new ItemStack(newItem, 1));
+            inventory.setItem(i, items.get(i).get().toItemStack());
         }
     }
 

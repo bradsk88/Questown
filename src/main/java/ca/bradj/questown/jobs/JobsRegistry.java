@@ -15,6 +15,7 @@ import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.ExplorerWork;
+import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -40,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class JobsRegistry {
@@ -51,7 +53,7 @@ public class JobsRegistry {
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
-        return works.values().stream().anyMatch(v -> v.blockCheckFunc.apply(b));
+        return works.values().stream().anyMatch(v -> v.isJobBlock.test(b));
     }
 
     public static Set<JobID> getAllJobs() {
@@ -207,7 +209,7 @@ public class JobsRegistry {
     public record Work(
             JobFunc jobFunc,
             SnapshotFunc snapshotFunc,
-            BlockCheckFunc blockCheckFunc,
+            Predicate<Block> isJobBlock,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<TownData, ImmutableSet<MCTownItem>> results,
@@ -217,7 +219,7 @@ public class JobsRegistry {
     }
 
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
-    private static final BlockCheckFunc NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
+    private static final Predicate<Block> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
     private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
@@ -247,6 +249,7 @@ public class JobsRegistry {
             GathererJob.ID.rootId(), new Jerb(
                     ImmutableList.of(
                             ExplorerWork.ID,
+                            GathererMappedAxeWork.ID,
                             GathererUnmappedAxeWork.ID,
                             GathererJob.ID
                     ),
@@ -299,7 +302,7 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),
                 BakerBreadWork.RESULT,
-                (s) -> getProductionNeeds((ProductionStatus) s, BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
+                (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
         ));
         b.put(DSmelterJob.ID, new Work(
                 (town, uuid) -> new DSmelterJob(uuid, 6),
@@ -309,7 +312,7 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
                 DSmelterJob.RESULT,
-                s -> getProductionNeeds((ProductionStatus) s, DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
+                s -> getProductionNeeds(DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
         ));
         b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
                 (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
@@ -321,7 +324,6 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
                 BlacksmithWoodenPickaxeJob.RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
                         BlacksmithWoodenPickaxeJob.TOOLS_REQUIRED_AT_STATES
                 )
@@ -335,7 +337,6 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
                 CrafterBowlWork.RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
                         CrafterBowlWork.TOOLS_REQUIRED_AT_STATES
                 )
@@ -349,7 +350,6 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
                 CrafterStickWork.RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
                         CrafterStickWork.TOOLS_REQUIRED_AT_STATES
                 )
@@ -363,7 +363,6 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
                 CrafterPaperWork.RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
                         CrafterPaperWork.TOOLS_REQUIRED_AT_STATES
                 )
@@ -377,7 +376,6 @@ public class JobsRegistry {
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
                 CrafterPlanksWork.RESULT,
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
                         CrafterPlanksWork.TOOLS_REQUIRED_AT_STATES
                 )
@@ -391,28 +389,17 @@ public class JobsRegistry {
                 t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
                 Items.WHEAT_SEEDS.getDefaultInstance(),
                 s -> getProductionNeeds(
-                        (ProductionStatus) s,
                         GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES,
                         GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
                 )
         ));
+        b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork.asWork());
         b.put(ExplorerWork.ID, ExplorerWork.asWork());
-        // TODO[ASAP]: Bring back
-//        b.put(GathererMappedAxeWork.ID, new Work(
-//                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
-//                productionJobSnapshot(GathererMappedAxeWork.ID),
-//                (block) -> block instanceof WelcomeMatBlock,
-//                SpecialQuests.TOWN_GATE,
-//                ProductionStatus.FACTORY.idle(),
-//                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
-//                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST
-//        ));
         works = b.build();
     }
 
     @NotNull
     public static List<Ingredient> getProductionNeeds(
-            ProductionStatus status,
             ImmutableMap<Integer, Ingredient> ing,
             ImmutableMap<Integer, Ingredient> tools
     ) {
