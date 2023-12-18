@@ -134,7 +134,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
      */
     boolean alreadyHasQuest(ResourceLocation resourceLocation);
 
-    KnowledgeHolder<MCHeldItem, ItemStack> getKnowledgeHandle();
+    KnowledgeHolder<ResourceLocation, MCHeldItem, MCTownItem> getKnowledgeHandle();
 
     QuestsHolder getQuestHandle();
 

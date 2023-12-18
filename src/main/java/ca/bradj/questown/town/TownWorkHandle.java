@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -85,7 +86,10 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         }
 
         BlockPos flagPos = parent.getTownFlagBasePos();
-        JobsRegistry.TownData td = new JobsRegistry.TownData(parent.getKnowledgeHandle()::getAllKnownGatherResults);
+        Collection<ResourceLocation> biomes = parent.getMapBiomes();
+        JobsRegistry.TownData td = new JobsRegistry.TownData(prefix ->
+                parent.getKnowledgeHandle().getAllKnownGatherResults(biomes, prefix)
+        );
         ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
         NetworkHooks.openScreen(sp, new MenuProvider() {
             @Override

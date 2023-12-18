@@ -510,7 +510,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public KnowledgeHolder getKnowledgeHandle() {
+    public KnowledgeHolder<ResourceLocation, MCHeldItem, MCTownItem> getKnowledgeHandle() {
         return knowledgeHandle;
     }
 
@@ -729,7 +729,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return null;
         }
 
-        JobsRegistry.TownData data = new JobsRegistry.TownData(knowledgeHandle::getAllKnownGatherResults);
+        Collection<ResourceLocation> mapBiomes = getMapBiomes();
+        JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+                mapBiomes, prefix
+        ));
 
         Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
         for (JobID p : preference) {
@@ -1147,5 +1150,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void openJobsMenu(ServerPlayer sender) {
         workHandle.openMenuRequested(sender);
+    }
+
+    public Collection<ResourceLocation> getMapBiomes() {
+        // TODO[ASAP]: Scan every container for maps
+        return null;
     }
 }
