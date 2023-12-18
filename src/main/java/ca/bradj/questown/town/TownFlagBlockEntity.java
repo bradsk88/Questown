@@ -10,7 +10,9 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.*;
+import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
@@ -1153,7 +1155,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public Collection<ResourceLocation> getMapBiomes() {
-        // TODO[ASAP]: Scan every container for maps
-        return null;
+        ImmutableSet.Builder<ResourceLocation> b = ImmutableSet.builder();
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(this, getServerLevel());
+        cs.forEach(v -> {
+            v.getItems()
+                    .stream()
+                    .filter(i -> ItemsInit.GATHERER_MAP.get().equals(i.get()))
+                    .map(i -> GathererMap.getBiome(i.toItemStack()))
+                    .filter(Objects::nonNull)
+                    .forEach(b::add);
+        });
+        return b.build();
     }
 }

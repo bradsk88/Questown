@@ -23,7 +23,7 @@ public class GathererMap extends Item {
         super(Questown.DEFAULT_ITEM_PROPS);
     }
 
-    private static @Nullable ResourceLocation getBiome(ItemStack itemStack) {
+    public static @Nullable ResourceLocation getBiome(ItemStack itemStack) {
         CompoundTag tag = itemStack.getOrCreateTag();
         if (QTNBT.contains(tag, "biome")) {
             return QTNBT.getResourceLocation(tag, "biome");
