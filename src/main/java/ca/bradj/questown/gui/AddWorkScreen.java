@@ -332,7 +332,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                menu.sendRequest(s.getItem()); // FIXME: Use the tag when relevant
+                menu.sendRequest(s.getItem());
                 return true;
             }
         }

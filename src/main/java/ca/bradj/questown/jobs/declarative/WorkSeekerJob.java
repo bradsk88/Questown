@@ -63,7 +63,8 @@ public class WorkSeekerJob extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 SHARED_TIMERS_NOT_APPLICABLE,
                 ImmutableMap.of(),
-                (a, b) -> ImmutableSet.of()
+                (a, b) -> ImmutableSet.of(),
+                false
         );
     }
 
@@ -88,6 +89,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct,
             int interval
     ) {
         return new WorldInteraction(
@@ -100,6 +102,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
                 workResult,
+                nullifyExcessProduct,
                 interval
         ) {
 

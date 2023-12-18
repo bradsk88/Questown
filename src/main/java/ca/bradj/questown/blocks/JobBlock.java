@@ -75,13 +75,13 @@ public class JobBlock {
             WorkStateContainer<BlockPos> jh,
             BlockPos block,
             Iterable<MCHeldItem> is,
-            @Nullable TakeFn takeFn
+            @Nullable TakeFn takeFn,
+            boolean nullifyExcess
     ) {
         AbstractWorkStatusStore.State oldState = jh.getJobBlockState(block);
         AbstractWorkStatusStore.State bs = oldState.setProcessing(0);
         for (MCHeldItem i : is) {
-            // TODO[ASAP]: Don't drop items for gatherers - just skip them
-            releaseOreFromBlock(sl, jh, block, bs, i, takeFn);
+            releaseOreFromBlock(sl, jh, block, bs, i, takeFn, nullifyExcess);
         }
         jh.setJobBlockState(block, bs);
         if (oldState.equals(bs)) {
@@ -96,9 +96,10 @@ public class JobBlock {
             BlockPos b,
             AbstractWorkStatusStore.State currentState,
             MCHeldItem is,
-            @Nullable TakeFn takeFn
+            @Nullable TakeFn takeFn,
+            boolean discardExcess
     ) {
-        Jobs.getOrCreateItemFromBlock(sl, b, takeFn, is);
+        Jobs.getOrCreateItemFromBlock(sl, b, takeFn, is, discardExcess);
         level.setJobBlockState(b, currentState.setProcessing(0));
         QT.BLOCK_LOGGER.debug("Moved item from block to world: {} at {}", is, b);
     }

@@ -61,29 +61,6 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         );
     }
 
-    public static boolean canAddIngredients(BlockState blockState) {
-        return canAcceptWheat(blockState) || canAcceptCoal(blockState);
-    }
-
-    public static BlockState insertItem(
-            ServerLevel level,
-            BlockState oldState,
-            ItemStack item
-    ) {
-        // FIXME: Check item type and state
-        int curValue = oldState.getValue(BAKE_STATE);
-        if (
-                canAcceptWheat(oldState) && item.is(Items.WHEAT) ||
-                        canAcceptCoal(oldState) && item.is(Items.COAL)
-        ) {
-            item.shrink(1);
-            int val = curValue + 1;
-            BlockState blockState = oldState.setValue(BAKE_STATE, val);
-            return blockState;
-        }
-        return oldState;
-    }
-
     public static boolean canAcceptWheat(BlockState oldState) {
         if (!oldState.hasProperty(BAKE_STATE)) {
             return false;
@@ -130,7 +107,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             @Nullable TakeFn takeFn
     ) {
         MCHeldItem is = MCHeldItem.fromMCItemStack(new ItemStack(Items.BREAD, 1));
-        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is);
+        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is, false);
         level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
     }
 

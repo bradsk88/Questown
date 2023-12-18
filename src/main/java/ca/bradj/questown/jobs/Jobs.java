@@ -169,10 +169,14 @@ public class Jobs {
             ServerLevel level,
             BlockPos b,
             TakeFn takeFn,
-            MCHeldItem is
+            MCHeldItem is,
+            boolean nullifyExcess
     ) {
         while (!is.isEmpty()) {
             if (takeFn == null || !takeFn.Take(is)) {
+                if (nullifyExcess) {
+                    return;
+                }
                 level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is.toItem().toItemStack()));
             }
             is = is.shrink();

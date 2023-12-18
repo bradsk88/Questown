@@ -31,6 +31,8 @@ import java.util.function.Function;
 public class WorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCCoupledHeldItem> {
 
+    private final boolean nullifyExcessProduct;
+
     public boolean tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
@@ -59,6 +61,7 @@ public class WorldInteraction
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct,
             int interval
     ) {
         super(
@@ -99,6 +102,7 @@ public class WorldInteraction
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
         this.workResult = workResult;
+        this.nullifyExcessProduct = nullifyExcessProduct;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -132,7 +136,7 @@ public class WorldInteraction
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
             @Nullable AbstractWorkStatusStore.State newState = JobBlock.extractRawProduct(
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
-                    journal::addItemIfSlotAvailable
+                    journal::addItemIfSlotAvailable, nullifyExcessProduct
             );
             return newState != null;
         }

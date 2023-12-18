@@ -128,7 +128,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             boolean sharedTimers,
             ImmutableMap<ProductionStatus, String> specialRules,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult
+            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct
     ) {
         super(
                 ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -154,6 +155,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 workResult,
+                nullifyExcessProduct,
                 workInterval
         );
         this.maxState = maxState;
@@ -176,6 +178,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
+            boolean nullifyExcessProduct,
             int interval
     ) {
         return new WorldInteraction(
@@ -188,6 +191,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
                 workResult,
+                nullifyExcessProduct,
                 interval
         );
     }

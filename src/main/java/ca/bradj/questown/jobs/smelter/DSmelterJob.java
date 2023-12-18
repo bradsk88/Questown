@@ -64,7 +64,8 @@ public class DSmelterJob extends DeclarativeJob {
                 TIME,
                 SHARED_TIMERS_NOT_APPLICABLE,
                 ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy()))
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
+                false
         );
     }
 }

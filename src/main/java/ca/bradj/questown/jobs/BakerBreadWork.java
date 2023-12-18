@@ -67,7 +67,8 @@ public class BakerBreadWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
                 ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy()))
+                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
+                false
         );
     }
 }

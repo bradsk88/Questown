@@ -82,7 +82,8 @@ public class ExplorerWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 TIMER_SHARING,
                 SPECIAL_RULES,
-                ExplorerWork::getFromLootTables
+                ExplorerWork::getFromLootTables,
+                false
         );
     }
 

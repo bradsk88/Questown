@@ -58,7 +58,9 @@ public class NewLeaverWork extends DeclarativeJob {
                 timeRequiredAtStates,
                 sharedTimers,
                 specialRules,
-                workResult
+                workResult,
+                // Gatherer's cannot "carry extra stuff home"
+                true // So we nullify loot that exceeds inventory capacity
         );
         if (!allParameters.contains(lootTableParams)) {
             throw new IllegalStateException("Descendents of NewLeaveWork must register selves from a static context");

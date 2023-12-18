@@ -475,7 +475,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     // TODO: Precompute ideal jobs regularly, ahead of time.
     //  When a change happens to the job board, or to the town state,
     //  detwermine the best possible use of people (this can be unit
-    //  tested thoroughly. And then
+    //  tested thoroughly. And then filter out any work that is already
+    //  being done, and assign the rest to people who are idle or
+    //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
         JobsRegistry.TownData td = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 getMapBiomes(),

@@ -144,7 +144,8 @@ public class WorldInteraction {
             Jobs.getOrCreateItemFromBlock(
                     level, groundPos,
                     journal::addItemIfSlotAvailable,
-                    MCHeldItem.fromMCItemStack(new ItemStack(Items.GRASS, 1))
+                    MCHeldItem.fromMCItemStack(new ItemStack(Items.GRASS, 1)),
+                    false
             );
             playSound(level, groundPos, SoundEvents.GRASS_BREAK);
             town.markBlockWeeded(groundPos);
