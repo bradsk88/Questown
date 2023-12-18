@@ -457,7 +457,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             t.quests.setChangeListener(t);
             t.roomsMap.addChangeListener(t);
             t.pois.setListener(t);
-            t.workHandle.addChangeListener(t::setChanged);
+            t.workHandle.addChangeListener(c -> {
+                updateWorkersAfterRequestChange();
+                setChanged();
+            });
             t.questsHandle.initialize(t);
             t.roomsHandle.initialize(t);
             t.knowledgeHandle.initialize(t);
@@ -467,6 +470,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             return true;
         });
+    }
+
+    // TODO: Precompute ideal jobs regularly, ahead of time.
+    //  When a change happens to the job board, or to the town state,
+    //  detwermine the best possible use of people (this can be unit
+    //  tested thoroughly. And then
+    private void updateWorkersAfterRequestChange() {
+        JobsRegistry.TownData td = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+                getMapBiomes(),
+                prefix
+        ));
+        entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(e -> {
+                    for (WorkRequest r : workHandle.getRequestedResults()) {
+                        if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
+                            if (e.getStatusForServer().canWork()) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .forEach(e -> changeJobForVisitor(e.getUUID(), WorkSeekerJob.getIDForRoot(e.getJobId())));
     }
 
     @Override

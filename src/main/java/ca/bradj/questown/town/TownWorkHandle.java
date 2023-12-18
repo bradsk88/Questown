@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,12 +36,16 @@ import java.util.function.Consumer;
 
 public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
+    public record Change(
+            @Nullable WorkRequest removed
+    ) {}
+
     final Collection<WorkRequest> requestedResults = new ArrayList<>();
 
     private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
 
     final ArrayList<BlockPos> jobBoards = new ArrayList<>();
-    private final List<Runnable> listeners = new ArrayList<>();
+    private final List<Consumer<Change>> listeners = new ArrayList<>();
     private final BlockPos parentPos;
     private final TownFlagSubBlocks subBlocks;
 
@@ -130,14 +135,14 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     @Override
     public void requestWork(WorkRequest e) {
         this.requestedResults.add(e);
-        this.listeners.forEach(Runnable::run);
+        this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
     }
 
     @Override
     public void removeWorkRequest(WorkRequest of) {
         this.requestedResults.remove(of);
-        this.listeners.forEach(Runnable::run);
+        this.listeners.forEach(l -> l.accept(new Change(of)));
         QT.FLAG_LOGGER.debug("Request removed from job board: {}", of);
     }
 
@@ -148,7 +153,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         this.nextTick.pop().accept(sl);
     }
 
-    public void addChangeListener(Runnable o) {
+    public void addChangeListener(Consumer<Change> o) {
         this.listeners.add(o);
     }
 }

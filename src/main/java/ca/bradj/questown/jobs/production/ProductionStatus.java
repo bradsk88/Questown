@@ -171,6 +171,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     }
 
     @Override
+    public boolean canWork() {
+        return !isAllowedToTakeBreaks();
+    }
+
+    @Override
     public @Nullable String getCategoryId() {
         if (isWorkingOnProduction()) {
             return null; // Should use job ID

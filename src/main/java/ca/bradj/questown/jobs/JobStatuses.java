@@ -45,8 +45,9 @@ public class JobStatuses {
             STATUS useStatus = job.tryUsingSupplies(supplyItemStatus);
             if (useStatus != null) {
                 s = useStatus;
-            } else {
-                hasWorkItems = false;
+                // TODO[Testing]: This "else" breaks jobs that use tools at multiple stages
+//            } else {
+//                hasWorkItems = false;
             }
         }
         if (s == null && inventory.inventoryFull()) {

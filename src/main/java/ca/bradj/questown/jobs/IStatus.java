@@ -18,4 +18,6 @@ public interface IStatus<S extends IStatus<S>> {
     boolean isAllowedToTakeBreaks();
 
     @Nullable String getCategoryId();
+
+    boolean canWork();
 }

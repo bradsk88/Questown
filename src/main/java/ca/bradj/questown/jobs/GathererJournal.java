@@ -471,6 +471,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         public boolean isUnset() {
             return this == UNSET;
         }
+
+        @Override
+        public boolean canWork() {
+            return !isAllowedToTakeBreaks();
+        }
     }
 
     public record Tools(boolean hasAxe, boolean hasPick, boolean hasShovel, boolean hasRod) {

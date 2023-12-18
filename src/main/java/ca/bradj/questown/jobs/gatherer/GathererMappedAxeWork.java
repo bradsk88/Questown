@@ -121,7 +121,6 @@ public class GathererMappedAxeWork extends NewLeaverWork {
                 ProductionStatus.FACTORY.idle(),
                 t -> t.allKnownGatherItemsFn().apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
                 Items.OAK_WOOD.getDefaultInstance(),
-                // TODO: Needs should be biome specific
                 s -> getProductionNeeds(INGREDIENTS_REQUIRED_AT_STATES, TOOLS_REQUIRED_AT_STATES)
         );
     }
