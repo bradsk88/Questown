@@ -248,7 +248,7 @@ public class Jobs {
         );
     }
 
-    public static Collection<MCRoom> roomsWithState(
+    public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town,
             ResourceLocation roomType,
             StateCheck check
@@ -263,7 +263,6 @@ public class Jobs {
                     }
                     return false;
                 })
-                .map(v -> v.room)
                 .toList();
     }
 
@@ -291,7 +290,7 @@ public class Jobs {
         }
 
 
-        boolean farFromChest = isFarFromChest(entityPos, target);
+        boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
@@ -330,46 +329,5 @@ public class Jobs {
             }
         }
         return true;
-    }
-
-    public interface ContainerItemTaker {
-
-        void addItem(MCHeldItem mcHeldItem);
-
-        boolean isInventoryFull();
-    }
-
-    public static void tryTakeContainerItems(
-            ContainerItemTaker farmerJob,
-            BlockPos entityPos,
-            ContainerTarget<MCContainer, MCTownItem> suppliesTarget,
-            ContainerTarget.CheckFn<MCTownItem> check
-    ) {
-        if (isFarFromChest(entityPos, suppliesTarget)) {
-            return;
-        }
-        if (farmerJob.isInventoryFull()) {
-            return;
-        }
-        String start = suppliesTarget.toShortString();
-        for (int i = 0; i < suppliesTarget.size(); i++) {
-            MCTownItem mcTownItem = suppliesTarget.getItem(i);
-            if (check.Matches(mcTownItem)) {
-                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
-                farmerJob.addItem(MCHeldItem.fromTown(mcTownItem));
-                suppliesTarget.getContainer().removeItem(i, 1);
-                break;
-            }
-        }
-    }
-
-    private static boolean isFarFromChest(
-            BlockPos entityPos,
-            ContainerTarget<?, ? extends Item<?>> chest
-    ) {
-        if (chest == null) {
-            return true;
-        }
-        return !Jobs.isCloseTo(entityPos, chest.getBlockPos());
     }
 }

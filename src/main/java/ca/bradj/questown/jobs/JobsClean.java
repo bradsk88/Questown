@@ -1,8 +1,13 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import com.google.common.collect.ImmutableList;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class JobsClean {
 
@@ -63,5 +68,48 @@ public class JobsClean {
             }
         }
         return false;
+    }
+
+    public interface ContainerItemTaker<TOWN_ITEM> {
+
+        void addItem(TOWN_ITEM mcHeldItem);
+
+        boolean isInventoryFull();
+    }
+
+    public interface SuppliesTarget<POS, TOWN_ITEM> {
+
+        boolean isCloseTo(POS entityPos);
+
+        String toShortString();
+
+        List<TOWN_ITEM> getItems();
+
+        void removeItem(int i, int quantity);
+    }
+
+    public static <POS, TOWN_ITEM> void tryTakeContainerItems(
+            ContainerItemTaker<TOWN_ITEM> farmerJob,
+            POS entityPos,
+            SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
+            Function<TOWN_ITEM, Boolean> isRemovalCandidate
+    ) {
+        if (!suppliesTarget.isCloseTo(entityPos)) {
+            return;
+        }
+        if (farmerJob.isInventoryFull()) {
+            return;
+        }
+        String start = suppliesTarget.toShortString();
+        List<TOWN_ITEM> items = suppliesTarget.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            TOWN_ITEM mcTownItem = items.get(i);
+            if (isRemovalCandidate.apply(mcTownItem)) {
+                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
+                farmerJob.addItem(mcTownItem);
+                suppliesTarget.removeItem(i, 1);
+                break;
+            }
+        }
     }
 }

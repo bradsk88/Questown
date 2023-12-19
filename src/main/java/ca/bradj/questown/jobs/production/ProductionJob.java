@@ -37,7 +37,7 @@ public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, Jobs.ContainerItemTaker, SignalSource {
+    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, JobsClean.ContainerItemTaker<MCTownItem>, SignalSource {
 
     private final Marker marker;
 
@@ -46,7 +46,7 @@ public abstract class ProductionJob<
     protected final JOURNAL journal;
     private final IProductionStatusFactory<STATUS> statusFactory;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
-    private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
+    protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
     // TODO: Support more recipes
@@ -54,7 +54,7 @@ public abstract class ProductionJob<
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     protected final UUID ownerUUID;
-    private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools;
+    private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
     private final boolean sharedTimers;
     public final ImmutableMap<STATUS, String> specialRules;
 
@@ -149,8 +149,8 @@ public abstract class ProductionJob<
     }
 
     @Override
-    public void addItem(MCHeldItem mcHeldItem) {
-        journal.addItem(mcHeldItem);
+    public void addItem(MCTownItem mcHeldItem) {
+        journal.addItem(MCHeldItem.fromTown(mcHeldItem));
     }
 
     @Override
@@ -170,37 +170,6 @@ public abstract class ProductionJob<
             QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
-    }
-
-    protected void tryGetSupplies(
-            JobTownProvider<MCRoom> town,
-            BlockPos entityPos
-    ) {
-        // TODO: Introduce this status for farmer
-        STATUS status = journal.getStatus();
-        if (!status.isCollectingSupplies()) {
-            return;
-        }
-
-        Optional<Integer> first = roomsNeedingIngredientsOrTools.entrySet()
-                .stream()
-                .filter(v -> !v.getValue().isEmpty())
-                .map(Map.Entry::getKey)
-                .findFirst();
-
-        if (first.isEmpty()) {
-            QT.JOB_LOGGER.warn("Trying to try container items when no rooms need items");
-            return;
-        }
-
-        Jobs.tryTakeContainerItems(
-                this, entityPos, suppliesTarget,
-                item -> JobsClean.shouldTakeItem(
-                        journal.getCapacity(),
-                        recipe.getRecipe(first.get()),
-                        journal.getItems(), item
-                )
-        );
     }
 
     @NotNull
@@ -272,7 +241,7 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findJobSite(TownInterface town, WorkStateContainer<BlockPos> work);
 
-    protected abstract Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town, WorkStateContainer<BlockPos> work
     );
 
@@ -303,7 +272,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCCoupledHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
