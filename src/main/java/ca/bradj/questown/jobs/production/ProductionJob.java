@@ -54,7 +54,7 @@ public abstract class ProductionJob<
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     protected final UUID ownerUUID;
-    private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients;
+    private Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools;
     private final boolean sharedTimers;
     public final ImmutableMap<STATUS, String> specialRules;
 
@@ -182,7 +182,7 @@ public abstract class ProductionJob<
             return;
         }
 
-        Optional<Integer> first = roomsNeedingIngredients.entrySet()
+        Optional<Integer> first = roomsNeedingIngredientsOrTools.entrySet()
                 .stream()
                 .filter(v -> !v.getValue().isEmpty())
                 .map(Map.Entry::getKey)
@@ -282,10 +282,10 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.roomsNeedingIngredients = roomsNeedingIngredientsOrTools(town, getWorkStatusHandle(town));
+        this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(town, getWorkStatusHandle(town));
 
         WorkStatusHandle<BlockPos, MCCoupledHeldItem> work = getWorkStatusHandle(town);
-        this.tick(town, work, entity, facingPos, roomsNeedingIngredients, statusFactory);
+        this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
 
     private WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(TownInterface town) {
@@ -303,7 +303,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCCoupledHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
+            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
@@ -312,7 +312,7 @@ public abstract class ProductionJob<
     ) {
         QT.JOB_LOGGER.debug(marker, "Searching for supplies");
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredients),
+                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
                 journal.getItems(), item
         );
         if (this.suppliesTarget != null) {
@@ -436,7 +436,7 @@ public abstract class ProductionJob<
             @Override
             public boolean hasNonSupplyItems() {
 
-                Set<Integer> statesToFeed = roomsNeedingIngredients.entrySet().stream().filter(
+                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet().stream().filter(
                         v -> !v.getValue().isEmpty()
                 ).map(Map.Entry::getKey).collect(Collectors.toSet());
                 ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(

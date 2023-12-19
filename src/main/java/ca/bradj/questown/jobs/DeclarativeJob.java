@@ -96,6 +96,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
     };
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
 
     private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
@@ -161,6 +162,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.maxState = maxState;
         this.workRoomId = workRoomId;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
+        this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
     }
 
@@ -227,7 +229,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredients,
+            Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
@@ -239,7 +241,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
             @Override
             public Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsByState() {
-                return roomsNeedingIngredients;
+                return roomsNeedingIngredientsOrTools;
             }
 
             @Override
@@ -445,9 +447,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 b.put(state, new ArrayList<>());
                 return;
             }
-            b.put(state, Lists.newArrayList(Jobs.roomsWithState(
+            Collection<MCRoom> roomz = Jobs.roomsWithState(
                     town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
-            )));
+            );
+            b.put(state, Lists.newArrayList(roomz));
             // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
