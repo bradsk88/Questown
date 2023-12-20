@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.smelter;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public class DSmelterJob extends DeclarativeJob {
     public static final JobID ID = new JobID("smelter", "process_ore");
@@ -28,9 +30,9 @@ public class DSmelterJob extends DeclarativeJob {
             // 1
             // 2
     );
-    public static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Predicate<MCTownItem>> TOOLS = ImmutableMap.of(
             // 0
-            1, Ingredient.of(TagsInit.Items.PICKAXES)
+            1, (item) -> Ingredient.of(TagsInit.Items.PICKAXES).test(item.toItemStack())
             // 2
     );
     private static final ImmutableMap<Integer, Integer> WORK = ImmutableMap.of(

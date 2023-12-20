@@ -7,15 +7,15 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 public class NewLeaverWork extends DeclarativeJob {
 
@@ -36,7 +36,7 @@ public class NewLeaverWork extends DeclarativeJob {
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             boolean sharedTimers,
@@ -65,5 +65,9 @@ public class NewLeaverWork extends DeclarativeJob {
         if (!allParameters.contains(lootTableParams)) {
             throw new IllegalStateException("Descendents of NewLeaveWork must register selves from a static context");
         }
+    }
+
+    public interface TagsCriteria {
+        boolean atLeastOneFullCriteriaMatch(Map<String, String> tagsFromPotentialTool);
     }
 }
