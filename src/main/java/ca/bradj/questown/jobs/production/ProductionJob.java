@@ -33,11 +33,13 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.jobs.Jobs.isCloseTo;
+
 public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, JobsClean.ContainerItemTaker<MCTownItem>, SignalSource {
+    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
 
     private final Marker marker;
 
@@ -147,22 +149,17 @@ public abstract class ProductionJob<
     public boolean removeItem(MCHeldItem mct) {
         return journal.removeItem(mct);
     }
-
-    @Override
-    public void addItem(MCTownItem mcHeldItem) {
-        journal.addItem(MCHeldItem.fromTown(mcHeldItem));
-    }
-
-    @Override
-    public boolean isInventoryFull() {
-        return journal.isInventoryFull();
-    }
-
     protected abstract Map<Integer, Boolean> getSupplyItemStatus();
 
     protected void tryDropLoot(
             BlockPos entityPos
     ) {
+        if (successTarget == null) {
+            return;
+        }
+        if (!isCloseTo(entityPos, successTarget.getBlockPos())) {
+            return;
+        }
         if (!journal.getStatus().isDroppingLoot()) {
             return;
         }

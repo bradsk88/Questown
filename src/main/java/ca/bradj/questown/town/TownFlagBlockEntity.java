@@ -480,7 +480,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
         JobsRegistry.TownData td = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                getMapBiomes(),
+                getKnownBiomes(),
                 prefix
         ));
         entities.stream()
@@ -761,7 +761,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return null;
         }
 
-        Collection<ResourceLocation> mapBiomes = getMapBiomes();
+        Collection<ResourceLocation> mapBiomes = getKnownBiomes();
         JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 mapBiomes, prefix
         ));
@@ -1184,7 +1184,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         workHandle.openMenuRequested(sender);
     }
 
-    public Collection<ResourceLocation> getMapBiomes() {
+    public Collection<ResourceLocation> getKnownBiomes() {
         ImmutableSet.Builder<ResourceLocation> b = ImmutableSet.builder();
         List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(this, getServerLevel());
         cs.forEach(v -> {
@@ -1194,6 +1194,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     .map(i -> GathererMap.getBiome(i.toItemStack()))
                     .filter(Objects::nonNull)
                     .forEach(b::add);
+        });
+        nearbyBiomes.forEach(v -> {
+            ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
+            if (key == null) {
+                return;
+            }
+            b.add(key);
         });
         return b.build();
     }

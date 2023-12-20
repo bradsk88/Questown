@@ -117,6 +117,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final boolean prioritizeExtraction;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
+    private boolean wrappingUp;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -247,7 +248,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
 
             @Override
-            public Map<Integer, ? extends Collection<MCRoom>> roomsNeedingIngredientsByState() {
+            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
                 return roomsNeedingIngredientsOrTools;
             }
 
@@ -281,14 +282,30 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         };
         this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
 
+        if (wrappingUp && !hasAnyLootToDrop()) {
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+        }
+
         if (entityCurrentJobSite != null) {
             tryWorking(town, work, entity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
+        if (!wrappingUp) {
+            tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
+        }
+    }
+
+    private void tryGetSupplies(
+            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            BlockPos entityBlockPos
+    ) {
+        if (suppliesTarget == null) {
+            return;
+        }
         JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
             @Override
-            public boolean isCloseTo(BlockPos entityPos) {
-                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+            public boolean isCloseTo() {
+                return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
             }
 
             @Override
@@ -308,8 +325,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         };
         getter.tryGetSupplies(
                 journal.getStatus(), journal.getCapacity(),
-                jtp, entityBlockPos, roomsNeedingIngredientsOrTools,
-                st, recipe::getRecipe, journal.getItems(), this);
+                roomsNeedingIngredientsOrTools,
+                st, recipe::getRecipe, journal.getItems(),
+                (item) -> this.journal.addItem(MCHeldItem.fromTown(item))
+        );
     }
 
     private void tryWorking(
@@ -344,10 +363,13 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
         boolean worked = this.world.tryWorking(town, work, entity, workSpot);
         boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-        boolean finishedWork = workSpot.action.equals(maxState);
+        boolean finishedWork = workSpot.action.equals(maxState); // TODO: Check all workspots before seeking work
         if (hasWork && worked && finishedWork) {
-            town.getKnowledgeHandle().registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
-            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            if (!wrappingUp) {
+                town.getKnowledgeHandle()
+                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+            }
+            wrappingUp = true;
         }
     }
 

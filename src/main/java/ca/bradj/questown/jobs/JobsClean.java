@@ -6,8 +6,8 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 public class JobsClean {
 
@@ -48,9 +48,7 @@ public class JobsClean {
 
         ImmutableList<TestFn<I>> initial = ImmutableList.copyOf(recipe);
         ArrayList<TestFn<I>> ingredientsToSatisfy = new ArrayList<>();
-        for (int i = 0; i < invCapacity / recipe.size(); i++) {
-            ingredientsToSatisfy.addAll(initial);
-        }
+        ingredientsToSatisfy.addAll(initial);
 
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
@@ -70,16 +68,9 @@ public class JobsClean {
         return false;
     }
 
-    public interface ContainerItemTaker<TOWN_ITEM> {
-
-        void addItem(TOWN_ITEM mcHeldItem);
-
-        boolean isInventoryFull();
-    }
-
     public interface SuppliesTarget<POS, TOWN_ITEM> {
 
-        boolean isCloseTo(POS entityPos);
+        boolean isCloseTo();
 
         String toShortString();
 
@@ -89,15 +80,11 @@ public class JobsClean {
     }
 
     public static <POS, TOWN_ITEM> void tryTakeContainerItems(
-            ContainerItemTaker<TOWN_ITEM> farmerJob,
-            POS entityPos,
+            Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<TOWN_ITEM, Boolean> isRemovalCandidate
     ) {
-        if (!suppliesTarget.isCloseTo(entityPos)) {
-            return;
-        }
-        if (farmerJob.isInventoryFull()) {
+        if (!suppliesTarget.isCloseTo()) {
             return;
         }
         String start = suppliesTarget.toShortString();
@@ -106,7 +93,7 @@ public class JobsClean {
             TOWN_ITEM mcTownItem = items.get(i);
             if (isRemovalCandidate.apply(mcTownItem)) {
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
-                farmerJob.addItem(mcTownItem);
+                villager.accept(mcTownItem);
                 suppliesTarget.removeItem(i, 1);
                 break;
             }

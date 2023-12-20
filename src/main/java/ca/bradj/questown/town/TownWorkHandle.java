@@ -91,7 +91,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         }
 
         BlockPos flagPos = parent.getTownFlagBasePos();
-        Collection<ResourceLocation> biomes = parent.getMapBiomes();
+        Collection<ResourceLocation> biomes = parent.getKnownBiomes();
         JobsRegistry.TownData td = new JobsRegistry.TownData(prefix ->
                 parent.getKnowledgeHandle().getAllKnownGatherResults(biomes, prefix)
         );

@@ -1,19 +1,19 @@
 {
   "variants": {
     "facing=south": {
-      "y": 270,
-      "model": "questown:block/job_board_block"
-    },
-    "facing=west": {
       "y": 0,
       "model": "questown:block/job_board_block"
     },
-    "facing=north": {
+    "facing=west": {
       "y": 90,
       "model": "questown:block/job_board_block"
     },
-    "facing=east": {
+    "facing=north": {
       "y": 180,
+      "model": "questown:block/job_board_block"
+    },
+    "facing=east": {
+      "y": 270,
       "model": "questown:block/job_board_block"
     }
   }

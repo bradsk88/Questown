@@ -47,7 +47,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState
+            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState
     ) implements JobTownProvider<Room> {
         @Override
         public boolean isUnfinishedTimeWorkPresent() {
@@ -74,7 +74,7 @@ public class StatusesProductionRoutineTest {
         static final PTestStatus RELAXING = new PTestStatus("relaxing");
         static final PTestStatus WAITING = new PTestStatus("waiting");
 
-        static final IProductionStatusFactory<PTestStatus> FACTORY = new IProductionStatusFactory<>() {
+        public static final IProductionStatusFactory<PTestStatus> FACTORY = new IProductionStatusFactory<>() {
             @Override
             public PTestStatus fromJobBlockState(int s) {
                 return switch (s) {
@@ -175,6 +175,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public @Nullable String getCategoryId() {
             return "test";
+        }
+
+        @Override
+        public boolean canWork() {
+            return true;
         }
 
         @Override
@@ -391,7 +396,7 @@ public class StatusesProductionRoutineTest {
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true // We have ingredients
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
         PTestStatus s = JobStatuses.productionRoutine(
@@ -417,7 +422,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work 2 be done
         );
@@ -453,7 +458,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(otherRoom.room), // There are ing. needed in another room
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done in this room
         );
@@ -485,7 +490,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -525,7 +530,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -561,7 +566,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -591,7 +596,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -621,7 +626,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -649,7 +654,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom.room), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom.room) // There is work to be done
         );
@@ -674,7 +679,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, ? extends Collection<Room>> roomsNeedingIngredientsByState,
+            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
             boolean isUnfinishedTimeWorkPresent
     ) implements JobTownProvider<Room> {
     }
@@ -688,7 +693,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, false,
                 BLOCK_READY_FOR_WORK, false
         );
-        Map<Integer, ImmutableList<Room>> workToBeDone = ImmutableMap.of(
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
                 BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
         );

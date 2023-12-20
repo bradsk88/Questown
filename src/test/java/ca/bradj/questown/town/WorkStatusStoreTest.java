@@ -25,7 +25,7 @@ class WorkStatusStoreTest {
 
         public TestWorkStatusStore() {
             super(
-                    (room, pos) -> pos,
+                    (room, pos) -> ImmutableList.of(pos),
                     (lvl, pos) -> false,
                     (lvl, pos) -> null,
                     (lvl, pos) -> null,
