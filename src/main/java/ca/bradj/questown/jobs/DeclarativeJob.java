@@ -8,6 +8,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.WorldInteraction;
+import ca.bradj.questown.jobs.gatherer.NewLeaverWork;
+import ca.bradj.questown.jobs.gatherer.ToolRequirement;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -29,7 +31,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -40,8 +41,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 // TODO[ASAP]: Break ties to MC and unit test
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
@@ -99,7 +100,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     };
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
+    private final ImmutableMap<Integer, ? extends Predicate<MCTownItem>> toolsRequiredAtStates;
 
     private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
             MCTownItem.fromMCItemStack(Items.COAL.getDefaultInstance()),
@@ -119,7 +120,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
 
-    public DeclarativeJob(
+    protected DeclarativeJob(
             UUID ownerUUID,
             int inventoryCapacity,
             @NotNull JobID jobId,
@@ -129,7 +130,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            NewLeaverWork.TagsCriteria criteria,
+            ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             boolean sharedTimers,
@@ -139,7 +141,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     ) {
         super(
                 ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
-                        ingredientsRequiredAtStates, toolsRequiredAtStates
+                        ingredientsRequiredAtStates, toolsRequiredAtStates, criteria
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
                         jobId,
@@ -181,7 +183,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ImmutableMap<Integer, ? extends Predicate<MCTownItem>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
@@ -205,7 +207,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private static RecipeProvider buildRecipe(
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+            ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates,
+            NewLeaverWork.TagsCriteria criteria
     ) {
         return s -> {
             ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> bb = ImmutableList.builder();
@@ -216,11 +219,13 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             // Hold on to tools required for this state and all previous states
             for (int i = 0; i <= s; i++) {
                 final int ii = i;
-                Ingredient tool = toolsRequiredAtStates.get(ii);
+                Predicate<MCTownItem> tool = toolsRequiredAtStates.get(ii);
                 if (tool != null) {
-                    bb.add(item -> {
-                        ItemStack itemStack = item.toItemStack();
-                        return tool.test(itemStack);
+                    bb.add((MCTownItem item) -> {
+                        if (!tool.test(item)) {
+                            return false;
+                        }
+                        return
                     });
                 }
             }
@@ -430,7 +435,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
         HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, Ingredient> fn = (state, ingr) -> {
+        ingredientsRequiredAtStates.forEach((state, ingr) -> {
             if (ingr == null) {
                 if (!b.containsKey(state)) {
                     b.put(state, false);
@@ -443,9 +448,21 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             if (!b.getOrDefault(state, false)) {
                 b.put(state, has);
             }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
+        });
+        toolsRequiredAtStates.forEach((state, ingr) -> {
+            if (ingr == null) {
+                if (!b.containsKey(state)) {
+                    b.put(state, false);
+                }
+                return;
+            }
+
+            // The check passes if the worker has ALL the tools needed for the state
+            boolean has = journal.getItems().stream().anyMatch(z -> ingr.test(z.get()));
+            if (!b.getOrDefault(state, false)) {
+                b.put(state, has);
+            }
+        });
         return ImmutableMap.copyOf(b);
     }
 
@@ -518,10 +535,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             b.put(state, Lists.newArrayList(roomz));
             // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
-        HashMap<Integer, Ingredient> stateTools = new HashMap<>();
-        if (toolsRequiredAtStates.values().stream().anyMatch(v -> !v.isEmpty())) {
-            for (int i = 0; i < maxState; i++) {
-                stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
+        HashMap<Integer, Predicate<MCTownItem>> stateTools = new HashMap<>();
+        for (int i = 0; i < maxState; i++) {
+            Predicate<MCTownItem> toolCheck = toolsRequiredAtStates.get(i);
+            if (toolCheck != null) {
+                stateTools.put(i, toolCheck);
             }
         }
         stateTools.forEach((state, ingrs) -> {

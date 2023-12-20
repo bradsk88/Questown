@@ -121,6 +121,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         });
     }
 
+    @Override
     public ImmutableList<WorkRequest> getRequestedResults() {
         return ImmutableList.copyOf(requestedResults);
     }

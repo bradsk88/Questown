@@ -14,14 +14,12 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.ExplorerWork;
-import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
-import ca.bradj.questown.jobs.gatherer.GathererTools;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
+import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -187,7 +185,7 @@ public class JobsRegistry {
         return ImmutableSet.copyOf(list);
     }
 
-    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
+    public interface JobFunc extends TriFunction<TownInterface, UUID, NewLeaverWork.TagsCriteria, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }
 
@@ -270,7 +268,7 @@ public class JobsRegistry {
     static {
         ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
         b.put(GathererJob.ID, new Work(
-                (town, uuid) -> new GathererJob(town, 6, uuid),
+                (town, uuid, criteria) -> new GathererJob(town, 6, uuid),
                 GATHERER_SNAPSHOT_FUNC,
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
@@ -281,7 +279,7 @@ public class JobsRegistry {
                 (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
         ));
         b.put(FarmerJob.ID, new Work(
-                (town, uuid) -> new FarmerJob(uuid, 6),
+                (town, uuid, criteria) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 SpecialQuests.FARM,
@@ -295,7 +293,7 @@ public class JobsRegistry {
                 (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
         ));
         b.put(BakerBreadWork.ID, new Work(
-                (town, uuid) -> new BakerBreadWork(uuid, 6),
+                (town, uuid, criteria) -> new BakerBreadWork(uuid, 6, criteria),
                 productionJobSnapshot(BakerBreadWork.ID),
                 (block) -> block instanceof BreadOvenBlock,
                 Questown.ResourceLocation("bakery"),
@@ -437,11 +435,21 @@ public class JobsRegistry {
         return getInitializedJob(town, jobName, null, heldItems, ownerUUID);
     }
 
+    public static Job<MCHeldItem,? extends Snapshot<MCHeldItem>,? extends IStatus<?>> getInitializedJob(
+            TownFlagBlockEntity town,
+            JobID p,
+            NewLeaverWork.TagsCriteria criteria,
+            ImmutableList<MCHeldItem> items,
+            UUID visitorUUID
+    ) {
+    }
+
     private static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
             JobID jobName,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
+            @Nullable NewLeaverWork.TagsCriteria criteria,
             UUID ownerUUID
     ) {
         Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> j;
@@ -453,7 +461,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
             j = new GathererJob(town, 6, ownerUUID);
         } else {
-            j = fn.jobFunc.apply(town, ownerUUID);
+            j = fn.jobFunc.apply(town, ownerUUID, criteria);
             journal = newJournal(jobName, journal, heldItems, fn);
         }
         if (journal != null) {

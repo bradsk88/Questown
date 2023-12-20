@@ -740,13 +740,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void changeJobForVisitorFromBoard(UUID ownerUUID) {
-        JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
+        JobApplication work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
         }
     }
 
-    private JobID getVillagerPreferredWork(
+    private JobApplication getVillagerPreferredWork(
             UUID uuid,
             Collection<WorkRequest> requestedResults
     ) {
@@ -768,16 +768,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
         for (JobID p : preference) {
-            List<Ingredient> i = requestedResults.stream().map(WorkRequest::asIngredient).toList();
-            for (Ingredient requestedResult : i) {
+            for (WorkRequest requestedResult : requestedResults) {
                 // TODO: Think about how work chains work.
                 //  E.g. If a blacksmith needs iron ingots to do a requested job,
                 //  but none of the other villagers produce that resource, the
                 //  blacksmith should light up red to indicate a broken chain and
                 //  that the player will need to contribute in order for the
                 //  blacksmith to work, rather than everything being automated.
-                if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
-                    return p;
+                if (JobsRegistry.canSatisfy(data, p, requestedResult.asIngredient())) {
+                    return new JobApplication(p, requestedResult);
                 }
             }
         }
@@ -809,6 +808,32 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             VisitorMobEntity f
     ) {
         f.setJob(JobsRegistry.getInitializedJob(this, jobName, f.getJobJournalSnapshot().items(), visitorUUID));
+    }
+
+    private void changeJobForVisitor(
+            UUID visitorUUID,
+            JobApplication work
+    ) {
+        Optional<VisitorMobEntity> f = entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> v.getUUID().equals(visitorUUID))
+                .findFirst();
+        if (f.isEmpty()) {
+            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, work);
+        } else {
+            doSetJob(visitorUUID, work, f.get());
+            setChanged();
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void doSetJob(
+            UUID visitorUUID,
+            JobApplication work,
+            VisitorMobEntity f
+    ) {
+        f.setJob(JobsRegistry.getInitializedJob(this, work.p(), work.requestedResult().criteria(), f.getJobJournalSnapshot().items(), visitorUUID));
     }
 
     @Override

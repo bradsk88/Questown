@@ -16,8 +16,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 
 import static ca.bradj.questown.jobs.JobsRegistry.getProductionNeeds;
@@ -50,7 +53,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 1
     );
-    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+    public static final ImmutableMap<Integer, ToolRequirement> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_MAP, Ingredient.of(ItemsInit.GATHERER_MAP.get()),
             BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
     );
