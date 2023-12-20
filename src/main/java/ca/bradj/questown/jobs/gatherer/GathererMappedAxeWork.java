@@ -53,7 +53,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 1
     );
-    public static final ImmutableMap<Integer, ToolRequirement> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_MAP, Ingredient.of(ItemsInit.GATHERER_MAP.get()),
             BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
     );

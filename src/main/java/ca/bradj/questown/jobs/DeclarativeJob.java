@@ -130,7 +130,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            NewLeaverWork.TagsCriteria criteria,
             ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
@@ -141,7 +140,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     ) {
         super(
                 ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
-                        ingredientsRequiredAtStates, toolsRequiredAtStates, criteria
+                        ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
                         jobId,
@@ -207,8 +206,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private static RecipeProvider buildRecipe(
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates,
-            NewLeaverWork.TagsCriteria criteria
+            ImmutableMap<Integer, ToolRequirement> toolsRequiredAtStates
     ) {
         return s -> {
             ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> bb = ImmutableList.builder();
@@ -221,12 +219,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 final int ii = i;
                 Predicate<MCTownItem> tool = toolsRequiredAtStates.get(ii);
                 if (tool != null) {
-                    bb.add((MCTownItem item) -> {
-                        if (!tool.test(item)) {
-                            return false;
-                        }
-                        return
-                    });
+                    bb.add(tool::test);
                 }
             }
             return bb.build();
@@ -371,8 +364,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         boolean finishedWork = workSpot.action.equals(maxState); // TODO: Check all workspots before seeking work
         if (hasWork && worked && finishedWork) {
             if (!wrappingUp) {
+                ImmutableMap.Builder<Integer, NewLeaverWork.TagsCriteria> b = ImmutableMap.builder();
+                toolsRequiredAtStates.forEach((k, v) -> b.put(k, v.));
                 town.getKnowledgeHandle()
-                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+                        .registerFoundLoots(journal.getItems(), toolsRequiredAtStates.); // TODO: Is this okay for every job to do?
             }
             wrappingUp = true;
         }

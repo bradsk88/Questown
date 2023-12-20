@@ -762,7 +762,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         Collection<ResourceLocation> mapBiomes = getKnownBiomes();
-        JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+        JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResultsByBiome(
                 mapBiomes, prefix
         ));
 
@@ -833,7 +833,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             JobApplication work,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(this, work.p(), work.requestedResult().criteria(), f.getJobJournalSnapshot().items(), visitorUUID));
+        f.setJob(JobsRegistry.getInitializedJob(this, work.p(), work.criteria(), f.getJobJournalSnapshot().items(), visitorUUID));
     }
 
     @Override
