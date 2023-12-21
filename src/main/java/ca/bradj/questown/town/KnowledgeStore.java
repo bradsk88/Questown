@@ -6,7 +6,6 @@ import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.town.interfaces.KnowledgeHolder;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.function.TriFunction;
 
@@ -36,22 +35,24 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
     private final Map<BIOME, Map<GathererTools.LootTablePrefix, ImmutableSet<ITEM_OUT>>> knownGatherResults = new HashMap<>();
 
     @Override
-    public ImmutableMap<BIOME, ImmutableSet<ITEM_OUT>> getAllKnownGatherResultsByBiome(
+    public ImmutableSet<ITEM_OUT> getAllKnownGatherResults(
             Collection<BIOME> mapBiomes, GathererTools.LootTablePrefix ltPrefix
     ) {
-        ImmutableMap.Builder<BIOME, ImmutableSet<ITEM_OUT>> bb = ImmutableMap.builder();
+        ImmutableSet.Builder<ITEM_OUT> b = ImmutableSet.builder();
+        b.addAll(baseKnowledge);
 
         ImmutableList.Builder<Map<GathererTools.LootTablePrefix, ImmutableSet<ITEM_OUT>>> vb = ImmutableList.builder();
         knownGatherResults.forEach((k, v) -> {
             if (mapBiomes.contains(k)) {
-                ImmutableSet.Builder<ITEM_OUT> b = ImmutableSet.builder();
-                b.addAll(baseKnowledge);
-                v.getOrDefault(ltPrefix, ImmutableSet.of()).forEach(b::add);
-                bb.put(k, b.build());
+                vb.add(v);
             }
         });
 
-       return bb.build();
+        vb.build()
+                .stream()
+                .flatMap(v -> v.getOrDefault(ltPrefix, ImmutableSet.of()).stream())
+                .forEach(b::add);
+        return b.build();
     }
 
     public ImmutableSet<ITEM_IN> getAllKnownGatherResults() {

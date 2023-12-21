@@ -1,7 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import java.util.Map;
-
 public interface Item<I extends Item<I>> {
     boolean isEmpty();
 
@@ -10,6 +8,4 @@ public interface Item<I extends Item<I>> {
     I shrink();
 
     String getShortName();
-
-    Map<String, String> getTags();
 }

@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.requests;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.gatherer.NewLeaverWork;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
@@ -20,30 +19,21 @@ public class WorkRequest {
 
     final @Nullable TagKey<Item> tag;
     final @Nullable Item item;
-    private @Nullable NewLeaverWork.TagsCriteria criteria;
 
     private WorkRequest(
             @Nullable TagKey<Item> tag,
-            @Nullable Item item,
-            @Nullable NewLeaverWork.TagsCriteria criteria
+            @Nullable Item item
     ) {
         this.tag = tag;
         this.item = item;
-        this.criteria = criteria;
     }
 
-    public static WorkRequest of(
-            Item requested,
-            @Nullable NewLeaverWork.TagsCriteria criteria
-    ) {
-        return new WorkRequest(null, requested, criteria);
+    public static WorkRequest of(Item requested) {
+        return new WorkRequest(null, requested);
     }
 
-    public static WorkRequest of(
-            TagKey<Item> tk,
-            @Nullable NewLeaverWork.TagsCriteria criteria
-    ) {
-        return new WorkRequest(tk, null, criteria);
+    public static WorkRequest of(TagKey<Item> tk) {
+        return new WorkRequest(tk, null);
     }
     // private final int quantity; // TODO: Implement
 
@@ -86,12 +76,10 @@ public class WorkRequest {
         if (i.isEmpty() && t.isEmpty()) {
             throw new IllegalArgumentException("Invalid work request on buffer.");
         }
-        // Should we include the criteria when we send across the network?
-        // As far as I know, the network is only used for the UI and there's no reason to surface criteria there
         if (i.isEmpty()) {
-            return new WorkRequest(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(t)), null, null);
+            return new WorkRequest(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(t)), null);
         }
-        return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)), null);
+        return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)));
     }
 
     @Override
@@ -123,9 +111,5 @@ public class WorkRequest {
             return Component.translatable(ForgeRegistries.ITEMS.getKey(item).toString());
         }
         return Component.translatable("invalid.workrequest");
-    }
-
-    public NewLeaverWork.TagsCriteria criteria() {
-        return criteria;
     }
 }

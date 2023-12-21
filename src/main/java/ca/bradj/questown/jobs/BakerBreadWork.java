@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.gatherer.NewLeaverWork;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
@@ -51,8 +50,7 @@ public class BakerBreadWork extends DeclarativeJob {
 
     public BakerBreadWork(
             UUID ownerUUID,
-            int inventoryCapacity,
-            NewLeaverWork.TagsCriteria criteria
+            int inventoryCapacity
     ) {
         super(
                 ownerUUID,

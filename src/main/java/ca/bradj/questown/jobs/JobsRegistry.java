@@ -3,7 +3,6 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
-import ca.bradj.questown.core.Resource;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
@@ -15,13 +14,14 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.*;
+import ca.bradj.questown.jobs.gatherer.ExplorerWork;
+import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.JobApplication;
-import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -120,31 +120,30 @@ public class JobsRegistry {
     }
 
     public record TownData(
-            Function<GathererTools.LootTablePrefix, ImmutableSet<ItemWithCriteria>> allKnownGatherItemsFn
+            Function<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> allKnownGatherItemsFn
     ) {
     }
 
-    public static @Nullable JobApplication canSatisfy(
+    public static boolean canSatisfy(
             TownData town,
             JobID p,
-            WorkRequest requestedResult
+            Ingredient requestedResult
     ) {
         if (WorkSeekerJob.isSeekingWork(p)) {
-            return null;
+            return false;
         }
 
         Work w = works.get(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
-            return null;
+            return false;
         }
-        ImmutableSet<ItemWithCriteria> x = w.results.apply(town);
-        for (ItemWithCriteria r : x) {
-            if (requestedResult.asIngredient().test(r.itemStack())) {
-                return new JobApplication(p, r.tagCriteria());
+        for (MCTownItem r : w.results.apply(town)) {
+            if (requestedResult.test(r.toItemStack())) {
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
     public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
@@ -178,7 +177,7 @@ public class JobsRegistry {
         List<Ingredient> list = works.values().stream()
                 .map(v -> v.results.apply(t))
                 .flatMap(Collection::stream)
-                .map(ItemWithCriteria::itemStack)
+                .map(MCTownItem::toItemStack)
                 .map(Ingredient::of)
                 .map(Ingredients::asWorkRequest)
                 .collect(Collectors.toSet())
@@ -188,7 +187,7 @@ public class JobsRegistry {
         return ImmutableSet.copyOf(list);
     }
 
-    public interface JobFunc extends TriFunction<TownInterface, UUID, NewLeaverWork.TagsCriteria, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
+    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
 
     }
 
@@ -213,7 +212,7 @@ public class JobsRegistry {
             Predicate<Block> isJobBlock,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
-            Function<TownData, ImmutableSet<ItemWithCriteria>> results,
+            Function<TownData, ImmutableSet<MCTownItem>> results,
             ItemStack initialRequest,
             Function<IStatus<?>, Collection<Ingredient>> needs
     ) {
@@ -271,7 +270,7 @@ public class JobsRegistry {
     static {
         ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
         b.put(GathererJob.ID, new Work(
-                (town, uuid, criteria) -> new GathererJob(town, 6, uuid),
+                (town, uuid) -> new GathererJob(town, 6, uuid),
                 GATHERER_SNAPSHOT_FUNC,
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
@@ -282,26 +281,26 @@ public class JobsRegistry {
                 (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
         ));
         b.put(FarmerJob.ID, new Work(
-                (town, uuid, criteria) -> new FarmerJob(uuid, 6),
+                (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 SpecialQuests.FARM,
                 GathererJournal.Status.IDLE,
                 t -> ImmutableSet.of(
-                        ItemWithCriteria.noCriteria(Items.WHEAT.getDefaultInstance()),
-                        ItemWithCriteria.noCriteria(Items.WHEAT_SEEDS.getDefaultInstance())
+                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
+                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
                 ),
                 Items.WHEAT.getDefaultInstance(),
                 // TODO: Review this - probably should be different by status
                 (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
         ));
         b.put(BakerBreadWork.ID, new Work(
-                (town, uuid, criteria) -> new BakerBreadWork(uuid, 6, criteria),
+                (town, uuid) -> new BakerBreadWork(uuid, 6),
                 productionJobSnapshot(BakerBreadWork.ID),
                 (block) -> block instanceof BreadOvenBlock,
                 Questown.ResourceLocation("bakery"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(BakerBreadWork.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),
                 BakerBreadWork.RESULT,
                 (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
         ));
@@ -311,7 +310,7 @@ public class JobsRegistry {
                 (block) -> block instanceof OreProcessingBlock,
                 Questown.ResourceLocation("smeltery"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(DSmelterJob.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
                 DSmelterJob.RESULT,
                 s -> getProductionNeeds(DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
         ));
@@ -322,7 +321,7 @@ public class JobsRegistry {
                 (block) -> block instanceof BlacksmithsTableBlock,
                 Questown.ResourceLocation("smithy"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(BlacksmithWoodenPickaxeJob.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
                 BlacksmithWoodenPickaxeJob.RESULT,
                 s -> getProductionNeeds(
                         BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
@@ -335,7 +334,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(CrafterBowlWork.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
                 CrafterBowlWork.RESULT,
                 s -> getProductionNeeds(
                         CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
@@ -348,7 +347,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(CrafterStickWork.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
                 CrafterStickWork.RESULT,
                 s -> getProductionNeeds(
                         CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
@@ -361,7 +360,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(CrafterPaperWork.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
                 CrafterPaperWork.RESULT,
                 s -> getProductionNeeds(
                         CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
@@ -374,7 +373,7 @@ public class JobsRegistry {
                 (block) -> block instanceof CraftingTableBlock,
                 Questown.ResourceLocation("crafting_room"),
                 ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(ItemWithCriteria.noCriteria(CrafterPlanksWork.RESULT)),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
                 CrafterPlanksWork.RESULT,
                 s -> getProductionNeeds(
                         CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
@@ -426,7 +425,7 @@ public class JobsRegistry {
             @NotNull Snapshot<MCHeldItem> journal,
             UUID ownerUUID
     ) {
-        return getInitializedJob(town, jobName, null, journal, null, ownerUUID);
+        return getInitializedJob(town, jobName, journal, null, ownerUUID);
     }
 
     public static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
@@ -435,24 +434,12 @@ public class JobsRegistry {
             ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        return getInitializedJob(town, jobName, null, null, heldItems, ownerUUID);
-    }
-
-    public static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
-            TownFlagBlockEntity town,
-            JobID p,
-            NewLeaverWork.TagsCriteria criteria,
-            ImmutableList<MCHeldItem> items,
-            UUID visitorUUID
-    ) {
-        return getInitializedJob(town, p, criteria, null, items, visitorUUID);
-
+        return getInitializedJob(town, jobName, null, heldItems, ownerUUID);
     }
 
     private static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
             JobID jobName,
-            @Nullable NewLeaverWork.TagsCriteria criteria,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
@@ -466,7 +453,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
             j = new GathererJob(town, 6, ownerUUID);
         } else {
-            j = fn.jobFunc.apply(town, ownerUUID, criteria);
+            j = fn.jobFunc.apply(town, ownerUUID);
             journal = newJournal(jobName, journal, heldItems, fn);
         }
         if (journal != null) {
