@@ -2,21 +2,18 @@ package ca.bradj.questown.jobs;
 
 import org.jetbrains.annotations.NotNull;
 
-public class WorkSpot<A, P> {
-    public final int score;
-
+public record WorkSpot<A, P>(P position, A action, int score, P interactionSpot) {
     public WorkSpot(
             @NotNull P position,
             @NotNull A action,
-            int score
+            int score,
+            P interactionSpot
     ) {
         this.position = position;
         this.action = action;
         this.score = score;
+        this.interactionSpot = interactionSpot;
     }
-
-    public final P position;
-    public final A action;
 
     @Override
     public String toString() {
@@ -25,9 +22,5 @@ public class WorkSpot<A, P> {
                 ", action=" + action +
                 ", score=" + score +
                 '}';
-    }
-
-    public int getScore() {
-        return score;
     }
 }

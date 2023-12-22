@@ -79,6 +79,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         public State decrWork() {
             return setWorkLeft(Math.max(workLeft - 1, 0));
         }
+
+        public boolean isFresh() {
+            return fresh().equals(this);
+        }
     }
 
     private final HashSet<ROOM> rooms = new HashSet<>();
@@ -107,11 +111,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public void setJobBlockState(
+    public Boolean setJobBlockState(
             POS bp,
             State bs
     ) {
         modifyJobBlockState(bp, (p, s) -> bs);
+        return true;
     }
 
     private void modifyJobBlockState(
@@ -126,7 +131,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public void setJobBlockStateWithTimer(
+    public Boolean setJobBlockStateWithTimer(
             POS bp,
             State bs,
             int ticksToNextState
@@ -139,12 +144,14 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
         QT.BLOCK_LOGGER.debug("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
         this.timeJobStatuses.put(bp, ticksToNextState);
+        return true;
     }
 
     @Override
-    public void clearState(POS bp) {
+    public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
+        return true;
     }
 
     @Override
@@ -226,5 +233,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                 });
             }
         }
+    }
+
+    @Override
+    public ImmutableMap<POS, State> getAll() {
+        return ImmutableMap.copyOf(jobStatuses);
     }
 }

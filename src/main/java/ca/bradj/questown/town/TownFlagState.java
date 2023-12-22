@@ -4,18 +4,16 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererTimeWarper;
-import ca.bradj.questown.jobs.Snapshot;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.jobs.GathererJob;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -31,11 +30,11 @@ import java.util.*;
 // This class is NOT encapsulated from MC
 
 public class TownFlagState {
-    static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
+    static final String NBT_TIME_WARP_REFERENCE_TICK = String.format("%s_last_tick", Questown.MODID);
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
     private boolean initialized = false;
-    private final Stack<Function<TownFlagBlockEntity, TownState<MCContainer, MCTownItem, MCHeldItem>>> townInit = new Stack<>();
+    private final Stack<Function<TownFlagBlockEntity, MCTownState>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
@@ -52,8 +51,8 @@ public class TownFlagState {
                     return null;
                 }
                 Vec3 pos = entity.position();
-                Snapshot snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
-                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<>(
+                ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
+                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
                         pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
                 vB.add(data);
@@ -61,22 +60,26 @@ public class TownFlagState {
         }
 
         long dayTime = parent.getServerLevel().getDayTime();
-        MCTownState ts = new MCTownState(
+        return new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
+                // TODO[ASAP]: Store statuses for all villagers
+                parent.getWorkStatusHandle(null).getAll(),
+                ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
+                ImmutableList.of(), // TODO: Should we pass in current knowledge?
                 dayTime
         );
-        return ts;
     }
 
     static MCTownState advanceTime(
             TownFlagBlockEntity e,
-            ServerLevel sl
-    ) {
+            ServerLevel sl,
+            @Nullable Long optionalWarpDuration
+            ) {
         long dayTime = sl.getDayTime();
-        if (e.advancedTimeOnTick == dayTime) {
-            Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
+        if (e.advancedTimeOnTick == dayTime) { // FIXME: Plus or minus some ticks?
+            QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
             return null;
         }
 
@@ -88,49 +91,81 @@ public class TownFlagState {
                     e.getPersistentData().getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
-            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
+            QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", storedState);
         } else {
-            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
-            QT.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
+            storedState = new MCTownState(
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    ImmutableMap.of(),
+                    ImmutableMap.of(),
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    0
+            );
+            QT.FLAG_LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
+
 
         ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
 
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
-        if (ticksPassed == 0) {
-            Questown.LOGGER.debug("Time warp is not applicable");
+        if (optionalWarpDuration != null) {
+            ticksPassed = optionalWarpDuration;
+        }
+        if (ticksPassed <= 0) {
+            QT.FLAG_LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
-                (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
-        GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
-                storedState, loot, storedState,
-                MCHeldItem::Air, MCHeldItem::fromTown,
-                GathererJob::checkTools,
-                (items) -> GathererJob.computeBiome(items, e)
-        );
+
+        ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
+
+        MCTownState liveState = storedState;
+
+        final List<Map.Entry<Long, Function<MCTownState, MCTownState>>> warpSteps = new ArrayList<>();
 
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            Snapshot<MCHeldItem> unwarped = v.journal;
-            QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
-            Snapshot<MCHeldItem> warped = unwarped;
-            if (unwarped instanceof GathererJournal.Snapshot<?>) {
-                warped = warper.timeWarp(
-                        (GathererJournal.Snapshot<MCHeldItem>) unwarped,
-                        dayTime,
-                        ticksPassed,
-                        v.getCapacity()
-                );
-                Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
-            } else {
-                // TODO: Implement generic snapshot warping
-                Questown.LOGGER.error("Warping not implemented");
-            }
-            villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
+            QT.FLAG_LOGGER.trace(
+                    "[{}] Warping time by {} ticks, starting with journal: {}",
+                    v.uuid,
+                    ticksPassed,
+                    liveState
+            );
+            Warper<ServerLevel, MCTownState> vWarper = JobsRegistry.getWarper(
+                    i, v.journal.jobId()
+            );
+
+            final int ii = i;
+            vWarper.getTicks(dayTime, ticksPassed).forEach(
+                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(tick.tick(), ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)))
+            );
         }
 
-        return new MCTownState(villagers, storedState.containers, storedState.gates, dayTime);
+        warpSteps.sort(Map.Entry.comparingByKey());
+        // TODO: Return a collection of lambdas that process chunks of 500?
+        long before = System.currentTimeMillis();
+
+        for (Map.Entry<Long, Function<MCTownState, MCTownState>> warpStep : warpSteps) {
+            MCTownState affectedState = warpStep.getValue().apply(liveState);
+            if (affectedState != null) {
+                liveState = affectedState;
+            }
+        }
+
+        long after = System.currentTimeMillis();
+
+        QT.FLAG_LOGGER.debug("State after warp of {}: {}", ticksPassed, liveState);
+        QT.FLAG_LOGGER.debug("Warp took {} milliseconds", after - before);
+
+        return new MCTownState(
+                liveState.villagers,
+                liveState.containers,
+                liveState.workStates,
+                liveState.workTimers,
+                liveState.gates,
+                liveState.knowledge(),
+                dayTime
+        );
     }
 
     static void recoverMobs(
@@ -145,11 +180,10 @@ public class TownFlagState {
         }
 
         if (e.getPersistentData().contains(NBT_TOWN_STATE)) {
-            MCTownState storedState = TownStateSerializer.INSTANCE.load(
-                    e.getPersistentData().getCompound(NBT_TOWN_STATE),
-                    sl, bp -> e.getWelcomeMats().contains(bp)
+            @NotNull ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = TownStateSerializer.loadVillagers(
+                    e.getPersistentData().getCompound(NBT_TOWN_STATE)
             );
-            for (TownState.VillagerData<MCHeldItem> v : storedState.villagers) {
+            for (TownState.VillagerData<MCHeldItem> v : villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(
                         e,
@@ -162,7 +196,7 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }
-            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
+            QT.FLAG_LOGGER.trace("Loaded villager state from NBT: {}", villagers);
         }
     }
 
@@ -177,28 +211,21 @@ public class TownFlagState {
 
     // Returns true if changes detected
     public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
+        if (!e.isInitialized()) {
+            return false;
+        }
+
         long start = System.currentTimeMillis();
-        long lastTick = flagTag.getLong(NBT_LAST_TICK);
+        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
-        long timeSinceWake = gt - lastTick;
+        long timeSinceWake = Math.max(0, gt - lastTick); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
-        if (waking && e.isInitialized()) {
-            QT.FLAG_LOGGER.debug(
-                    "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
-                    timeSinceWake, gt, lastTick
-            );
-            MCTownState newState = TownFlagState.advanceTime(parent, level);
-            if (newState != null) {
-                TownFlagState.recoverMobs(parent, level);
-                Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
-                e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
-            }
-            // TODO: Make sure chests get filled/empty
-            flagTag.putLong(NBT_LAST_TICK, gt);
+        if (waking) {
+            warp(e, flagTag, level, timeSinceWake);
         } else {
-            flagTag.putLong(NBT_LAST_TICK, gt);
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
 
         // TODO: Run less often?
@@ -211,6 +238,29 @@ public class TownFlagState {
         profileTick(start);
 
         return changes;
+    }
+
+    void warp(
+            TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level, long timeSinceWake
+    ) {
+        long levelDayTime = level.getDayTime();
+        try {
+            MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            if (newState != null) {
+                QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
+                e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+                TownFlagState.recoverMobs(parent, level);
+                parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
+            }
+        } catch (Exception ex) {
+            if (Config.CRASH_ON_FAILED_WARP.get()) {
+                throw ex;
+            }
+            QT.FLAG_LOGGER.error("Time warp raised exception", ex);
+            QT.FLAG_LOGGER.info("Due to config, continuing as if nothing happened in town while player was away");
+        }
+        // TODO: Make sure chests get filled/empty
+        flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
     }
 
     private void profileTick(long startTime) {
@@ -234,7 +284,10 @@ public class TownFlagState {
     ) {
         boolean containersChanged = false;
 
-        while (matchIter.hasNext()) {
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (!matchIter.hasNext()) {
+                break;
+            }
             ContainerTarget<MCContainer, MCTownItem> v = matchIter.next();
             BlockPos bp = Positions.ToBlock(v.getPosition(), v.getYPosition());
             BlockEntity entity = level.getBlockEntity(bp);
@@ -245,7 +298,7 @@ public class TownFlagState {
                 if (listenedBlocks.containsKey(bp)) {
                     Integer oldValue = listenedBlocks.get(bp);
                     if (!oldValue.equals(newValue)) {
-                        Questown.LOGGER.debug("Chest tags changed");
+                        QT.FLAG_LOGGER.debug("Chest tags changed");
                         containersChanged = true;
                     } else {
                         continue;

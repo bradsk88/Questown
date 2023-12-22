@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.TownQuestsContainer;
@@ -11,6 +12,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -19,6 +21,7 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,17 +35,17 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
@@ -172,12 +175,16 @@ public class Jobs {
             MCHeldItem is,
             boolean nullifyExcess
     ) {
-        while (!is.isEmpty()) {
-            if (takeFn == null || !takeFn.Take(is)) {
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (is.isEmpty()) {
+                break;
+            }
+            MCHeldItem oneOf = is.unit();
+            if (takeFn == null || !takeFn.Take(oneOf)) {
                 if (nullifyExcess) {
                     return;
                 }
-                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), is.toItem().toItemStack()));
+                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), oneOf.toItem().toItemStack()));
             }
             is = is.shrink();
         }
@@ -209,6 +216,9 @@ public class Jobs {
                 .filter(v -> InclusiveSpaces.contains(
                         v.room.getSpaces(),
                         Positions.FromBlockPos(entityBlockPos)
+                ) || (
+                        InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
+                                v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
                 ))
                 .findFirst()
                 .orElse(null);
@@ -239,6 +249,82 @@ public class Jobs {
                     }
                     return false;
                 });
+    }
+
+    public static Collection<Integer> getStatesWithUnfinishedWork(
+            Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
+            Function<BlockPos, AbstractWorkStatusStore.State> ticksSource
+    ) {
+        Collection<? extends Supplier<Collection<BlockPos>>> rooms = town.get();
+        HashSet<Integer> b = new HashSet<>();
+        rooms.forEach(v -> {
+            for (BlockPos e : v.get()) {
+                @Nullable AbstractWorkStatusStore.State apply = ticksSource.apply(e);
+                if (apply != null && apply.workLeft() > 0) {
+                    b.add(apply.processingState());
+                    return;
+                }
+            }
+        });
+        ArrayList<Integer> b2 = new ArrayList<>(b);
+        Collections.sort(b2);
+        return ImmutableList.copyOf(b2);
+    }
+
+    public static ImmutableMap<Integer, Function<MCTownItem, Boolean>> unMC(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
+        );
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
+        );
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unMCHeld2(
+            ImmutableMap<Integer, Ingredient> input
+    ) {
+        return unFn(unMCHeld(input));
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(
+            Map<Integer, Function<MCHeldItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, v::apply));
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCTownItem>> unFn2(
+            Map<Integer, Function<MCTownItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, v::apply));
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unHeld(
+            ImmutableMap<Integer, Function<MCTownItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn3(ImmutableMap<Integer, Function<MCTownItem, Boolean>> input) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
+        return b.build();
     }
 
     public interface StateCheck {

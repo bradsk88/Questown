@@ -3,8 +3,10 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Objects;
 
 public class ProductionStatus implements IProductionStatus<ProductionStatus> {
@@ -13,8 +15,9 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     // Numbers 0-9 are reserved for job-specific statuses.
     // TODO: Should probably build something more flexible
-    private static final int firstNonCustomIndex = 10;
+    public static final int firstNonCustomIndex = 10;
     private static int nextIndex = firstNonCustomIndex;
+    private static final HashSet<ProductionStatus> allStatuses = new HashSet<>();
 
     static {
         for (int i = 0; i < firstNonCustomIndex; i++) {
@@ -22,35 +25,42 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         }
     }
 
-    private static final ProductionStatus DROPPING_LOOT = SessionUniqueOrdinals.register(
+    private static ProductionStatus register(ProductionStatus ps) {
+        allStatuses.add(ps);
+        return SessionUniqueOrdinals.register(ps);
+    }
+
+    public static ImmutableSet<ProductionStatus> allStatuses() {
+        return ImmutableSet.copyOf(allStatuses);
+    }
+
+    public static final ProductionStatus DROPPING_LOOT = register(
             new ProductionStatus("DROPPING_LOOT", nextIndex++)
     );
-    private static final ProductionStatus NO_SPACE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SPACE = register(
             new ProductionStatus("NO_SPACE", nextIndex++)
     );
-
-    private static final ProductionStatus GOING_TO_JOB = SessionUniqueOrdinals.register(
+    public static final ProductionStatus GOING_TO_JOB = register(
             new ProductionStatus("GOING_TO_JOB", nextIndex++)
     );
-    private static final ProductionStatus NO_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SUPPLIES = register(
             new ProductionStatus("NO_SUPPLIES", nextIndex++)
     );
-    private static final ProductionStatus COLLECTING_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus COLLECTING_SUPPLIES = register(
             new ProductionStatus("COLLECTING_SUPPLIES", nextIndex++)
     );
-    private static final ProductionStatus IDLE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus IDLE = register(
             new ProductionStatus("IDLE", nextIndex++)
     );
-    private static final ProductionStatus EXTRACTING_PRODUCT = SessionUniqueOrdinals.register(
+    public static final ProductionStatus EXTRACTING_PRODUCT = register(
             new ProductionStatus("EXTRACTING_PRODUCT", nextIndex++)
     );
-    private static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
+    public static final ProductionStatus RELAXING = register(
             new ProductionStatus("RELAXING", nextIndex++)
     );
-    private static final ProductionStatus WAITING_FOR_TIMED_STATE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus WAITING_FOR_TIMED_STATE = register(
             new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
     );
-
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -149,6 +159,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     @Override
     public String name() {
+        // TODO[ASAP]: For known statuses (e.g. collecting supplies) return a string value
         return Integer.toString(value);
     }
 
@@ -166,12 +177,13 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
                 GOING_TO_JOB,
                 DROPPING_LOOT,
                 COLLECTING_SUPPLIES,
-                EXTRACTING_PRODUCT
+                EXTRACTING_PRODUCT,
+                WAITING_FOR_TIMED_STATE
         ).contains(this);
     }
 
     @Override
-    public boolean canWork() {
+    public boolean isBusy() {
         return !isAllowedToTakeBreaks();
     }
 

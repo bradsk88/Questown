@@ -6,61 +6,70 @@ import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public abstract class AbstractWorldInteraction<
-        EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>
+        EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>,
+        TOWN
 > implements AbstractWorkStatusStore.InsertionRules<HELD_ITEM> {
-    private final AbstractItemWI<POS, EXTRA, HELD_ITEM> itemWI;
-    private final AbstractWorkWI<POS, EXTRA, INNER_ITEM> workWI;
-    private int ticksSinceLastAction;
-    private final int interval;
+    private final AbstractItemWI<POS, EXTRA, HELD_ITEM, TOWN> itemWI;
+    private final AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN> workWI;
+    protected final int villagerIndex;
+    protected int ticksSinceLastAction;
+    public final int interval;
     protected final int maxState;
 
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates;
 
-    private final Supplier<Collection<INNER_ITEM>> journalItems;
 
     public AbstractWorldInteraction(
             JobID jobId,
+            int villagerIndex,
             int interval,
             int maxState,
             ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Supplier<Collection<INNER_ITEM>> journalItems,
-            InventoryHandle<HELD_ITEM> inventory
+            ImmutableMap<Integer, Integer> timeRequiredAtStates
     ) {
         if (toolsRequiredAtStates.isEmpty() && workRequiredAtStates.isEmpty() && ingredientQuantityRequiredAtStates.isEmpty() && timeRequiredAtStates.isEmpty()) {
             QT.JOB_LOGGER.error("{} requires no tools, work, time, or ingredients. This will lead to strange game behaviour.", jobId);
         }
+        this.villagerIndex = villagerIndex;
         this.interval = interval;
         this.maxState = maxState;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
-        this.journalItems = journalItems;
-        AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM> self = this;
+        AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM, TOWN> self = this;
         this.itemWI = new AbstractItemWI<>(
+                villagerIndex,
                 ingredientsRequiredAtStates,
                 ingredientQuantityRequiredAtStates,
                 workRequiredAtStates,
-                timeRequiredAtStates,
-                inventory
+                timeRequiredAtStates
         ) {
             @Override
-            protected WorkStateContainer<POS> getWorkStatuses(EXTRA extra) {
+            protected TOWN setHeldItem(EXTRA uxtra, TOWN tuwn, int villagerIndex, int itemIndex, HELD_ITEM item) {
+                return self.setHeldItem(uxtra, tuwn, villagerIndex, itemIndex, item);
+            }
+
+            @Override
+            protected Collection<HELD_ITEM> getHeldItems(EXTRA extra, int villagerIndex) {
+                return self.getHeldItems(extra, villagerIndex);
+            }
+
+            @Override
+            protected ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra) {
                 return self.getWorkStatuses(extra);
             }
 
@@ -79,22 +88,26 @@ public abstract class AbstractWorldInteraction<
                 toolsRequiredAtStates
         ) {
             @Override
-            protected void degradeTool(
+            protected TOWN degradeTool(
                     EXTRA extra,
+                    @Nullable TOWN tuwn,
                     Function<INNER_ITEM, Boolean> heldItemBooleanFunction
             ) {
-                self.degradeTool(extra, heldItemBooleanFunction); // TODO: Implement generically and test
+                return self.degradeTool(extra, tuwn, heldItemBooleanFunction); // TODO: Implement generically and test
             }
 
             @Override
-            protected WorkStateContainer<POS> getWorkStatuses(EXTRA extra) {
+            protected ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra) {
                 return self.getWorkStatuses(extra);
             }
         };
     }
 
-    protected abstract void degradeTool(
+    protected abstract TOWN setHeldItem(EXTRA uxtra, TOWN tuwn, int villagerIndex, int itemIndex, HELD_ITEM item);
+
+    protected abstract TOWN degradeTool(
             EXTRA extra,
+            @Nullable TOWN tuwn,
             Function<INNER_ITEM, Boolean> heldItemBooleanFunction
     );
 
@@ -104,78 +117,82 @@ public abstract class AbstractWorldInteraction<
             POS bp
     );
 
-    protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);
+    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
 
-    public boolean tryWorking(
+    public TOWN tryWorking(
             EXTRA extra,
             WorkSpot<Integer, POS> workSpot
     ) {
         if (!isReady(extra)) {
-            return false;
+            return null;
         }
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
-            return false;
+            return null;
         }
         ticksSinceLastAction = 0;
 
         if (workSpot == null) {
-            return false;
+            return null;
         }
 
-        if (!isEntityClose(extra, workSpot.position)) {
-            return false;
+        if (!isEntityClose(extra, workSpot.position())) {
+            return null;
         }
 
-        WorkStateContainer<POS> workStatuses = getWorkStatuses(extra);
-        AbstractWorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position);
+        ImmutableWorkStateContainer<POS, TOWN> workStatuses = getWorkStatuses(extra);
+        AbstractWorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position());
 
-        if (workSpot.action == maxState) {
+        if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return tryExtractOre(extra, workSpot.position);
+                return tryExtractOre(extra, workSpot.position());
             }
         }
 
-        Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(workSpot.action);
+        Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(workSpot.action());
         if (tool != null) {
-            Collection<INNER_ITEM> items = journalItems.get();
-            boolean foundTool = items.stream().anyMatch(tool::apply);
+            Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
+            boolean foundTool = items.stream().anyMatch(i -> tool.apply(i.get()));
             if (!foundTool) {
-                return false;
+                return null;
             }
         }
 
-        if (this.ingredientsRequiredAtStates.get(workSpot.action) != null) {
-            if (itemWI.tryInsertIngredients(extra, workSpot)) {
-                return true;
+        if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
+            TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
+            if (o != null) {
+                return o;
             }
         }
 
-        if (this.workRequiredAtStates.containsKey(workSpot.action)) {
-            Integer work = this.workRequiredAtStates.get(workSpot.action);
+        if (this.workRequiredAtStates.containsKey(workSpot.action())) {
+            Integer work = this.workRequiredAtStates.get(workSpot.action());
             if (work != null && work > 0) {
-                if (workSpot.action == 0) {
+                if (workSpot.action() == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = new AbstractWorkStatusStore.State(0, 0, 0);
                     }
                     if (jobBlockState.workLeft() == 0) {
-                        workStatuses.setJobBlockState(workSpot.position, jobBlockState.setWorkLeft(work));
-                        return true;
+                        return workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
                     }
                 }
             }
         }
 
+        // TODO: If workspot is waiting for time, return  null
+
         return workWI.tryWork(extra, workSpot);
     }
+
+    protected abstract Collection<HELD_ITEM> getHeldItems(EXTRA extra, int villagerIndex);
 
     @Override
     public Map<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates() {
         return ingredientsRequiredAtStates;
     }
 
-    protected abstract boolean tryExtractOre(
+    protected abstract TOWN tryExtractOre(
             EXTRA extra,
             POS position
     );

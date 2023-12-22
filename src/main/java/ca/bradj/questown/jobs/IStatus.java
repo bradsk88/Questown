@@ -19,5 +19,5 @@ public interface IStatus<S extends IStatus<S>> {
 
     @Nullable String getCategoryId();
 
-    boolean canWork();
+    boolean isBusy();
 }

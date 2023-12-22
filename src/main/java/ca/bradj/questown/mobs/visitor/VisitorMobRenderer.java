@@ -1,5 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.Questown;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -11,6 +13,11 @@ import net.minecraft.resources.ResourceLocation;
 
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
 
+    ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
+            Questown.ResourceLocation("textures/entity/1.png"),
+            Questown.ResourceLocation("textures/entity/2.png")
+    );
+
     public VisitorMobRenderer(
             EntityRendererProvider.Context ctx
     ) {
@@ -19,7 +26,11 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
 
     @Override
     public ResourceLocation getTextureLocation(VisitorMobEntity entity) {
-        return DefaultPlayerSkin.getDefaultSkin(entity.getUUID());
+        int index = Math.abs(entity.getUUID().hashCode()) % (customSkins.size() + 2);
+        if (index < 2) {
+            return DefaultPlayerSkin.getDefaultSkin(entity.getUUID());
+        }
+        return customSkins.get(index - 2);
     }
 
     @Override

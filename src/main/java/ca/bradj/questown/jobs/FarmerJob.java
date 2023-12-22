@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -315,12 +314,12 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         BlockPos out = switch (getStatus()) {
             case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm);
-            case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position;
-            case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position;
-            case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position;
-            case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position;
-            case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position;
-            case FARMING_WEEDING-> workSpots.get(FarmerAction.WEED).position;
+            case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position();
+            case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position();
+            case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position();
+            case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position();
+            case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position();
+            case FARMING_WEEDING-> workSpots.get(FarmerAction.WEED).position();
             case FARMING_RANDOM_TEND -> getRandomFarmSpot(sl);
             case COLLECTING_SUPPLIES -> supplies;
             case DROPPING_LOOT -> blockPos;
@@ -360,7 +359,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         ContainerTarget<MCContainer, MCTownItem> in = this.suppliesTarget;
 
         List<ImmutableSet<Item>> supplies = workSpot.stream().map(
-                v -> switch (v.action) {
+                v -> switch (v.action()) {
                     case TILL, PLANT, COMPOST -> ImmutableSet.of(Items.WHEAT_SEEDS);
                     case BONE -> ImmutableSet.of(Items.BONE_MEAL);
                     default -> ImmutableSet.<Item>of();
@@ -390,7 +389,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     ) {
         W secondChoice = null;
         for (W spot : spots) {
-            FarmerAction blockAction = spot.action;
+            FarmerAction blockAction = spot.action();
             // TODO: [Optimize] Cache these values
             if (actionsForHeldItems.isEmpty() && itemlessActions.contains(blockAction)) {
                 // TODO: We might want to scan all blocks to find up to one
@@ -405,7 +404,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 }
             }
             if (actionsForHeldItems.contains(blockAction) && blockAction != FarmerAction.UNDEFINED) {
-                if (secondChoice == null || spot.action.isPreferableTo(secondChoice.action)) {
+                if (secondChoice == null || spot.action().isPreferableTo(secondChoice.action())) {
                     secondChoice = spot;
                 }
             }
@@ -436,9 +435,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                             }
                             FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock, blockWithWeeds);
                             int score = score(groundBlock, cropBlock);
-                            return new WorkSpot<>(gp, blockAction, score);
+                            return new WorkSpot<>(gp, blockAction, score, gp.relative(Direction.getRandom(level.random)));
                         }))
-                .sorted(Comparator.comparingInt(WorkSpot::getScore))
+                .sorted(Comparator.comparingInt(WorkSpot::score))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
                     if (!this.reverse) {
                         Collections.reverse(list);
@@ -484,7 +483,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 v -> {
                     WorkSpot<FarmerAction, BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
                     b.put(v, ws != null);
-                    if (ws != null && v.equals(ws.action)) {
+                    if (ws != null && v.equals(ws.action())) {
                         workSpots.put(v, ws);
                     }
                 }

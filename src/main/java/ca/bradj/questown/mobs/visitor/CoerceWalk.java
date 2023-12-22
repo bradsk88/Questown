@@ -26,7 +26,7 @@ public class CoerceWalk extends Behavior<VisitorMobEntity> {
             return false;
         }
         IStatus<?> s = p_22539_.getStatusForServer();
-        return s.isAllowedToTakeBreaks();
+        return s != null && s.isAllowedToTakeBreaks();
     }
 
     @Override

@@ -116,13 +116,13 @@ public class WorldInteraction {
             return tryScavenging(sl, town, entityPos);
         }
 
-        BlockPos groundPos = workSpot.position;
+        BlockPos groundPos = workSpot.position();
         if (!Jobs.isCloseTo(entityPos, groundPos)) {
             return false;
         }
         BlockPos cropBlock = groundPos.above();
 
-        return switch (workSpot.action) {
+        return switch (workSpot.action()) {
             case UNDEFINED -> false;
             case TILL -> tryTilling(sl, groundPos);
             case PLANT -> tryPlanting(sl, groundPos);

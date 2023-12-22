@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.ScheduledBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
@@ -17,11 +16,14 @@ import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
@@ -56,6 +58,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -80,7 +83,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
+import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
@@ -93,6 +96,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = "knowledge";
+    private static boolean stopped;
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
@@ -113,20 +117,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final ArrayList<BlockPos> blocksWithWeeds = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
-    private final MCRoom flagMetaRoom = metaRoomAround(getBlockPos());
 
-    @NotNull
-    private MCRoom metaRoomAround(BlockPos p) {
-        return new MCRoom(
-                Positions.FromBlockPos(p.offset(1, 0, 0)),
-                ImmutableList.of(new InclusiveSpace(
-                        // TODO: Add 2 to config?
-                        Positions.FromBlockPos(p).offset(-2, -2),
-                        Positions.FromBlockPos(p).offset(2, 2)
-                )),
-                p.getY()
-        );
-    }
+    // TODO: Add 2 to config?
+    private final MCRoom flagMetaRoom = Spaces.metaRoomAround(getBlockPos(), 2);
 
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
     private final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
@@ -155,10 +148,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState state,
             TownFlagBlockEntity e
     ) {
-
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+
+        Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), -1, null);
+        if (nearestPlayer == null) {
+            QT.FLAG_LOGGER.error("No players detected in world");
+            return;
+        }
+        double distToPlayer = nearestPlayer.blockPosition().distSqr(e.worldPosition);
+        if (distToPlayer > Config.TOWN_TICK_RADIUS.get()) {
+            if (!stopped) {
+                QT.FLAG_LOGGER.info(
+                        "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
+                        blockPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
+                );
+            }
+            stopped = true;
+            return;
+        }
+
+        stopped = false;
 
         long start = System.currentTimeMillis();
 
@@ -245,7 +256,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         for (LivingEntity e : entities) {
             e.stopSleeping();
         }
-        getPersistentData().putLong(NBT_LAST_TICK, newTime);
+        getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
     private static void profileTick(
@@ -481,7 +492,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     //  being done, and assign the rest to people who are idle or
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
-        JobsRegistry.TownData td = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 getKnownBiomes(),
                 prefix
         ));
@@ -491,7 +502,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .filter(e -> {
                     for (WorkRequest r : workHandle.getRequestedResults()) {
                         if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
-                            if (e.getStatusForServer().canWork()) {
+                            if (e.getStatusForServer().isBusy()) {
                                 return false;
                             }
                         }
@@ -769,11 +780,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         Collection<ResourceLocation> mapBiomes = getKnownBiomes();
-        JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+        WorksBehaviour.TownData data = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 mapBiomes, prefix
         ));
 
-        Collection<JobID> preference = JobsRegistry.getPreferredWorkIds(v.getJobId());
+        List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(v.getJobId()));
+
+        // TODO[ASAP]: Allow work to be "claimed" so that if there are multiple
+        //  requests that can be satisfied by one job, the villagers with that
+        //  job will distribute themselves across those requests.
+
+        // For now, we use randomization to give work requests a fair chance of being selected
+        Collections.shuffle(preference);
+
         for (JobID p : preference) {
             List<Ingredient> i = requestedResults.stream().map(WorkRequest::asIngredient).toList();
             for (Ingredient requestedResult : i) {
@@ -888,6 +907,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
+    public void removeEntity(VisitorMobEntity visitorMobEntity) {
+        entities.remove(visitorMobEntity);
+        setChanged();
+    }
+
+    @Override
     public ImmutableSet<UUID> getVillagersWithQuests() {
         return TownQuests.getVillagers(quests);
     }
@@ -951,7 +976,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         );
         return getWelcomeMats()
                 .stream()
-                .map(this::metaRoomAround)
+                .map(p -> Spaces.metaRoomAround(p, 2)) // TODO: Config
                 .map(v -> new RoomRecipeMatch<>(v, SpecialQuests.TOWN_GATE, fn.apply(v).entrySet()))
                 .toList();
     }
@@ -967,7 +992,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(
+    public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(
             @Nullable UUID ownerIDOrNullForGlobal
     ) {
         if (ownerIDOrNullForGlobal == null) {
@@ -1114,7 +1139,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
-        TownState<MCContainer, MCTownItem, MCHeldItem> state = TownStateSerializer.INSTANCE.load(
+        MCTownState state = TownStateSerializer.INSTANCE.load(
                 getPersistentData().getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats().contains(bp)
         );
@@ -1209,6 +1234,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             b.add(key);
         });
+        b.add(Loots.fallbackBiome);
         return b.build();
+    }
+
+    public void warpTime(int ticks) {
+        state.warp(this, getPersistentData(), getServerLevel(), ticks);
+    }
+
+    public void freezeVillagers(Integer ticks) {
+        entities.stream()
+                .filter(VisitorMobEntity.class::isInstance)
+                .map(VisitorMobEntity.class::cast)
+                .forEach(v -> v.freeze(ticks));
     }
 }

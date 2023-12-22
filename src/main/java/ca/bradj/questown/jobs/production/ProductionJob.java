@@ -2,13 +2,13 @@ package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
@@ -31,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
@@ -39,7 +41,7 @@ public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
+        > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
 
     private final Marker marker;
 
@@ -57,8 +59,10 @@ public abstract class ProductionJob<
 
     protected final UUID ownerUUID;
     private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
-    private final boolean sharedTimers;
+
     public final ImmutableMap<STATUS, String> specialRules;
+    protected final ImmutableList<String> specialGlobalRules;
+    private BlockPos jobSite;
 
     @Override
     public abstract Signals getSignal();
@@ -69,14 +73,14 @@ public abstract class ProductionJob<
 
     public ProductionJob(
             UUID ownerUUID,
-            boolean sharedTimers,
             int inventoryCapacity,
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, String> specialRules
+            ImmutableMap<STATUS, String> specialRules,
+            ImmutableList<String> specialGlobalRules
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -86,7 +90,7 @@ public abstract class ProductionJob<
             }
         };
         this.ownerUUID = ownerUUID;
-        this.sharedTimers = sharedTimers;
+        this.specialGlobalRules = specialGlobalRules;
         this.allowedToPickUp = allowedToPickUp;
         this.marker = logMarker;
         this.recipe = recipe;
@@ -149,6 +153,7 @@ public abstract class ProductionJob<
     public boolean removeItem(MCHeldItem mct) {
         return journal.removeItem(mct);
     }
+
     protected abstract Map<Integer, Boolean> getSupplyItemStatus();
 
     protected void tryDropLoot(
@@ -200,7 +205,15 @@ public abstract class ProductionJob<
 
         STATUS status = journal.getStatus();
         if (status.isGoingToJobsite()) {
-            return findJobSite(town, getWorkStatusHandle(town));
+            if (this.jobSite == null) {
+                this.jobSite = findJobSite(
+                        town.getRoomHandle(),
+                        getWorkStatusHandle(town)::getJobBlockState,
+                        sl::isEmptyBlock,
+                        sl.getRandom()
+                );
+            }
+            return jobSite;
         }
 
         if (status.isWorkingOnProduction()) {
@@ -236,10 +249,16 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findProductionSpot(ServerLevel level);
 
-    protected abstract BlockPos findJobSite(TownInterface town, WorkStateContainer<BlockPos> work);
+    protected abstract BlockPos findJobSite(
+            RoomsHolder town,
+            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Predicate<BlockPos> isEmpty,
+            RandomSource rand
+    );
 
     protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
-            TownInterface town, WorkStateContainer<BlockPos> work
+            TownInterface town,
+            Function<BlockPos, AbstractWorkStatusStore.State> work
     );
 
     @Override
@@ -248,15 +267,17 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(town, getWorkStatusHandle(town));
+        this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(
+                town, getWorkStatusHandle(town)::getJobBlockState
+        );
 
-        WorkStatusHandle<BlockPos, MCCoupledHeldItem> work = getWorkStatusHandle(town);
+        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
 
-    private WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(TownInterface town) {
-        WorkStatusHandle<BlockPos, MCCoupledHeldItem> work;
-        if (this.sharedTimers) {
+    private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
+        WorkStatusHandle<BlockPos, MCHeldItem> work;
+        if (this.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
             work = town.getWorkStatusHandle(null);
         } else {
             work = town.getWorkStatusHandle(ownerUUID);
@@ -266,7 +287,7 @@ public abstract class ProductionJob<
 
     protected abstract void tick(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> workStatus,
+            WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,

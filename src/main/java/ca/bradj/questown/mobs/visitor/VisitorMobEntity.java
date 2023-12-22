@@ -10,11 +10,7 @@ import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
-import ca.bradj.questown.jobs.crafter.CrafterStickWork;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
-import ca.bradj.questown.jobs.smelter.DSmelterJob;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -77,7 +73,6 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FarmBlock;
@@ -119,6 +114,9 @@ public class VisitorMobEntity extends PathfinderMob {
     private static final EntityDataAccessor<String> jobName = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
+    private static final EntityDataAccessor<ItemStack> heldItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
+    );
 
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
@@ -133,11 +131,12 @@ public class VisitorMobEntity extends PathfinderMob {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> job = getInitialJob();
+    Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job = getInitialJob();
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
     private Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
+    private int freezeTicks;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -282,15 +281,15 @@ public class VisitorMobEntity extends PathfinderMob {
 
     // TODO: Make this abstract or injectable
     @NotNull
-    private Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitialJob() {
-        return new GathererJob(town, inventoryCapacity, uuid);
+    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
+        return Works.get(GathererUnmappedNoToolWork.ID).get().jobFunc().apply(town, uuid);
     }
 
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
      */
-    public void setJob(Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> initializedJob) {
+    public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
         entityData.set(jobName, job.getJobName().translationKey());
@@ -306,6 +305,7 @@ public class VisitorMobEntity extends PathfinderMob {
         this.entityData.define(visible, true);
         this.entityData.define(status, GathererJournal.Status.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
+        this.entityData.define(heldItem, ItemStack.EMPTY);
     }
 
     @NotNull
@@ -339,6 +339,11 @@ public class VisitorMobEntity extends PathfinderMob {
         }
 
         if (!town.isInitialized()) {
+            return;
+        }
+
+        if (freezeTicks > 0) {
+            freezeTicks--;
             return;
         }
 
@@ -381,6 +386,7 @@ public class VisitorMobEntity extends PathfinderMob {
             this.entityData.set(visible, vis);
             if (job.isInitialized()) {
                 entityData.set(status, job.getStatusToSyncToClient());
+                entityData.set(heldItem, job.getInventory().getItem(0));
             }
         }
 
@@ -440,6 +446,7 @@ public class VisitorMobEntity extends PathfinderMob {
                         getInventory().getItem(i)
                 ));
             }
+            town.removeEntity(this);
         }
     }
 
@@ -517,6 +524,11 @@ public class VisitorMobEntity extends PathfinderMob {
         this.getBrain().setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
         this.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
         this.getBrain().setMemory(MemoryModuleType.PATH, Optional.empty());
+    }
+
+    @Override
+    public ItemStack getMainHandItem() {
+        return getEntityData().get(heldItem);
     }
 
     @Override
@@ -862,7 +874,7 @@ public class VisitorMobEntity extends PathfinderMob {
         job.addStatusListener(l);
     }
 
-    public Snapshot<MCHeldItem> getJobJournalSnapshot() {
+    public ImmutableSnapshot<MCHeldItem, ?> getJobJournalSnapshot() {
         return job.getJournalSnapshot();
     }
 
@@ -909,7 +921,7 @@ public class VisitorMobEntity extends PathfinderMob {
     }
 
     public boolean canAcceptJob() {
-        return job instanceof GathererJob;
+        return GathererUnmappedNoToolWork.ID.rootId().equals(job.getId().rootId());
     }
 
     public void addChangeListener(ChangeListener cl) {
@@ -970,6 +982,14 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public TownInterface getTown() {
         return town;
+    }
+
+    public void freeze(int ticks) {
+        this.freezeTicks = ticks;
+    }
+
+    public boolean isTickFrozen() {
+        return freezeTicks > 0;
     }
 
     public interface ChangeListener {

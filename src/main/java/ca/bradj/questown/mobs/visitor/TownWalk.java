@@ -36,6 +36,10 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
             ServerLevel level,
             VisitorMobEntity e
     ) {
+        if (e.isTickFrozen()) {
+            return false;
+        }
+
         if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
             return false;
         }
@@ -88,7 +92,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (distToTarget > 500) { // TODO: Use navigation distance to account for complex paths
             speed = speed * 1.5f; // TODO: Define this as a field on the class?
         }
-        e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
+        if (distToTarget > 1) {
+            e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
+        }
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
         QT.VILLAGER_LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
         e.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, lvl.getDayTime());

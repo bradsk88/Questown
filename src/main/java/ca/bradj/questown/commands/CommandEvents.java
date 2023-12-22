@@ -12,6 +12,8 @@ public class CommandEvents {
     @SubscribeEvent
     public static void on(RegisterCommandsEvent event) {
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());
+        TimeWarpCommand.register(event.getDispatcher());
+        FreezeCommand.register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
     }
 }

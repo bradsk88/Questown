@@ -1,17 +1,14 @@
 package ca.bradj.questown.jobs.gatherer;
 
-import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.Journal;
 import ca.bradj.questown.jobs.SpecialRules;
+import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -19,10 +16,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.UUID;
-
-import static ca.bradj.questown.jobs.JobsRegistry.getProductionNeeds;
-import static ca.bradj.questown.jobs.JobsRegistry.productionJobSnapshot;
+import java.util.Collection;
 
 public class GathererMappedAxeWork extends NewLeaverWork {
 
@@ -58,28 +52,22 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
     );
-    private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
             ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-
-    public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
-
     public GathererMappedAxeWork(
-            UUID ownerUUID,
-            int inventoryCapacity
     ) {
-        super(
-                ownerUUID,
-                PARAMS,
-                inventoryCapacity,
+        super(PARAMS);
+    }
+
+    public static Work asWork() {
+        return NewLeaverWork.asWork(
                 ID,
-                JOB_SITE,
+                GathererTools.AXE_LOOT_TABLE_PREFIX,
+                Items.OAK_WOOD.getDefaultInstance(),
                 MAX_STATE,
-                true,
-                0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
@@ -87,7 +75,6 @@ public class GathererMappedAxeWork extends NewLeaverWork {
                 ImmutableMap.of(
                         BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
                 ),
-                TIMER_SHARING,
                 SPECIAL_RULES,
                 GathererMappedAxeWork::getFromLootTables
         );
@@ -99,29 +86,16 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     // - Default "jobs/axe/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal
+            Collection<MCHeldItem> items
     ) {
-        @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
+        @Nullable ResourceLocation biome = GathererMap.computeBiome(items);
         if (biome == null) {
-            return Loots.getFromLootTables(level, journal, new GathererTools.LootTableParameters(
+            return Loots.getFromLootTables(level, items, new GathererTools.LootTableParameters(
                     GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
             ));
         }
-        return Loots.getFromLootTables(level, journal, new GathererTools.LootTableParameters(
+        return Loots.getFromLootTables(level, items.size(), new GathererTools.LootTableParameters(
                 GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
         ), biome);
-    }
-
-    public static JobsRegistry.Work asWork() {
-        return new JobsRegistry.Work(
-                (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
-                productionJobSnapshot(ID),
-                block -> block instanceof WelcomeMatBlock,
-                JOB_SITE,
-                ProductionStatus.FACTORY.idle(),
-                t -> t.allKnownGatherItemsFn().apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
-                Items.OAK_WOOD.getDefaultInstance(),
-                s -> getProductionNeeds(INGREDIENTS_REQUIRED_AT_STATES, TOOLS_REQUIRED_AT_STATES)
-        );
     }
 }

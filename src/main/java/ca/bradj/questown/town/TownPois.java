@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.core.Room;
@@ -40,7 +41,10 @@ public class TownPois {
         }
         BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
         // TODO: No while loops. Do this logic in the tick
-        while (!level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
+                break;
+            }
             vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
         }
         return new Vec3(vs.getX(), vs.getY(), vs.getZ());
@@ -79,7 +83,10 @@ public class TownPois {
     }
 
     public @Nullable BlockPos getWelcomeMatPos(@NotNull ServerLevel level) {
-        while (welcomeMats.size() > 0) {
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (welcomeMats.isEmpty()) {
+                break;
+            }
             ImmutableList<BlockPos> copy = ImmutableList.copyOf(welcomeMats);
             int index = level.random.nextInt(copy.size());
             BlockPos mat = copy.get(index);

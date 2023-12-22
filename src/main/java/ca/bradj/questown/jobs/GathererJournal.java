@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -262,7 +263,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
     // TODO: Create read-only class
     public Snapshot<H> getSnapshot(EmptyFactory<H> ef) {
-        return new Snapshot<>(GathererJob.ID, status, ImmutableList.copyOf(inventory));
+        return new Snapshot<>(GathererUnmappedNoToolWork.ID, status, ImmutableList.copyOf(inventory));
     }
 
     public void initialize(Snapshot<H> journal) {
@@ -473,7 +474,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         }
 
         @Override
-        public boolean canWork() {
+        public boolean isBusy() {
             return !isAllowedToTakeBreaks();
         }
     }
@@ -504,7 +505,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             JobID jobId,
             Status status,
             ImmutableList<H> items
-    ) implements ca.bradj.questown.jobs.Snapshot<H> {
+    ) implements ImmutableSnapshot<H, Snapshot<H>> {
 
         public static final String NAME = "gatherer";
 
@@ -512,7 +513,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
                 Status newStatus,
                 ImmutableList<H> outImItems
         ) {
-            this(GathererJob.ID, newStatus, outImItems);
+            this(GathererUnmappedNoToolWork.ID, newStatus, outImItems);
         }
 
         public Snapshot<H> eatFoodFromInventory(
@@ -569,6 +570,22 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         @Override
         public JobID jobId() {
             return jobId;
+        }
+
+        @Override
+        public Snapshot<H> withSetItem(int itemIndex, H item) {
+            ArrayList<H> a = new ArrayList<>(items);
+            a.set(itemIndex, item);
+            return new Snapshot<>(
+                    status, ImmutableList.copyOf(a)
+            );
+        }
+
+        @Override
+        public Snapshot<H> withItems(ImmutableList<H> items) {
+            return new Snapshot<>(
+                    status, ImmutableList.copyOf(items)
+            );
         }
 
         @Override

@@ -17,7 +17,7 @@ public class CommandsInit {
             Questown.MODID
     );
 
-    public static final RegistryObject<ArgumentTypeInfo<JobArgument, ?>> SETJOB = COMMAND_TYPES.register(
+    public static final RegistryObject<ArgumentTypeInfo<JobArgument, ?>> SET_JOB = COMMAND_TYPES.register(
             "setjob",
             () -> ArgumentTypeInfos.registerByClass(JobArgument.class, SingletonArgumentInfo.contextAware(JobArgument::new))
     );

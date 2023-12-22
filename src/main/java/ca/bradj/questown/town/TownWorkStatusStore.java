@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.blocks.StatefulJobBlock;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -11,7 +11,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCCoupledHeldItem, MCRoom, ServerLevel> {
+public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> {
     public TownWorkStatusStore() {
         super(
                 (room, pos) -> ImmutableList.of(
@@ -36,7 +36,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCCou
                     }
                     return null;
                 },
-                MCCoupledHeldItem::shrink
+                MCHeldItem::shrink
         );
     }
 }

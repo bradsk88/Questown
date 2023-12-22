@@ -6,15 +6,16 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.SpecialRules;
+import ca.bradj.questown.jobs.Work;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -22,12 +23,10 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
-import static ca.bradj.questown.jobs.JobsRegistry.getProductionNeeds;
-
-public class ExplorerWork extends DeclarativeJob {
+public class ExplorerWork {
     public static final JobID ID = new JobID("gatherer", "explore");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
@@ -61,39 +60,13 @@ public class ExplorerWork extends DeclarativeJob {
 
     public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
 
-    public ExplorerWork(
-            UUID ownerUUID,
-            int inventoryCapacity
-    ) {
-        super(
-                ownerUUID,
-                inventoryCapacity,
-                ID,
-                JOB_SITE,
-                MAX_STATE,
-                true,
-                0,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
-                ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
-                ),
-                TIMER_SHARING,
-                SPECIAL_RULES,
-                ExplorerWork::getFromLootTables,
-                false
-        );
-    }
-
     // Note: this is still declarative. In a file, we would just specify something like:
     // - Strategy: "loot_tables"
     // - Prefix: "jobs/axe"
     // - Default "jobs/axe/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal
+            Collection<MCHeldItem> items
     ) {
         ItemStack map = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
 
@@ -141,19 +114,25 @@ public class ExplorerWork extends DeclarativeJob {
         return list.build();
     }
 
-    public static JobsRegistry.Work asWork() {
-        return new JobsRegistry.Work(
-                (town, uuid) -> new ExplorerWork(uuid, 6),
-                JobsRegistry.productionJobSnapshot(ID),
-                (block) -> block instanceof WelcomeMatBlock,
+    public static Work asWork() {
+        return WorksBehaviour.productionWork(
+                ID,
+                block -> block instanceof WelcomeMatBlock,
                 JOB_SITE,
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                WorksBehaviour.standardProductionResult(RESULT::copy),
                 RESULT,
-                s -> getProductionNeeds(
-                        ExplorerWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        ExplorerWork.TOOLS_REQUIRED_AT_STATES
-                )
+                MAX_STATE,
+                INGREDIENTS_REQUIRED_AT_STATES,
+                INGREDIENT_QTY_REQUIRED_AT_STATES,
+                TOOLS_REQUIRED_AT_STATES,
+                WORK_REQUIRED_AT_STATES,
+                ImmutableMap.of(
+                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                ),
+                0,
+                SPECIAL_RULES,
+                NewLeaverWork.standardRules(),
+                ExplorerWork::getFromLootTables
         );
     }
 }

@@ -1,13 +1,18 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.*;
 
 public class JobsClean {
 
@@ -20,6 +25,77 @@ public class JobsClean {
             return status;
         }
         return goStatus;
+    }
+
+    public static <HELD extends HeldItem<HELD, TOWN_ITEM>, TOWN_ITEM extends Item<TOWN_ITEM>> boolean hasNonSupplyItems(
+            ItemsHolder<HELD> journal,
+            ImmutableList<TestFn<TOWN_ITEM>> recipe
+    ) {
+        return journal.getItems().stream()
+                .filter(Predicates.not(Item::isEmpty))
+                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+    }
+
+    @NotNull
+    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+            Supplier<Collection<I>> journal,
+            ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+    ) {
+        HashMap<Integer, Boolean> b = new HashMap<>();
+        BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
+            if (ingr == null) {
+                if (!b.containsKey(state)) {
+                    b.put(state, false);
+                }
+                return;
+            }
+
+            // The check passes if the worker has ALL the ingredients needed for the state
+            boolean has = journal.get().stream().anyMatch(ingr);
+            if (!b.getOrDefault(state, false)) {
+                b.put(state, has);
+            }
+        };
+        ingredientsRequiredAtStates.forEach(fn);
+        toolsRequiredAtStates.forEach(fn);
+        return ImmutableMap.copyOf(b);
+    }
+
+    public static <I extends Item<I>> boolean hasNonSupplyItems(
+            Collection<I> items,
+            int state,
+            ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+    ) {
+        if (items.isEmpty() || items.stream().allMatch(Item::isEmpty)) {
+            return false;
+        }
+
+        items = items.stream().filter(v -> !v.isEmpty()).toList();
+
+        Predicate<I> ings = ingredientsRequiredAtStates.get(state);
+        if (ings == null) {
+            return items.stream().anyMatch(
+                    i -> isNotToolFromAnyStage(i, toolsRequiredAtStates)
+            );
+        }
+        return items.stream().anyMatch(v -> !ings.test(v));
+    }
+
+
+    @NotNull
+    private static <I> boolean isNotToolFromAnyStage(
+            I i,
+            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+    ) {
+        for (Predicate<I> e : toolsRequiredAtStates.values()) {
+            if (e.test(i)) {
+                return false;
+            }
+        }
+        // Item is not a tool
+        return true;
     }
 
     public interface TestFn<I extends Item<I>> {
@@ -79,7 +155,7 @@ public class JobsClean {
         void removeItem(int i, int quantity);
     }
 
-    public static <POS, TOWN_ITEM> void tryTakeContainerItems(
+    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<TOWN_ITEM, Boolean> isRemovalCandidate
@@ -92,8 +168,9 @@ public class JobsClean {
         for (int i = 0; i < items.size(); i++) {
             TOWN_ITEM mcTownItem = items.get(i);
             if (isRemovalCandidate.apply(mcTownItem)) {
-                QT.JOB_LOGGER.debug("Villager is taking {} from {}", mcTownItem, start);
-                villager.accept(mcTownItem);
+                TOWN_ITEM unit = mcTownItem.unit();
+                QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit, start);
+                villager.accept(unit);
                 suppliesTarget.removeItem(i, 1);
                 break;
             }

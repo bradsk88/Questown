@@ -4,54 +4,24 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Function;
+
 public class JobBlock {
 
     public static @Nullable Integer getState(
-            WorkStateContainer<BlockPos> sl,
+            Function<BlockPos, AbstractWorkStatusStore.State> sl,
             BlockPos bp
     ) {
-        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        AbstractWorkStatusStore.State oldState = sl.apply(bp);
         if (oldState == null) {
             return null;
         }
         return oldState.processingState();
-    }
-
-    public static AbstractWorkStatusStore.State applyWork(
-            WorkStateContainer<BlockPos> sl,
-            BlockPos bp,
-            int nextWork,
-            int nextTicks
-    ) {
-        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
-        int workLeft = oldState.workLeft();
-        AbstractWorkStatusStore.State bs;
-        if (workLeft <= 0) {
-            Integer state = getState(sl, bp);
-            if (state == null) {
-                state = 0;
-            }
-            bs = setProcessingState(oldState, state + 1);
-        } else {
-            bs = reduceWorkLeft(oldState);
-        }
-        if (oldState.equals(bs)) {
-            return null;
-        }
-        if (bs.workLeft() == 0) {
-            bs = bs.setProcessing(bs.processingState() + 1).setWorkLeft(nextWork).setCount(0);
-        }
-        if (nextTicks <= 0) {
-            sl.setJobBlockState(bp, bs);
-        } else {
-            sl.setJobBlockStateWithTimer(bp, bs, nextTicks);
-        }
-        return bs;
     }
 
     private static AbstractWorkStatusStore.State reduceWorkLeft(AbstractWorkStatusStore.State oldState) {
@@ -72,7 +42,7 @@ public class JobBlock {
 
     public static @Nullable AbstractWorkStatusStore.State extractRawProduct(
             ServerLevel sl,
-            WorkStateContainer<BlockPos> jh,
+            ImmutableWorkStateContainer<BlockPos, ?> jh,
             BlockPos block,
             Iterable<MCHeldItem> is,
             @Nullable TakeFn takeFn,
@@ -92,7 +62,7 @@ public class JobBlock {
 
     private static void releaseOreFromBlock(
             ServerLevel sl,
-            WorkStateContainer<BlockPos> level,
+            ImmutableWorkStateContainer<BlockPos, ?> level,
             BlockPos b,
             AbstractWorkStatusStore.State currentState,
             MCHeldItem is,
