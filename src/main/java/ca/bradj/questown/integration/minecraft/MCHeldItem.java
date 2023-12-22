@@ -55,7 +55,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem fromTown(MCTownItem mcTownItem) {
-        return new MCHeldItem(mcTownItem, false, null, null);
+        return fromMCItemStack(mcTownItem.toItemStack());
     }
 
     public static MCHeldItem fromTown(ItemStack itemstack) {
@@ -80,6 +80,11 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     @Override
     public MCHeldItem shrink() {
         return new MCHeldItem(delegate.shrink(), locked, prefix, biome);
+    }
+
+    @Override
+    public MCHeldItem unit() {
+        return new MCHeldItem(delegate.unit(), locked, prefix, biome);
     }
 
     @Override

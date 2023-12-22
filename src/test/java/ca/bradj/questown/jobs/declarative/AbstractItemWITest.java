@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,10 +24,22 @@ class AbstractItemWITest {
     ) {
     }
 
-    private static class TestItemWI extends AbstractItemWI<Position, Void, GathererJournalTest.TestItem> {
+    private record TestTownState(boolean updatedHeldItems, boolean updatedJobState) {
+        public static TestTownState updateJobState() {
+            return new TestTownState(false, true);
+        }
+
+        public static TestTownState updateVillagerItems() {
+            return new TestTownState(true, false);
+        }
+    }
+
+    ;
+
+    private static class TestItemWI extends AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
         private final Map<Position, StateWithTimer> map = new HashMap<>();
 
-        private final WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+        private final ImmutableWorkStateContainer<Position, TestTownState> statuses = new ImmutableWorkStateContainer<Position, TestTownState>() {
             @Override
             public AbstractWorkStatusStore.@Nullable State getJobBlockState(Position bp) {
                 StateWithTimer stateWithTimer = map.get(bp);
@@ -35,27 +47,38 @@ class AbstractItemWITest {
             }
 
             @Override
-            public void setJobBlockState(
+            public ImmutableMap<Position, AbstractWorkStatusStore.State> getAll() {
+                ImmutableMap.Builder<Position, AbstractWorkStatusStore.State> b = ImmutableMap.builder();
+                map.forEach((k, v) -> b.put(k, v.state));
+                return b.build();
+            }
+
+            @Override
+            public TestTownState setJobBlockState(
                     Position bp,
                     AbstractWorkStatusStore.State bs
             ) {
                 map.put(bp, new StateWithTimer(bs, 0));
+                return null;
             }
 
             @Override
-            public void setJobBlockStateWithTimer(
+            public TestTownState setJobBlockStateWithTimer(
                     Position bp,
                     AbstractWorkStatusStore.State bs,
                     int ticksToNextState
             ) {
                 map.put(bp, new StateWithTimer(bs, ticksToNextState));
+                return TestTownState.updateJobState();
             }
 
             @Override
-            public void clearState(Position bp) {
+            public TestTownState clearState(Position bp) {
                 map.remove(bp);
+                return null;
             }
         };
+        private final InventoryHandle<GathererJournalTest.TestItem> inventory;
 
         public TestItemWI(
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
@@ -65,16 +88,28 @@ class AbstractItemWITest {
                 InventoryHandle<GathererJournalTest.TestItem> inventory
         ) {
             super(
+                    -1,
                     ingredientsRequiredAtStates,
                     ingredientQtyRequiredAtStates,
                     workRequiredAtStates,
-                    timeRequiredAtStates,
-                    inventory
+                    timeRequiredAtStates
             );
+            this.inventory = inventory;
         }
 
         @Override
-        protected WorkStateContainer<Position> getWorkStatuses(Void unused) {
+        protected TestTownState setHeldItem(Void uxtra, TestTownState tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+            inventory.set(itemIndex, item);
+            return TestTownState.updateVillagerItems();
+        }
+
+        @Override
+        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
+            return inventory.getItems();
+        }
+
+        @Override
+        protected ImmutableWorkStateContainer<Position, TestTownState> getWorkStatuses(Void unused) {
             return statuses;
         }
 
@@ -117,7 +152,7 @@ class AbstractItemWITest {
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfInventoryEmpty() {
+    void tryInsertIngredients_shouldReturnNoStateUpdates_IfInventoryEmpty() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>() // Empty inventory
         );
@@ -136,14 +171,14 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(update);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfItemRequirementsAreEmpty() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfItemRequirementsAreEmpty() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(
                         new GathererJournalTest.TestItem("gold")
@@ -162,14 +197,14 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfItemQuantityRequirementsAreEmpty() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfItemQuantityRequirementsAreEmpty() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(
                         new GathererJournalTest.TestItem("gold")
@@ -186,14 +221,14 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfWorkRequirementsAreEmpty() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfWorkRequirementsAreEmpty() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(
                         new GathererJournalTest.TestItem("gold")
@@ -208,14 +243,14 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfAllRequirementsAreEmpty() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfAllRequirementsAreEmpty() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(
                         new GathererJournalTest.TestItem("gold")
@@ -228,14 +263,14 @@ class AbstractItemWITest {
                 ImmutableMap.of(),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfInventoryFullOfAir() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfInventoryFullOfAir() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(new GathererJournalTest.TestItem(""))) // Full of air
         );
@@ -254,14 +289,14 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
-    void tryInsertIngredients_shouldReturnFalse_IfInventoryHasItems_ButTheyAreNotWanted() {
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfInventoryHasItems_ButTheyAreNotWanted() {
         TestInvHandle inventory = new TestInvHandle(
                 new ArrayList<>(ImmutableList.of(
                         new GathererJournalTest.TestItem("dirt")
@@ -282,10 +317,10 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertFalse(res);
+        Assertions.assertNull(res);
     }
 
     @Test
@@ -338,8 +373,9 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        boolean res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
-        Assertions.assertTrue(res);
+        TestTownState res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0));
+        Assertions.assertNotNull(res);
+        Assertions.assertTrue(res.updatedHeldItems);
     }
 
     @Test

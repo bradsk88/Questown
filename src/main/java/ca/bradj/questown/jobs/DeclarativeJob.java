@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
@@ -13,19 +13,21 @@ import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.rooms.XWall;
+import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,12 +42,13 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.print.attribute.standard.JobName;
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-// TODO[ASAP]: Break ties to MC and unit test
+// TODO[ASAP]: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
@@ -102,6 +105,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
+    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
 
     private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
             MCTownItem.fromMCItemStack(Items.COAL.getDefaultInstance()),
@@ -116,10 +120,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final JobID jobId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
-    private final boolean prioritizeExtraction;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
+    private int noSuppliesTicks;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -127,20 +131,18 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull JobID jobId,
             ResourceLocation workRoomId,
             int maxState,
-            boolean prioritizeExtraction,
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            boolean sharedTimers,
-            ImmutableMap<ProductionStatus, String> specialRules,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct
+            ImmutableMap<ProductionStatus, String> specialStatusRules,
+            ImmutableList<String> specialGlobalRules,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         super(
-                ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
+                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
@@ -151,10 +153,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                         STATUS_FACTORY
                 ),
                 STATUS_FACTORY,
-                specialRules
+                specialStatusRules, specialGlobalRules
         );
         this.jobId = jobId;
-        this.prioritizeExtraction = prioritizeExtraction;
         this.world = initWorldInteraction(
                 maxState,
                 ingredientsRequiredAtStates,
@@ -162,8 +163,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 toolsRequiredAtStates,
                 workRequiredAtStates,
                 timeRequiredAtStates,
-                workResult,
-                nullifyExcessProduct,
+                resultGenerator,
+                specialGlobalRules,
                 workInterval
         );
         this.maxState = maxState;
@@ -171,6 +172,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
+        this.workRequiredAtStates = workRequiredAtStates;
     }
 
     @Override
@@ -186,12 +188,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            ImmutableList<String> specialRules,
             int interval
     ) {
         return new WorldInteraction(
-                inventory,
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,
@@ -199,8 +200,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
-                workResult,
-                nullifyExcessProduct,
+                resultGenerator,
+                specialRules,
                 interval
         );
     }
@@ -233,7 +234,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected void tick(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
@@ -241,9 +242,14 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     ) {
         this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
+            private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
+
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(town, workRoomId, (sl, bp) -> maxState.equals(JobBlock.getState(work, bp)))
+                return Jobs.roomsWithState(
+                                town, workRoomId,
+                                (sl, bp) -> maxState.equals(JobBlock.getState(getJobBlockState, bp))
+                        )
                         .stream()
                         .map(v -> v.room)
                         .toList();
@@ -263,6 +269,27 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
 
             @Override
+            public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
+                Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
+                        () -> town.getRoomHandle()
+                                .getRoomsMatching(workRoomId)
+                                .stream()
+                                .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet())
+                                .toList(),
+                        getJobBlockState
+                );
+                ImmutableList.Builder<Integer> b = ImmutableList.builder();
+                statesWithUnfinishedWork.forEach(s -> {
+                    Ingredient toolsReq = toolsRequiredAtStates.get(s);
+                    if (toolsReq != null && !toolsReq.isEmpty()) {
+                        return;
+                    }
+                    b.add(s);
+                });
+                return b.build();
+            }
+
+            @Override
             public boolean hasSupplies() {
                 Map<Integer, ? extends Collection<MCRoom>> needs = roomsNeedingIngredientsByState();
                 return Jobs.townHasSupplies(town, journal, convertToCleanFns(needs));
@@ -277,15 +304,30 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
-            public @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite() {
-
-                return entityCurrentJobSite;
+            public @Nullable MCRoom getEntityCurrentJobSite() {
+                if (entityCurrentJobSite == null) {
+                    return null;
+                }
+                return entityCurrentJobSite.room;
             }
         };
-        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
+        boolean prioritizeExtraction = this.specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION);
+        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, prioritizeExtraction);
+
+        if (ProductionStatus.NO_SUPPLIES.equals(this.journal.getStatus())) {
+            noSuppliesTicks++;
+        } else {
+            noSuppliesTicks = 0;
+        }
+
+        if (noSuppliesTicks > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            return;
+        }
 
         if (wrappingUp && !hasAnyLootToDrop()) {
             town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            return;
         }
 
         if (entityCurrentJobSite != null) {
@@ -321,7 +363,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
 
             @Override
-            public void removeItem(int i, int quantity) {
+            public void removeItem(
+                    int i,
+                    int quantity
+            ) {
                 suppliesTarget.getContainer().removeItem(i, quantity);
             }
         };
@@ -335,12 +380,15 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private void tryWorking(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
+        ServerLevel sl = town.getServerLevel();
         Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
-                work, entityCurrentJobSite.room
+                work::getJobBlockState, entityCurrentJobSite.room,
+                sl::isEmptyBlock,
+                () -> Direction.getRandom(sl.random)
         );
 
         ProductionStatus status = getStatus();
@@ -357,31 +405,38 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         if (workSpot == null) {
             WorkSpot<Integer, BlockPos> workSpot1 = workSpots.get(status.getProductionState());
             if (workSpot1 == null) {
-                QT.JOB_LOGGER.error("Worker somehow has different status than all existing work spots. This is probably a bug.");
+                QT.JOB_LOGGER.error(
+                        "Worker somehow has different status than all existing work spots. This is probably a bug.");
                 return;
             }
             this.workSpot = workSpot1;
         }
 
-        boolean worked = this.world.tryWorking(town, work, entity, workSpot);
-        boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-        boolean finishedWork = workSpot.action.equals(maxState); // TODO: Check all workspots before seeking work
-        if (hasWork && worked && finishedWork) {
-            if (!wrappingUp) {
-                town.getKnowledgeHandle()
-                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+        Boolean worked = this.world.tryWorking(town, work, entity, workSpot);
+        if (worked != null && worked) {
+            boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
+            boolean finishedWork = workSpot.action().equals(maxState); // TODO: Check all workspots before seeking work
+            if (hasWork && finishedWork) {
+                if (!wrappingUp) {
+                    town.getKnowledgeHandle()
+                            .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+                }
+                wrappingUp = true;
             }
-            wrappingUp = true;
         }
     }
 
     Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
-            WorkStateContainer<BlockPos> town,
-            @Nullable MCRoom jobSite
+            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            @Nullable MCRoom jobSite,
+            Predicate<BlockPos> isEmpty,
+            Supplier<Direction> randomDirection
     ) {
         if (jobSite == null) {
             return ImmutableMap.of();
         }
+
+        Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
 
         Map<Integer, WorkSpot<Integer, BlockPos>> b = new HashMap<>();
         jobSite.getSpaces().stream()
@@ -390,7 +445,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                     BlockPos bp = Positions.ToBlock(v, jobSite.yCoord);
                     @Nullable Integer blockAction = JobBlock.getState(town, bp);
                     if (blockAction != null && !b.containsKey(blockAction)) {
-                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
+                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
                     }
                     // TODO: Depend on job and/or villager?
                     //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
@@ -398,10 +453,47 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                     bp = Positions.ToBlock(v, jobSite.yCoord + 1);
                     blockAction = JobBlock.getState(town, bp);
                     if (blockAction != null && !b.containsKey(blockAction)) {
-                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0));
+                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
                     }
                 });
         return ImmutableMap.copyOf(b);
+    }
+
+    private BlockPos findInteractionSpot(BlockPos bp, Room jobSite, Predicate<BlockPos> isEmpty, Supplier<Direction> random) {
+        Direction d = getDoorDirectionFromCenter(jobSite);
+        if (isEmpty.test(bp.relative(d))) {
+            return bp.relative(d);
+        }
+        for (Direction dd : Direction.Plane.HORIZONTAL) {
+            if (isEmpty.test(bp.relative(dd))) {
+                return bp.relative(dd);
+            }
+        }
+        if (InclusiveSpaces.calculateArea(jobSite.getSpaces()) == 9) {
+            // 1x1 room (plus walls)
+            return Positions.ToBlock(jobSite.getDoorPos(), bp.getY());
+        }
+        return bp.relative(random.get());
+    }
+
+    private Direction getDoorDirectionFromCenter(Room jobSite) {
+        Optional<XWall> backXWall = jobSite.getBackXWall();
+        if (backXWall.isPresent() && backXWall.get().getZ() > jobSite.doorPos.z) {
+            return Direction.NORTH;
+        }
+        if (backXWall.isPresent()) {
+            return Direction.SOUTH;
+        }
+
+
+        Optional<ZWall> backZWall = jobSite.getBackZWall();
+        if (backZWall.isPresent() && backZWall.get().getX() > jobSite.doorPos.x) {
+            return Direction.WEST;
+        }
+        if (backZWall.isPresent()) {
+            return Direction.EAST;
+        }
+        return Direction.NORTH;
     }
 
     @Override
@@ -431,49 +523,39 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
-        HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, Ingredient> fn = (state, ingr) -> {
-            if (ingr == null) {
-                if (!b.containsKey(state)) {
-                    b.put(state, false);
-                }
-                return;
-            }
-
-            // The check passes if the worker has ALL the ingredients needed for the state
-            boolean has = journal.getItems().stream().anyMatch(z -> ingr.test(z.get().toItemStack()));
-            if (!b.getOrDefault(state, false)) {
-                b.put(state, has);
-            }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
-        return ImmutableMap.copyOf(b);
+        return JobsClean.getSupplyItemStatuses(
+                journal::getItems,
+                Jobs.unMCHeld2(ingredientsRequiredAtStates),
+                Jobs.unMCHeld2(toolsRequiredAtStates)
+        );
     }
 
     @Override
     protected BlockPos findProductionSpot(ServerLevel sl) {
         if (workSpot != null) {
-            // TODO: Choose a location based on its horizontal orientation
-            return workSpot.position.relative(Direction.getRandom(sl.getRandom()));
+            return workSpot.interactionSpot();
         }
         return null;
     }
 
     @Override
-    protected BlockPos findJobSite(TownInterface town, WorkStateContainer<BlockPos> work) {
-        @Nullable ServerLevel sl = town.getServerLevel();
-        if (sl == null) {
-            return null;
-        }
-
+    protected BlockPos findJobSite(
+            RoomsHolder town,
+            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Predicate<BlockPos> isEmpty,
+            Random rand
+    ) {
         // TODO: Use tags to support more tiers of work rooms
-        Collection<RoomRecipeMatch<MCRoom>> bakeries = town.getRoomsMatching(workRoomId);
+        List<RoomRecipeMatch<MCRoom>> rooms = new ArrayList<>(town.getRoomsMatching(workRoomId));
 
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
 
-        // TODO: Sort by distance and choose the closest
-        for (RoomRecipeMatch<MCRoom> match : bakeries) {
+        // TODO: Sort by distance and choose the closest (maybe also coordinate
+        //  with other workers who need the same type of job site)
+        // For now, we use randomization
+        Collections.shuffle(rooms);
+
+        for (RoomRecipeMatch<MCRoom> match : rooms) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
                 @Nullable Integer blockState = JobBlock.getState(work, blocks.getKey());
                 if (blockState == null) {
@@ -484,7 +566,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
-                    return blocks.getKey();
+                    return findInteractionSpot(
+                            blocks.getKey(), match.room, isEmpty,
+                            () -> Direction.getRandom(rand)
+                    );
                 }
             }
         }
@@ -494,8 +579,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
-            TownInterface town, WorkStateContainer<BlockPos> th
+            TownInterface town,
+            Function<BlockPos, AbstractWorkStatusStore.State> work
     ) {
+        // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {
@@ -503,11 +590,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return;
             }
             Collection<RoomRecipeMatch<MCRoom>> matches = Jobs.roomsWithState(
-                    town, workRoomId, (sl, bp) -> state.equals(JobBlock.getState(th, bp))
+                    town, workRoomId,
+                    (sl, bp) -> state.equals(JobBlock.getState(work, bp))
             );
             List<MCRoom> roomz = matches.stream().filter(room -> {
                 for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
-                    AbstractWorkStatusStore.State jobBlockState = th.getJobBlockState(e.getKey());
+                    AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
                     if (jobBlockState == null) {
                         continue;
                     }
@@ -518,7 +606,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return false;
             }).map(v -> v.room).toList();
             b.put(state, Lists.newArrayList(roomz));
-            // TODO[ASAP]: Check block state to see if ingredients and quantity are already satisfied
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values().stream().anyMatch(v -> !v.isEmpty())) {
@@ -534,7 +621,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             for (int i = 0; i <= state; i++) {
                 final Integer ii = i;
                 b.get(state).addAll((Jobs.roomsWithState(
-                        town, workRoomId, (sl, bp) -> ii.equals(JobBlock.getState(th, bp))
+                        town, workRoomId,
+                        (sl, bp) -> ii.equals(JobBlock.getState(work, bp))
                 ).stream().map(v -> v.room).toList()));
             }
         });
@@ -559,7 +647,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     @Override
-    public TranslatableComponent getJobName() {
-        return new TranslatableComponent("jobs." + jobId);
+    public JobName getJobName() {
+        return new JobName("jobs." + jobId);
     }
 }

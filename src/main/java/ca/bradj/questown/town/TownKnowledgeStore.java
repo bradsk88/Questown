@@ -11,6 +11,8 @@ import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+
 public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldItem, MCTownItem> {
     @Nullable
     private TownFlagBlockEntity town;
@@ -54,7 +56,7 @@ public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldI
     }
 
     @Override
-    public void registerFoundLoots(ImmutableList<MCHeldItem> items) {
+    public void registerFoundLoots(Collection<MCHeldItem> items) {
         super.registerFoundLoots(items);
         unsafeGetTown().setChanged();
     }

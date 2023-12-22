@@ -96,7 +96,15 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
             return MCTownItem.Air();
         }
         ItemStack stack = toItemStack();
-        return new MCTownItem(stack.getItem(), stack.getCount() - 1, stack.serializeNBT());
+        stack.shrink(1);
+        return new MCTownItem(stack.getItem(), stack.getCount(), stack.serializeNBT());
+    }
+
+    @Override
+    public MCTownItem unit() {
+        ItemStack stack = toItemStack();
+        stack.setCount(1);
+        return new MCTownItem(stack.getItem(), 1, stack.serializeNBT());
     }
 
     @Override

@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -22,10 +23,11 @@ import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
-    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
+    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
 
+        private final InventoryHandle<GathererJournalTest.TestItem> inventory;
         private boolean extracted;
-        private final WorkStateContainer<Position> workStatuses;
+        private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
 
         public TestWI(
                 int maxState,
@@ -36,21 +38,21 @@ class AbstractWorldInteractionTest {
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
                 Supplier<Collection<GathererJournalTest.TestItem>> journal,
                 InventoryHandle<GathererJournalTest.TestItem> inventory,
-                WorkStateContainer<Position> workStatuses
+                ImmutableWorkStateContainer<Position, Boolean> workStatuses
         ) {
             super(
                     new JobID("test", "test"),
+                    -1, // Not used
                     0,
                     maxState,
                     toolsRequiredAtStates,
                     workRequiredAtStates,
                     ingredientsRequiredAtStates,
                     ingredientQuantityRequiredAtStates,
-                    timeRequiredAtStates,
-                    journal,
-                    inventory
+                    timeRequiredAtStates
             );
             this.workStatuses = workStatuses;
+            this.inventory = inventory;
         }
 
         public static TestWI noMemoryInventory(
@@ -83,7 +85,7 @@ class AbstractWorldInteractionTest {
                 }
             };
 
-            WorkStateContainer<Position> statuses = testWorkStateContainer();
+            ImmutableWorkStateContainer<Position, Boolean> statuses = testWorkStateContainer();
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
                     alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
@@ -92,7 +94,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected boolean tryExtractOre(
+        protected Boolean tryExtractOre(
                 Void unused,
                 Position position
         ) {
@@ -120,10 +122,17 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected void degradeTool(
+        protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+            inventory.set(itemIndex, item);
+            return true;
+        }
+
+        @Override
+        protected Boolean degradeTool(
                 Void unused,
-                Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+                Boolean tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
         ) {
+            return tuwn;
         }
 
         @Override
@@ -136,42 +145,56 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected WorkStateContainer<Position> getWorkStatuses(Void unused) {
+        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
             return workStatuses;
+        }
+
+        @Override
+        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
+            return inventory.getItems();
         }
     }
 
     @NotNull
-    private static WorkStateContainer<Position> testWorkStateContainer() {
+    private static ImmutableWorkStateContainer<Position, Boolean> testWorkStateContainer() {
         HashMap<Position, State> ztate = new HashMap<>();
 
-        WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+        ImmutableWorkStateContainer<Position, Boolean> statuses = new ImmutableWorkStateContainer<Position, Boolean>() {
             @Override
             public @Nullable State getJobBlockState(Position bp) {
                 return ztate.get(bp);
             }
 
             @Override
-            public void setJobBlockState(
+            public ImmutableMap<Position, State> getAll() {
+                return ImmutableMap.copyOf(ztate);
+            }
+
+            @Override
+            public Boolean setJobBlockState(
                     Position bp,
                     State bs
             ) {
                 ztate.put(bp, bs);
+                return true;
             }
 
             @Override
-            public void setJobBlockStateWithTimer(
+            public Boolean setJobBlockStateWithTimer(
                     Position bp,
                     State bs,
                     int ticksToNextState
             ) {
                 ztate.put(bp, bs); // Ignoring time
+                return true;
             }
 
             @Override
-            public void clearState(Position bp) {
+            public Boolean clearState(Position bp) {
                 ztate.remove(bp);
+                return true;
             }
+
         };
         return statuses;
     }

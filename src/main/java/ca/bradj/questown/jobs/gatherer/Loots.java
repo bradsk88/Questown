@@ -1,10 +1,11 @@
 package ca.bradj.questown.jobs.gatherer;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
-import ca.bradj.questown.jobs.Journal;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -17,30 +18,32 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 public class Loots {
 
+    public static ResourceLocation fallbackBiome = new ResourceLocation("forest"); // TODO: Something better?
+
     @NotNull
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal,
+            Collection<MCHeldItem> items,
             GathererTools.LootTableParameters lt
     ) {
-        final ResourceLocation biome = finalizeBiome(journal);
-        int maxAmount = journal.getCapacity();
+        final ResourceLocation biome = finalizeBiome(items);
+        int maxAmount = items.size();
         return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
     }
 
     @NotNull
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal,
+            int maxAmount,
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
     ) {
-        int maxAmount = journal.getCapacity();
         return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
     }
 
@@ -55,7 +58,16 @@ public class Loots {
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
         LootTables tables = level.getServer().getLootTables();
         if (!tables.getIds().contains(rl)) {
-            rl = new ResourceLocation(Questown.MODID, lt.path().path());
+            QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
+            rl = new ResourceLocation(Questown.MODID, lt.fallback().path());
+        }
+        if (!tables.getIds().contains(rl)) {
+            throw new IllegalStateException(
+                    String.format(
+                            "No loot table found for %s or fallback %s",
+                            id, lt.fallback()
+                    )
+            );
         }
         LootTable lootTable = tables.get(rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
@@ -63,10 +75,10 @@ public class Loots {
     }
 
     @NotNull
-    private static ResourceLocation finalizeBiome(Journal<?, MCHeldItem, ?> journal) {
-        @Nullable ResourceLocation biome = GathererMap.computeBiome(journal.getItems());
+    private static ResourceLocation finalizeBiome(Collection<MCHeldItem> journal) {
+        @Nullable ResourceLocation biome = GathererMap.computeBiome(journal);
         if (biome == null) {
-            biome = new ResourceLocation("forest"); // TODO: Something better?
+            biome = fallbackBiome;
         }
         return biome;
     }
@@ -86,8 +98,11 @@ public class Loots {
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
         ArrayList<ItemStack> rItems = new ArrayList<>();
-        int max = Math.min(minItems, level.random.nextInt(maxItems) + 1);
-        while (rItems.size() < max) {
+        int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (rItems.size() >= max) {
+                break;
+            }
             rItems.addAll(lootTable.getRandomItems(lc));
         }
         Collections.shuffle(rItems);

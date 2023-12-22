@@ -2,9 +2,24 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Map;
+
 public class StatusArt {
+
+    private static final Map<ProductionStatus, String> pArt;
+
+    static {
+        ImmutableMap.Builder<ProductionStatus, String> b = ImmutableMap.builder();
+        b.put(ProductionStatus.IDLE, "menu/gatherer/idle.png");
+        b.put(ProductionStatus.NO_SPACE, "menu/gatherer/no_space.png");
+        b.put(ProductionStatus.RELAXING, "menu/gatherer/relaxing.png");
+        pArt = b.build();
+    }
+
     public static ResourceLocation getTexture(IStatus<?> status) {
         if (status instanceof GathererJournal.Status gjc) {
             return switch (gjc) {
@@ -41,6 +56,12 @@ public class StatusArt {
                     // TODO: Icon for this
                         new ResourceLocation("questown", "textures/error.png");  
             };
+        }
+        if (status instanceof ProductionStatus ps) {
+            String art = pArt.get(ps);
+            if (art != null) {
+                return new ResourceLocation("questown", "textures/" + art);
+            }
         }
 
         // TODO: Smelter statuses

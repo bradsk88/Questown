@@ -58,7 +58,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     boolean shouldBeNoClip(TownInterface town, BlockPos blockPos);
 
-    TranslatableComponent getJobName();
+    JobName getJobName();
 
     boolean addToEmptySlot(MCHeldItem mcTownItem);
 

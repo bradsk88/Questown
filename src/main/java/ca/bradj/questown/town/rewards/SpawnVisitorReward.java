@@ -1,10 +1,12 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
@@ -16,20 +18,11 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.UUID;
 
 public class SpawnVisitorReward extends MCReward {
-
-    public static final GathererJournal.Snapshot<MCHeldItem> EMPTY = new GathererJournal.Snapshot<>(
-            GathererJournal.Status.IDLE,
-            ImmutableList.of(MCHeldItem.Air(),
-                    MCHeldItem.Air(),
-                    MCHeldItem.Air(),
-                    MCHeldItem.Air(),
-                    MCHeldItem.Air(),
-                    MCHeldItem.Air()
-            )
-    );
 
     public static final String ID = "spawn_visitor_reward";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
@@ -77,7 +70,14 @@ public class SpawnVisitorReward extends MCReward {
             initUUID = vEntity.getUUID();
         }
         Vec3 vjp = entity.getVisitorJoinPos();
-        vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, EMPTY);
+        ImmutableSnapshot<MCHeldItem, ?> initJournal = JobsRegistry.getNewJournal(
+                GathererUnmappedNoToolWork.ID,
+                ProductionStatus.IDLE.name(),
+                ImmutableList.copyOf(
+                        Collections.nCopies(6, MCHeldItem.Air())
+                )
+        );
+        vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, initJournal);
         entity.registerEntity(vEntity);
         sl.addFreshEntity(vEntity);
         QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());

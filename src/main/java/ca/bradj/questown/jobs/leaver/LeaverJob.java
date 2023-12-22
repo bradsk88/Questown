@@ -144,8 +144,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
         this.dropping = Jobs.tryDropLoot(dropper, entityPos, successTarget);
 
         if (this.dropping && !journal.hasAnyLootToDrop() && town != null) {
-            // TODO[ASAP]: Bring back
-//            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(getId()));
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(getId()));
         }
     }
 

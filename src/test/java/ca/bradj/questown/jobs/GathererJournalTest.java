@@ -14,6 +14,7 @@ import java.util.Objects;
 
 public class GathererJournalTest {
 
+    // TODO[ASAP]: Move to outer class
     public static class TestItem implements Item<TestItem>, HeldItem<TestItem, TestItem> {
         public final String value;
 
@@ -39,6 +40,11 @@ public class GathererJournalTest {
         @Override
         public String getShortName() {
             return value;
+        }
+
+        @Override
+        public TestItem unit() {
+            return this;
         }
 
         @Override

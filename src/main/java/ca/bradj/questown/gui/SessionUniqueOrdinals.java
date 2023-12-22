@@ -59,7 +59,7 @@ public class SessionUniqueOrdinals {
         }
 
         @Override
-        public boolean canWork() {
+        public boolean isBusy() {
             return false;
         }
     };

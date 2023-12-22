@@ -124,7 +124,7 @@ class JobStatusesTest {
         }
 
         @Override
-        public boolean canWork() {
+        public boolean isBusy() {
             return !isAllowedToTakeBreaks();
         }
 
@@ -166,11 +166,6 @@ class JobStatusesTest {
             boolean hasSpace,
             boolean canUseMoreSupplies
     ) implements TownStateProvider {
-
-        @Override
-        public boolean isUnfinishedTimeWorkPresent() {
-            return false;
-        }
     }
 
     static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
@@ -421,6 +416,28 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.IDLE, s);
+    }
+    @Test
+    void StatusShouldBe_NoSpace_WhenInvHasSomeItemsButNotFull_AndTownHasNoSpace_AndCannotDoWork() {
+        boolean canDoWork = false;
+        boolean hasSupplies = false;
+        boolean suppliesInInventory = false;
+
+        boolean hasNonSupplyItems = true;
+        boolean townHasSpace = false;
+
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, suppliesInInventory,
+                        TestStatus.ITEM_WORK_2, suppliesInInventory
+                )),
+                new ConstTown(hasSupplies, townHasSpace, canDoWork),
+                new NoOpJob(),
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_SPACE, s);
     }
 
     @Test

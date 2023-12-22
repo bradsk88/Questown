@@ -8,4 +8,6 @@ public interface Item<I extends Item<I>> {
     I shrink();
 
     String getShortName();
+
+     I unit();
 }

@@ -2,12 +2,14 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -79,8 +81,12 @@ public class TownStateSerializer {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
         ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = loadVillagers(tag);
+        // TODO[ASAP]: Load work states
+        @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates = ImmutableMap.of();
+        @NotNull ImmutableMap<BlockPos, Integer> workTimers = ImmutableMap.of();
+        @NotNull ImmutableList<MCHeldItem> knowledge = ImmutableList.of();
         List<BlockPos> gates = loadGates(tag, gg);
-        return new MCTownState(villagers, containers, gates, worldTimeAtSleep);
+        return new MCTownState(villagers, containers, workStates, workTimers, gates, knowledge, worldTimeAtSleep);
     }
 
     private ImmutableList<BlockPos> loadGates(
@@ -105,7 +111,7 @@ public class TownStateSerializer {
     }
 
     @NotNull
-    private static ImmutableList<TownState.VillagerData<MCHeldItem>> loadVillagers(CompoundTag tag) {
+    public static ImmutableList<TownState.VillagerData<MCHeldItem>> loadVillagers(CompoundTag tag) {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> b = ImmutableList.builder();
         ListTag villagers = tag.getList("villagers", Tag.TAG_COMPOUND);
         for (Tag vTag : villagers) {
@@ -126,7 +132,7 @@ public class TownStateSerializer {
                 QT.JOB_LOGGER.error("Empty job. Falling back to gatherer for {}", uuid);
                 job = "gatherer";
             }
-            Snapshot<MCHeldItem> journal = JobsRegistry.getNewJournal(
+            ImmutableSnapshot<MCHeldItem, ?> journal = JobsRegistry.getNewJournal(
                     JobsRegistry.parseStringValue(job),
                     vcTag.getString("journal_status"),
                     heldItems
@@ -164,7 +170,7 @@ public class TownStateSerializer {
             BlockPos pos = new BlockPos(x, y, z);
             BlockState bs = level.getBlockState(pos);
             if (!(bs.getBlock() instanceof ChestBlock)) {
-                Questown.LOGGER.error(
+                QT.FLAG_LOGGER.error(
                         "There used to be a chest at {}, but now there isn't. " +
                                 "This is a bug and will cause items to be lost.", pos
                 );

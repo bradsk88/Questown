@@ -12,6 +12,7 @@ public class Config {
     public static final String FILENAME = "questown-server.toml";
 
     public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_TICK_RADIUS;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
 
@@ -25,7 +26,7 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME_REQUIRED_BASELINE;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
 
@@ -50,20 +51,27 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
+    public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
+    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
 
     static {
         // Scanning Config
         BUILDER.push("Questown.Config.Scanning");
-        DOOR_SEARCH_RADIUS = BUILDER.comment(
-                "The radius (around the town flag) where this mod will search for doors for room detection"
-        ).define("DoorSearchRadius", 100);
-        CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
-                "The radius (around the town flag) where this mod will search for campfires which attract visitors"
-        ).define("CampfireSearchRadius", 10);
         SCAN_FOR_DOORS = BUILDER.comment(
                 "RISKY: Set true to scan for vanilla doors in a radius around the town flag during room detection. " +
                         "This may be prone to crashes if rooms get too complex."
         ).define("ScanForDoors", false);
+        DOOR_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for doors for room detection"
+        ).define("DoorSearchRadius", 100);
+        TOWN_TICK_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for players. If no players are found, the flag will stop ticking."
+        ).define("TownTickRadius", 10000);
+        CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for campfires which attract visitors"
+        ).define("CampfireSearchRadius", 10);
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
         ).defineInRange("BiomeScanRadius", 20, 0, 100);
@@ -104,12 +112,15 @@ public class Config {
 
         // Jobs Config
         BUILDER.push("Jobs");
+        MAX_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
+                "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
+        ).defineInRange("MaxTicksWithoutSupplies", 100, 1, 24000);
         FARM_ACTION_INTERVAL = BUILDER.comment(
                 "The number of ticks that farmers will wait between actions"
         ).define("FarmActionInterval", 100);
-        BAKING_TIME = BUILDER.comment(
-                "The number of ticks it takes for a villager to bake bread (will be rounded down to nearest 1000)"
-        ).defineInRange("BakingTime", 6000, 1000, 24000);
+        BAKING_TIME_REQUIRED_BASELINE = BUILDER.comment(
+                "The number of ticks it takes for a villager to bake bread"
+        ).defineInRange("BakingTime", 1000, 1000, 24000);
         FARMER_WEEDS_RARITY = BUILDER.comment(
                 "The chance that a farmer will find weeds (actually grass, for composting) on a still-growing crop block. 1 means \"constantly\"."
         ).defineInRange("FarmerWeedsRarity", 10, 1, 9999);
@@ -130,6 +141,9 @@ public class Config {
 
         // Advanced Config
         BUILDER.push("Advanced");
+        BASE_MAX_LOOP = BUILDER.comment(
+                "The maximum number of attempts this mod will allow for ANY algorithm. This helps prevent bugs from causing the game to freeze."
+        ).defineInRange("BaseMaxLoop", 1000, 1, Integer.MAX_VALUE);
         TICK_SAMPLING_RATE = BUILDER.comment(
                 "For profiling minecraft server performance. 0 means OFF and may reduce log bloat."
         ).defineInRange("TickSamplingRate", 0, 0, 24000);
@@ -142,7 +156,17 @@ public class Config {
         FLAG_SUB_BLOCK_DETECTION_TICKS = BUILDER.comment(
                 "It may take a few ticks before the entity for the sub block shows up in the world. If the number exceeds this config value, the server will crash."
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);
-        BUILDER.pop(); // Yep, really twice. Getting out of config
+        BUILDER.push("TimeWarp").comment(
+                "Villages do a 'time warp' when the player returns from away - to simulate villager activity. This is an experimental feature."
+        );
+        CRASH_ON_FAILED_WARP = BUILDER.comment(
+                "Since this is an experimental feature that is likely to crash. By default, problems will be ignored at the cost of lost village productivity."
+        ).define("CrashOnFailure", false);
+        TIME_WARP_MAX_TICKS = BUILDER.comment(
+                "Since the player can be gone for a very long time, we enforce a maximum warp to prevent the warp taking too long to compute."
+        ).defineInRange("MaxTicks", 200000, 1, Integer.MAX_VALUE);
+        BUILDER.pop(); // Yep, really thrice. Getting out of nested config
+        BUILDER.pop();
         BUILDER.pop();
 
         // Cheats

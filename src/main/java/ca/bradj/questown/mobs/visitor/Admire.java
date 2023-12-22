@@ -33,7 +33,7 @@ public class Admire extends Behavior<VisitorMobEntity> {
             return false;
         }
         IStatus<?> s = entity.getStatusForServer();
-        return !s.isAllowedToTakeBreaks();
+        return s != null && !s.isAllowedToTakeBreaks();
     }
 
     @Override

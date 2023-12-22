@@ -1,7 +1,9 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.blocks.BreadOvenBlock;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
@@ -10,9 +12,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
-import java.util.UUID;
+import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
-public class BakerBreadWork extends DeclarativeJob {
+public class BakerBreadWork {
     public static final JobID ID = new JobID("baker", "bread");
 
     public static final int BLOCK_STATE_NEED_WHEAT = 0;
@@ -38,37 +40,34 @@ public class BakerBreadWork extends DeclarativeJob {
             BLOCK_STATE_NEED_TIME, 0,
             BLOCK_STATE_DONE, 0
     );
-    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_WHEAT, 0,
-            BLOCK_STATE_NEED_COAL, 0,
-            BLOCK_STATE_NEED_TIME, 100, // FIXME: 6000?
-            BLOCK_STATE_DONE, 0
-    );
-    private static final boolean TIMER_SHARING = false;
+    public static final Class<BreadOvenBlock> WORK_BLOCK_CLASS = BreadOvenBlock.class;
 
     public static final ItemStack RESULT = Items.BREAD.getDefaultInstance();
+    public static final ResourceLocation WORK_ROOM_ID = new ResourceLocation(Questown.MODID, "bakery");
+    public static final int ACTION_DURATION = 100;
 
-    public BakerBreadWork(
-            UUID ownerUUID,
-            int inventoryCapacity
-    ) {
-        super(
-                ownerUUID,
-                inventoryCapacity,
+    public static Work asWork() {
+        return productionWork(
                 ID,
-                new ResourceLocation(Questown.MODID, "bakery"),
+                WORK_BLOCK_CLASS::isInstance,
+                WORK_ROOM_ID,
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                RESULT,
                 MAX_STATE,
-                true,
-                100,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                TIME_REQUIRED_AT_STATES,
-                TIMER_SHARING,
-                ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
-                false
+                ImmutableMap.of(
+                        BLOCK_STATE_NEED_WHEAT, 0,
+                        BLOCK_STATE_NEED_COAL, 0,
+                        BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE.get(),
+                        BLOCK_STATE_DONE, 0
+                ),
+                ACTION_DURATION,
+                ImmutableMap.of(), // No stage rules
+                WorksBehaviour.standardProductionRules(),
+                WorksBehaviour.singleItemOutput(RESULT::copy)
         );
     }
 }

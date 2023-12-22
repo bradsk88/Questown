@@ -11,4 +11,6 @@ public interface JobTownProvider<ROOM extends Room> extends TownProvider {
     Map<Integer, Collection<ROOM>> roomsNeedingIngredientsByState();
 
     boolean isUnfinishedTimeWorkPresent();
+
+    Collection<Integer> getStatesWithUnfinishedItemlessWork();
 }

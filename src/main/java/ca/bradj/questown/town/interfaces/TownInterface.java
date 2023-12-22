@@ -1,7 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
@@ -19,7 +18,6 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -125,7 +123,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void markBlockWeeded(BlockPos p);
 
-    WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
+    WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(@Nullable UUID ownerIDOrNullForGlobal);
 
     WorkHandle getWorkHandle();
 
@@ -139,6 +137,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     QuestsHolder getQuestHandle();
 
     RoomsHolder getRoomHandle();
+
+    void removeEntity(VisitorMobEntity visitorMobEntity);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

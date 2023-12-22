@@ -2,12 +2,13 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Function;
 
-public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
+public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
@@ -23,12 +24,12 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         this.toolsRequiredAtStates = toolsRequiredAtStates;
     }
 
-    public boolean tryWork(
+    public TOWN tryWork(
             EXTRA extra,
             WorkSpot<Integer, POS> ws
     ) {
-        POS bp = ws.position;
-        Integer curState = ws.action;
+        POS bp = ws.position();
+        Integer curState = ws.action();
         Integer nextStepWork = workRequiredAtStates.getOrDefault(
                 curState + 1, 0
         );
@@ -41,51 +42,45 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         if (nextStepTime == null) {
             nextStepTime = 0;
         }
-        AbstractWorkStatusStore.State blockState = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
-        boolean didWork = blockState != null;
+        TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
+        boolean didWork = updatedTown != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
         if (didWork && itemBooleanFunction != null) {
-            degradeTool(extra, itemBooleanFunction);
+            return degradeTool(extra, updatedTown, itemBooleanFunction);
         }
-        return didWork;
+        return updatedTown;
     }
 
-    protected abstract void degradeTool(
+    protected abstract TOWN degradeTool(
             EXTRA extra,
+            @Nullable TOWN tuwn,
             Function<ITEM, Boolean> itemBooleanFunction
     );
 
-    private AbstractWorkStatusStore.State applyWork(
+    private @Nullable TOWN applyWork(
             EXTRA extra,
             POS bp,
             Integer curState,
             Integer nextStepWork,
             Integer nextStepTime
     ) {
-        WorkStateContainer<POS> sl = getWorkStatuses(extra);
+        ImmutableWorkStateContainer<POS, TOWN> sl = getWorkStatuses(extra);
         AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             oldState = initForState(curState);
         }
-        int workLeft = oldState.workLeft();
-        AbstractWorkStatusStore.State bs;
-        if (workLeft <= 0) {
-            bs = initForState(curState + 1);
-        } else {
-            bs = oldState.decrWork();
-        }
-        if (oldState.equals(bs)) {
+        AbstractWorkStatusStore.State bs = oldState.decrWork();
+        if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return null;
         }
         if (bs.workLeft() == 0) {
-            bs = bs.setWorkLeft(nextStepWork).setCount(0);
+            bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }
         if (nextStepTime <= 0) {
-            sl.setJobBlockState(bp, bs);
+            return sl.setJobBlockState(bp, bs);
         } else {
-            sl.setJobBlockStateWithTimer(bp, bs, nextStepTime);
+            return sl.setJobBlockStateWithTimer(bp, bs, nextStepTime);
         }
-        return bs;
     }
 
     private AbstractWorkStatusStore.State initForState(Integer curState) {
@@ -96,5 +91,5 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
         return AbstractWorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
-    protected abstract WorkStateContainer<POS> getWorkStatuses(EXTRA extra);
+    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
 }
