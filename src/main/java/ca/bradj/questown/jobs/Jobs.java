@@ -17,7 +17,6 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
@@ -212,15 +211,6 @@ public class Jobs {
                 ))
                 .findFirst()
                 .orElse(null);
-    }
-
-    public static boolean hasNonSupplyItems(
-            ItemsHolder<MCHeldItem> journal,
-            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
-    ) {
-        return journal.getItems().stream()
-                .filter(Predicates.not(Item::isEmpty))
-                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     public static boolean isUnfinishedTimeWorkPresent(

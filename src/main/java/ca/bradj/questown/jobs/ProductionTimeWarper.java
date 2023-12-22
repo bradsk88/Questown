@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.production.ProductionStatuses;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,7 +13,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME> {
+public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME> {
 
     private final FoodRemover<I> remover;
     private final LootGiver<I, H, BIOME> lootGiver;
@@ -21,7 +23,7 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
     private final GathererJournal.ToolsChecker<H> toolChecker;
     private final Function<Iterable<H>, BIOME> biome;
 
-    public GathererTimeWarper(
+    public ProductionTimeWarper(
             FoodRemover<I> remover,
             LootGiver<I, H, BIOME> lootGiver,
             Town<I, H> town,
@@ -59,8 +61,8 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
         ImmutableList<H> depositItems(ImmutableList<H> itemsToDeposit);
     }
 
-    public GathererJournal.Snapshot<H> timeWarp(
-            GathererJournal.Snapshot<H> input,
+    public SimpleSnapshot<ProductionStatus, H> timeWarp(
+            SimpleSnapshot<ProductionStatus, H> input,
             long currentTick,
             long ticksPassed,
             int lootPerDay
@@ -68,9 +70,9 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
         if (ticksPassed == 0) {
             return input;
         }
-        GathererJournal.Snapshot<H> output = input;
-        MutableInventoryStateProvider<H> stateGetter =
-                MutableInventoryStateProvider.withInitialItems(input.items());
+        SimpleSnapshot<ProductionStatus, H> output = input;
+        EntityInvStateProvider<Integer> stateGetter =
+                MutableEntityInvStateProvider.withInitialItems(input.items());
 
         long start = currentTick;
         long max = currentTick + ticksPassed;
@@ -79,7 +81,7 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
             Signals signal = Signals.fromGameTime(
                     i
             );
-            GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
+            GathererJournal.Status newStatus = ProductionStatuses.getNewStatusFromSignal(
                     output.status(), signal, stateGetter, town
             );
             if (newStatus == null) {

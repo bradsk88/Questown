@@ -15,7 +15,7 @@ public class TownState<
         C extends ContainerTarget.Container<I>,
         I extends Item<I>,
         H extends HeldItem<H, I> & Item<H>
-        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I, H> {
+        > implements ProductionTimeWarper.FoodRemover<I>, ProductionTimeWarper.Town<I, H> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<BlockPos> gates;

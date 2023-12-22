@@ -280,7 +280,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return entityCurrentJobSite;
             }
         };
-        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
+        this.journal.tick(jtp, elp, new DefaultEntityInvStateProvider<>(
+                () -> journal, ingredientsRequiredAtStates, toolsRequiredAtStates,
+                () -> roomsNeedingIngredientsOrTools, recipe::getRecipe,
+                (Ingredient i, MCHeldItem h) -> i.test(h.get().toItemStack())
+        ), statusFactory, this.prioritizeExtraction);
 
         if (wrappingUp && !hasAnyLootToDrop()) {
             town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
@@ -429,24 +433,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
-        HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, Ingredient> fn = (state, ingr) -> {
-            if (ingr == null) {
-                if (!b.containsKey(state)) {
-                    b.put(state, false);
-                }
-                return;
-            }
-
-            // The check passes if the worker has ALL the ingredients needed for the state
-            boolean has = journal.getItems().stream().anyMatch(z -> ingr.test(z.get().toItemStack()));
-            if (!b.getOrDefault(state, false)) {
-                b.put(state, has);
-            }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
-        return ImmutableMap.copyOf(b);
+        return DeclarativeJobs.getSupplyItemStatus(
+                journal.getItems(),
+                ingredientsRequiredAtStates,
+                toolsRequiredAtStates,
+                (Ingredient ingr, MCHeldItem item) -> ingr.test(item.get().toItemStack())
+        );
     }
 
     @Override

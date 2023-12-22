@@ -5,7 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererTimeWarper;
+import ca.bradj.questown.jobs.ProductionTimeWarper;
 import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -101,9 +101,9 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        GathererTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
+        ProductionTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
-        GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
+        ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
                 storedState, loot, storedState,
                 MCHeldItem::Air, MCHeldItem::fromTown,
                 GathererJob::checkTools,

@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 class GathererTimeWarperTest {
-    private static final GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem> infiniteStorageTown
-            = new GathererTimeWarper.Town<>() {
+    private static final ProductionTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem> infiniteStorageTown
+            = new ProductionTimeWarper.Town<>() {
         @Override
         public ImmutableList<GathererJournalTest.TestItem> depositItems(ImmutableList<GathererJournalTest.TestItem> itemsToDeposit) {
             return ImmutableList.of(
@@ -35,7 +35,7 @@ class GathererTimeWarperTest {
 
     @Test
     void TestShouldDepositAllItems() {
-        @NotNull List<GathererJournalTest.TestItem> finalInventory = GathererTimeWarper.<
+        @NotNull List<GathererJournalTest.TestItem> finalInventory = ProductionTimeWarper.<
                 GathererJournalTest.TestItem, GathererJournalTest.TestItem
                 >dropLoot(
                 ImmutableList.of(
@@ -88,7 +88,7 @@ class GathererTimeWarperTest {
 
     @Test
     void TestShouldDepositOnlyUnlockedItems() {
-        @NotNull List<GathererJournalTest.TestItem> finalInventory = GathererTimeWarper.<
+        @NotNull List<GathererJournalTest.TestItem> finalInventory = ProductionTimeWarper.<
                 GathererJournalTest.TestItem, GathererJournalTest.TestItem
                 >dropLoot(
                 ImmutableList.of(
