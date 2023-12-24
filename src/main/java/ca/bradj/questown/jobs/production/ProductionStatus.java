@@ -3,8 +3,10 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Objects;
 
 public class ProductionStatus implements IProductionStatus<ProductionStatus> {
@@ -15,6 +17,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     // TODO: Should probably build something more flexible
     private static final int firstNonCustomIndex = 10;
     private static int nextIndex = firstNonCustomIndex;
+    private static final HashSet<ProductionStatus> allStatuses = new HashSet<>();
 
     static {
         for (int i = 0; i < firstNonCustomIndex; i++) {
@@ -22,35 +25,43 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         }
     }
 
-    private static final ProductionStatus DROPPING_LOOT = SessionUniqueOrdinals.register(
+    private static ProductionStatus register(ProductionStatus ps) {
+        allStatuses.add(ps);
+        return SessionUniqueOrdinals.register(ps);
+    }
+
+    public static ImmutableSet<ProductionStatus> allStatuses() {
+        return ImmutableSet.copyOf(allStatuses);
+    }
+
+    public static final ProductionStatus DROPPING_LOOT = register(
             new ProductionStatus("DROPPING_LOOT", nextIndex++)
     );
-    private static final ProductionStatus NO_SPACE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SPACE = SessionUniqueOrdinals.register(
             new ProductionStatus("NO_SPACE", nextIndex++)
     );
 
-    private static final ProductionStatus GOING_TO_JOB = SessionUniqueOrdinals.register(
+    public static final ProductionStatus GOING_TO_JOB = SessionUniqueOrdinals.register(
             new ProductionStatus("GOING_TO_JOB", nextIndex++)
     );
-    private static final ProductionStatus NO_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SUPPLIES = SessionUniqueOrdinals.register(
             new ProductionStatus("NO_SUPPLIES", nextIndex++)
     );
-    private static final ProductionStatus COLLECTING_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus COLLECTING_SUPPLIES = SessionUniqueOrdinals.register(
             new ProductionStatus("COLLECTING_SUPPLIES", nextIndex++)
     );
-    private static final ProductionStatus IDLE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus IDLE = SessionUniqueOrdinals.register(
             new ProductionStatus("IDLE", nextIndex++)
     );
-    private static final ProductionStatus EXTRACTING_PRODUCT = SessionUniqueOrdinals.register(
+    public static final ProductionStatus EXTRACTING_PRODUCT = SessionUniqueOrdinals.register(
             new ProductionStatus("EXTRACTING_PRODUCT", nextIndex++)
     );
-    private static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
+    public static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
             new ProductionStatus("RELAXING", nextIndex++)
     );
-    private static final ProductionStatus WAITING_FOR_TIMED_STATE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus WAITING_FOR_TIMED_STATE = SessionUniqueOrdinals.register(
             new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
     );
-
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override

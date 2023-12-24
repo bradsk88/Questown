@@ -5,14 +5,17 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.Map;
 
-public class MutableEntityInvStateProvider<HELD_ITEM> implements EntityInvStateProvider<Integer> {
+// FIXME: Implement this
+public class MutableEntityInvStateProvider<HELD_ITEM extends HeldItem<HELD_ITEM, ?>> implements EntityInvStateProvider<Integer> {
 
     private ImmutableCollection<HELD_ITEM> items = ImmutableList.of();
     private final DefaultInventoryStateProvider<HELD_ITEM> delegate = new DefaultInventoryStateProvider<>(
             () -> this.items
     );
 
-    public static <HELD_ITEM> MutableEntityInvStateProvider<HELD_ITEM> withInitialItems(ImmutableList<HELD_ITEM> items) {
+    public static <HELD_ITEM extends HeldItem<HELD_ITEM, ?>> MutableEntityInvStateProvider<HELD_ITEM> withInitialItems(
+            ImmutableList<HELD_ITEM> items
+    ) {
         return new MutableEntityInvStateProvider<>();
     }
 
@@ -29,5 +32,9 @@ public class MutableEntityInvStateProvider<HELD_ITEM> implements EntityInvStateP
     @Override
     public Map<Integer, Boolean> getSupplyItemStatus() {
         return null;
+    }
+
+    public void updateItems(ImmutableList<HELD_ITEM> outImItems) {
+
     }
 }

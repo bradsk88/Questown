@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.jobs.production.ProductionStatuses;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,33 +12,77 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME> {
 
-    private final FoodRemover<I> remover;
+    private final Supplier<I> itemRemover;
     private final LootGiver<I, H, BIOME> lootGiver;
     private final Town<I, H> town;
     private final EmptyFactory<H> emptyFactory;
-    private final ItemToEntityMover<I, H> converter;
+    private final ItemToEntityMover<I, H> taker;
     private final GathererJournal.ToolsChecker<H> toolChecker;
     private final Function<Iterable<H>, BIOME> biome;
 
+    private final ImmutableMap<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> handlers;
+
     public ProductionTimeWarper(
-            FoodRemover<I> remover,
+            Supplier<@Nullable I> itemRemover,
             LootGiver<I, H, BIOME> lootGiver,
             Town<I, H> town,
             EmptyFactory<H> emptyFactory,
-            ItemToEntityMover<I, H> converter,
+            ItemToEntityMover<I, H> taker,
             GathererJournal.ToolsChecker<H> toolChecker,
-            Function<Iterable<H>, BIOME> biome
+            Function<Iterable<H>, BIOME> heldBiome
     ) {
-        this.remover = remover;
+        this.itemRemover = itemRemover;
         this.lootGiver = lootGiver;
         this.town = town;
         this.emptyFactory = emptyFactory;
-        this.converter = converter;
+        this.taker = taker;
         this.toolChecker = toolChecker;
-        this.biome = biome;
+        this.biome = heldBiome;
+
+        ImmutableMap.Builder<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> b = ImmutableMap.builder();
+        b.put(ProductionStatus.EXTRACTING_PRODUCT, r -> ProductionTimeWarper.simulateExtractProduct(
+                r.items, taker, itemRemover
+        ));
+        // TODO: Handle the remaining statuses
+
+        this.handlers = b.build();
+        assertAllStatusesHandled();
+    }
+
+    private void assertAllStatusesHandled() {
+        ProductionStatus.allStatuses().forEach(v -> {
+            if (handlers.containsKey(v)) {
+                return;
+            }
+            throw new ExceptionInInitializerError("Not all statuses are handled");
+        });
+    }
+
+    public static <I extends Item<I>, H extends HeldItem<H, I>> WarpResult<H> simulateExtractProduct(
+            ImmutableList<H> items, ItemToEntityMover<I, H> taker, Supplier<I> remover
+    ) {
+        // TODO: More efficient way to do this?
+        Optional<H> foundEmpty = items.stream()
+                .filter(Item::isEmpty)
+                .findFirst();
+        if (foundEmpty.isPresent()) {
+            // TODO: This is suspiciously similar to the logic in VisitorMobJob
+            int idx = items.indexOf(foundEmpty.get());
+            ArrayList<H> outItems = new ArrayList<>(items);
+            outItems.set(idx, taker.copyFromTownWithoutRemoving(remover.get()));
+            return new WarpResult<>(
+                    ProductionStatus.DROPPING_LOOT,
+                    ImmutableList.copyOf(outItems)
+            );
+        }
+        throw new IllegalStateException(String.format(
+                "Got extract product with full inventory", items
+        ));
+
     }
 
     public interface FoodRemover<I extends Item<I>> {
@@ -61,6 +105,12 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
         ImmutableList<H> depositItems(ImmutableList<H> itemsToDeposit);
     }
 
+    public record WarpResult<H>(
+            ProductionStatus status,
+            ImmutableList<H> items
+    ) {
+    }
+
     public SimpleSnapshot<ProductionStatus, H> timeWarp(
             SimpleSnapshot<ProductionStatus, H> input,
             long currentTick,
@@ -71,7 +121,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             return input;
         }
         SimpleSnapshot<ProductionStatus, H> output = input;
-        EntityInvStateProvider<Integer> stateGetter =
+        MutableEntityInvStateProvider<H> stateHandle =
                 MutableEntityInvStateProvider.withInitialItems(input.items());
 
         long start = currentTick;
@@ -81,46 +131,53 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             Signals signal = Signals.fromGameTime(
                     i
             );
-            GathererJournal.Status newStatus = ProductionStatuses.getNewStatusFromSignal(
-                    output.status(), signal, stateGetter, town
-            );
-            if (newStatus == null) {
-                continue;
-            }
-            List<H> outItems = new ArrayList<>(output.items());
-            if (newStatus == GathererJournal.Status.NO_FOOD) {
-                I food = remover.removeFood();
-                if (food != null) {
-                    takeButDoNotEatFood(outItems, food, signal, this.converter);
-                }
-            }
-            if (newStatus == GathererJournal.Status.GATHERING_EATING) {
-                output = output.withStatus(newStatus)
-                        .eatFoodFromInventory(emptyFactory, signal);
-                outItems = output.items();
-                newStatus = output.status();
-            }
-            if (newStatus == GathererJournal.Status.RETURNED_SUCCESS) {
-                GathererJournal.Tools tools = this.toolChecker.computeTools(output.items());
-                @NotNull Iterable<H> loot = lootGiver.giveLoot(lootPerDay, tools, biome.apply(output.items()));
-                Iterator<H> iterator = loot.iterator();
-                outItems = outItems.stream().map(
-                        v -> {
-                            if (v.isEmpty() && iterator.hasNext()) {
-                                return iterator.next();
-                            }
-                            return v;
-                        }
-                ).toList();
-            }
-            if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
-                outItems = dropLoot(outItems, town, converter, emptyFactory);
-            }
-            ImmutableList<H> outImItems = ImmutableList.copyOf(outItems);
-            stateGetter.updateItems(outImItems);
-            output = new GathererJournal.Snapshot<>(newStatus, outImItems);
+            ProductionStatus newStatus = null; // TODO[ASAP]: Uncomment
+//            ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
+//                    output.status(), signal, stateHandle, town
+//            );
+//            if (newStatus == null) {
+//                continue;
+//            }
+            WarpResult<H> r = this.simulateEffects(newStatus, input.items());
+            ImmutableList<H> outImItems = ImmutableList.copyOf(r.items);
+            stateHandle.updateItems(outImItems);
+            output = new SimpleSnapshot<>(input.jobId(), r.status, outImItems);
         }
         return output;
+    }
+
+    private WarpResult<H> simulateEffects(ProductionStatus inputStatus, ImmutableList<H> items) {
+        return this.handlers.get(inputStatus).apply(
+                new WarpResult<>(inputStatus, items)
+        );
+//        if (newStatus == GathererJournal.Status.NO_FOOD) {
+//            I food = remover.removeFood();
+//            if (food != null) {
+//                takeButDoNotEatFood(outItems, food, signal, this.converter);
+//            }
+//        }
+//        if (newStatus == GathererJournal.Status.GATHERING_EATING) {
+//            output = output.withStatus(newStatus)
+//                    .eatFoodFromInventory(emptyFactory, signal);
+//            outItems = output.items();
+//            newStatus = output.status();
+//        }
+//        if (newStatus == GathererJournal.Status.RETURNED_SUCCESS) {
+//            GathererJournal.Tools tools = this.toolChecker.computeTools(output.items());
+//            @NotNull Iterable<H> loot = lootGiver.giveLoot(lootPerDay, tools, biome.apply(output.items()));
+//            Iterator<H> iterator = loot.iterator();
+//            outItems = outItems.stream().map(
+//                    v -> {
+//                        if (v.isEmpty() && iterator.hasNext()) {
+//                            return iterator.next();
+//                        }
+//                        return v;
+//                    }
+//            ).toList();
+//        }
+//        if (newStatus == GathererJournal.Status.DROPPING_LOOT) {
+//            outItems = dropLoot(outItems, town, converter, emptyFactory);
+//        }
     }
 
     @NotNull
@@ -156,7 +213,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     public interface ItemToEntityMover<I extends Item<I>, H extends HeldItem<H, I>> {
-        H takeFromTown(I item);
+        H copyFromTownWithoutRemoving(I item);
     }
 
     private static <I extends Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
@@ -172,7 +229,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
         if (foundEmpty.isPresent()) {
             // TODO: This is suspiciously similar to the logic in VisitorMobJob
             int idx = outItems.indexOf(foundEmpty.get());
-            outItems.set(idx, mover.takeFromTown(food));
+            outItems.set(idx, mover.copyFromTownWithoutRemoving(food));
         } else {
             throw new IllegalStateException(String.format(
                     "Got NO_FOOD with full inventory on signal %s: %s",
