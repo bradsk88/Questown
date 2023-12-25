@@ -37,29 +37,29 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus DROPPING_LOOT = register(
             new ProductionStatus("DROPPING_LOOT", nextIndex++)
     );
-    public static final ProductionStatus NO_SPACE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SPACE = register(
             new ProductionStatus("NO_SPACE", nextIndex++)
     );
 
-    public static final ProductionStatus GOING_TO_JOB = SessionUniqueOrdinals.register(
+    public static final ProductionStatus GOING_TO_JOB = register(
             new ProductionStatus("GOING_TO_JOB", nextIndex++)
     );
-    public static final ProductionStatus NO_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus NO_SUPPLIES = register(
             new ProductionStatus("NO_SUPPLIES", nextIndex++)
     );
-    public static final ProductionStatus COLLECTING_SUPPLIES = SessionUniqueOrdinals.register(
+    public static final ProductionStatus COLLECTING_SUPPLIES = register(
             new ProductionStatus("COLLECTING_SUPPLIES", nextIndex++)
     );
-    public static final ProductionStatus IDLE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus IDLE = register(
             new ProductionStatus("IDLE", nextIndex++)
     );
-    public static final ProductionStatus EXTRACTING_PRODUCT = SessionUniqueOrdinals.register(
+    public static final ProductionStatus EXTRACTING_PRODUCT = register(
             new ProductionStatus("EXTRACTING_PRODUCT", nextIndex++)
     );
-    public static final ProductionStatus RELAXING = SessionUniqueOrdinals.register(
+    public static final ProductionStatus RELAXING = register(
             new ProductionStatus("RELAXING", nextIndex++)
     );
-    public static final ProductionStatus WAITING_FOR_TIMED_STATE = SessionUniqueOrdinals.register(
+    public static final ProductionStatus WAITING_FOR_TIMED_STATE = register(
             new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
     );
 

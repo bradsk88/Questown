@@ -6,10 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -45,7 +42,10 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
 
         ImmutableMap.Builder<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> b = ImmutableMap.builder();
         b.put(ProductionStatus.EXTRACTING_PRODUCT, r -> ProductionTimeWarper.simulateExtractProduct(
-                r.items, taker, itemRemover
+                r.status, r.items, taker, itemRemover
+        ));
+        b.put(ProductionStatus.DROPPING_LOOT, r -> ProductionTimeWarper.simulateDropLoot(
+                r, town::depositItems, emptyFactory::makeEmptyItem
         ));
         // TODO: Handle the remaining statuses
 
@@ -54,16 +54,16 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     private void assertAllStatusesHandled() {
-        ProductionStatus.allStatuses().forEach(v -> {
+        for (ProductionStatus v : ProductionStatus.allStatuses()) {
             if (handlers.containsKey(v)) {
-                return;
+                continue;
             }
-            throw new ExceptionInInitializerError("Not all statuses are handled");
-        });
+            throw new ExceptionInInitializerError("Not all statuses are handled (failed on " + v + ")");
+        };
     }
 
-    public static <I extends Item<I>, H extends HeldItem<H, I>> WarpResult<H> simulateExtractProduct(
-            ImmutableList<H> items, ItemToEntityMover<I, H> taker, Supplier<I> remover
+    static <I extends Item<I>, H extends HeldItem<H, I>> WarpResult<H> simulateExtractProduct(
+            ProductionStatus status, ImmutableList<H> items, ItemToEntityMover<I, H> taker, Supplier<I> remover
     ) {
         // TODO: More efficient way to do this?
         Optional<H> foundEmpty = items.stream()
@@ -75,7 +75,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             ArrayList<H> outItems = new ArrayList<>(items);
             outItems.set(idx, taker.copyFromTownWithoutRemoving(remover.get()));
             return new WarpResult<>(
-                    ProductionStatus.DROPPING_LOOT,
+                    status,
                     ImmutableList.copyOf(outItems)
             );
         }
@@ -83,6 +83,42 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
                 "Got extract product with full inventory", items
         ));
 
+    }
+
+    static <I extends Item<I>, H extends HeldItem<H, I> & Item<H>> WarpResult<H> simulateDropLoot(
+            WarpResult<H> input,
+            Function<ImmutableList<H>, ? extends Collection<H>> addToTownOrReturn,
+            Supplier<H> emptyFactory
+    ) {
+        if (input.items.isEmpty() || input.items.stream().allMatch(Item::isEmpty)) {
+            throw new IllegalStateException("Got DROP_LOOT with empty inventory");
+        }
+
+        ImmutableList<H> unlockedItems = ImmutableList.copyOf(
+                input.items.stream()
+                        .filter(v -> !v.isLocked())
+                        .toList()
+        );
+        Iterator<H> undeposited = addToTownOrReturn.apply(unlockedItems)
+                .stream()
+                .filter(Predicate.not(HeldItem::isEmpty))
+                .iterator();
+        ImmutableList.Builder<H> b = ImmutableList.builder();
+        for (H item : input.items) {
+            if (item.isLocked()) {
+                b.add(item);
+                continue;
+            }
+            if (undeposited.hasNext()) {
+                b.add(undeposited.next());
+                continue;
+            }
+            b.add(emptyFactory.get());
+        }
+        return new WarpResult<>(
+                input.status,
+                b.build()
+        );
     }
 
     public interface FoodRemover<I extends Item<I>> {
