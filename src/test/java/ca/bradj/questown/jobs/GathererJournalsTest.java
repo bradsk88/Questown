@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 class GathererJournalsTest {
@@ -27,7 +28,7 @@ class GathererJournalsTest {
 
     private static class FakeTownWithInfiniteStorage implements
             ProductionTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>,
-            ProductionTimeWarper.FoodRemover<GathererJournalTest.TestItem>, Supplier<GathererJournalTest.TestItem> {
+            ProductionTimeWarper.FoodRemover<GathererJournalTest.TestItem>, Function<ProductionStatus, GathererJournalTest.TestItem> {
 
         final List<GathererJournalTest.TestItem> container = new ArrayList<>();
 
@@ -67,7 +68,7 @@ class GathererJournalsTest {
         }
 
         @Override
-        public GathererJournalTest.@Nullable TestItem get() {
+        public GathererJournalTest.TestItem apply(ProductionStatus productionStatus) {
             return removeFood();
         }
     }
@@ -88,14 +89,15 @@ class GathererJournalsTest {
                 )
         );
 
-        Supplier<GathererJournalTest.TestItem> emptyContainers = () -> null;
+        Function<ProductionStatus, GathererJournalTest.TestItem> emptyContainers = (s) -> null;
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 emptyContainers,
                 defaultLootGiver,
                 new FakeTownWithInfiniteStorage(), // No items added
+                (ts, rooms) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -103,7 +105,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(result.status(), initial.status());
@@ -145,16 +147,18 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String>(
-                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem(""),
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void>(
+                infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
+                () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(
@@ -197,10 +201,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -208,7 +213,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
@@ -254,10 +259,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -265,7 +271,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
@@ -306,10 +312,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -317,7 +324,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
@@ -358,10 +365,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -369,7 +377,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
@@ -414,10 +422,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -425,7 +434,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
@@ -466,10 +475,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -477,7 +487,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
@@ -545,10 +555,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 sizeSixStorage, specificLoot, sizeSixStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -556,7 +567,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = ImmutableList.of(
@@ -614,10 +625,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -625,7 +637,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.COLLECTING_SUPPLIES, result.status());
@@ -665,10 +677,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -676,7 +689,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.COLLECTING_SUPPLIES, result.status());
@@ -717,10 +730,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -728,7 +742,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
@@ -776,10 +790,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -787,7 +802,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
@@ -828,10 +843,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -839,7 +855,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = ImmutableList.of(
@@ -896,10 +912,11 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
+                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
                         >(
                 infiniteStorage, specificLoot, infiniteStorage,
+                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
@@ -907,7 +924,7 @@ class GathererJournalsTest {
         );
 
         SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                initial, 0, ticksPassed, 6
+                null, initial, 0, ticksPassed, 6
         );
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();

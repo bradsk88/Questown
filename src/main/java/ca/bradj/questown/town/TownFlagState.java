@@ -101,8 +101,12 @@ public class TownFlagState {
         }
         ProductionTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
-        ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
-                storedState::removeFood, loot, storedState,
+        ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation, ServerLevel> warper = new ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation, ServerLevel>(
+                status -> {
+                    // TODO[ASAP]: Remove items based on Job needs
+                    return storedState.removeFood();
+                }, loot, storedState,
+                (src, rooms) -> storedState.asTimerHandle(),
                 MCHeldItem::Air, MCHeldItem::fromTown,
                 GathererJob::checkTools,
                 (items) -> GathererJob.computeBiome(items, e)
@@ -114,7 +118,7 @@ public class TownFlagState {
             QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
             Snapshot<MCHeldItem> warped = unwarped;
             if (unwarped instanceof SimpleSnapshot) {
-                warped = warper.timeWarp(
+                warped = warper.timeWarp(sl,
                         (SimpleSnapshot<ProductionStatus, MCHeldItem>) (Object) unwarped,
                         dayTime,
                         ticksPassed,

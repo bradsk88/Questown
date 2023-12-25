@@ -1,12 +1,15 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.interfaces.MutableWorkStatusHandle;
+import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 class ProductionTimeWarperTest {
 
@@ -14,7 +17,7 @@ class ProductionTimeWarperTest {
     void constructorShouldNotThrow() {
         // This essentially tests that all the production statuses have been handled
         new ProductionTimeWarper(
-                () -> new GathererJournalTest.TestItem("bread"),
+                (status) -> new GathererJournalTest.TestItem("bread"),
                 new ProductionTimeWarper.LootGiver() {
                     @Override
                     public @NotNull Iterable giveLoot(int max, GathererJournal.Tools tools, Object o) {
@@ -37,7 +40,13 @@ class ProductionTimeWarperTest {
                         return false;
                     }
                 },
-                new EmptyFactory() {
+                new TimerHandle() {
+                    @Override
+                    public void tick(Object o, Collection roomsToScanForChanges) {
+                        // TODO: Test timers
+                    }
+                },
+        new EmptyFactory() {
                     @Override
                     public Item makeEmptyItem() {
                         return new GathererJournalTest.TestItem("");

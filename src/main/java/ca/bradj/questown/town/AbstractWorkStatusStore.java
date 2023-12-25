@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.interfaces.MutableWorkStatusHandle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
+public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements MutableWorkStatusHandle<ROOM, TICK_SOURCE, POS, ITEM> {
 
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
@@ -169,11 +169,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         return jobStatuses.containsKey(bp);
     }
 
+    @Override
     public void tick(
             TICK_SOURCE tickSource,
-            Collection<ROOM> allRooms
+            Collection<ROOM> roomsToScanForChanges
     ) {
-        rooms.addAll(allRooms);
+        rooms.addAll(roomsToScanForChanges);
 
         if (rooms.isEmpty()) {
             return;

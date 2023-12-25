@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.interfaces.MutableWorkStatusHandle;
+import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -11,9 +13,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME> {
+public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & Item<H>, BIOME, TICK_SOURCE> {
 
-    private final Supplier<I> itemRemover;
+    private final Function<ProductionStatus, @Nullable I> itemRemover;
     private final LootGiver<I, H, BIOME> lootGiver;
     private final Town<I, H> town;
     private final EmptyFactory<H> emptyFactory;
@@ -22,11 +24,13 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     private final Function<Iterable<H>, BIOME> biome;
 
     private final ImmutableMap<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> handlers;
+    private final TimerHandle<?, TICK_SOURCE> workStatus;
 
     public ProductionTimeWarper(
-            Supplier<@Nullable I> itemRemover,
+            Function<ProductionStatus, @Nullable I> itemRemover,
             LootGiver<I, H, BIOME> lootGiver,
             Town<I, H> town,
+            TimerHandle<?, TICK_SOURCE> workStatus,
             EmptyFactory<H> emptyFactory,
             ItemToEntityMover<I, H> taker,
             GathererJournal.ToolsChecker<H> toolChecker,
@@ -39,14 +43,24 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
         this.taker = taker;
         this.toolChecker = toolChecker;
         this.biome = heldBiome;
+        this.workStatus = workStatus;
 
         ImmutableMap.Builder<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> b = ImmutableMap.builder();
         b.put(ProductionStatus.EXTRACTING_PRODUCT, r -> ProductionTimeWarper.simulateExtractProduct(
-                r.status, r.items, taker, itemRemover
+                r.status, r.items, taker, () -> itemRemover.apply(ProductionStatus.EXTRACTING_PRODUCT)
         ));
         b.put(ProductionStatus.DROPPING_LOOT, r -> ProductionTimeWarper.simulateDropLoot(
                 r, town::depositItems, emptyFactory::makeEmptyItem
         ));
+        b.put(ProductionStatus.COLLECTING_SUPPLIES, r -> ProductionTimeWarper.simulateExtractProduct(
+                r.status, r.items, taker, () -> itemRemover.apply(ProductionStatus.COLLECTING_SUPPLIES)
+        ));
+        b.put(ProductionStatus.RELAXING, r -> r);
+        b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, r -> r);
+        b.put(ProductionStatus.NO_SPACE, r -> r);
+        b.put(ProductionStatus.GOING_TO_JOB, r -> r);
+        b.put(ProductionStatus.NO_SUPPLIES, r -> r);
+        b.put(ProductionStatus.IDLE, r -> r);
         // TODO: Handle the remaining statuses
 
         this.handlers = b.build();
@@ -59,7 +73,8 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
                 continue;
             }
             throw new ExceptionInInitializerError("Not all statuses are handled (failed on " + v + ")");
-        };
+        }
+        ;
     }
 
     static <I extends Item<I>, H extends HeldItem<H, I>> WarpResult<H> simulateExtractProduct(
@@ -74,13 +89,14 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             int idx = items.indexOf(foundEmpty.get());
             ArrayList<H> outItems = new ArrayList<>(items);
             outItems.set(idx, taker.copyFromTownWithoutRemoving(remover.get()));
+            // TODO[ASAP]: Update state of block?
             return new WarpResult<>(
                     status,
                     ImmutableList.copyOf(outItems)
             );
         }
         throw new IllegalStateException(String.format(
-                "Got extract product with full inventory", items
+                "Got extract product with full inventory: %s", items
         ));
 
     }
@@ -148,6 +164,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     public SimpleSnapshot<ProductionStatus, H> timeWarp(
+            TICK_SOURCE tickSource,
             SimpleSnapshot<ProductionStatus, H> input,
             long currentTick,
             long ticksPassed,
@@ -163,10 +180,11 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
         long start = currentTick;
         long max = currentTick + ticksPassed;
 
+        long prevI = start;
         for (long i = start; i <= max; i = getNextDaySegment(i, max)) {
-            Signals signal = Signals.fromGameTime(
-                    i
-            );
+            long passed = i - prevI;
+            prevI = i;
+            Signals signal = Signals.fromGameTime(i);
             ProductionStatus newStatus = null; // TODO[ASAP]: Uncomment
 //            ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
 //                    output.status(), signal, stateHandle, town
@@ -178,6 +196,11 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             ImmutableList<H> outImItems = ImmutableList.copyOf(r.items);
             stateHandle.updateItems(outImItems);
             output = new SimpleSnapshot<>(input.jobId(), r.status, outImItems);
+            for (int k = 0; k < passed; k++) {
+                // TODO: add "passed" as an optional parameter to tick, so
+                //  we don't potentially call this hundreds of times
+                workStatus.tick(tickSource, ImmutableList.of());
+            }
         }
         return output;
     }
@@ -252,29 +275,6 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
         H copyFromTownWithoutRemoving(I item);
     }
 
-    private static <I extends Item<I>, H extends HeldItem<H, I>> void takeButDoNotEatFood(
-            List<H> outItems,
-            I food,
-            Signals signal,
-            ItemToEntityMover<I, H> mover
-    ) {
-        // TODO: More efficient way to do this?
-        Optional<H> foundEmpty = outItems.stream()
-                .filter(Item::isEmpty)
-                .findFirst();
-        if (foundEmpty.isPresent()) {
-            // TODO: This is suspiciously similar to the logic in VisitorMobJob
-            int idx = outItems.indexOf(foundEmpty.get());
-            outItems.set(idx, mover.copyFromTownWithoutRemoving(food));
-        } else {
-            throw new IllegalStateException(String.format(
-                    "Got NO_FOOD with full inventory on signal %s: %s",
-                    signal,
-                    outItems
-            ));
-        }
-    }
-
     public static long getNextDaySegment(
             long currentGameTime,
             long upTo
@@ -283,11 +283,13 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             return currentGameTime + 1;
         }
         long daysPassed = currentGameTime / 24000;
-        long i = (24000 * daysPassed) + getNextSingleDatSegment(currentGameTime);
+        long i = (24000 * daysPassed) + getNextSingleDaySegment(currentGameTime);
         return i;
     }
 
-    private static long getNextSingleDatSegment(long currentGameTime) {
+    private static long getNextSingleDaySegment(long currentGameTime) {
+        // TODO: Increment by 100 or some other larger number to simulate
+        //  the need for villager movement through town.
         long timeOfDay = currentGameTime % 24000;
         // Allow ten ticks per period for multi-step status transitions
         if (timeOfDay < 10) {
