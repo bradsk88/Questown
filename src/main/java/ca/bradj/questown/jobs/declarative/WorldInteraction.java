@@ -146,12 +146,12 @@ public class WorldInteraction
     @Override
     protected void degradeTool(
             MCExtra mcExtra,
-            Function<MCTownItem, Boolean> toolCheck
+            Function<MCTownItem, Boolean> isExpectedTool
     ) {
         // FIXME: This tool degradation seem to work
         Optional<MCHeldItem> foundTool = journal.getItems()
                 .stream()
-                .filter(v -> toolCheck.apply(v.get()))
+                .filter(v -> isExpectedTool.apply(v.get()))
                 .findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());

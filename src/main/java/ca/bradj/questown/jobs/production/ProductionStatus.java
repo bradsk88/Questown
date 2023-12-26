@@ -40,7 +40,6 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus NO_SPACE = register(
             new ProductionStatus("NO_SPACE", nextIndex++)
     );
-
     public static final ProductionStatus GOING_TO_JOB = register(
             new ProductionStatus("GOING_TO_JOB", nextIndex++)
     );

@@ -122,7 +122,7 @@ class AbstractWorldInteractionTest {
         @Override
         protected void degradeTool(
                 Void unused,
-                Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+                Function<GathererJournalTest.TestItem, Boolean> isExpectedTool
         ) {
         }
 

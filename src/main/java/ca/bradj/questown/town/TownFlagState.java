@@ -11,6 +11,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -45,12 +46,12 @@ public class TownFlagState {
     @Nullable MCTownState captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> vB = ImmutableList.builder();
         for (LivingEntity entity : parent.entities) {
-            if (entity instanceof VisitorMobEntity) {
-                if (!((VisitorMobEntity) entity).isInitialized()) {
+            if (entity instanceof VisitorMobEntity vme) {
+                if (!vme.isInitialized()) {
                     return null;
                 }
                 Vec3 pos = entity.position();
-                Snapshot snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
+                Snapshot snapshot = vme.getJobJournalSnapshot();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<>(
                         pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
@@ -62,6 +63,7 @@ public class TownFlagState {
         MCTownState ts = new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
+                parent.getWorkStatusHandle(null).getAll(),
                 parent.getWelcomeMats(),
                 dayTime
         );
@@ -88,7 +90,7 @@ public class TownFlagState {
             );
             QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
         } else {
-            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
+            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableMap.of(), ImmutableList.of(), 0);
             QT.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
@@ -119,6 +121,9 @@ public class TownFlagState {
             Snapshot<MCHeldItem> warped = unwarped;
             if (unwarped instanceof SimpleSnapshot) {
                 warped = warper.timeWarp(sl,
+                        r -> unwarped.getTownStateWI(storedState).tryWorking(
+                                storedState, storedState.
+                        ),
                         (SimpleSnapshot<ProductionStatus, MCHeldItem>) (Object) unwarped,
                         dayTime,
                         ticksPassed,
@@ -132,7 +137,7 @@ public class TownFlagState {
             villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
         }
 
-        return new MCTownState(villagers, storedState.containers, storedState.gates, dayTime);
+        return new MCTownState(villagers, storedState.containers, storedState.workStates, storedState.gates, dayTime);
     }
 
     static void recoverMobs(

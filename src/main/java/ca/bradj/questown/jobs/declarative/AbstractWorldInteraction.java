@@ -81,9 +81,9 @@ public abstract class AbstractWorldInteraction<
             @Override
             protected void degradeTool(
                     EXTRA extra,
-                    Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+                    Function<INNER_ITEM, Boolean> isExpectedTool
             ) {
-                self.degradeTool(extra, heldItemBooleanFunction); // TODO: Implement generically and test
+                self.degradeTool(extra, isExpectedTool); // TODO: Implement generically and test
             }
 
             @Override
@@ -95,7 +95,7 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract void degradeTool(
             EXTRA extra,
-            Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+            Function<INNER_ITEM, Boolean> isExpectedTool
     );
 
     protected abstract boolean canInsertItem(

@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.TownFlagState;
 import ca.bradj.questown.town.interfaces.MutableWorkStatusHandle;
 import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;
@@ -25,6 +27,10 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
 
     private final ImmutableMap<ProductionStatus, Function<WarpResult<H>, WarpResult<H>>> handlers;
     private final TimerHandle<?, TICK_SOURCE> workStatus;
+
+    public record JobNeeds<I>(
+            ImmutableMap<Integer, Predicate<I>> ingredients
+    ) {}
 
     public ProductionTimeWarper(
             Function<ProductionStatus, @Nullable I> itemRemover,
@@ -164,7 +170,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     public SimpleSnapshot<ProductionStatus, H> timeWarp(
-            TICK_SOURCE tickSource,
+            Function<WarpResult<H>, WarpResult<H>> tryWorking,
             SimpleSnapshot<ProductionStatus, H> input,
             long currentTick,
             long ticksPassed,
@@ -192,15 +198,15 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
 //            if (newStatus == null) {
 //                continue;
 //            }
-            WarpResult<H> r = this.simulateEffects(newStatus, input.items());
+            WarpResult<H> r;
+            if (newStatus.isWorkingOnProduction()) {
+                r = tryWorking.apply(new WarpResult<>(newStatus, input.items()));
+            } else {
+                r = this.simulateEffects(newStatus, input.items());
+            }
             ImmutableList<H> outImItems = ImmutableList.copyOf(r.items);
             stateHandle.updateItems(outImItems);
             output = new SimpleSnapshot<>(input.jobId(), r.status, outImItems);
-            for (int k = 0; k < passed; k++) {
-                // TODO: add "passed" as an optional parameter to tick, so
-                //  we don't potentially call this hundreds of times
-                workStatus.tick(tickSource, ImmutableList.of());
-            }
         }
         return output;
     }
