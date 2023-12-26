@@ -315,7 +315,4 @@ public class GathererJob extends LeaverJob {
         return journal.addItemIfSlotAvailable(i);
     }
 
-    public static MCTownStateWorldInteraction timeWarpWI() {
-        throw new UnsupportedOperationException(); // FIXME: Phase out this job
-    }
 }

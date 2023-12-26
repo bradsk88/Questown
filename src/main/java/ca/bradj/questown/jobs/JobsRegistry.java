@@ -8,13 +8,11 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.ExplorerWork;
 import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
@@ -44,7 +42,6 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class JobsRegistry {
@@ -120,11 +117,6 @@ public class JobsRegistry {
             return new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
         }
         return new AbstractWorkStatusStore.State(0, 0, 0);
-    }
-
-    public static MCTownStateWorldInteraction getTownStateWI(JobID jobID, MCTownState storedState) {
-        Work w = works.get(jobID);
-        return w.timeWarpWI;
     }
 
     public record TownData(
@@ -222,8 +214,7 @@ public class JobsRegistry {
             IStatus<?> initialStatus,
             Function<TownData, ImmutableSet<MCTownItem>> results,
             ItemStack initialRequest,
-            Function<IStatus<?>, Collection<Ingredient>> needs,
-            Supplier<MCTownStateWorldInteraction> timeWarpWI
+            Function<IStatus<?>, Collection<Ingredient>> needs
     ) {
     }
 
@@ -287,8 +278,7 @@ public class JobsRegistry {
                 t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
                 NOT_REQUIRED_BECAUSE_NO_JOB_QUEST,
                 // TODO: Review this - probably should be different by status
-                (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)),
-                GathererJob::timeWarpWI
+                (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
         ));
         b.put(FarmerJob.ID, new Work(
                 (town, uuid) -> new FarmerJob(uuid, 6),
@@ -312,8 +302,7 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),
                 BakerBreadWork.RESULT,
-                (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES),
-                BakerBreadWork::townStateWI
+                (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
         ));
         b.put(DSmelterJob.ID, new Work(
                 (town, uuid) -> new DSmelterJob(uuid, 6),

@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -10,12 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 class GathererJournalsTest {
 
-    private final ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> defaultLootGiver =
+    private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> defaultLootGiver =
             (max, tools, biome) -> ImmutableList.of(
                     new GathererJournalTest.TestItem(
                             "gold"),
@@ -27,8 +26,8 @@ class GathererJournalsTest {
             );
 
     private static class FakeTownWithInfiniteStorage implements
-            ProductionTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>,
-            ProductionTimeWarper.FoodRemover<GathererJournalTest.TestItem>, Function<ProductionStatus, GathererJournalTest.TestItem> {
+            GathererTimeWarper.Town<GathererJournalTest.TestItem, GathererJournalTest.TestItem>,
+            GathererTimeWarper.FoodRemover<GathererJournalTest.TestItem> {
 
         final List<GathererJournalTest.TestItem> container = new ArrayList<>();
 
@@ -66,19 +65,13 @@ class GathererJournalsTest {
             }
             return null;
         }
-
-        @Override
-        public GathererJournalTest.TestItem apply(ProductionStatus productionStatus) {
-            return removeFood();
-        }
     }
 
     @Test
     public void test_OneDay_WithEmptyContainers_ShouldStaySame() {
         int ticksPassed = 24000;
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.COLLECTING_SUPPLIES,
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.NO_FOOD,
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -89,23 +82,22 @@ class GathererJournalsTest {
                 )
         );
 
-        Function<ProductionStatus, GathererJournalTest.TestItem> emptyContainers = (s) -> null;
+        GathererTimeWarper.FoodRemover<GathererJournalTest.TestItem> emptyContainers = () -> null;
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 emptyContainers,
                 defaultLootGiver,
                 new FakeTownWithInfiniteStorage(), // No items added
-                (ts, rooms) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(result.status(), initial.status());
@@ -125,9 +117,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE,
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE,
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -138,7 +129,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, biome) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, biome) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -147,22 +138,20 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void>(
-                infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
-                () -> new GathererJournalTest.TestItem(""),
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String>(
+                infiniteStorage, specificLoot, infiniteStorage, () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         Assertions.assertEquals(
-                ProductionStatus.COLLECTING_SUPPLIES,
+                GathererJournal.Status.NO_FOOD,
                 result.status()
         ); // Debatable. Idle (or sleeping?) could also be good
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
@@ -179,9 +168,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE,
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE,
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -192,7 +180,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -201,22 +189,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
+        Assertions.assertEquals(GathererJournal.Status.GATHERING_HUNGRY, result.status());
         Assertions.assertEquals(ImmutableList.of(
                 new GathererJournalTest.TestItem("bread"),
                 new GathererJournalTest.TestItem(""),
@@ -237,9 +224,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -250,7 +236,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -259,22 +245,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
+        Assertions.assertEquals(GathererJournal.Status.RETURNING, result.status());
         Assertions.assertTrue(result.items()
                 .stream()
                 .allMatch(GathererJournalTest.TestItem::isEmpty)); // Loot is not given until evening
@@ -290,9 +275,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -303,7 +287,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -312,22 +296,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
+        Assertions.assertEquals(GathererJournal.Status.RETURNING, result.status());
         Assertions.assertTrue(result.items()
                 .stream()
                 .allMatch(GathererJournalTest.TestItem::isEmpty)); // Loot is not given until evening
@@ -343,9 +326,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -356,7 +338,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -365,22 +347,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), result.items());
         Assertions.assertTrue(infiniteStorage.container.isEmpty());
     }
@@ -400,9 +381,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -413,7 +393,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -422,22 +402,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), infiniteStorage.container);
     }
@@ -453,9 +432,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -466,7 +444,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -475,19 +453,18 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
@@ -495,7 +472,7 @@ class GathererJournalsTest {
         b.addAll(specificLoot.giveLoot(6, noToolz(), "forest"));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }
@@ -533,9 +510,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("seeds")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -546,7 +522,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -555,19 +531,18 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 sizeSixStorage, specificLoot, sizeSixStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = ImmutableList.of(
@@ -588,7 +563,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("")
         );
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertEquals(expectedKeptLoot, result.items());
         Assertions.assertEquals(expectedTownLoot, sizeSixStorage.container);
     }
@@ -603,9 +578,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -616,7 +590,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -625,22 +599,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.COLLECTING_SUPPLIES, result.status());
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), infiniteStorage.container); // From the first day
     }
@@ -655,9 +628,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -668,7 +640,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -677,22 +649,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.COLLECTING_SUPPLIES, result.status());
+        Assertions.assertEquals(GathererJournal.Status.NO_FOOD, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(Item::isEmpty));
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), infiniteStorage.container); // From the first day
     }
@@ -708,9 +679,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -721,7 +691,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -730,22 +700,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.WAITING_FOR_TIMED_STATE, result.status());
+        Assertions.assertEquals(GathererJournal.Status.GATHERING, result.status());
         Assertions.assertEquals(ImmutableList.of(
                 new GathererJournalTest.TestItem("bread"),
                 new GathererJournalTest.TestItem(""),
@@ -768,9 +737,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -781,7 +749,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -790,22 +758,21 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.RETURNED_SUCCESS, result.status());
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), result.items());
         Assertions.assertEquals(specificLoot.giveLoot(6, noToolz(), "forest"), infiniteStorage.container);
     }
@@ -821,9 +788,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -834,7 +800,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -843,19 +809,18 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = ImmutableList.of(
@@ -873,7 +838,7 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond") // <-- From day two
         );
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
         Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }
@@ -890,9 +855,8 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("bread")
         ));
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> initial = new SimpleSnapshot<>(
-                new JobID("test", "test"),
-                ProductionStatus.IDLE, // Technically this should also work if the status is NO_FOOD
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> initial = new GathererJournal.Snapshot<>(
+                GathererJournal.Status.IDLE, // Technically this should also work if the status is NO_FOOD
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""),
                         new GathererJournalTest.TestItem(""),
@@ -903,7 +867,7 @@ class GathererJournalsTest {
                 )
         );
 
-        ProductionTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
+        GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> specificLoot = (max, tools, b) -> ImmutableList.of(
                 new GathererJournalTest.TestItem("flint"),
                 new GathererJournalTest.TestItem("wood"),
                 new GathererJournalTest.TestItem("stone"),
@@ -912,19 +876,18 @@ class GathererJournalsTest {
                 new GathererJournalTest.TestItem("diamond")
         );
 
-        ProductionTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void> warper = new ProductionTimeWarper<
-                        GathererJournalTest.TestItem, GathererJournalTest.TestItem, String, Void
-                        >(
+        GathererTimeWarper<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> warper = new GathererTimeWarper<
+                GathererJournalTest.TestItem, GathererJournalTest.TestItem, String
+                >(
                 infiniteStorage, specificLoot, infiniteStorage,
-                (ts, r) -> {},
                 () -> new GathererJournalTest.TestItem(""),
                 t -> t,
                 noTools(),
                 (i) -> "forest"
         );
 
-        SimpleSnapshot<ProductionStatus, GathererJournalTest.TestItem> result = warper.timeWarp(
-                null, initial, 0, ticksPassed, 6
+        GathererJournal.Snapshot<GathererJournalTest.TestItem> result = warper.timeWarp(
+                initial, 0, ticksPassed, 6
         );
 
         ImmutableList.Builder<GathererJournalTest.TestItem> b = ImmutableList.builder();
@@ -933,7 +896,7 @@ class GathererJournalsTest {
         b.addAll(specificLoot.giveLoot(6, noToolz(), "forest"));
         ImmutableList<GathererJournalTest.TestItem> expectedTownLoot = b.build();
 
-        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, result.status());
+        Assertions.assertEquals(GathererJournal.Status.DROPPING_LOOT, result.status());
         Assertions.assertTrue(result.items().stream().allMatch(GathererJournalTest.TestItem::isEmpty));
         Assertions.assertEquals(expectedTownLoot, infiniteStorage.container);
     }

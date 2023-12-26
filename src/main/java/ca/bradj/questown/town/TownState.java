@@ -2,35 +2,28 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
 public class TownState<
         C extends ContainerTarget.Container<I>,
         I extends Item<I>,
-        H extends HeldItem<H, I> & Item<H>,
-        P
-        > implements ProductionTimeWarper.FoodRemover<I>, ProductionTimeWarper.Town<I, H>, ImmutableWorkStateContainer<P, TownState<C, I, H, P>> {
+        H extends HeldItem<H, I> & Item<H>
+        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I, H> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<BlockPos> gates;
     public final long worldTimeAtSleep;
-    public final ImmutableMap<P, AbstractWorkStatusStore.State> workStates;
 
     public TownState(
             @NotNull List<VillagerData<H>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
-            @NotNull ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
             @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
     ) {
@@ -38,7 +31,6 @@ public class TownState<
         this.containers = ImmutableList.copyOf(containers);
         this.gates = ImmutableList.copyOf(gates);
         this.worldTimeAtSleep = worldTimeAtSleep;
-        this.workStates = workStates;
     }
 
     @Override
@@ -114,30 +106,6 @@ public class TownState<
     @Override
     public boolean hasGate() {
         return !gates.isEmpty();
-    }
-
-    @Override
-    public TownState<C, I, H, P> setJobBlockState(P bp, AbstractWorkStatusStore.State bs) {
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
-        m.put(bp, bs);
-        return new TownState<>(
-                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
-        );
-    }
-
-    @Override
-    public TownState<C, I, H, P> setJobBlockStateWithTimer(P bp, AbstractWorkStatusStore.State bs, int ticksToNextState) {
-        // FIXME: Implement
-        return this;
-    }
-
-    @Override
-    public TownState<C, I, H, P> clearState(P bp) {
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
-        m.remove(bp);
-        return new TownState<>(
-                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
-        );
     }
 
     public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {

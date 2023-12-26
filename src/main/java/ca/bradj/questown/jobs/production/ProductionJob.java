@@ -392,6 +392,32 @@ public abstract class ProductionJob<
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
+    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
+        return new EntityInvStateProvider<>() {
+            @Override
+            public boolean inventoryFull() {
+                return journal.isInventoryFull();
+            }
+
+            @Override
+            public boolean hasNonSupplyItems() {
+
+                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet().stream().filter(
+                        v -> !v.getValue().isEmpty()
+                ).map(Map.Entry::getKey).collect(Collectors.toSet());
+                ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
+                        statesToFeed.stream().flatMap(v -> recipe.getRecipe(v).stream()).toList()
+                );
+                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
+            }
+
+            @Override
+            public Map<Integer, Boolean> getSupplyItemStatus() {
+                return ProductionJob.this.getSupplyItemStatus();
+            }
+        };
+    }
+
     public interface TestFn<S, I> {
         boolean test(
                 Map<S, Boolean> canUseIngredientsForWork,

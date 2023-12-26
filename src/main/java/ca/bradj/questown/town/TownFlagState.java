@@ -4,14 +4,15 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.GathererJournal;
+import ca.bradj.questown.jobs.GathererTimeWarper;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.jobs.GathererJob;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -20,8 +21,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,12 +47,12 @@ public class TownFlagState {
     @Nullable MCTownState captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> vB = ImmutableList.builder();
         for (LivingEntity entity : parent.entities) {
-            if (entity instanceof VisitorMobEntity vme) {
-                if (!vme.isInitialized()) {
+            if (entity instanceof VisitorMobEntity) {
+                if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
                 }
                 Vec3 pos = entity.position();
-                Snapshot snapshot = vme.getJobJournalSnapshot();
+                Snapshot snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<>(
                         pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
@@ -63,7 +64,6 @@ public class TownFlagState {
         MCTownState ts = new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
-                parent.getWorkStatusHandle(null).getAll(),
                 parent.getWelcomeMats(),
                 dayTime
         );
@@ -90,7 +90,7 @@ public class TownFlagState {
             );
             QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
         } else {
-            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableMap.of(), ImmutableList.of(), 0);
+            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
             QT.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
@@ -101,14 +101,10 @@ public class TownFlagState {
             Questown.LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
-        ProductionTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
+        GathererTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
-        ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation, ServerLevel> warper = new ProductionTimeWarper<MCTownItem, MCHeldItem, ResourceLocation, ServerLevel>(
-                status -> {
-                    // TODO[ASAP]: Remove items based on Job needs
-                    return storedState.removeFood();
-                }, loot, storedState,
-                (src, rooms) -> storedState.asTimerHandle(),
+        GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
+                storedState, loot, storedState,
                 MCHeldItem::Air, MCHeldItem::fromTown,
                 GathererJob::checkTools,
                 (items) -> GathererJob.computeBiome(items, e)
@@ -119,15 +115,9 @@ public class TownFlagState {
             Snapshot<MCHeldItem> unwarped = v.journal;
             QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
             Snapshot<MCHeldItem> warped = unwarped;
-            if (unwarped instanceof SimpleSnapshot) {
-                warped = warper.timeWarp(sl,
-                        (ProductionTimeWarper.WarpResult<MCHeldItem> r) -> JobsRegistry.getTownStateWI(v.journal.jobId(), storedState).tryWorking(
-                                storedState, storedState.workStates.entrySet().stream().
-                                        filter(x -> x.getValue().processingState() == r.status().getProductionState()).
-                                        map(x -> new WorkSpot<Integer, BlockPos>(x.getKey(), x.getValue().processingState(), 1)).
-                                        findFirst().get()
-                        ),
-                        (SimpleSnapshot<ProductionStatus, MCHeldItem>) (Object) unwarped,
+            if (unwarped instanceof GathererJournal.Snapshot<?>) {
+                warped = warper.timeWarp(
+                        (GathererJournal.Snapshot<MCHeldItem>) unwarped,
                         dayTime,
                         ticksPassed,
                         v.getCapacity()
@@ -140,7 +130,7 @@ public class TownFlagState {
             villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
         }
 
-        return new MCTownState(villagers, storedState.containers, storedState.workStates, storedState.gates, dayTime);
+        return new MCTownState(villagers, storedState.containers, storedState.gates, dayTime);
     }
 
     static void recoverMobs(
@@ -249,7 +239,7 @@ public class TownFlagState {
             BlockPos bp = Positions.ToBlock(v.getPosition(), v.getYPosition());
             BlockEntity entity = level.getBlockEntity(bp);
             LazyOptional<IItemHandler> cap = entity.getCapability(
-                    ForgeCapabilities.ITEM_HANDLER);
+                    CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
             if (cap != null && cap.isPresent()) {
                 int newValue = determineValue(cap.resolve().get());
                 if (listenedBlocks.containsKey(bp)) {

@@ -52,7 +52,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM> {
 
     protected abstract void degradeTool(
             EXTRA extra,
-            Function<ITEM, Boolean> isExpectedTool
+            Function<ITEM, Boolean> itemBooleanFunction
     );
 
     private AbstractWorkStatusStore.State applyWork(

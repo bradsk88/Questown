@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.town.interfaces.MutableWorkStatusHandle;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements MutableWorkStatusHandle<ROOM, TICK_SOURCE, POS, ITEM> {
+public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
 
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
@@ -107,12 +107,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public Void setJobBlockState(
+    public void setJobBlockState(
             POS bp,
             State bs
     ) {
         modifyJobBlockState(bp, (p, s) -> bs);
-        return null;
     }
 
     private void modifyJobBlockState(
@@ -127,7 +126,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public Void setJobBlockStateWithTimer(
+    public void setJobBlockStateWithTimer(
             POS bp,
             State bs,
             int ticksToNextState
@@ -140,14 +139,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
         QT.BLOCK_LOGGER.debug("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
         this.timeJobStatuses.put(bp, ticksToNextState);
-        return null;
     }
 
     @Override
-    public Void clearState(POS bp) {
+    public void clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
-        return null;
     }
 
     @Override
@@ -156,6 +153,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     public interface InsertionRules<ITEM> {
+
+
         Map<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates();
 
         Map<Integer, Integer> ingredientQuantityRequiredAtStates();
@@ -170,12 +169,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         return jobStatuses.containsKey(bp);
     }
 
-    @Override
     public void tick(
             TICK_SOURCE tickSource,
-            Collection<ROOM> roomsToScanForChanges
+            Collection<ROOM> allRooms
     ) {
-        rooms.addAll(roomsToScanForChanges);
+        rooms.addAll(allRooms);
 
         if (rooms.isEmpty()) {
             return;
