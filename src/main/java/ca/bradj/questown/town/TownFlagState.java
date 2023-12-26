@@ -121,8 +121,11 @@ public class TownFlagState {
             Snapshot<MCHeldItem> warped = unwarped;
             if (unwarped instanceof SimpleSnapshot) {
                 warped = warper.timeWarp(sl,
-                        r -> unwarped.getTownStateWI(storedState).tryWorking(
-                                storedState, storedState.
+                        (ProductionTimeWarper.WarpResult<MCHeldItem> r) -> JobsRegistry.getTownStateWI(v.journal.jobId(), storedState).tryWorking(
+                                storedState, storedState.workStates.entrySet().stream().
+                                        filter(x -> x.getValue().processingState() == r.status().getProductionState()).
+                                        map(x -> new WorkSpot<Integer, BlockPos>(x.getKey(), x.getValue().processingState(), 1)).
+                                        findFirst().get()
                         ),
                         (SimpleSnapshot<ProductionStatus, MCHeldItem>) (Object) unwarped,
                         dayTime,

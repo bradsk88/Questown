@@ -9,6 +9,7 @@ import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 import java.util.Map;
@@ -22,9 +23,9 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             JobID jobId,
             int interval,
             int maxState,
-            ImmutableMap<Integer, Function<MCTownItem, Boolean>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Function<MCHeldItem, Boolean>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates, Supplier<Collection<MCTownItem>> journalItems,
             InventoryHandle<MCHeldItem> inventory

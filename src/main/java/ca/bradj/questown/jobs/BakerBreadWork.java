@@ -71,4 +71,10 @@ public class BakerBreadWork extends DeclarativeJob {
                 false
         );
     }
+
+    public static MCTownStateWorldInteraction townStateWI() {
+        return new MCTownStateWorldInteraction(ID, 100, MAX_STATE, TOOLS_REQUIRED_AT_STATES, WORK_REQUIRED_AT_STATES,
+                INGREDIENTS_REQUIRED_AT_STATES, INGREDIENT_QTY_REQUIRED_AT_STATES, TIME_REQUIRED_AT_STATES,
+                )
+    }
 }
