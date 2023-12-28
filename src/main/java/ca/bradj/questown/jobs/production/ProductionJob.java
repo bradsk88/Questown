@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
@@ -250,12 +249,12 @@ public abstract class ProductionJob<
     ) {
         this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(town, getWorkStatusHandle(town));
 
-        WorkStatusHandle<BlockPos, MCCoupledHeldItem> work = getWorkStatusHandle(town);
+        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
 
-    private WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(TownInterface town) {
-        WorkStatusHandle<BlockPos, MCCoupledHeldItem> work;
+    private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
+        WorkStatusHandle<BlockPos, MCHeldItem> work;
         if (this.sharedTimers) {
             work = town.getWorkStatusHandle(null);
         } else {
@@ -266,7 +265,7 @@ public abstract class ProductionJob<
 
     protected abstract void tick(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> workStatus,
+            WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,

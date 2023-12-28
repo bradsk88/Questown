@@ -107,12 +107,12 @@ public class WorkSeekerJob extends DeclarativeJob {
         ) {
 
             @Override
-            protected boolean tryExtractOre(
+            protected Void tryExtractOre(
                     MCExtra extra,
                     BlockPos position
             ) {
                 extra.town().changeJobForVisitorFromBoard(ownerUUID);
-                return true;
+                return null;
             }
         };
     }

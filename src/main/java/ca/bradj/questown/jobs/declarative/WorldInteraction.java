@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
@@ -10,7 +9,6 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -29,13 +27,13 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class WorldInteraction
-        extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCCoupledHeldItem> {
+        extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Void> {
 
     private final boolean nullifyExcessProduct;
 
-    public boolean tryWorking(
+    public Void tryWorking(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
@@ -66,36 +64,14 @@ public class WorldInteraction
     ) {
         super(
                 journal.getJobId(),
+                -1, // Not used by this implementation
                 interval,
                 maxState,
                 stripMC2(toolsRequiredAtStates),
                 workRequiredAtStates,
                 stripMC(ingredientsRequiredAtStates),
                 ingredientQtyRequiredAtStates,
-                timeRequiredAtStates,
-                () -> journal.getItems().stream().map(MCHeldItem::get).toList(),
-                new InventoryHandle<>() {
-                    @Override
-                    public Collection<MCCoupledHeldItem> getItems() {
-                        ImmutableList.Builder<MCCoupledHeldItem> b = ImmutableList.builder();
-                        for (int i = 0; i < inventory.getContainerSize(); i++) {
-                            final int ii = i;
-                            b.add(MCCoupledHeldItem.fromMCItemStack(inventory.getItem(i), (shrunk) -> {
-                                inventory.setItem(ii, shrunk.toItem().toItemStack());
-                            }));
-                        }
-                        return b.build();
-                    }
-
-                    @Override
-                    public void set(
-                            int ii,
-                            MCCoupledHeldItem shrink
-                    ) {
-                        inventory.setItem(ii, shrink.get().toItemStack());
-                        inventory.setChanged();
-                    }
-                }
+                timeRequiredAtStates
         );
         this.inventory = inventory;
         this.journal = journal;
@@ -113,21 +89,21 @@ public class WorldInteraction
         return b.build();
     }
 
-    private static ImmutableMap<Integer, Function<MCCoupledHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCCoupledHeldItem, Boolean>> b = ImmutableMap.builder();
+    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
         ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toItemStack())));
         return b.build();
     }
 
     @Override
-    protected boolean tryExtractOre(
+    protected Void tryExtractOre(
             MCExtra extra,
             BlockPos position
     ) {
         return tryExtractOre(extra.town(), extra.work(), position);
     }
 
-    protected boolean tryExtractOre(
+    protected Void tryExtractOre(
             TownInterface town,
             WorkStateContainer<BlockPos> jh,
             BlockPos oldPos
@@ -138,15 +114,20 @@ public class WorldInteraction
                     sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
                     journal::addItemIfSlotAvailable, nullifyExcessProduct
             );
-            return newState != null;
         }
-        return false;
+        return null;
     }
 
     @Override
-    protected void degradeTool(
+    protected Void setHeldItem(MCExtra uxtra, Void tuwn, int villagerIndex, int itemIndex, MCHeldItem item) {
+        journal.setItem(itemIndex, item);
+        return null;
+    }
+
+    @Override
+    protected Void degradeTool(
             MCExtra mcExtra,
-            Function<MCTownItem, Boolean> toolCheck
+            Void tuwn, Function<MCTownItem, Boolean> toolCheck
     ) {
         // FIXME: This tool degradation seem to work
         Optional<MCHeldItem> foundTool = journal.getItems()
@@ -159,6 +140,7 @@ public class WorldInteraction
             is.hurtAndBreak(1, mcExtra.entity(), (x) -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
         }
+        return null;
     }
 
     @Override
@@ -167,9 +149,14 @@ public class WorldInteraction
     }
 
     @Override
+    protected Collection<MCHeldItem> getHeldItems(MCExtra mcExtra, int villagerIndex) {
+        return journal.getItems();
+    }
+
+    @Override
     protected boolean canInsertItem(
             MCExtra mcExtra,
-            MCCoupledHeldItem item,
+            MCHeldItem item,
             BlockPos bp
     ) {
         return mcExtra.work().canInsertItem(item, bp);

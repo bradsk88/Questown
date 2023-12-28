@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
@@ -20,6 +21,15 @@ public class JobsClean {
             return status;
         }
         return goStatus;
+    }
+
+    public static <HELD extends HeldItem<HELD, TOWN_ITEM>, TOWN_ITEM extends Item<TOWN_ITEM>> boolean hasNonSupplyItems(
+            ItemsHolder<HELD> journal,
+            ImmutableList<TestFn<TOWN_ITEM>> recipe
+    ) {
+        return journal.getItems().stream()
+                .filter(Predicates.not(Item::isEmpty))
+                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     public interface TestFn<I extends Item<I>> {

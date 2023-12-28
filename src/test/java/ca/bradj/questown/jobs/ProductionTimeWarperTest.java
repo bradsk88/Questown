@@ -68,9 +68,6 @@ class ProductionTimeWarperTest {
     }
 
     @Test
-    void warp_should
-
-    @Test
     void simulateExtractProduct_shouldRemoveItemFromTown() {
 
         ArrayList<String> townItems = new ArrayList<>();
@@ -93,7 +90,7 @@ class ProductionTimeWarperTest {
         ArrayList<String> townItems = new ArrayList<>();
         townItems.add("bread");
 
-        ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+        ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                 simulateExtractProduct(
                 ProductionStatus.EXTRACTING_PRODUCT,
                 ImmutableList.of(
@@ -115,7 +112,7 @@ class ProductionTimeWarperTest {
         Assertions.assertThrows(
                 IllegalStateException.class,
                 () -> {
-                    ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+                    ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                             simulateExtractProduct(
                             ProductionStatus.EXTRACTING_PRODUCT,
                             ImmutableList.of(
@@ -136,9 +133,9 @@ class ProductionTimeWarperTest {
         Assertions.assertThrows(
                 IllegalStateException.class,
                 () -> {
-                    ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+                    ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                             simulateDropLoot(
-                            new ProductionTimeWarper.WarpResult<>(
+                            new ProductionTimeWarper.Result<>(
                                     ProductionStatus.DROPPING_LOOT,
                                     ImmutableList.of(
                                             new GathererJournalTest.TestItem("") // 1-slot inventory with nothing in it
@@ -155,9 +152,9 @@ class ProductionTimeWarperTest {
     void simulateDropLoot_shouldRemoveItemFromInventory() {
         ArrayList<GathererJournalTest.TestItem> townItems = new ArrayList<>();
 
-        ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+        ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                 simulateDropLoot(
-                        new ProductionTimeWarper.WarpResult<>(
+                        new ProductionTimeWarper.Result<>(
                                 ProductionStatus.DROPPING_LOOT,
                                 ImmutableList.of(
                                         new GathererJournalTest.TestItem("bread") // 1 slot inventory with bread in it
@@ -177,9 +174,9 @@ class ProductionTimeWarperTest {
     void simulateDropLoot_shouldAddItemToTown() {
         ArrayList<GathererJournalTest.TestItem> townItems = new ArrayList<>();
 
-        ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+        ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                 simulateDropLoot(
-                        new ProductionTimeWarper.WarpResult<>(
+                        new ProductionTimeWarper.Result<>(
                                 ProductionStatus.DROPPING_LOOT,
                                 ImmutableList.of(
                                         new GathererJournalTest.TestItem("bread") // 1 slot inventory with bread in it
@@ -200,9 +197,9 @@ class ProductionTimeWarperTest {
         // We'll let the next iteration compute status for us
         ArrayList<GathererJournalTest.TestItem> townItems = new ArrayList<>();
 
-        ProductionTimeWarper.WarpResult<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
+        ProductionTimeWarper.Result<GathererJournalTest.TestItem> res = ProductionTimeWarper.<GathererJournalTest.TestItem, GathererJournalTest.TestItem>
                 simulateDropLoot(
-                        new ProductionTimeWarper.WarpResult<>(
+                        new ProductionTimeWarper.Result<>(
                                 ProductionStatus.DROPPING_LOOT,
                                 ImmutableList.of(
                                         new GathererJournalTest.TestItem("bread") // 1 slot inventory with bread in it

@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -19,6 +20,7 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,6 +34,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
@@ -239,6 +242,25 @@ public class Jobs {
                     }
                     return false;
                 });
+    }
+
+    public static ImmutableMap<Integer, Function<MCTownItem, Boolean>> unMC(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
+        );
+        return b.build();
+    }
+    public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
+        );
+        return b.build();
     }
 
     public interface StateCheck {

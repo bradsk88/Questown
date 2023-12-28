@@ -960,7 +960,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     @Override
-    public WorkStatusHandle<BlockPos, MCCoupledHeldItem> getWorkStatusHandle(
+    public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(
             @Nullable UUID ownerIDOrNullForGlobal
     ) {
         if (ownerIDOrNullForGlobal == null) {
@@ -1107,7 +1107,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
-        TownState<MCContainer, MCTownItem, MCHeldItem> state = TownStateSerializer.INSTANCE.load(
+        MCTownState state = TownStateSerializer.INSTANCE.load(
                 getPersistentData().getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats().contains(bp)
         );

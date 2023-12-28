@@ -2,8 +2,13 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.Warper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
@@ -11,6 +16,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
+
+import static ca.bradj.questown.jobs.ProductionTimeWarper.getNextDaySegment;
 
 public class BakerBreadWork extends DeclarativeJob {
     public static final JobID ID = new JobID("baker", "bread");
@@ -70,5 +77,18 @@ public class BakerBreadWork extends DeclarativeJob {
                 (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
                 false
         );
+    }
+
+    public static Warper<MCTownState> warper(int villagerIndex) {
+        MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+                ID, villagerIndex, 100, MAX_STATE,
+                TOOLS_REQUIRED_AT_STATES,
+                WORK_REQUIRED_AT_STATES,
+                INGREDIENTS_REQUIRED_AT_STATES,
+                INGREDIENT_QTY_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
+                () -> MCHeldItem.fromTown(RESULT)
+        );
+        return DeclarativeJobs.warper(wi);
     }
 }

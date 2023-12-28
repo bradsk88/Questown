@@ -133,7 +133,7 @@ public class VisitorMobEntity extends PathfinderMob {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> job = getInitialJob();
+    Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job = getInitialJob();
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
@@ -282,7 +282,7 @@ public class VisitorMobEntity extends PathfinderMob {
 
     // TODO: Make this abstract or injectable
     @NotNull
-    private Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitialJob() {
+    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
         return new GathererJob(town, inventoryCapacity, uuid);
     }
 
@@ -290,7 +290,7 @@ public class VisitorMobEntity extends PathfinderMob {
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
      */
-    public void setJob(Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> initializedJob) {
+    public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = initializedJob;
         entityData.set(jobName, job.getJobName().translationKey());
@@ -862,7 +862,7 @@ public class VisitorMobEntity extends PathfinderMob {
         job.addStatusListener(l);
     }
 
-    public Snapshot<MCHeldItem> getJobJournalSnapshot() {
+    public ImmutableSnapshot<MCHeldItem, ?> getJobJournalSnapshot() {
         return job.getJournalSnapshot();
     }
 

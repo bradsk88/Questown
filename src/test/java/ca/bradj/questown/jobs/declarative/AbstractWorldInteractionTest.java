@@ -22,8 +22,9 @@ import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
-    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
+    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Void> {
 
+        private final InventoryHandle<GathererJournalTest.TestItem> inventory;
         private boolean extracted;
         private final WorkStateContainer<Position> workStatuses;
 
@@ -40,17 +41,17 @@ class AbstractWorldInteractionTest {
         ) {
             super(
                     new JobID("test", "test"),
+                    -1, // Not used
                     0,
                     maxState,
                     toolsRequiredAtStates,
                     workRequiredAtStates,
                     ingredientsRequiredAtStates,
                     ingredientQuantityRequiredAtStates,
-                    timeRequiredAtStates,
-                    journal,
-                    inventory
+                    timeRequiredAtStates
             );
             this.workStatuses = workStatuses;
+            this.inventory = inventory;
         }
 
         public static TestWI noMemoryInventory(
@@ -92,13 +93,13 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected boolean tryExtractOre(
+        protected Void tryExtractOre(
                 Void unused,
                 Position position
         ) {
             extracted = true;
             getWorkStatuses(null).clearState(position);
-            return true;
+            return null;
         }
 
         @Override
@@ -120,10 +121,17 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected void degradeTool(
+        protected Void setHeldItem(Void uxtra, Void tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+            inventory.set(itemIndex, item);
+            return tuwn;
+        }
+
+        @Override
+        protected Void degradeTool(
                 Void unused,
-                Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+                Void tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
         ) {
+            return tuwn;
         }
 
         @Override
@@ -139,6 +147,11 @@ class AbstractWorldInteractionTest {
         protected WorkStateContainer<Position> getWorkStatuses(Void unused) {
             return workStatuses;
         }
+
+        @Override
+        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
+            return inventory.getItems();
+        }
     }
 
     @NotNull
@@ -152,25 +165,33 @@ class AbstractWorldInteractionTest {
             }
 
             @Override
-            public void setJobBlockState(
+            public ImmutableMap<Position, State> getAll() {
+                return ImmutableMap.copyOf(ztate);
+            }
+
+            @Override
+            public Void setJobBlockState(
                     Position bp,
                     State bs
             ) {
                 ztate.put(bp, bs);
+                return null;
             }
 
             @Override
-            public void setJobBlockStateWithTimer(
+            public Void setJobBlockStateWithTimer(
                     Position bp,
                     State bs,
                     int ticksToNextState
             ) {
                 ztate.put(bp, bs); // Ignoring time
+                return null;
             }
 
             @Override
-            public void clearState(Position bp) {
+            public Void clearState(Position bp) {
                 ztate.remove(bp);
+                return null;
             }
         };
         return statuses;

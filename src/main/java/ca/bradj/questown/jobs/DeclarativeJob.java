@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
-import ca.bradj.questown.integration.minecraft.MCCoupledHeldItem;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
@@ -231,7 +230,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected void tick(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
@@ -333,7 +332,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     private void tryWorking(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCCoupledHeldItem> work,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
@@ -361,10 +360,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             this.workSpot = workSpot1;
         }
 
-        boolean worked = this.world.tryWorking(town, work, entity, workSpot);
+        this.world.tryWorking(town, work, entity, workSpot);
         boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
         boolean finishedWork = workSpot.action.equals(maxState); // TODO: Check all workspots before seeking work
-        if (hasWork && worked && finishedWork) {
+        if (hasWork && finishedWork) {
             if (!wrappingUp) {
                 town.getKnowledgeHandle()
                         .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?

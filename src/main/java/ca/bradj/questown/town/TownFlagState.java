@@ -4,15 +4,13 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.GathererJournal;
-import ca.bradj.questown.jobs.GathererTimeWarper;
-import ca.bradj.questown.jobs.Snapshot;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.jobs.GathererJob;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -35,7 +33,7 @@ public class TownFlagState {
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
     private boolean initialized = false;
-    private final Stack<Function<TownFlagBlockEntity, TownState<MCContainer, MCTownItem, MCHeldItem>>> townInit = new Stack<>();
+    private final Stack<Function<TownFlagBlockEntity, MCTownState>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
@@ -52,8 +50,8 @@ public class TownFlagState {
                     return null;
                 }
                 Vec3 pos = entity.position();
-                Snapshot snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
-                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<>(
+                ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
+                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
                         pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
                 vB.add(data);
@@ -64,6 +62,8 @@ public class TownFlagState {
         MCTownState ts = new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
+                // TODO[ASAP]: Store statuses for all villagers
+                parent.getWorkStatusHandle(null).getAll(),
                 parent.getWelcomeMats(),
                 dayTime
         );
@@ -88,49 +88,56 @@ public class TownFlagState {
                     e.getPersistentData().getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
-            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
+            QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", storedState);
         } else {
-            storedState = new MCTownState(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), 0);
-            QT.LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
+            storedState = new MCTownState(
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    ImmutableMap.of(),
+                    ImmutableList.of(),
+                    0
+            );
+            QT.FLAG_LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
         }
+
 
         ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
 
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
         if (ticksPassed == 0) {
-            Questown.LOGGER.debug("Time warp is not applicable");
+            QT.FLAG_LOGGER.debug("Time warp is not applicable");
             return storedState;
         }
+
         GathererTimeWarper.LootGiver<MCTownItem, MCHeldItem, ResourceLocation> loot =
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
-        GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation> warper = new GathererTimeWarper<MCTownItem, MCHeldItem, ResourceLocation>(
-                storedState, loot, storedState,
-                MCHeldItem::Air, MCHeldItem::fromTown,
-                GathererJob::checkTools,
-                (items) -> GathererJob.computeBiome(items, e)
-        );
+        MCTownState liveState = storedState;
 
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
             Snapshot<MCHeldItem> unwarped = v.journal;
-            QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, storedState);
-            Snapshot<MCHeldItem> warped = unwarped;
-            if (unwarped instanceof GathererJournal.Snapshot<?>) {
-                warped = warper.timeWarp(
-                        (GathererJournal.Snapshot<MCHeldItem>) unwarped,
-                        dayTime,
-                        ticksPassed,
-                        v.getCapacity()
-                );
-                Questown.LOGGER.debug("[{}] Warping complete, journal is now: {}", v.uuid, storedState);
-            } else {
-                // TODO: Implement generic snapshot warping
-                Questown.LOGGER.error("Warping not implemented");
-            }
-            villagers.set(i, new TownState.VillagerData<>(v.xPosition, v.yPosition, v.zPosition, warped, v.uuid));
+            QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, liveState);
+            Warper<MCTownState> vWarper = JobsRegistry.getWarper(
+                    i, v.journal.jobId()
+            );
+            // TODO[ASAP]: Stop passing ticks in.
+            //  The way it works right now, each villager works through the passed
+            //  ticks as though they were the only villager present, and then we
+            //  move on to the next one who repeats the process. What we should
+            //  probably do is warp one chunk of time for each of the villagers
+            //  until we have reached the desired number of ticks. That better
+            //  simulates a village full of people (and we can maybe even run
+            //  each "chunk" on a separate game tick.
+            liveState = vWarper.warp(liveState, dayTime, ticksPassed, i);
         }
 
-        return new MCTownState(villagers, storedState.containers, storedState.gates, dayTime);
+        return new MCTownState(
+                liveState.villagers,
+                liveState.containers,
+                liveState.workStates,
+                liveState.gates,
+                dayTime
+        );
     }
 
     static void recoverMobs(

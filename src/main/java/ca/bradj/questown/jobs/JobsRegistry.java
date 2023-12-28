@@ -8,6 +8,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
@@ -22,18 +23,16 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.CraftingTableBlock;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -119,6 +118,14 @@ public class JobsRegistry {
         return new AbstractWorkStatusStore.State(0, 0, 0);
     }
 
+    public static Warper<MCTownState> getWarper(
+            int villagerIndex,
+            JobID jobID
+    ) {
+        Work w = works.get(jobID);
+        return w.warper.apply(new WarpInput(villagerIndex));
+    }
+
     public record TownData(
             Function<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> allKnownGatherItemsFn
     ) {
@@ -187,11 +194,11 @@ public class JobsRegistry {
         return ImmutableSet.copyOf(list);
     }
 
-    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>>> {
+    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
-    private interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> {
+    private interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
 
     }
 
@@ -206,6 +213,10 @@ public class JobsRegistry {
 
     }
 
+    public record WarpInput(
+            int villagerIndex
+    ){};
+
     public record Work(
             JobFunc jobFunc,
             SnapshotFunc snapshotFunc,
@@ -214,7 +225,8 @@ public class JobsRegistry {
             IStatus<?> initialStatus,
             Function<TownData, ImmutableSet<MCTownItem>> results,
             ItemStack initialRequest,
-            Function<IStatus<?>, Collection<Ingredient>> needs
+            Function<IStatus<?>, Collection<Ingredient>> needs,
+            Function<WarpInput, Warper<MCTownState>> warper
     ) {
     }
 
@@ -269,31 +281,32 @@ public class JobsRegistry {
 
     static {
         ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
-        b.put(GathererJob.ID, new Work(
-                (town, uuid) -> new GathererJob(town, 6, uuid),
-                GATHERER_SNAPSHOT_FUNC,
-                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
-                GathererJournal.Status.IDLE,
-                t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
-                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST,
-                // TODO: Review this - probably should be different by status
-                (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
-        ));
-        b.put(FarmerJob.ID, new Work(
-                (town, uuid) -> new FarmerJob(uuid, 6),
-                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                SpecialQuests.FARM,
-                GathererJournal.Status.IDLE,
-                t -> ImmutableSet.of(
-                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
-                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
-                ),
-                Items.WHEAT.getDefaultInstance(),
-                // TODO: Review this - probably should be different by status
-                (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
-        ));
+        // TODO: Replace these with production jobs
+//        b.put(GathererJob.ID, new Work(
+//                (town, uuid) -> new GathererJob(town, 6, uuid),
+//                GATHERER_SNAPSHOT_FUNC,
+//                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+//                NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB,
+//                GathererJournal.Status.IDLE,
+//                t -> t.allKnownGatherItemsFn().apply(GathererTools.NO_TOOL_TABLE_PREFIX),
+//                NOT_REQUIRED_BECAUSE_NO_JOB_QUEST,
+//                // TODO: Review this - probably should be different by status
+//                (s) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD))
+//        ));
+//        b.put(FarmerJob.ID, new Work(
+//                (town, uuid) -> new FarmerJob(uuid, 6),
+//                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
+//                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+//                SpecialQuests.FARM,
+//                GathererJournal.Status.IDLE,
+//                t -> ImmutableSet.of(
+//                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
+//                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+//                ),
+//                Items.WHEAT.getDefaultInstance(),
+//                // TODO: Review this - probably should be different by status
+//                (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
+//        ));
         b.put(BakerBreadWork.ID, new Work(
                 (town, uuid) -> new BakerBreadWork(uuid, 6),
                 productionJobSnapshot(BakerBreadWork.ID),
@@ -302,97 +315,98 @@ public class JobsRegistry {
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),
                 BakerBreadWork.RESULT,
-                (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES)
+                (s) -> getProductionNeeds(BakerBreadWork.INGREDIENTS_REQUIRED_AT_STATES, BakerBreadWork.TOOLS_REQUIRED_AT_STATES),
+                (id) -> BakerBreadWork.warper(id.villagerIndex)
         ));
-        b.put(DSmelterJob.ID, new Work(
-                (town, uuid) -> new DSmelterJob(uuid, 6),
-                productionJobSnapshot(DSmelterJob.ID),
-                (block) -> block instanceof OreProcessingBlock,
-                Questown.ResourceLocation("smeltery"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
-                DSmelterJob.RESULT,
-                s -> getProductionNeeds(DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
-        ));
-        b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
-                (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
-                // TODO: Add support for smaller inventories
-                productionJobSnapshot(BlacksmithWoodenPickaxeJob.ID),
-                (block) -> block instanceof BlacksmithsTableBlock,
-                Questown.ResourceLocation("smithy"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
-                BlacksmithWoodenPickaxeJob.RESULT,
-                s -> getProductionNeeds(
-                        BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
-                        BlacksmithWoodenPickaxeJob.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
-        b.put(CrafterBowlWork.ID, new Work(
-                (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
-                productionJobSnapshot(CrafterBowlWork.ID),
-                (block) -> block instanceof CraftingTableBlock,
-                Questown.ResourceLocation("crafting_room"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
-                CrafterBowlWork.RESULT,
-                s -> getProductionNeeds(
-                        CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        CrafterBowlWork.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
-        b.put(CrafterStickWork.ID, new Work(
-                (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
-                productionJobSnapshot(CrafterStickWork.ID),
-                (block) -> block instanceof CraftingTableBlock,
-                Questown.ResourceLocation("crafting_room"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
-                CrafterStickWork.RESULT,
-                s -> getProductionNeeds(
-                        CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        CrafterStickWork.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
-        b.put(CrafterPaperWork.ID, new Work(
-                (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
-                productionJobSnapshot(CrafterPaperWork.ID),
-                (block) -> block instanceof CraftingTableBlock,
-                Questown.ResourceLocation("crafting_room"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
-                CrafterPaperWork.RESULT,
-                s -> getProductionNeeds(
-                        CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        CrafterPaperWork.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
-        b.put(CrafterPlanksWork.ID, new Work(
-                (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
-                productionJobSnapshot(CrafterPlanksWork.ID),
-                (block) -> block instanceof CraftingTableBlock,
-                Questown.ResourceLocation("crafting_room"),
-                ProductionStatus.FACTORY.idle(),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
-                CrafterPlanksWork.RESULT,
-                s -> getProductionNeeds(
-                        CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        CrafterPlanksWork.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
-        b.put(GathererUnmappedAxeWork.ID, new Work(
-                (town, uuid) -> new GathererUnmappedAxeWork(uuid, 6),
-                productionJobSnapshot(GathererUnmappedAxeWork.ID),
-                (block) -> block instanceof WelcomeMatBlock,
-                GathererUnmappedAxeWork.JOB_SITE,
-                ProductionStatus.FACTORY.idle(),
-                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
-                Items.WHEAT_SEEDS.getDefaultInstance(),
-                s -> getProductionNeeds(
-                        GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES,
-                        GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
-                )
-        ));
+//        b.put(DSmelterJob.ID, new Work(
+//                (town, uuid) -> new DSmelterJob(uuid, 6),
+//                productionJobSnapshot(DSmelterJob.ID),
+//                (block) -> block instanceof OreProcessingBlock,
+//                Questown.ResourceLocation("smeltery"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
+//                DSmelterJob.RESULT,
+//                s -> getProductionNeeds(DSmelterJob.INGREDIENTS, DSmelterJob.TOOLS)
+//        ));
+//        b.put(BlacksmithWoodenPickaxeJob.ID, new Work(
+//                (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
+//                // TODO: Add support for smaller inventories
+//                productionJobSnapshot(BlacksmithWoodenPickaxeJob.ID),
+//                (block) -> block instanceof BlacksmithsTableBlock,
+//                Questown.ResourceLocation("smithy"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
+//                BlacksmithWoodenPickaxeJob.RESULT,
+//                s -> getProductionNeeds(
+//                        BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
+//                        BlacksmithWoodenPickaxeJob.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
+//        b.put(CrafterBowlWork.ID, new Work(
+//                (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
+//                productionJobSnapshot(CrafterBowlWork.ID),
+//                (block) -> block instanceof CraftingTableBlock,
+//                Questown.ResourceLocation("crafting_room"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
+//                CrafterBowlWork.RESULT,
+//                s -> getProductionNeeds(
+//                        CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
+//                        CrafterBowlWork.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
+//        b.put(CrafterStickWork.ID, new Work(
+//                (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
+//                productionJobSnapshot(CrafterStickWork.ID),
+//                (block) -> block instanceof CraftingTableBlock,
+//                Questown.ResourceLocation("crafting_room"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
+//                CrafterStickWork.RESULT,
+//                s -> getProductionNeeds(
+//                        CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
+//                        CrafterStickWork.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
+//        b.put(CrafterPaperWork.ID, new Work(
+//                (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
+//                productionJobSnapshot(CrafterPaperWork.ID),
+//                (block) -> block instanceof CraftingTableBlock,
+//                Questown.ResourceLocation("crafting_room"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
+//                CrafterPaperWork.RESULT,
+//                s -> getProductionNeeds(
+//                        CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
+//                        CrafterPaperWork.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
+//        b.put(CrafterPlanksWork.ID, new Work(
+//                (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
+//                productionJobSnapshot(CrafterPlanksWork.ID),
+//                (block) -> block instanceof CraftingTableBlock,
+//                Questown.ResourceLocation("crafting_room"),
+//                ProductionStatus.FACTORY.idle(),
+//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
+//                CrafterPlanksWork.RESULT,
+//                s -> getProductionNeeds(
+//                        CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
+//                        CrafterPlanksWork.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
+//        b.put(GathererUnmappedAxeWork.ID, new Work(
+//                (town, uuid) -> new GathererUnmappedAxeWork(uuid, 6),
+//                productionJobSnapshot(GathererUnmappedAxeWork.ID),
+//                (block) -> block instanceof WelcomeMatBlock,
+//                GathererUnmappedAxeWork.JOB_SITE,
+//                ProductionStatus.FACTORY.idle(),
+//                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
+//                Items.WHEAT_SEEDS.getDefaultInstance(),
+//                s -> getProductionNeeds(
+//                        GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES,
+//                        GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
+//                )
+//        ));
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork.asWork());
         b.put(ExplorerWork.ID, ExplorerWork.asWork());
         works = b.build();
@@ -428,7 +442,7 @@ public class JobsRegistry {
         return getInitializedJob(town, jobName, journal, null, ownerUUID);
     }
 
-    public static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
+    public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
             JobID jobName,
             ImmutableList<MCHeldItem> heldItems,
@@ -437,14 +451,14 @@ public class JobsRegistry {
         return getInitializedJob(town, jobName, null, heldItems, ownerUUID);
     }
 
-    private static Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> getInitializedJob(
+    private static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
             JobID jobName,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        Job<MCHeldItem, ? extends Snapshot<MCHeldItem>, ? extends IStatus<?>> j;
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j;
         Work fn = works.get(jobName);
         if (WorkSeekerJob.isSeekingWork(jobName)) {
             j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
@@ -491,7 +505,7 @@ public class JobsRegistry {
         return journal;
     }
 
-    public static Snapshot<MCHeldItem> getNewJournal(
+    public static ImmutableSnapshot<MCHeldItem, ?> getNewJournal(
             JobID job,
             String status,
             ImmutableList<MCHeldItem> heldItems

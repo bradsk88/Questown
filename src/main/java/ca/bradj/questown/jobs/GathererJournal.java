@@ -504,7 +504,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             JobID jobId,
             Status status,
             ImmutableList<H> items
-    ) implements ca.bradj.questown.jobs.Snapshot<H> {
+    ) implements ImmutableSnapshot<H, Snapshot<H>> {
 
         public static final String NAME = "gatherer";
 
@@ -569,6 +569,15 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         @Override
         public JobID jobId() {
             return jobId;
+        }
+
+        @Override
+        public Snapshot<H> withSetItem(int itemIndex, H item) {
+            ArrayList<H> a = new ArrayList<>(items);
+            a.set(itemIndex, item);
+            return new Snapshot<>(
+                    status, ImmutableList.copyOf(a)
+            );
         }
 
         @Override

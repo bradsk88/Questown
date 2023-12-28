@@ -4,12 +4,11 @@ import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.GathererMap;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.Journal;
-import ca.bradj.questown.jobs.SpecialRules;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
@@ -121,7 +120,24 @@ public class GathererMappedAxeWork extends NewLeaverWork {
                 ProductionStatus.FACTORY.idle(),
                 t -> t.allKnownGatherItemsFn().apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
                 Items.OAK_WOOD.getDefaultInstance(),
-                s -> getProductionNeeds(INGREDIENTS_REQUIRED_AT_STATES, TOOLS_REQUIRED_AT_STATES)
+                s -> getProductionNeeds(INGREDIENTS_REQUIRED_AT_STATES, TOOLS_REQUIRED_AT_STATES),
+                GathererMappedAxeWork::warper
         );
+    }
+
+    private static Warper<MCTownState> warper(
+            JobsRegistry.WarpInput inputs
+    ) {
+        MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+                ID, inputs.villagerIndex(), 100, MAX_STATE,
+                TOOLS_REQUIRED_AT_STATES,
+                WORK_REQUIRED_AT_STATES,
+                INGREDIENTS_REQUIRED_AT_STATES,
+                INGREDIENT_QTY_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
+                // FIXME: Warper should support random loot acquisition
+                () -> MCHeldItem.fromMCItemStack(Items.OAK_LOG.getDefaultInstance())
+        );
+        return DeclarativeJobs.warper(wi);
     }
 }

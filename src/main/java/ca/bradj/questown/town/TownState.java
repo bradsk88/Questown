@@ -2,28 +2,34 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public class TownState<
+public abstract class TownState<
         C extends ContainerTarget.Container<I>,
         I extends Item<I>,
-        H extends HeldItem<H, I> & Item<H>
-        > implements GathererTimeWarper.FoodRemover<I>, GathererTimeWarper.Town<I, H> {
+        H extends HeldItem<H, I> & Item<H>,
+        P, SELF
+        > implements ProductionTimeWarper.FoodRemover<I>, ProductionTimeWarper.Town<I, H>, ImmutableWorkStateContainer<P, SELF> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<BlockPos> gates;
     public final long worldTimeAtSleep;
+    public final ImmutableMap<P, AbstractWorkStatusStore.State> workStates;
 
     public TownState(
             @NotNull List<VillagerData<H>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
+            @NotNull ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
             @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
     ) {
@@ -31,6 +37,7 @@ public class TownState<
         this.containers = ImmutableList.copyOf(containers);
         this.gates = ImmutableList.copyOf(gates);
         this.worldTimeAtSleep = worldTimeAtSleep;
+        this.workStates = workStates;
     }
 
     @Override
@@ -108,16 +115,67 @@ public class TownState<
         return !gates.isEmpty();
     }
 
+    @Override
+    public AbstractWorkStatusStore.@Nullable State getJobBlockState(P bp) {
+        return workStates.get(bp);
+    }
+
+    @Override
+    public ImmutableMap<P, AbstractWorkStatusStore.State> getAll() {
+        return ImmutableMap.copyOf(workStates);
+    }
+
+    @Override
+    public SELF setJobBlockState(P bp, AbstractWorkStatusStore.State bs) {
+        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        m.put(bp, bs);
+        return newTownState(
+                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
+        );
+    }
+
+    protected abstract SELF newTownState(ImmutableList<VillagerData<H>> villagers, ImmutableList<ContainerTarget<C, I>> containers, ImmutableMap<P, AbstractWorkStatusStore.State> pStateImmutableMap, ImmutableList<BlockPos> gates, long worldTimeAtSleep);
+
+    @Override
+    public SELF setJobBlockStateWithTimer(P bp, AbstractWorkStatusStore.State bs, int ticksToNextState) {
+        // FIXME: Implement
+        return newTownState(villagers, containers, workStates, gates, worldTimeAtSleep);
+    }
+
+    @Override
+    public SELF clearState(P bp) {
+        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        m.remove(bp);
+        return newTownState(
+                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
+        );
+    }
+
+
+    public SELF withVillagerData(
+            int index, VillagerData<H> data
+    ) {
+        ArrayList<VillagerData<H>> vilz = new ArrayList<>(villagers);
+        vilz.set(index, data);
+        return newTownState(
+                ImmutableList.copyOf(vilz),
+                containers,
+                workStates,
+                gates,
+                worldTimeAtSleep
+        );
+    }
+
     public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
-        public final Snapshot<I> journal;
+        public final ImmutableSnapshot<I, ?> journal;
 
         public VillagerData(
                 double xPosition,
                 double yPosition,
                 double zPosition,
-                Snapshot<I> journal,
+                ImmutableSnapshot<I, ?> journal,
                 UUID uuid
         ) {
             this.xPosition = xPosition;
@@ -140,6 +198,14 @@ public class TownState<
 
         public int getCapacity() {
             return 6; // TODO: Be smarter about this?
+        }
+
+        public VillagerData<I> withSetItem(int itemIndex, I item) {
+
+            return new VillagerData<>(
+                    xPosition, yPosition, zPosition,
+                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
+            );
         }
     }
 }

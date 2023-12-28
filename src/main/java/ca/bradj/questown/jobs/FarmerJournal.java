@@ -182,7 +182,7 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
 
     public record Snapshot<H extends HeldItem<H, ?> & Item<H>>(
             GathererJournal.Status status, ImmutableList<H> items
-    ) implements ca.bradj.questown.jobs.Snapshot<H> {
+    ) implements ImmutableSnapshot<H, Snapshot<H>> {
         @Override
         public String statusStringValue() {
             return this.status().name();
@@ -196,6 +196,13 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
         @Override
         public JobID jobId() {
             return FarmerJob.ID;
+        }
+
+        @Override
+        public Snapshot<H> withSetItem(int itemIndex, H item) {
+            ArrayList<H> a = new ArrayList<>(items);
+            a.set(itemIndex, item);
+            return new Snapshot<>(status, ImmutableList.copyOf(a));
         }
 
         @Override

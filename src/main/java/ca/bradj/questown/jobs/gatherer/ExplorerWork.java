@@ -6,10 +6,12 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -149,7 +151,21 @@ public class ExplorerWork extends DeclarativeJob {
                 s -> getProductionNeeds(
                         ExplorerWork.INGREDIENTS_REQUIRED_AT_STATES,
                         ExplorerWork.TOOLS_REQUIRED_AT_STATES
-                )
+                ),
+                input -> warper(input)
         );
+    }
+
+    private static Warper<MCTownState> warper(JobsRegistry.WarpInput input) {
+        MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+                ID, input.villagerIndex(), 100, MAX_STATE,
+                TOOLS_REQUIRED_AT_STATES,
+                WORK_REQUIRED_AT_STATES,
+                INGREDIENTS_REQUIRED_AT_STATES,
+                INGREDIENT_QTY_REQUIRED_AT_STATES,
+                TIME_REQUIRED_AT_STATES,
+                () -> MCHeldItem.fromTown(RESULT)
+        );
+        return DeclarativeJobs.warper(wi);
     }
 }
