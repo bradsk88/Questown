@@ -1,7 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.roomrecipes.RoomRecipeMatchShell;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import org.jetbrains.annotations.Nullable;
 

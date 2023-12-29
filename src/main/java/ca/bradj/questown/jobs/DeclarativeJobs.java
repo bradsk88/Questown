@@ -92,6 +92,8 @@ public class DeclarativeJobs {
                     affectedState = wi.tryWorking(outState, new WorkSpot<>(fakePos, state.processingState(), 1));
                 } else if (status.isDroppingLoot()) {
                     affectedState = wi.simulateDropLoot(outState, status);
+                } else if (status.isCollectingSupplies()) {
+                    affectedState = wi.simulateCollectSupplies();
                 }
                 // FIXME: Handle the other statuses
 
