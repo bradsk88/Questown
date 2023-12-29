@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -103,9 +104,13 @@ public class TownContainers {
         }
 
         if (!blockState.getBlock().equals(block)) {
-            throw new IllegalArgumentException(String.format(
-                    "Given block is not present at given position. Actual blockstate %s", blockState
-            ));
+            QT.BLOCK_LOGGER.error(
+                    "Given block is not present at given position. Actual blockstate {}", blockState
+            );
+            return new ContainerTarget<>(
+                    Positions.FromBlockPos(p), p.getY(), interactPos,
+                    new MCContainer(ContainerTarget.REMOVED), () -> false
+            );
         }
 
         ChestType typ = blockState.getOptionalValue(ChestBlock.TYPE).orElse(null);
