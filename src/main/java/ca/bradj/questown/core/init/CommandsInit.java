@@ -19,7 +19,7 @@ public class CommandsInit {
 
     public static final RegistryObject<ArgumentTypeInfo<JobArgument, ?>> SETJOB = COMMAND_TYPES.register(
             "setjob",
-            () -> ArgumentTypeInfos.registerByClass(JobArgument.class, SingletonArgumentInfo.contextFree(JobArgument::new))
+            () -> ArgumentTypeInfos.registerByClass(JobArgument.class, SingletonArgumentInfo.contextAware(JobArgument::new))
     );
 
     public static void register(IEventBus bus) {
