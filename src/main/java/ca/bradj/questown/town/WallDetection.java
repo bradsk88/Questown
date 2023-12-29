@@ -22,7 +22,7 @@ public class WallDetection {
         BlockPos bp = Positions.ToBlock(dp, y);
         BlockPos abp = bp.above();
         BlockState blockState = level.getBlockState(bp);
-        if (blockState.getBlock() instanceof FalseWallBlock) {
+        if (blockState.getBlock() instanceof FalseWallBlock || blockState.getBlock() instanceof FalseDoorBlock) {
             return true;
         }
 

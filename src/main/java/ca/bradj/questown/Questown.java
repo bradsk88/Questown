@@ -69,7 +69,6 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        ItemBlockRenderTypes.setRenderLayer(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), RenderType.cutout());
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
