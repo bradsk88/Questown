@@ -1,26 +1,19 @@
 package ca.bradj.questown.items;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Function;
-
-public class FalseDoorItem extends Item {
+public class FalseWallItem extends Item {
     public static final String ITEM_ID = "false_door_block";
 
-    public FalseDoorItem() {
+    public FalseWallItem() {
         super(Questown.DEFAULT_ITEM_PROPS);
     }
 
@@ -37,15 +30,13 @@ public class FalseDoorItem extends Item {
             return InteractionResult.FAIL;
         }
         if (ctx.getPlayer().isShiftKeyDown()) {
-            ItemStack newStack = ItemsInit.FALSE_WALL_BLOCK.get().getDefaultInstance();
+            ItemStack newStack = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
             TownFlagBlock.CopyParentFromNBT(ctx.getItemInHand(), newStack);
             ctx.getPlayer().setItemInHand(ctx.getHand(), newStack);
             return InteractionResult.CONSUME;
         }
         if (ctx.getLevel() instanceof ServerLevel sl) {
-            sl.setBlockAndUpdate(ctx.getClickedPos().above(), BlocksInit.FALSE_DOOR_BLOCK.get().defaultBlockState());
-            TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.registerDoor(ctx.getClickedPos().above());
+            sl.setBlockAndUpdate(ctx.getClickedPos().above(), BlocksInit.FALSE_WALL_BLOCK.get().defaultBlockState());
             return InteractionResult.CONSUME;
         }
         return InteractionResult.FAIL;
