@@ -161,6 +161,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
         }
+        if (itemInHand.getItem().equals(ItemsInit.FALSE_DOOR.get())) {
+            converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
+        }
         if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
             // TODO: Advancement
