@@ -320,7 +320,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position;
             case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position;
             case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position;
-            case FARMING_WEEDING-> workSpots.get(FarmerAction.WEED).position;
+            case FARMING_WEEDING -> workSpots.get(FarmerAction.WEED).position;
             case FARMING_RANDOM_TEND -> getRandomFarmSpot(sl);
             case COLLECTING_SUPPLIES -> supplies;
             case DROPPING_LOOT -> blockPos;
@@ -336,7 +336,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @NotNull
     private BlockPos getRandomFarmSpot(@NotNull ServerLevel sl) {
         return Positions.ToBlock(
-                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), sl.getRandom()),
+                InclusiveSpaces.getRandomEnclosedPosition(
+                        selectedFarm.getSpace(),
+                        range -> sl.getRandom().nextInt(range)
+                ),
                 selectedFarm.yCoord
         );
     }

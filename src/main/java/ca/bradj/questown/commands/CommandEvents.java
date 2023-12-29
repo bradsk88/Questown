@@ -13,5 +13,6 @@ public class CommandEvents {
     public static void on(RegisterCommandsEvent event) {
         SetJobCommand.register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
+
     }
 }

@@ -1,5 +1,6 @@
 package ca.bradj.questown;
 
+import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
@@ -11,6 +12,7 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.commands.synchronization.ArgumentTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
@@ -58,6 +60,8 @@ public class Questown {
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
+
+        ArgumentTypes.register("job", JobArgument.class, new JobArgument.Serializer());
     }
 
     public static ResourceLocation ResourceLocation(String id) {
