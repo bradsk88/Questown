@@ -1,5 +1,7 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.blocks.FalseDoorBlock;
+import ca.bradj.questown.blocks.FalseWallBlock;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
@@ -19,10 +21,15 @@ public class WallDetection {
     public static boolean IsWall(ServerLevel level, Position dp, int y) {
         BlockPos bp = Positions.ToBlock(dp, y);
         BlockPos abp = bp.above();
+        BlockState blockState = level.getBlockState(bp);
+        if (blockState.getBlock() instanceof FalseWallBlock) {
+            return true;
+        }
+
         if (IsEmpty(level, dp, y)) {
             return false;
         }
-        BlockState blockState = level.getBlockState(bp);
+
         BlockState aboveBlockState = level.getBlockState(abp);
         if (blockState.isAir() || aboveBlockState.isAir()) {
             return false;
@@ -55,6 +62,9 @@ public class WallDetection {
 
     public static boolean IsDoor(ServerLevel level, Position dp, int y) {
         BlockState bs = level.getBlockState(Positions.ToBlock(dp, y));
+        if (bs.getBlock() instanceof FalseDoorBlock) {
+            return true;
+        }
         return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "questown:block/false_wall_block"
+    }
+  }
+}

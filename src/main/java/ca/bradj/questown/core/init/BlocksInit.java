@@ -18,6 +18,12 @@ public class BlocksInit {
     public static final RegistryObject<Block> COBBLESTONE_TOWN_FLAG = BLOCKS.register(
             TownFlagBlock.itemId(WallType.COBBLESTONE), TownFlagBlock::new
     );
+    public static final RegistryObject<Block> FALSE_WALL_BLOCK = BLOCKS.register(
+            FalseWallBlock.ID, FalseWallBlock::new
+    );
+    public static final RegistryObject<Block> FALSE_DOOR_BLOCK = BLOCKS.register(
+            FalseDoorBlock.ID, FalseDoorBlock::new
+    );
 
     public static final RegistryObject<Block> WELCOME_MAT_BLOCK = BLOCKS.register(
             WelcomeMatBlock.ITEM_ID, WelcomeMatBlock::new

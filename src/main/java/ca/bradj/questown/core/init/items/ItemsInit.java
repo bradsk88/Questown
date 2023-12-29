@@ -3,10 +3,7 @@ package ca.bradj.questown.core.init.items;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
-import ca.bradj.questown.items.GathererMap;
-import ca.bradj.questown.items.KnowledgeMetaItem;
-import ca.bradj.questown.items.TownDoorItem;
-import ca.bradj.questown.items.TownFenceGateItem;
+import ca.bradj.questown.items.*;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -29,6 +26,13 @@ public class ItemsInit {
             WelcomeMatBlock.ITEM_ID,
             () -> new BlockItem(
                     BlocksInit.WELCOME_MAT_BLOCK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+    public static final RegistryObject<Item> FALSE_WALL_BLOCK = ITEMS.register(
+            FalseWallBlock.ID,
+            () -> new BlockItem(
+                    BlocksInit.FALSE_WALL_BLOCK.get(),
                     Questown.DEFAULT_ITEM_PROPS
             )
     );
@@ -68,6 +72,11 @@ public class ItemsInit {
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
             TownDoorItem.ITEM_ID,
             TownDoorItem::new
+    );
+
+    public static final RegistryObject<Item> FALSE_DOOR = ITEMS.register(
+            FalseDoorItem.ITEM_ID,
+            FalseDoorItem::new
     );
 
     public static final RegistryObject<Item> TOWN_FENCE_GATE = ITEMS.register(

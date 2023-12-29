@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -177,7 +178,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 .filter(tp -> {
                     BlockPos bp = new BlockPos(tp.x, blockPos.getY() + tp.scanLevel, tp.z);
                     BlockState bs = level.getBlockState(bp);
-                    return !(bs.getBlock() instanceof DoorBlock);
+                    return !(bs.getBlock() instanceof DoorBlock || bs.getBlock() instanceof FalseDoorBlock);
                 })
                 .toList()
                 .forEach(tp -> {

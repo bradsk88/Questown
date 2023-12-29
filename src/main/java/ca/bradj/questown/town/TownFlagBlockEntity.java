@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.ScheduledBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
@@ -65,6 +66,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -616,7 +618,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             if (!predicate.matches(level, e.getKey())) {
                 continue;
             }
-            level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
+            Direction value = level.getBlockState(e.getKey()).getValue(HorizontalDirectionalBlock.FACING);
+            level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState()
+                    .setValue(HorizontalDirectionalBlock.FACING, value)
+            );
             registerJobsBoard(e.getKey());
             jobHandle.setJobBlockState(e.getKey(), new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
         }
