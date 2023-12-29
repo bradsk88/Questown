@@ -31,10 +31,7 @@ public class ItemsInit {
     );
     public static final RegistryObject<Item> FALSE_WALL_BLOCK = ITEMS.register(
             FalseWallBlock.ID,
-            () -> new BlockItem(
-                    BlocksInit.FALSE_WALL_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            FalseWallItem::new
     );
 
     public static final RegistryObject<Item> JOB_BOARD_BLOCK = ITEMS.register(

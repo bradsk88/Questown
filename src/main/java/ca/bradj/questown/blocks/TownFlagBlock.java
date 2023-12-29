@@ -68,19 +68,23 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack itemInHand
     ) {
         if (itemInHand.getTag() == null) {
+            QT.ITEM_LOGGER.error("Missing tag");
             return null;
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
         if (!itemInHand.getTag().contains(xTag)) {
+            QT.ITEM_LOGGER.error("Missing X tag from {}", itemInHand.getTag());
             return null;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
         if (!itemInHand.getTag().contains(yTag)) {
+            QT.ITEM_LOGGER.error("Missing Y tag from {}", itemInHand.getTag());
             return null;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
         if (!itemInHand.getTag().contains(zTag)) {
+            QT.ITEM_LOGGER.error("Missing Z tag from {}", itemInHand.getTag());
             return null;
         }
         x = itemInHand.getOrCreateTag().getInt(xTag);
@@ -89,9 +93,40 @@ public class TownFlagBlock extends BaseEntityBlock {
 
 
         BlockPos bp = new BlockPos(x, y, z);
-        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(bp, TilesInit.TOWN_FLAG.get());
-        return oEntity.orElse(null);
+        BlockEntity oEntity = level.getBlockEntity(bp);
+        if (oEntity instanceof TownFlagBlockEntity e) {
+            return e;
+        }
+        return null;
 
+    }
+    public static void CopyParentFromNBT(
+            ItemStack input,
+            ItemStack output
+    ) {
+        if (input.getTag() == null) {
+            QT.ITEM_LOGGER.error("No parent stored on item: {}", input.getTag());
+            return;
+        }
+        int x, y, z;
+        String xTag = String.format("%s.parent_pos_x", Questown.MODID);
+        if (!input.getTag().contains(xTag)) {
+            QT.ITEM_LOGGER.error("No parent X coord stored on item: {}", input.getTag());
+            return;
+        }
+        String yTag = String.format("%s.parent_pos_y", Questown.MODID);
+        if (!input.getTag().contains(yTag)) {
+            QT.ITEM_LOGGER.error("No parent Y coord stored on item: {}", input.getTag());
+            return;
+        }
+        String zTag = String.format("%s.parent_pos_z", Questown.MODID);
+        if (!input.getTag().contains(zTag)) {
+            QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", input.getTag());
+            return;
+        }
+        output.getOrCreateTag().putInt(xTag, input.getTag().getInt(xTag));
+        output.getOrCreateTag().putInt(yTag, input.getTag().getInt(yTag));
+        output.getOrCreateTag().putInt(zTag, input.getTag().getInt(zTag));
     }
 
     @Nullable
@@ -161,7 +196,13 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
         }
+        if (itemInHand.getItem().equals(Items.COBBLESTONE)) {
+            converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
+        }
         if (itemInHand.getItem().equals(ItemsInit.FALSE_DOOR.get())) {
+            converted = ItemsInit.FALSE_WALL_BLOCK.get().getDefaultInstance();
+        }
+        if (itemInHand.getItem().equals(ItemsInit.FALSE_WALL_BLOCK.get())) {
             converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
         }
         if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {

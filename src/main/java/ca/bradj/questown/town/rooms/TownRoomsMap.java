@@ -325,7 +325,6 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             TownRooms rooms = getOrCreateRooms(p.scanLevel);
             Optional<MCRoom> room = rooms.getAll().stream().filter(v -> v.getDoorPos().equals(pz)).findFirst();
             if (room.isEmpty()) {
-                Questown.LOGGER.error("No active room found for registered door position {}", p);
                 continue;
             }
             ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> recipes = activeRecipes.get(p.scanLevel);
