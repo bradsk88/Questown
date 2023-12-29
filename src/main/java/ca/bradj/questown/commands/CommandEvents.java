@@ -12,6 +12,7 @@ public class CommandEvents {
     @SubscribeEvent
     public static void on(RegisterCommandsEvent event) {
         SetJobCommand.register(event.getDispatcher());
+        TimeWarpCommand.register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
     }
 }

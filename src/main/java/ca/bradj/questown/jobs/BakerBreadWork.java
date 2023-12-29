@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -14,6 +15,7 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.Block;
 
 import java.util.UUID;
 
@@ -51,9 +53,11 @@ public class BakerBreadWork extends DeclarativeJob {
             BLOCK_STATE_NEED_TIME, 100, // FIXME: 6000?
             BLOCK_STATE_DONE, 0
     );
+    public static final Class<BreadOvenBlock> WORK_BLOCK_CLASS = BreadOvenBlock.class;
     private static final boolean TIMER_SHARING = false;
 
     public static final ItemStack RESULT = Items.BREAD.getDefaultInstance();
+    public static final ResourceLocation WORK_ROOM_ID = new ResourceLocation(Questown.MODID, "bakery");
 
     public BakerBreadWork(
             UUID ownerUUID,
@@ -63,7 +67,7 @@ public class BakerBreadWork extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 ID,
-                new ResourceLocation(Questown.MODID, "bakery"),
+                WORK_ROOM_ID,
                 MAX_STATE,
                 true,
                 100,
@@ -89,6 +93,6 @@ public class BakerBreadWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 () -> MCHeldItem.fromTown(RESULT)
         );
-        return DeclarativeJobs.warper(wi);
+        return DeclarativeJobs.warper(wi, true);
     }
 }

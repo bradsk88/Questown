@@ -310,7 +310,7 @@ public class JobsRegistry {
         b.put(BakerBreadWork.ID, new Work(
                 (town, uuid) -> new BakerBreadWork(uuid, 6),
                 productionJobSnapshot(BakerBreadWork.ID),
-                (block) -> block instanceof BreadOvenBlock,
+                BakerBreadWork.WORK_BLOCK_CLASS::isInstance,
                 Questown.ResourceLocation("bakery"),
                 ProductionStatus.FACTORY.idle(),
                 t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BakerBreadWork.RESULT)),

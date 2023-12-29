@@ -138,6 +138,6 @@ public class GathererMappedAxeWork extends NewLeaverWork {
                 // FIXME: Warper should support random loot acquisition
                 () -> MCHeldItem.fromMCItemStack(Items.OAK_LOG.getDefaultInstance())
         );
-        return DeclarativeJobs.warper(wi);
+        return DeclarativeJobs.warper(wi, true);
     }
 }

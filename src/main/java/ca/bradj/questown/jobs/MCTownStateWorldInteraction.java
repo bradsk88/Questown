@@ -1,26 +1,35 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownState, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
     private final BlockPos position;
     private final Supplier<MCHeldItem> result;
+    private Map<Integer, Integer> ingredientQuantityRequiredAtStates;
 
     public MCTownStateWorldInteraction(
             JobID jobId,
@@ -41,6 +50,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         );
         this.position = new BlockPos(villagerIndex, villagerIndex, villagerIndex);
         this.result = result;
+        this.ingredientQuantityRequiredAtStates = ingredientQuantityRequiredAtStates;
     }
 
     @Override
@@ -115,6 +125,116 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return null;
+        return ingredientQuantityRequiredAtStates;
+    }
+
+    public void injectTicks(int interval) {
+        ticksSinceLastAction += interval;
+    }
+
+    public JobTownProvider<MCRoom> asTownJobs(
+            @NotNull AbstractWorkStatusStore.State workStates,
+            MCRoom mcRoom,
+            @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers
+    ) {
+        return new JobTownProvider<MCRoom>() {
+            @Override
+            public Collection<MCRoom> roomsWithCompletedProduct() {
+                if (workStates.processingState() == maxState) {
+                    return ImmutableList.of(mcRoom);
+                }
+                return ImmutableList.of();
+            }
+
+            @Override
+            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(workStates.processingState());
+                if (ings != null) {
+                    return ImmutableMap.of(workStates.processingState(), ImmutableList.of(mcRoom));
+                }
+                return ImmutableMap.of();
+            }
+
+            @Override
+            public boolean isUnfinishedTimeWorkPresent() {
+                // TODO[ASAP]: Implement time work
+                return false;
+            }
+
+            @Override
+            public boolean hasSupplies() {
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(workStates.processingState());
+                if (ings != null) {
+                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+                        if (container.hasItem(i -> ings.apply(MCHeldItem.fromTown(i)))) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public boolean hasSpace() {
+                return containers.stream().anyMatch(v -> !v.isFull());
+            }
+        };
+    }
+
+    public EntityInvStateProvider<Integer> asInventory(MCTownState outState, int state) {
+        return new EntityInvStateProvider<Integer>() {
+            @Override
+            public boolean inventoryFull() {
+                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
+                return items.stream().noneMatch(MCHeldItem::isEmpty);
+            }
+
+            @Override
+            public boolean hasNonSupplyItems() {
+                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(state);
+                if (ings == null && !items.isEmpty()) {
+                    return true;
+                }
+                return items.stream()
+                        .filter(Predicates.not(Item::isEmpty))
+                        .anyMatch(v -> !ings.apply(v));
+            }
+
+            @Override
+            public Map<Integer, Boolean> getSupplyItemStatus() {
+                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(state);
+                if (ings == null) {
+                    return ImmutableMap.of();
+                }
+                return ImmutableMap.of(
+                        state, items.stream().anyMatch(ings::apply)
+                );
+            }
+        };
+    }
+
+    public MCTownState simulateDropLoot(MCTownState outState, ProductionStatus status) {
+        Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
+        ProductionTimeWarper.Result<MCHeldItem> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
+        ProductionTimeWarper.simulateDropLoot(r, itemz -> {
+            Stack<MCHeldItem> stack = new Stack<>();
+            stack.addAll(itemz);
+            while (!stack.isEmpty()) {
+                for (ContainerTarget<MCContainer, MCTownItem> container : outState.containers) {
+                    if (container.isFull()) {
+                        continue;
+                    }
+                    for (int i = 0; i < container.size(); i++) {
+                        if (container.getItem(i).isEmpty()) {
+                                container.setItem(i, stack.pop().toItem());
+                        }
+                    }
+                }
+            }
+            return ImmutableList.copyOf(stack);
+        }, MCHeldItem::Air);
+        return outState;
     }
 }

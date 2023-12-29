@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -154,9 +153,9 @@ public class JobStatuses {
                                     return null;
                                 }
 
-                                RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
+                                ROOM location = entity.getEntityCurrentJobSite();
                                 if (location != null) {
-                                    if (rooms.contains(location.room)) {
+                                    if (rooms.contains(location)) {
                                         return factory.extractingProduct();
                                     }
                                 }
@@ -169,7 +168,7 @@ public class JobStatuses {
                                 if (supplyItemStatus.isEmpty()) {
                                     return null;
                                 }
-                                RoomRecipeMatch<ROOM> location = entity.getEntityCurrentJobSite();
+                                ROOM location = entity.getEntityCurrentJobSite();
                                 Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
 
                                 roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
@@ -186,7 +185,7 @@ public class JobStatuses {
                                             .isEmpty()) { // TODO: Unit test the second leg of this condition
                                         foundWork = true;
                                         if (location != null) {
-                                            if (roomNeedsMap.get(s).contains(location.room)) {
+                                            if (roomNeedsMap.get(s).contains(location)) {
                                                 return factory.fromJobBlockState(s);
                                             }
                                         }

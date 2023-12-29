@@ -166,6 +166,6 @@ public class ExplorerWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 () -> MCHeldItem.fromTown(RESULT)
         );
-        return DeclarativeJobs.warper(wi);
+        return DeclarativeJobs.warper(wi, true);
     }
 }

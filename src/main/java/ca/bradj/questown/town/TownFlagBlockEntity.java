@@ -21,6 +21,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
@@ -78,7 +79,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static ca.bradj.questown.town.TownFlagState.NBT_LAST_TICK;
+import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>, TownPois.Listener {
@@ -111,20 +112,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final ArrayList<BlockPos> blocksWithWeeds = new ArrayList<>();
 
     private final ArrayList<Integer> times = new ArrayList<>();
-    private final MCRoom flagMetaRoom = metaRoomAround(getBlockPos());
 
-    @NotNull
-    private MCRoom metaRoomAround(BlockPos p) {
-        return new MCRoom(
-                Positions.FromBlockPos(p.offset(1, 0, 0)),
-                ImmutableList.of(new InclusiveSpace(
-                        // TODO: Add 2 to config?
-                        Positions.FromBlockPos(p).offset(-2, -2),
-                        Positions.FromBlockPos(p).offset(2, 2)
-                )),
-                p.getY()
-        );
-    }
+    // TODO: Add 2 to config?
+    private final MCRoom flagMetaRoom = Spaces.metaRoomAround(getBlockPos(), 2);
 
     private final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
     private final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
@@ -243,7 +233,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         for (LivingEntity e : entities) {
             e.stopSleeping();
         }
-        getPersistentData().putLong(NBT_LAST_TICK, newTime);
+        getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
     private static void profileTick(
@@ -944,7 +934,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         );
         return getWelcomeMats()
                 .stream()
-                .map(this::metaRoomAround)
+                .map(p -> Spaces.metaRoomAround(p, 2)) // TODO: Config
                 .map(v -> new RoomRecipeMatch<>(v, SpecialQuests.TOWN_GATE, fn.apply(v).entrySet()))
                 .toList();
     }
@@ -1203,5 +1193,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             b.add(key);
         });
         return b.build();
+    }
+
+    public void warpTime(int ticks) {
+        getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, level.getDayTime() - ticks);
     }
 }

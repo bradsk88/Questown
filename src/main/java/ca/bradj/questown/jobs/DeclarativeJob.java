@@ -274,9 +274,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
-            public @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite() {
+            public @Nullable MCRoom getEntityCurrentJobSite() {
 
-                return entityCurrentJobSite;
+                return entityCurrentJobSite.room;
             }
         };
         this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);

@@ -29,7 +29,7 @@ import java.util.*;
 // This class is NOT encapsulated from MC
 
 public class TownFlagState {
-    static final String NBT_LAST_TICK = String.format("%s_last_tick", Questown.MODID);
+    static final String NBT_TIME_WARP_REFERENCE_TICK = String.format("%s_last_tick", Questown.MODID);
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
     private boolean initialized = false;
@@ -128,7 +128,10 @@ public class TownFlagState {
             //  until we have reached the desired number of ticks. That better
             //  simulates a village full of people (and we can maybe even run
             //  each "chunk" on a separate game tick.
-            liveState = vWarper.warp(liveState, dayTime, ticksPassed, i);
+            MCTownState affectedState = vWarper.warp(liveState, dayTime, ticksPassed, i);
+            if (affectedState != null) {
+                liveState = affectedState;
+            }
         }
 
         return new MCTownState(
@@ -185,7 +188,7 @@ public class TownFlagState {
     // Returns true if changes detected
     public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
         long start = System.currentTimeMillis();
-        long lastTick = flagTag.getLong(NBT_LAST_TICK);
+        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
         long timeSinceWake = gt - lastTick;
         boolean waking = timeSinceWake > 10 || !initialized;
@@ -203,9 +206,9 @@ public class TownFlagState {
                 e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             }
             // TODO: Make sure chests get filled/empty
-            flagTag.putLong(NBT_LAST_TICK, gt);
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         } else {
-            flagTag.putLong(NBT_LAST_TICK, gt);
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
 
         // TODO: Run less often?

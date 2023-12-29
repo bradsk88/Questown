@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;

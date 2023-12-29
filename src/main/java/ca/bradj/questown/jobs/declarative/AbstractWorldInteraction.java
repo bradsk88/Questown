@@ -21,8 +21,8 @@ public abstract class AbstractWorldInteraction<
     private final AbstractItemWI<POS, EXTRA, HELD_ITEM, TOWN> itemWI;
     private final AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN> workWI;
     protected final int villagerIndex;
-    private int ticksSinceLastAction;
-    private final int interval;
+    protected int ticksSinceLastAction;
+    public final int interval;
     protected final int maxState;
 
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
