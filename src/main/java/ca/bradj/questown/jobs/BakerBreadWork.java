@@ -4,22 +4,16 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.Warper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 
 import java.util.UUID;
-
-import static ca.bradj.questown.jobs.ProductionTimeWarper.getNextDaySegment;
 
 public class BakerBreadWork extends DeclarativeJob {
     public static final JobID ID = new JobID("baker", "bread");
@@ -93,6 +87,6 @@ public class BakerBreadWork extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 () -> MCHeldItem.fromTown(RESULT)
         );
-        return DeclarativeJobs.warper(wi, true);
+        return DeclarativeJobs.warper(wi, MAX_STATE, true);
     }
 }

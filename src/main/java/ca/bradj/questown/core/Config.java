@@ -49,6 +49,8 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
 
     static {
         // Scanning Config
@@ -115,6 +117,9 @@ public class Config {
         SMELTER_WORK_REQUIRED = BUILDER.comment(
                 "The number of times a smelter must work on a block of ore to extract the raw materials inside"
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
+        GATHERER_TIME_REQUIRED_BASELINE = BUILDER.comment(
+                "The number of ticks the gatherer/explorer will spend outside of town collecting items. All villagers will start with this baseline, but it might get altered by villager or town modifiers."
+        ).defineInRange("GathererTimeRequiredBaseline", 6000, 1, 24000);
         BUILDER.pop();
 
         // Villagers Config
@@ -138,6 +143,9 @@ public class Config {
         FLAG_SUB_BLOCK_DETECTION_TICKS = BUILDER.comment(
                 "It may take a few ticks before the entity for the sub block shows up in the world. If the number exceeds this config value, the server will crash."
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);
+        CRASH_ON_FAILED_WARP = BUILDER.comment(
+                "Villages do a 'time warp' when the player returns from away - to simulate villager activity. This is an experimental feature that is likely to crash. By default, problems will be ignored at the cost of lost progress."
+        ).define("CrashOnFailedWarp", false);
         BUILDER.pop(); // Yep, really twice. Getting out of config
         BUILDER.pop();
 

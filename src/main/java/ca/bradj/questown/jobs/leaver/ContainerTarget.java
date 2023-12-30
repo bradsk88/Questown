@@ -9,8 +9,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 
 public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends Item<I>> {
 
@@ -89,6 +93,20 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
     public String toShortString() {
         return container.toShortString();
+    }
+
+    public @Nullable Map.Entry<ContainerTarget<C, I>, I> withItemRemoved(Predicate<I> itemCheck) {
+        for (int i = 0; i < container.size(); i++) {
+            if (itemCheck.test(container.getItem(i))) {
+                I itm = container.getItem(i);
+                container.removeItem(i, 1);
+                return new AbstractMap.SimpleEntry<>(
+                        new ContainerTarget<>(position, yPosition, interactPosition, container, check),
+                        itm
+                );
+            }
+        }
+        return null;
     }
 
     public interface Container<I extends Item<I>> {

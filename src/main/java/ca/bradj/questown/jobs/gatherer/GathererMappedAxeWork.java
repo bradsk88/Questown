@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -57,7 +58,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
             // No work required
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_ROAM, 20
+            BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
     );
     private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
@@ -138,6 +139,6 @@ public class GathererMappedAxeWork extends NewLeaverWork {
                 // FIXME: Warper should support random loot acquisition
                 () -> MCHeldItem.fromMCItemStack(Items.OAK_LOG.getDefaultInstance())
         );
-        return DeclarativeJobs.warper(wi, true);
+        return DeclarativeJobs.warper(wi, MAX_STATE, true);
     }
 }

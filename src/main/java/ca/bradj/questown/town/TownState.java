@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -9,10 +10,8 @@ import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Predicate;
 
 public abstract class TownState<
         C extends ContainerTarget.Container<I>,
@@ -166,6 +165,25 @@ public abstract class TownState<
         );
     }
 
+    public Map.Entry<SELF, I> withContainerItemRemoved(Predicate<I> itemCheck) {
+        ImmutableList.Builder<ContainerTarget<C, I>> b = ImmutableList.builder();
+        I removed = null;
+        for (ContainerTarget<C, I> container : containers) {
+            @Nullable Map.Entry<ContainerTarget<C, I>, I> wRem = container.withItemRemoved(itemCheck);
+            if (wRem != null) {
+                b.add(wRem.getKey());
+                removed = wRem.getValue();
+            } else {
+                b.add(container);
+            }
+        }
+        return new AbstractMap.SimpleEntry<>(newTownState(
+                villagers, b.build(), workStates, gates, worldTimeAtSleep
+        ), removed);
+    }
+
+    ;
+
     public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
@@ -205,6 +223,18 @@ public abstract class TownState<
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
                     (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
+            );
+        }
+
+        public @Nullable VillagerData<I> withAddedItem(I value) {
+            Optional<I> first = journal.items().stream().filter(Item::isEmpty).findFirst();
+            if (first.isEmpty()) {
+                return null;
+            }
+            int idx = journal.items().indexOf(first.get());
+            return new VillagerData<>(
+                    xPosition, yPosition, zPosition,
+                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
             );
         }
     }

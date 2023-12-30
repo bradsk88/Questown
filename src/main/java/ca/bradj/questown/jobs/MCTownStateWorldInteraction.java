@@ -237,4 +237,23 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         }, MCHeldItem::Air);
         return outState;
     }
+
+    public @Nullable MCTownState simulateCollectSupplies(MCTownState inState, ProductionStatus status) {
+        Function<MCHeldItem, Boolean> ingr = ingredientsRequiredAtStates().get(status.getProductionState());
+
+        @Nullable Map.Entry<MCTownState, MCTownItem> removeResult = inState.withContainerItemRemoved(i -> ingr.apply(MCHeldItem.fromTown(i)));
+        if (removeResult == null) {
+            return null; // Item does not exist - collection failed
+        }
+
+        MCTownState outState = removeResult.getKey();
+
+        TownState.VillagerData<MCHeldItem> villager = outState.villagers.get(villagerIndex);
+        villager = villager.withAddedItem(MCHeldItem.fromTown(removeResult.getValue()));
+        if (villager == null) {
+            return null; // No space in inventory - collection failed
+        }
+
+        return outState.withVillagerData(villagerIndex, villager);
+    }
 }

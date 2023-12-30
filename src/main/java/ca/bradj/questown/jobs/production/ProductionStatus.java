@@ -15,7 +15,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     // Numbers 0-9 are reserved for job-specific statuses.
     // TODO: Should probably build something more flexible
-    private static final int firstNonCustomIndex = 10;
+    public static final int firstNonCustomIndex = 10;
     private static int nextIndex = firstNonCustomIndex;
     private static final HashSet<ProductionStatus> allStatuses = new HashSet<>();
 

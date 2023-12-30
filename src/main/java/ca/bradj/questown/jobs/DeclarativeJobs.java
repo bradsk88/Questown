@@ -1,22 +1,17 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.blocks.BreadOvenBlock;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -24,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 public class DeclarativeJobs {
     public static <INGREDIENT, ITEM extends Item<ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, ITEM>> Map<Integer, Boolean> getSupplyItemStatus(
@@ -52,10 +48,86 @@ public class DeclarativeJobs {
         return ImmutableMap.copyOf(b);
     }
 
+    private static final ImmutableMap<ProductionStatus, Function<HandlerInputs, MCTownState>> handler;
+
+    private record HandlerInputs(
+            MCTownStateWorldInteraction wi,
+            MCTownState inState,
+            ProductionStatus status,
+            AbstractWorkStatusStore.State workBlockState,
+            Integer maxState,
+            BlockPos fakePos
+    ) {
+    }
+
+    static {
+        ImmutableMap.Builder<ProductionStatus, Function<
+                HandlerInputs,
+                @Nullable MCTownState
+        >> b = ImmutableMap.builder();
+        for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {
+            b.put(ProductionStatus.fromJobBlockStatus(i), (
+                    HandlerInputs ii
+            ) -> {
+                if (ii.status.isWorkingOnProduction() && ii.status.getProductionState() == ii.maxState) {
+                    // FIXME: Simulate extraction
+                    return ii.inState;
+                }
+                return ii.wi.tryWorking(ii.inState, new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1));
+            });
+        }
+        b.put(
+                ProductionStatus.EXTRACTING_PRODUCT,
+                i -> i.inState // FIXME: Simulate extraction
+        );
+        b.put(
+                ProductionStatus.DROPPING_LOOT,
+                i -> i.wi.simulateDropLoot(i.inState, i.status)
+        );
+        b.put(
+                ProductionStatus.COLLECTING_SUPPLIES,
+                i -> i.wi.simulateCollectSupplies(i.inState, i.status)
+        );
+        b.put(
+                ProductionStatus.RELAXING,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.WAITING_FOR_TIMED_STATE,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.NO_SPACE,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.GOING_TO_JOB,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.NO_SUPPLIES,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.IDLE,
+                i -> null
+        );
+        handler = b.build();
+    }
+
     public static Warper<MCTownState> warper(
             MCTownStateWorldInteraction wi,
+            int maxState,
             boolean prioritizeExtraction
     ) {
+        ImmutableSet<ProductionStatus> c = handler.keySet();
+        ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();
+        if (!c.containsAll(productionStatuses)) {
+            throw new IllegalStateException("Not all production states are handled. Difference: " + Sets.difference(
+                    ImmutableSet.copyOf(productionStatuses), ImmutableSet.copyOf(c)
+            ));
+        }
+
         return (inState, currentTick, ticksPassed, villagerNum) -> {
             BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
 
@@ -72,11 +144,12 @@ public class DeclarativeJobs {
             ProductionStatus status = ProductionStatus.FACTORY.idle();
 
             // TODO[ASAP]: Factor in timers and "walk time"
-            for (long i = start; i <= max; i += wi.interval) {
+            int stepInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
+            for (long i = start; i <= max; i += stepInterval) {
                 state = outState.workStates.get(fakePos);
-                wi.injectTicks(wi.interval);
+                wi.injectTicks(stepInterval);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
-                status = ProductionStatuses.getNewStatusFromSignal(
+                @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
                         status, Signals.fromGameTime(i),
                         wi.asInventory(outState, villagerNum),
                         wi.asTownJobs(
@@ -87,20 +160,18 @@ public class DeclarativeJobs {
                         DeclarativeJobs.alwaysInRoom(fakeRoom),
                         DeclarativeJob.STATUS_FACTORY, prioritizeExtraction
                 );
-                MCTownState affectedState = null;
-                if (status != null && status.isWorkingOnProduction()) {
-                    affectedState = wi.tryWorking(outState, new WorkSpot<>(fakePos, state.processingState(), 1));
-                } else if (status.isDroppingLoot()) {
-                    affectedState = wi.simulateDropLoot(outState, status);
-                } else if (status.isCollectingSupplies()) {
-                    affectedState = wi.simulateCollectSupplies();
+                if (nuStatus != null) {
+                    status = nuStatus;
                 }
-                // FIXME: Handle the other statuses
-
+                MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
+                        wi, outState, status, state, maxState, fakePos
+                ));
                 if (affectedState != null) {
                     outState = affectedState;
                 }
             }
+
+            QT.FLAG_LOGGER.debug("State after warp: {}", outState);
 
             return outState;
         };

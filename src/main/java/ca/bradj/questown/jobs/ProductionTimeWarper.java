@@ -87,16 +87,16 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     static <I extends Item<I>, H extends HeldItem<H, I>> Result<H> simulateExtractProduct(
-            ProductionStatus status, ImmutableList<H> items, ItemToEntityMover<I, H> taker, Supplier<I> remover
+            ProductionStatus status, ImmutableList<H> heldItems, ItemToEntityMover<I, H> taker, Supplier<I> remover
     ) {
         // TODO: More efficient way to do this?
-        Optional<H> foundEmpty = items.stream()
+        Optional<H> foundEmpty = heldItems.stream()
                 .filter(Item::isEmpty)
                 .findFirst();
         if (foundEmpty.isPresent()) {
             // TODO: This is suspiciously similar to the logic in VisitorMobJob
-            int idx = items.indexOf(foundEmpty.get());
-            ArrayList<H> outItems = new ArrayList<>(items);
+            int idx = heldItems.indexOf(foundEmpty.get());
+            ArrayList<H> outItems = new ArrayList<>(heldItems);
             outItems.set(idx, taker.copyFromTownWithoutRemoving(remover.get()));
             // TODO[ASAP]: Update state of block?
             return new Result<>(
@@ -105,7 +105,7 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             );
         }
         throw new IllegalStateException(String.format(
-                "Got extract product with full inventory: %s", items
+                "Got extract product with full inventory: %s", heldItems
         ));
 
     }

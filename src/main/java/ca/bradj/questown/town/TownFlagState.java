@@ -199,11 +199,19 @@ public class TownFlagState {
                     "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
                     timeSinceWake, gt, lastTick
             );
-            MCTownState newState = TownFlagState.advanceTime(parent, level);
-            if (newState != null) {
-                TownFlagState.recoverMobs(parent, level);
-                Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
-                e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+            try {
+                MCTownState newState = TownFlagState.advanceTime(parent, level);
+                if (newState != null) {
+                    TownFlagState.recoverMobs(parent, level);
+                    Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
+                    e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+                }
+            } catch (Exception ex) {
+                if (Config.CRASH_ON_FAILED_WARP.get()) {
+                    throw ex;
+                }
+                QT.FLAG_LOGGER.error("Time warp raised exception: {}", ex.getMessage());
+                QT.FLAG_LOGGER.info("Due to config, continuing as if nothing happened in town while player was away");
             }
             // TODO: Make sure chests get filled/empty
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
