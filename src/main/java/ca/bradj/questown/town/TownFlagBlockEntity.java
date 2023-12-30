@@ -572,7 +572,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            p.sendMessage(new TranslatableComponent(key), ChatType.CHAT, p.getUUID());
+            p.sendMessage(new TranslatableComponent(key, args), ChatType.CHAT, p.getUUID());
         }
     }
 
