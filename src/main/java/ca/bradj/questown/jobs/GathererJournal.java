@@ -581,6 +581,13 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         }
 
         @Override
+        public Snapshot<H> withItems(ImmutableList<H> items) {
+            return new Snapshot<>(
+                    status, ImmutableList.copyOf(items)
+            );
+        }
+
+        @Override
         public String jobStringValue() {
             return NAME;
         }

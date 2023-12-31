@@ -39,8 +39,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 // TODO[ASAP]: Break ties to MC and unit test
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
@@ -275,7 +276,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
             public @Nullable MCRoom getEntityCurrentJobSite() {
-
+                if (entityCurrentJobSite == null) {
+                    return null;
+                }
                 return entityCurrentJobSite.room;
             }
         };
@@ -428,24 +431,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
-        HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, Ingredient> fn = (state, ingr) -> {
-            if (ingr == null) {
-                if (!b.containsKey(state)) {
-                    b.put(state, false);
-                }
-                return;
-            }
-
-            // The check passes if the worker has ALL the ingredients needed for the state
-            boolean has = journal.getItems().stream().anyMatch(z -> ingr.test(z.get().toItemStack()));
-            if (!b.getOrDefault(state, false)) {
-                b.put(state, has);
-            }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
-        return ImmutableMap.copyOf(b);
+        return JobsClean.getSupplyItemStatuses(
+                journal::getItems,
+                Jobs.unMCHeld2(ingredientsRequiredAtStates),
+                Jobs.unMCHeld2(toolsRequiredAtStates)
+        );
     }
 
     @Override
@@ -493,6 +483,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town, WorkStateContainer<BlockPos> th
     ) {
+        // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {

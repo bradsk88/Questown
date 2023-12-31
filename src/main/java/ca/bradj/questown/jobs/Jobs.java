@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
@@ -253,6 +254,7 @@ public class Jobs {
         );
         return b.build();
     }
+
     public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
@@ -260,6 +262,28 @@ public class Jobs {
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
         );
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unMCHeld2(
+            ImmutableMap<Integer, Ingredient> input
+    ) {
+        return unFn(unMCHeld(input));
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(
+            Map<Integer, Function<MCHeldItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, v::apply));
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unHeld(
+            ImmutableMap<Integer, Function<MCTownItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
         return b.build();
     }
 

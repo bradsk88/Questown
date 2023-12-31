@@ -1196,6 +1196,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void warpTime(int ticks) {
+        state.warp(this, getPersistentData(), getServerLevel(), ticks);
         getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, level.getDayTime() - ticks);
     }
 }

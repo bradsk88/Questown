@@ -27,6 +27,11 @@ public record SimpleSnapshot<STATUS extends IStatus<STATUS>, H extends HeldItem<
     }
 
     @Override
+    public SimpleSnapshot<STATUS, H> withItems(ImmutableList<H> items) {
+        return new SimpleSnapshot<>(jobId, status, ImmutableList.copyOf(items));
+    }
+
+    @Override
     public String toString() {
         return "Journal.Snapshot[" + jobStringValue() + " ]{" +
                 "status=" + status +

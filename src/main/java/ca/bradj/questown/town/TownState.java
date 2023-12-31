@@ -24,11 +24,13 @@ public abstract class TownState<
     public final @NotNull ImmutableList<BlockPos> gates;
     public final long worldTimeAtSleep;
     public final ImmutableMap<P, AbstractWorkStatusStore.State> workStates;
+    public final ImmutableMap<P, Integer> workTimers;
 
     public TownState(
             @NotNull List<VillagerData<H>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
             @NotNull ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
+            @NotNull ImmutableMap<P, Integer> workTimers,
             @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
     ) {
@@ -37,6 +39,7 @@ public abstract class TownState<
         this.gates = ImmutableList.copyOf(gates);
         this.worldTimeAtSleep = worldTimeAtSleep;
         this.workStates = workStates;
+        this.workTimers = workTimers;
     }
 
     @Override
@@ -129,16 +132,28 @@ public abstract class TownState<
         HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
         m.put(bp, bs);
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
+                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
         );
     }
 
-    protected abstract SELF newTownState(ImmutableList<VillagerData<H>> villagers, ImmutableList<ContainerTarget<C, I>> containers, ImmutableMap<P, AbstractWorkStatusStore.State> pStateImmutableMap, ImmutableList<BlockPos> gates, long worldTimeAtSleep);
+    protected abstract SELF newTownState(
+            ImmutableList<VillagerData<H>> villagers,
+            ImmutableList<ContainerTarget<C, I>> containers,
+            ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
+            ImmutableMap<P, Integer> workTimers,
+            ImmutableList<BlockPos> gates,
+            long worldTimeAtSleep
+    );
 
     @Override
     public SELF setJobBlockStateWithTimer(P bp, AbstractWorkStatusStore.State bs, int ticksToNextState) {
-        // FIXME: Implement
-        return newTownState(villagers, containers, workStates, gates, worldTimeAtSleep);
+        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        m.put(bp, bs);
+        HashMap<P, Integer> m2 = new HashMap<>(workTimers);
+        m2.put(bp, ticksToNextState);
+        return newTownState(
+                villagers, containers, ImmutableMap.copyOf(m), ImmutableMap.copyOf(m2), gates, worldTimeAtSleep
+        );
     }
 
     @Override
@@ -146,7 +161,7 @@ public abstract class TownState<
         HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
         m.remove(bp);
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), gates, worldTimeAtSleep
+                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
         );
     }
 
@@ -160,6 +175,7 @@ public abstract class TownState<
                 ImmutableList.copyOf(vilz),
                 containers,
                 workStates,
+                workTimers,
                 gates,
                 worldTimeAtSleep
         );
@@ -178,11 +194,29 @@ public abstract class TownState<
             }
         }
         return new AbstractMap.SimpleEntry<>(newTownState(
-                villagers, b.build(), workStates, gates, worldTimeAtSleep
+                villagers, b.build(), workStates, workTimers, gates, worldTimeAtSleep
         ), removed);
     }
 
-    ;
+    public SELF withTimerReducedBy(P bp, int stepInterval) {
+        // TODO: Take "next step work" and "next step time" as inputs
+        if (workTimers.get(bp) == null || workTimers.get(bp) == 0) {
+            return unchanged();
+        }
+        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        HashMap<P, Integer> m2 = new HashMap<>(workTimers);
+        m2.compute(bp, (k, v) -> v == null ? 0 : Math.max(0, v - stepInterval));
+        if (m2.get(bp) <= 0) {
+            m.compute(bp, (k, v) -> (v == null ? AbstractWorkStatusStore.State.fresh() : v).incrProcessing());
+        }
+        return newTownState(
+                villagers, containers, ImmutableMap.copyOf(m), ImmutableMap.copyOf(m2), gates, worldTimeAtSleep
+        );
+    }
+
+    private SELF unchanged() {
+        return newTownState(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
+    }
 
     public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {
         public final UUID uuid;
@@ -235,6 +269,13 @@ public abstract class TownState<
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
                     (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
+            );
+        }
+
+        public VillagerData<I> withItems(ImmutableList<I> items) {
+            return new VillagerData<>(
+                    xPosition, yPosition, zPosition,
+                    (ImmutableSnapshot) journal.withItems(items), uuid
             );
         }
     }

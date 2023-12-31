@@ -28,6 +28,7 @@ public class DeclarativeJobs {
             ImmutableMap<Integer, INGREDIENT> toolsRequiredAtStates,
             BiPredicate<INGREDIENT, HELD_ITEM> matchFn
     ) {
+        // TODO: Compare with JobsClean version and eliminate one
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, INGREDIENT> fn = (state, ingr) -> {
             if (ingr == null) {
@@ -69,10 +70,13 @@ public class DeclarativeJobs {
             b.put(ProductionStatus.fromJobBlockStatus(i), (
                     HandlerInputs ii
             ) -> {
-                if (ii.status.isWorkingOnProduction() && ii.status.getProductionState() == ii.maxState) {
-                    // FIXME: Simulate extraction
+                if (!ii.status.isWorkingOnProduction()) {
                     return ii.inState;
                 }
+                if (ii.status.getProductionState() == ii.maxState) {
+                    // FIXME: Simulate extraction
+                    return ii.inState;
+                } // FIXME: This seems to be duplicating tool items
                 return ii.wi.tryWorking(ii.inState, new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1));
             });
         }
@@ -86,7 +90,7 @@ public class DeclarativeJobs {
         );
         b.put(
                 ProductionStatus.COLLECTING_SUPPLIES,
-                i -> i.wi.simulateCollectSupplies(i.inState, i.status)
+                i -> i.wi.simulateCollectSupplies(i.inState, i.workBlockState.processingState())
         );
         b.put(
                 ProductionStatus.RELAXING,
@@ -146,14 +150,15 @@ public class DeclarativeJobs {
             // TODO[ASAP]: Factor in timers and "walk time"
             int stepInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
             for (long i = start; i <= max; i += stepInterval) {
-                state = outState.workStates.get(fakePos);
+                final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
+                final MCTownState fState = outState;
                 wi.injectTicks(stepInterval);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
                         status, Signals.fromGameTime(i),
-                        wi.asInventory(outState, villagerNum),
+                        wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
-                                outState.workStates.get(fakePos),
+                                ztate,
                                 fakeRoom,
                                 outState.containers
                         ),
@@ -164,11 +169,13 @@ public class DeclarativeJobs {
                     status = nuStatus;
                 }
                 MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
-                        wi, outState, status, state, maxState, fakePos
+                        wi, outState, status, ztate, maxState, fakePos
                 ));
                 if (affectedState != null) {
                     outState = affectedState;
                 }
+
+                outState = outState.withTimerReducedBy(fakePos, stepInterval);
             }
 
             QT.FLAG_LOGGER.debug("State after warp: {}", outState);

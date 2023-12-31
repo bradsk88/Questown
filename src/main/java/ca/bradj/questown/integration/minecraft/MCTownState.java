@@ -23,10 +23,11 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull List<VillagerData<MCHeldItem>> villagers,
             @NotNull List<ContainerTarget<MCContainer, MCTownItem>> containers,
             @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates,
+            @NotNull ImmutableMap<BlockPos, Integer> workTimers,
             @NotNull List<BlockPos> gates,
             long worldTimeAtSleep
     ) {
-        super(villagers, containers, workStates, gates, worldTimeAtSleep);
+        super(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
     }
 
     @Override
@@ -34,20 +35,12 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             ImmutableList<VillagerData<MCHeldItem>> villagers,
             ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers,
             ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates,
+            ImmutableMap<BlockPos, Integer> workTimers,
             ImmutableList<BlockPos> gates,
             long worldTimeAtSleep
     ) {
         return new MCTownState(
-                villagers, containers, workStates, gates, worldTimeAtSleep
+                villagers, containers, workStates, workTimers, gates, worldTimeAtSleep
         );
-    }
-
-    public TimerHandle<MCRoom, ServerLevel> asTimerHandle() {
-        return new TimerHandle<MCRoom, ServerLevel>() {
-            @Override
-            public void tick(ServerLevel serverLevel, Collection<MCRoom> roomsToScanForChanges) {
-                // FIXME: Store and manage timers in TownState
-            }
-        };
     }
 }

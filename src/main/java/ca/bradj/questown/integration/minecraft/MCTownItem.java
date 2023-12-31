@@ -100,6 +100,13 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     @Override
+    public MCTownItem unit() {
+        ItemStack stack = toItemStack();
+        stack.setCount(1);
+        return new MCTownItem(stack.getItem(), 1, stack.serializeNBT());
+    }
+
+    @Override
     public String getShortName() {
         String name = "[unknown]";
         ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(get());

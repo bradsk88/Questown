@@ -64,6 +64,7 @@ public class TownFlagState {
                 TownContainers.findAllMatching(parent, item -> true).toList(),
                 // TODO[ASAP]: Store statuses for all villagers
                 parent.getWorkStatusHandle(null).getAll(),
+                ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
                 dayTime
         );
@@ -72,8 +73,9 @@ public class TownFlagState {
 
     static MCTownState advanceTime(
             TownFlagBlockEntity e,
-            ServerLevel sl
-    ) {
+            ServerLevel sl,
+            @Nullable Long optionalWarpDuration
+            ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) {
             Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
@@ -94,6 +96,7 @@ public class TownFlagState {
                     ImmutableList.of(),
                     ImmutableList.of(),
                     ImmutableMap.of(),
+                    ImmutableMap.of(),
                     ImmutableList.of(),
                     0
             );
@@ -104,6 +107,9 @@ public class TownFlagState {
         ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
 
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
+        if (optionalWarpDuration != null) {
+            ticksPassed = optionalWarpDuration;
+        }
         if (ticksPassed == 0) {
             QT.FLAG_LOGGER.debug("Time warp is not applicable");
             return storedState;
@@ -138,6 +144,7 @@ public class TownFlagState {
                 liveState.villagers,
                 liveState.containers,
                 liveState.workStates,
+                liveState.workTimers,
                 liveState.gates,
                 dayTime
         );
@@ -195,26 +202,7 @@ public class TownFlagState {
         this.initialized = true;
 
         if (waking && e.isInitialized()) {
-            QT.FLAG_LOGGER.debug(
-                    "Recovering villagers due to player return (last near {} ticks ago [now {}, then {}])",
-                    timeSinceWake, gt, lastTick
-            );
-            try {
-                MCTownState newState = TownFlagState.advanceTime(parent, level);
-                if (newState != null) {
-                    TownFlagState.recoverMobs(parent, level);
-                    Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
-                    e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
-                }
-            } catch (Exception ex) {
-                if (Config.CRASH_ON_FAILED_WARP.get()) {
-                    throw ex;
-                }
-                QT.FLAG_LOGGER.error("Time warp raised exception: {}", ex.getMessage());
-                QT.FLAG_LOGGER.info("Due to config, continuing as if nothing happened in town while player was away");
-            }
-            // TODO: Make sure chests get filled/empty
-            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            warp(e, flagTag, level, timeSinceWake);
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
@@ -229,6 +217,28 @@ public class TownFlagState {
         profileTick(start);
 
         return changes;
+    }
+
+    void warp(
+            TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level, long timeSinceWake
+    ) {
+        long levelDayTime = level.getDayTime();
+        try {
+            MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            if (newState != null) {
+                TownFlagState.recoverMobs(parent, level);
+                Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
+                e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+            }
+        } catch (Exception ex) {
+            if (Config.CRASH_ON_FAILED_WARP.get()) {
+                throw ex;
+            }
+            QT.FLAG_LOGGER.error("Time warp raised exception", ex);
+            QT.FLAG_LOGGER.info("Due to config, continuing as if nothing happened in town while player was away");
+        }
+        // TODO: Make sure chests get filled/empty
+        flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
     }
 
     private void profileTick(long startTime) {

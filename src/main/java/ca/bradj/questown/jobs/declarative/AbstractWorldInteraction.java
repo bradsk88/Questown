@@ -180,6 +180,8 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
+        // TODO: If workspot is waiting for time, return  null
+
         return workWI.tryWork(extra, workSpot);
     }
 

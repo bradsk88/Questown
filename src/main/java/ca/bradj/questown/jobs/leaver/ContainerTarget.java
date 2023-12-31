@@ -102,7 +102,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
                 container.removeItem(i, 1);
                 return new AbstractMap.SimpleEntry<>(
                         new ContainerTarget<>(position, yPosition, interactPosition, container, check),
-                        itm
+                        itm.unit()
                 );
             }
         }

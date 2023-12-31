@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;
@@ -26,13 +26,44 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     private final ImmutableMap<ProductionStatus, Function<Result<H>, Result<H>>> handlers;
     private final TimerHandle<?, TICK_SOURCE> workStatus;
 
+    public static <
+            C extends ContainerTarget.Container<I>,
+            I extends Item<I>,
+            H extends HeldItem<H, I>
+            >
+    Collection<H> dropIntoContainers(
+            ImmutableList<H> itemz,
+            @NotNull ImmutableList<ContainerTarget<C, I>> containers
+    ) {
+        Stack<H> stack = new Stack<>();
+        itemz.stream().filter(v -> !v.isEmpty() && !v.isLocked()).forEach(stack::add);
+        for (ContainerTarget<C, I> container : containers) {
+            if (container.isFull()) {
+                continue;
+            }
+            for (int i = 0; i < container.size(); i++) {
+                if (container.getItem(i).isEmpty()) {
+                    container.setItem(i, stack.pop().get());
+                    if (stack.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+        }
+        if (stack.isEmpty()) {
+            return ImmutableList.of();
+        }
+        return ImmutableList.copyOf(stack);
+    }
+
     public record JobNeeds<I>(
             ImmutableMap<Integer, Predicate<I>> ingredients
-    ) {}
+    ) {
+    }
 
     public record Result<H>(
             ProductionStatus status,
-            ImmutableList<H> items    ) {
+            ImmutableList<H> items) {
     }
 
     public ProductionTimeWarper(

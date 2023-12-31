@@ -22,7 +22,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Stack;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -75,7 +74,8 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                 continue;
             }
             ItemStack itemStack = item.get().toItemStack();
-            itemStack.getItem().damageItem(itemStack ,1, null, e -> {}); // TODO: Get a reference to the villager?
+            itemStack.getItem().damageItem(itemStack, 1, null, e -> {
+            }); // TODO: Get a reference to the villager?
             return setHeldItem(mcTownState, tuwn, villagerIndex, i, MCHeldItem.fromMCItemStack(itemStack));
         }
         return tuwn;
@@ -148,8 +148,20 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
             @Override
             public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
-                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(workStates.processingState());
+                int curState = workStates.processingState();
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {
+                    return ImmutableMap.of(workStates.processingState(), ImmutableList.of(mcRoom));
+                }
+
+                Function<MCTownItem, Boolean> toolChk = toolsRequiredAtStates.get(curState);
+                if (toolChk == null) {
+                    return ImmutableMap.of();
+                }
+                for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+                    if (!container.hasItem(toolChk::apply)) {
+                        continue;
+                    }
                     return ImmutableMap.of(workStates.processingState(), ImmutableList.of(mcRoom));
                 }
                 return ImmutableMap.of();
@@ -163,10 +175,20 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
             @Override
             public boolean hasSupplies() {
-                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(workStates.processingState());
+                // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
+                int curState = workStates.processingState();
+                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {
                     for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
                         if (container.hasItem(i -> ings.apply(MCHeldItem.fromTown(i)))) {
+                            return true;
+                        }
+                    }
+                }
+                Function<MCTownItem, Boolean> toolChk = toolsRequiredAtStates.get(curState);
+                if (toolChk != null) {
+                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+                        if (container.hasItem(toolChk::apply)) {
                             return true;
                         }
                     }
@@ -178,38 +200,35 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             public boolean hasSpace() {
                 return containers.stream().anyMatch(v -> !v.isFull());
             }
-        };
+        }
+
+                ;
     }
 
-    public EntityInvStateProvider<Integer> asInventory(MCTownState outState, int state) {
+    public EntityInvStateProvider<Integer> asInventory(Supplier<Collection<MCHeldItem>> heldItems, Supplier<Integer> state) {
         return new EntityInvStateProvider<Integer>() {
             @Override
             public boolean inventoryFull() {
-                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
+                Collection<MCHeldItem> items = heldItems.get();
                 return items.stream().noneMatch(MCHeldItem::isEmpty);
             }
 
             @Override
             public boolean hasNonSupplyItems() {
-                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
-                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(state);
-                if (ings == null && !items.isEmpty()) {
-                    return true;
-                }
-                return items.stream()
-                        .filter(Predicates.not(Item::isEmpty))
-                        .anyMatch(v -> !ings.apply(v));
+                return JobsClean.hasNonSupplyItems(
+                        heldItems.get(),
+                        state.get(),
+                        Jobs.unFn(ingredientsRequiredAtStates()),
+                        Jobs.unHeld(toolsRequiredAtStates)
+                );
             }
 
             @Override
             public Map<Integer, Boolean> getSupplyItemStatus() {
-                Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
-                Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(state);
-                if (ings == null) {
-                    return ImmutableMap.of();
-                }
-                return ImmutableMap.of(
-                        state, items.stream().anyMatch(ings::apply)
+                return JobsClean.getSupplyItemStatuses(
+                        heldItems,
+                        Jobs.unFn(ingredientsRequiredAtStates()),
+                        Jobs.unHeld(toolsRequiredAtStates)
                 );
             }
         };
@@ -218,30 +237,27 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     public MCTownState simulateDropLoot(MCTownState outState, ProductionStatus status) {
         Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
         ProductionTimeWarper.Result<MCHeldItem> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
-        ProductionTimeWarper.simulateDropLoot(r, itemz -> {
-            Stack<MCHeldItem> stack = new Stack<>();
-            stack.addAll(itemz);
-            while (!stack.isEmpty()) {
-                for (ContainerTarget<MCContainer, MCTownItem> container : outState.containers) {
-                    if (container.isFull()) {
-                        continue;
-                    }
-                    for (int i = 0; i < container.size(); i++) {
-                        if (container.getItem(i).isEmpty()) {
-                                container.setItem(i, stack.pop().toItem());
-                        }
-                    }
-                }
-            }
-            return ImmutableList.copyOf(stack);
-        }, MCHeldItem::Air);
-        return outState;
+        Function<ImmutableList<MCHeldItem>, Collection<MCHeldItem>> dropFn = itemz -> ProductionTimeWarper.dropIntoContainers(itemz, outState.containers);
+        r = ProductionTimeWarper.simulateDropLoot(r, dropFn, MCHeldItem::Air);
+        return outState.withVillagerData(villagerIndex, outState.villagers.get(villagerIndex).withItems(r.items()));
     }
 
-    public @Nullable MCTownState simulateCollectSupplies(MCTownState inState, ProductionStatus status) {
-        Function<MCHeldItem, Boolean> ingr = ingredientsRequiredAtStates().get(status.getProductionState());
+    public @Nullable MCTownState simulateCollectSupplies(
+            MCTownState inState, int processingState
+    ) {
+        Function<MCHeldItem, Boolean> ingr = ingredientsRequiredAtStates().get(processingState);
 
-        @Nullable Map.Entry<MCTownState, MCTownItem> removeResult = inState.withContainerItemRemoved(i -> ingr.apply(MCHeldItem.fromTown(i)));
+        if (ingr == null) {
+            Function<MCTownItem, Boolean> toolchk = toolsRequiredAtStates.get(processingState);
+            if (toolchk == null) {
+                throw new IllegalStateException("No ingredients or tools required at state " + processingState + ". We shouldn't be collecting.");
+            }
+            ingr = (h) -> toolchk.apply(h.get());
+        }
+
+        final Function<MCHeldItem, Boolean> fingr = ingr;
+
+        @Nullable Map.Entry<MCTownState, MCTownItem> removeResult = inState.withContainerItemRemoved(i -> fingr.apply(MCHeldItem.fromTown(i)));
         if (removeResult == null) {
             return null; // Item does not exist - collection failed
         }

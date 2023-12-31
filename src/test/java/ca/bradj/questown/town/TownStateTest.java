@@ -20,19 +20,21 @@ class TownStateTest {
 
     private static class TestTownState extends TownState<Container, TestItem, TestItem, Position, TestTownState> {
 
-        public TestTownState(@NotNull List<VillagerData<TestItem>> villagers, @NotNull List<ContainerTarget<Container, TestItem>> containers, @NotNull ImmutableMap<Position, AbstractWorkStatusStore.State> workStates, @NotNull List<BlockPos> gates, long worldTimeAtSleep) {
-            super(villagers, containers, workStates, gates, worldTimeAtSleep);
+        public TestTownState(
+                @NotNull List<VillagerData<TestItem>> villagers, @NotNull List<ContainerTarget<Container, TestItem>> containers, @NotNull ImmutableMap<Position, AbstractWorkStatusStore.State> workStates, @NotNull List<BlockPos> gates, long worldTimeAtSleep) {
+            super(villagers, containers, workStates, ImmutableMap.of(), gates, worldTimeAtSleep);
         }
 
         @Override
         protected TestTownState newTownState(
                 ImmutableList<VillagerData<TestItem>> villagers,
                 ImmutableList<ContainerTarget<Container, TestItem>> containers,
-                ImmutableMap<Position, AbstractWorkStatusStore.State> positionStateImmutableMap,
+                ImmutableMap<Position, AbstractWorkStatusStore.State> workStates,
+                ImmutableMap<Position, Integer> workTimers,
                 ImmutableList<BlockPos> gates,
                 long worldTimeAtSleep
         ) {
-            return new TestTownState(villagers, containers, workStates, gates, worldTimeAtSleep);
+            return new TestTownState(villagers, containers, this.workStates, gates, worldTimeAtSleep);
         }
     }
 
