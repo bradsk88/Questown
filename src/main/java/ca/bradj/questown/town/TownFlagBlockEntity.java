@@ -616,7 +616,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             if (!predicate.matches(level, e.getKey())) {
                 continue;
             }
-            Direction value = level.getBlockState(e.getKey()).getValue(HorizontalDirectionalBlock.FACING);
+            // TODO: Get direction
+//            Direction value = level.getBlockState(e.getKey()).getValue(HorizontalDirectionalBlock.FACING);
+            Direction value = Direction.getRandom(level.getRandom());
             level.setBlockAndUpdate(e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState()
                     .setValue(HorizontalDirectionalBlock.FACING, value)
             );

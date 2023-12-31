@@ -14,10 +14,7 @@ import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.ExplorerWork;
-import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
-import ca.bradj.questown.jobs.gatherer.GathererTools;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
+import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.DSmelterJob;
@@ -394,6 +391,9 @@ public class JobsRegistry {
                 )
         ));
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork.asWork());
+        b.put(GathererUnmappedPickaxeWork.ID, GathererUnmappedPickaxeWork.asWork());
+        b.put(GathererUnmappedShovelWork.ID, GathererUnmappedShovelWork.asWork());
+        b.put(GathererUnmappedNoToolWork.ID, GathererUnmappedNoToolWork.asWork());
         b.put(ExplorerWork.ID, ExplorerWork.asWork());
         works = b.build();
     }
