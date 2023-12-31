@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -51,7 +52,7 @@ public class ExplorerWork extends DeclarativeJob {
             // No work required
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_ROAM, 50
+            BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
     );
     public static final ItemStack RESULT = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
     private static final boolean TIMER_SHARING = false;
@@ -101,7 +102,11 @@ public class ExplorerWork extends DeclarativeJob {
         ImmutableList<ResourceLocation> biomes = ImmutableList.of(
                 new ResourceLocation("dark_forest"),
                 new ResourceLocation("desert"),
-                new ResourceLocation("jungle")
+                new ResourceLocation("forest"),
+                new ResourceLocation("jungle"),
+                new ResourceLocation("mushroom_fields"),
+                new ResourceLocation("savanna"),
+                new ResourceLocation("taiga")
         );
 
         ResourceLocation biome = biomes.get(level.getRandom().nextInt(biomes.size()));

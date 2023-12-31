@@ -49,6 +49,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
 
     static {
         // Scanning Config
@@ -115,6 +116,9 @@ public class Config {
         SMELTER_WORK_REQUIRED = BUILDER.comment(
                 "The number of times a smelter must work on a block of ore to extract the raw materials inside"
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
+        GATHERER_TIME_REQUIRED_BASELINE = BUILDER.comment(
+                "The number of ticks the gatherer/explorer will spend outside of town collecting items. All villagers will start with this baseline, but it might get altered by villager or town modifiers."
+        ).defineInRange("GathererTimeRequiredBaseline", 6000, 1, 24000);
         BUILDER.pop();
 
         // Villagers Config

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.gatherer;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobID;
@@ -47,7 +48,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             // No work required
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_ROAM, 20
+            BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
     );
     private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
