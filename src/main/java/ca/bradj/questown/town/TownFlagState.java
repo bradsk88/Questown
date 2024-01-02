@@ -186,7 +186,7 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }
-            QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", villagers);
+            QT.FLAG_LOGGER.trace("Loaded villager state from NBT: {}", villagers);
         }
     }
 
@@ -233,9 +233,9 @@ public class TownFlagState {
         try {
             MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
-                TownFlagState.recoverMobs(parent, level);
                 QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
                 e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+                TownFlagState.recoverMobs(parent, level);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {

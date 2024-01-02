@@ -485,7 +485,7 @@ public class JobsRegistry {
     ) {
         if (journal == null && heldItems != null) {
             journal = fn.snapshotFunc.apply(jobName, fn.initialStatus.name(), heldItems);
-        } else if (heldItems == null) {
+        } else if (journal == null) {
             QT.JOB_LOGGER.error("Null items and journal. We probably just lost items.");
         }
         return journal;
@@ -499,7 +499,7 @@ public class JobsRegistry {
     ) {
         if (journal == null && heldItems != null) {
             journal = new SimpleSnapshot<>(jobName, ProductionStatus.FACTORY.idle(), heldItems);
-        } else if (heldItems == null) {
+        } else if (journal == null) {
             QT.JOB_LOGGER.error("Null items and journal. We probably just lost items.");
         }
         return journal;
