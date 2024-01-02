@@ -1,9 +1,12 @@
 package ca.bradj.questown.jobs.blacksmith;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.DeclarativeJob;
-import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.town.Warper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
@@ -13,6 +16,10 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
+import java.util.function.Supplier;
+
+import static ca.bradj.questown.jobs.WorksBehaviour.productionJobSnapshot;
+import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
 public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
     public static final JobID ID = new JobID("blacksmith", "wooden_pickaxe");
@@ -52,6 +59,8 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
     private static final boolean TIMER_SHARING = false;
 
     public static final ItemStack RESULT = Items.WOODEN_PICKAXE.getDefaultInstance();
+    public static final boolean PRIORITIZE_EXTRACTION = true;
+    public static final int PAUSE_FOR_ACTION = 100;
 
     public BlacksmithWoodenPickaxeJob(
             UUID ownerUUID,
@@ -63,8 +72,8 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 ID,
                 new ResourceLocation(Questown.MODID, "smithy"),
                 MAX_STATE,
-                true,
-                100,
+                PRIORITIZE_EXTRACTION,
+                PAUSE_FOR_ACTION,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
@@ -74,6 +83,20 @@ public class BlacksmithWoodenPickaxeJob extends DeclarativeJob {
                 ImmutableMap.of(),
                 (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
                 false
+        );
+    }
+
+    public static Work asWork() {
+        return productionWork(
+                (town, uuid) -> new BlacksmithWoodenPickaxeJob(uuid, 6),
+                // TODO: Add support for smaller inventories
+                BlacksmithWoodenPickaxeJob.ID,
+                (block) -> block instanceof BlacksmithsTableBlock,
+                Questown.ResourceLocation("smithy"),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(BlacksmithWoodenPickaxeJob.RESULT)),
+                BlacksmithWoodenPickaxeJob.RESULT,
+                BlacksmithWoodenPickaxeJob.INGREDIENTS_REQUIRED_AT_STATES,
+                BlacksmithWoodenPickaxeJob.TOOLS_REQUIRED_AT_STATES
         );
     }
 }

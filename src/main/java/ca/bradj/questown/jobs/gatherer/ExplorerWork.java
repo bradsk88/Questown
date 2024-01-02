@@ -140,10 +140,10 @@ public class ExplorerWork extends DeclarativeJob {
         return list.build();
     }
 
-    public static JobsRegistry.Work asWork() {
-        return new JobsRegistry.Work(
+    public static Work asWork() {
+        return new Work(
                 (town, uuid) -> new ExplorerWork(uuid, 6),
-                JobsRegistry.productionJobSnapshot(ID),
+                WorksBehaviour.productionJobSnapshot(ID),
                 (block) -> block instanceof WelcomeMatBlock,
                 JOB_SITE,
                 ProductionStatus.FACTORY.idle(),

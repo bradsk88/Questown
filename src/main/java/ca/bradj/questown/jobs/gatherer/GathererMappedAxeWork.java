@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 import static ca.bradj.questown.jobs.JobsRegistry.getProductionNeeds;
-import static ca.bradj.questown.jobs.JobsRegistry.productionJobSnapshot;
+import static ca.bradj.questown.jobs.WorksBehaviour.productionJobSnapshot;
 
 public class GathererMappedAxeWork extends NewLeaverWork {
 
@@ -112,8 +112,8 @@ public class GathererMappedAxeWork extends NewLeaverWork {
         ), biome);
     }
 
-    public static JobsRegistry.Work asWork() {
-        return new JobsRegistry.Work(
+    public static Work asWork() {
+        return new Work(
                 (town, uuid) -> new GathererMappedAxeWork(uuid, 6),
                 productionJobSnapshot(ID),
                 block -> block instanceof WelcomeMatBlock,

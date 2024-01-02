@@ -4,7 +4,9 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.smelter.DSmelterJob;
 import ca.bradj.questown.town.Warper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -15,6 +17,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
+
+import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
 public class BakerBreadWork extends DeclarativeJob {
     public static final JobID ID = new JobID("baker", "bread");
@@ -89,5 +93,19 @@ public class BakerBreadWork extends DeclarativeJob {
                 () -> MCHeldItem.fromTown(RESULT)
         );
         return DeclarativeJobs.warper(wi, MAX_STATE, true);
+    }
+
+    public static Work asWork() {
+        return productionWork(
+                (town, uuid) -> new BakerBreadWork(uuid, 6),
+                ID,
+                block -> block instanceof BreadOvenBlock,
+                WORK_ROOM_ID,
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                RESULT,
+                wi -> warper(wi.villagerIndex()),
+                INGREDIENTS_REQUIRED_AT_STATES,
+                TOOLS_REQUIRED_AT_STATES
+        );
     }
 }
