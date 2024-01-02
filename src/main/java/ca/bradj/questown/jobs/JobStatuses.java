@@ -74,7 +74,11 @@ public class JobStatuses {
         if (s2 != null) {
             return nullIfUnchanged(currentStatus, s2);
         } else if (inventory.hasNonSupplyItems()) {
-            s2 = factory.droppingLoot();
+            if (town.hasSpace()) {
+                s2 = factory.droppingLoot();
+            } else {
+                s2 = factory.noSpace();
+            }
         } else if (!town.hasSupplies()) {
             if (town.canUseMoreSupplies()) {
                 s2 = nullIfUnchanged(currentStatus, factory.noSupplies());
