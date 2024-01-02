@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.VillagerDataCollectionHolder;
 import ca.bradj.questown.town.interfaces.TimerHandle;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -54,6 +56,75 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
             return ImmutableList.of();
         }
         return ImmutableList.copyOf(stack);
+    }
+
+    public static <
+            I extends Item<I>,
+            H extends HeldItem<H, I>,
+            TOWN extends TownState<?, I, H, ?, TOWN>
+            > TOWN simulateDropLoot(
+            TOWN inState,
+            ProductionStatus status,
+            int villagerIndex,
+            Supplier<H> emptyFactory
+    ) {
+        Collection<H> items = getHeldItems(inState, villagerIndex);
+        ProductionTimeWarper.Result<H> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
+        Function<ImmutableList<H>, Collection<H>> dropFn = itemz -> ProductionTimeWarper.dropIntoContainers(
+                itemz,
+                inState.containers
+        );
+        r = ProductionTimeWarper.simulateDropLoot(r, dropFn, emptyFactory);
+        return inState.withVillagerData(villagerIndex, inState.villagers.get(villagerIndex).withItems(r.items()));
+    }
+
+    public static <H extends HeldItem<H, ?>> Collection<H> getHeldItems(
+            VillagerDataCollectionHolder<H> mcTownState,
+            int villagerIndex
+    ) {
+        TownState.VillagerData<H> vil = mcTownState.getVillager(villagerIndex);
+        return vil.journal.items();
+    }
+
+    public static <
+            I extends Item<I>,
+            H extends HeldItem<H, I>,
+            TOWN extends TownState<?, I, H, ?, TOWN>
+            >
+    @Nullable TOWN simulateCollectSupplies(
+            TOWN inState,
+            int processingState,
+            int villagerIndex,
+            ImmutableMap<Integer, Predicate<H>> ingrRequiredAtStates,
+            ImmutableMap<Integer, Predicate<H>> toolsRequiredAtStates,
+            Function<I, H> grabber
+    ) {
+        Predicate<H> ingr = ingrRequiredAtStates.get(processingState);
+
+        if (ingr == null) {
+            Predicate<H> toolchk = toolsRequiredAtStates.get(processingState);
+            if (toolchk == null) {
+                throw new IllegalStateException("No ingredients or tools required at state " + processingState + ". We shouldn't be collecting.");
+            }
+            ingr = toolchk;
+        }
+
+        final Predicate<H> fingr = ingr;
+
+        @Nullable Map.Entry<TOWN, I> removeResult = inState.withContainerItemRemoved(i -> fingr.test(grabber.apply(i)));
+        if (removeResult == null) {
+            return null; // Item does not exist - collection failed
+        }
+
+        TOWN outState = removeResult.getKey();
+
+        TownState.VillagerData<H> villager = outState.villagers.get(villagerIndex);
+        villager = villager.withAddedItem(grabber.apply(removeResult.getValue()));
+        if (villager == null) {
+            return null; // No space in inventory - collection failed
+        }
+
+        return outState.withVillagerData(villagerIndex, villager);
     }
 
     public record JobNeeds<I>(
@@ -118,7 +189,10 @@ public class ProductionTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & 
     }
 
     static <I extends Item<I>, H extends HeldItem<H, I>> Result<H> simulateExtractProduct(
-            ProductionStatus status, ImmutableList<H> heldItems, ItemToEntityMover<I, H> taker, Supplier<I> remover
+            ProductionStatus status,
+            ImmutableList<H> heldItems,
+            ItemToEntityMover<I, H> taker,
+            Supplier<I> remover
     ) {
         // TODO: More efficient way to do this?
         Optional<H> foundEmpty = heldItems.stream()

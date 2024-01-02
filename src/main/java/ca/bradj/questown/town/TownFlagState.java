@@ -22,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -77,7 +78,7 @@ public class TownFlagState {
             @Nullable Long optionalWarpDuration
             ) {
         long dayTime = sl.getDayTime();
-        if (e.advancedTimeOnTick == dayTime) {
+        if (e.advancedTimeOnTick == dayTime) { // FIXME: Plus or minus some ticks?
             Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
             return null;
         }
@@ -121,7 +122,6 @@ public class TownFlagState {
 
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            Snapshot<MCHeldItem> unwarped = v.journal;
             QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, liveState);
             Warper<MCTownState> vWarper = JobsRegistry.getWarper(
                     i, v.journal.jobId()
@@ -134,6 +134,14 @@ public class TownFlagState {
             //  until we have reached the desired number of ticks. That better
             //  simulates a village full of people (and we can maybe even run
             //  each "chunk" on a separate game tick.
+            // E.g.
+            //
+            // Map<Integer, Runnable> warps = vWraper.getWarps(liveState, dayTime, ticksPassed, i);
+            // warps.forEach((time, runnable) -> orderedWarps.compute((time, runnables) -> runnables == null ? new Stack(runnable) : runnables.add(runnable));
+            //
+            // After villager loop:
+            // orderedWarps.values().forEach(runnables -> runnables.forEach(Runnable::run));
+
             MCTownState affectedState = vWarper.warp(liveState, dayTime, ticksPassed, i);
             if (affectedState != null) {
                 liveState = affectedState;
@@ -162,11 +170,10 @@ public class TownFlagState {
         }
 
         if (e.getPersistentData().contains(NBT_TOWN_STATE)) {
-            MCTownState storedState = TownStateSerializer.INSTANCE.load(
-                    e.getPersistentData().getCompound(NBT_TOWN_STATE),
-                    sl, bp -> e.getWelcomeMats().contains(bp)
+            @NotNull ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = TownStateSerializer.loadVillagers(
+                    e.getPersistentData().getCompound(NBT_TOWN_STATE)
             );
-            for (TownState.VillagerData<MCHeldItem> v : storedState.villagers) {
+            for (TownState.VillagerData<MCHeldItem> v : villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
                 recovered.initialize(
                         e,
@@ -179,7 +186,7 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.registerEntity(recovered);
             }
-            QT.LOGGER.trace("Loaded state from NBT: {}", storedState);
+            QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", villagers);
         }
     }
 
@@ -227,7 +234,7 @@ public class TownFlagState {
             MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
                 TownFlagState.recoverMobs(parent, level);
-                Questown.LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
+                QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
                 e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
             }
         } catch (Exception ex) {

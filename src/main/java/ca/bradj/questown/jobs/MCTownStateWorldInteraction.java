@@ -11,7 +11,6 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -23,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownState, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
@@ -53,7 +53,13 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState setHeldItem(MCTownState uxtra, MCTownState tuwn, int villagerIndex, int itemIndex, MCHeldItem item) {
+    protected MCTownState setHeldItem(
+            MCTownState uxtra,
+            MCTownState tuwn,
+            int villagerIndex,
+            int itemIndex,
+            MCHeldItem item
+    ) {
         if (tuwn == null) {
             tuwn = uxtra;
         }
@@ -62,7 +68,11 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState degradeTool(MCTownState mcTownState, @Nullable MCTownState tuwn, Function<MCTownItem, Boolean> isExpectedTool) {
+    protected MCTownState degradeTool(
+            MCTownState mcTownState,
+            @Nullable MCTownState tuwn,
+            Function<MCTownItem, Boolean> isExpectedTool
+    ) {
         if (tuwn == null) {
             tuwn = mcTownState;
         }
@@ -82,7 +92,11 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected boolean canInsertItem(MCTownState mcTownState, MCHeldItem item, BlockPos bp) {
+    protected boolean canInsertItem(
+            MCTownState mcTownState,
+            MCHeldItem item,
+            BlockPos bp
+    ) {
         return true;
     }
 
@@ -92,13 +106,18 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected Collection<MCHeldItem> getHeldItems(MCTownState mcTownState, int villagerIndex) {
-        TownState.VillagerData<MCHeldItem> vil = mcTownState.villagers.get(villagerIndex);
-        return vil.journal.items();
+    protected Collection<MCHeldItem> getHeldItems(
+            MCTownState mcTownState,
+            int villagerIndex
+    ) {
+        return ProductionTimeWarper.getHeldItems(mcTownState, villagerIndex);
     }
 
     @Override
-    protected MCTownState tryExtractOre(MCTownState mcTownState, BlockPos position) {
+    protected MCTownState tryExtractOre(
+            MCTownState mcTownState,
+            BlockPos position
+    ) {
         AbstractWorkStatusStore.State s = getJobBlockState(mcTownState, position);
         if (s != null && s.processingState() == maxState) {
             int i = 0;
@@ -114,7 +133,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected boolean isEntityClose(MCTownState mcTownState, BlockPos position) {
+    protected boolean isEntityClose(
+            MCTownState mcTownState,
+            BlockPos position
+    ) {
         return true;
     }
 
@@ -205,7 +227,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                 ;
     }
 
-    public EntityInvStateProvider<Integer> asInventory(Supplier<Collection<MCHeldItem>> heldItems, Supplier<Integer> state) {
+    public EntityInvStateProvider<Integer> asInventory(
+            Supplier<Collection<MCHeldItem>> heldItems,
+            Supplier<Integer> state
+    ) {
         return new EntityInvStateProvider<Integer>() {
             @Override
             public boolean inventoryFull() {
@@ -234,42 +259,23 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         };
     }
 
-    public MCTownState simulateDropLoot(MCTownState outState, ProductionStatus status) {
-        Collection<MCHeldItem> items = getHeldItems(outState, villagerIndex);
-        ProductionTimeWarper.Result<MCHeldItem> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
-        Function<ImmutableList<MCHeldItem>, Collection<MCHeldItem>> dropFn = itemz -> ProductionTimeWarper.dropIntoContainers(itemz, outState.containers);
-        r = ProductionTimeWarper.simulateDropLoot(r, dropFn, MCHeldItem::Air);
-        return outState.withVillagerData(villagerIndex, outState.villagers.get(villagerIndex).withItems(r.items()));
+    public MCTownState simulateDropLoot(
+            MCTownState inState,
+            ProductionStatus status
+    ) {
+        return ProductionTimeWarper.simulateDropLoot(
+                inState, status, villagerIndex, MCHeldItem::Air
+        );
     }
 
     public @Nullable MCTownState simulateCollectSupplies(
-            MCTownState inState, int processingState
+            MCTownState inState,
+            int processingState
     ) {
-        Function<MCHeldItem, Boolean> ingr = ingredientsRequiredAtStates().get(processingState);
-
-        if (ingr == null) {
-            Function<MCTownItem, Boolean> toolchk = toolsRequiredAtStates.get(processingState);
-            if (toolchk == null) {
-                throw new IllegalStateException("No ingredients or tools required at state " + processingState + ". We shouldn't be collecting.");
-            }
-            ingr = (h) -> toolchk.apply(h.get());
-        }
-
-        final Function<MCHeldItem, Boolean> fingr = ingr;
-
-        @Nullable Map.Entry<MCTownState, MCTownItem> removeResult = inState.withContainerItemRemoved(i -> fingr.apply(MCHeldItem.fromTown(i)));
-        if (removeResult == null) {
-            return null; // Item does not exist - collection failed
-        }
-
-        MCTownState outState = removeResult.getKey();
-
-        TownState.VillagerData<MCHeldItem> villager = outState.villagers.get(villagerIndex);
-        villager = villager.withAddedItem(MCHeldItem.fromTown(removeResult.getValue()));
-        if (villager == null) {
-            return null; // No space in inventory - collection failed
-        }
-
-        return outState.withVillagerData(villagerIndex, villager);
+        ImmutableMap<Integer, Predicate<MCHeldItem>> ingr = Jobs.unFn(ingredientsRequiredAtStates());
+        ImmutableMap<Integer, Predicate<MCHeldItem>> tool = Jobs.unFn3(toolsRequiredAtStates);
+        return ProductionTimeWarper.simulateCollectSupplies(
+                inState, processingState, villagerIndex, ingr, tool, MCHeldItem::fromTown
+        );
     }
 }

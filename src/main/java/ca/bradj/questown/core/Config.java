@@ -25,7 +25,7 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME;
+    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME_REQUIRED_BASELINE;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
 
@@ -108,7 +108,7 @@ public class Config {
         FARM_ACTION_INTERVAL = BUILDER.comment(
                 "The number of ticks that farmers will wait between actions"
         ).define("FarmActionInterval", 100);
-        BAKING_TIME = BUILDER.comment(
+        BAKING_TIME_REQUIRED_BASELINE = BUILDER.comment(
                 "The number of ticks it takes for a villager to bake bread (will be rounded down to nearest 1000)"
         ).defineInRange("BakingTime", 6000, 1000, 24000);
         FARMER_WEEDS_RARITY = BUILDER.comment(

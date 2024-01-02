@@ -1,12 +1,13 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.jobs.Item;
+import ca.bradj.questown.jobs.ProductionTimeWarper;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,10 +19,15 @@ public abstract class TownState<
         I extends Item<I>,
         H extends HeldItem<H, I> & Item<H>,
         P, SELF
-        > implements ProductionTimeWarper.FoodRemover<I>, ProductionTimeWarper.Town<I, H>, ImmutableWorkStateContainer<P, SELF> {
+        > implements
+        ProductionTimeWarper.FoodRemover<I>,
+        ProductionTimeWarper.Town<I, H>,
+        ImmutableWorkStateContainer<P, SELF>,
+        VillagerDataCollectionHolder<H>
+{
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
-    public final @NotNull ImmutableList<BlockPos> gates;
+    public final @NotNull ImmutableList<P> gates;
     public final long worldTimeAtSleep;
     public final ImmutableMap<P, AbstractWorkStatusStore.State> workStates;
     public final ImmutableMap<P, Integer> workTimers;
@@ -31,7 +37,7 @@ public abstract class TownState<
             @NotNull List<ContainerTarget<C, I>> containers,
             @NotNull ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
             @NotNull ImmutableMap<P, Integer> workTimers,
-            @NotNull List<BlockPos> gates,
+            @NotNull List<P> gates,
             long worldTimeAtSleep
     ) {
         this.villagers = ImmutableList.copyOf(villagers);
@@ -40,6 +46,11 @@ public abstract class TownState<
         this.worldTimeAtSleep = worldTimeAtSleep;
         this.workStates = workStates;
         this.workTimers = workTimers;
+    }
+
+    @Override
+    public VillagerData<H> getVillager(int villagerIndex) {
+        return villagers.get(villagerIndex);
     }
 
     @Override
@@ -141,7 +152,7 @@ public abstract class TownState<
             ImmutableList<ContainerTarget<C, I>> containers,
             ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
             ImmutableMap<P, Integer> workTimers,
-            ImmutableList<BlockPos> gates,
+            ImmutableList<P> gates,
             long worldTimeAtSleep
     );
 

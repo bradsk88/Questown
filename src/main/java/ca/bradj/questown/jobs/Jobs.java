@@ -279,9 +279,23 @@ public class Jobs {
         return b.build();
     }
 
+    public static ImmutableMap<Integer, Predicate<MCTownItem>> unFn2(
+            Map<Integer, Function<MCTownItem, Boolean>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, v::apply));
+        return b.build();
+    }
+
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unHeld(
             ImmutableMap<Integer, Function<MCTownItem, Boolean>> input
     ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn3(ImmutableMap<Integer, Function<MCTownItem, Boolean>> input) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
         return b.build();

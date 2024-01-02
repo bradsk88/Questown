@@ -18,7 +18,6 @@ import java.util.function.Predicate;
 
 public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, BlockPos, MCTownState> {
 
-
     public MCTownState(
             @NotNull List<VillagerData<MCHeldItem>> villagers,
             @NotNull List<ContainerTarget<MCContainer, MCTownItem>> containers,

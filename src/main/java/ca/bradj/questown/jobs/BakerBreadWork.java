@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.town.Warper;
@@ -44,7 +45,7 @@ public class BakerBreadWork extends DeclarativeJob {
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_WHEAT, 0,
             BLOCK_STATE_NEED_COAL, 0,
-            BLOCK_STATE_NEED_TIME, 100, // FIXME: 6000?
+            BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE.get(),
             BLOCK_STATE_DONE, 0
     );
     public static final Class<BreadOvenBlock> WORK_BLOCK_CLASS = BreadOvenBlock.class;

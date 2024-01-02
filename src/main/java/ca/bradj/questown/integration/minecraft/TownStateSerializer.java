@@ -110,7 +110,7 @@ public class TownStateSerializer {
     }
 
     @NotNull
-    private static ImmutableList<TownState.VillagerData<MCHeldItem>> loadVillagers(CompoundTag tag) {
+    public static ImmutableList<TownState.VillagerData<MCHeldItem>> loadVillagers(CompoundTag tag) {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> b = ImmutableList.builder();
         ListTag villagers = tag.getList("villagers", Tag.TAG_COMPOUND);
         for (Tag vTag : villagers) {
@@ -169,7 +169,7 @@ public class TownStateSerializer {
             BlockPos pos = new BlockPos(x, y, z);
             BlockState bs = level.getBlockState(pos);
             if (!(bs.getBlock() instanceof ChestBlock)) {
-                Questown.LOGGER.error(
+                QT.FLAG_LOGGER.error(
                         "There used to be a chest at {}, but now there isn't. " +
                                 "This is a bug and will cause items to be lost.", pos
                 );

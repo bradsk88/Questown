@@ -73,16 +73,12 @@ public class DeclarativeJobs {
                 if (!ii.status.isWorkingOnProduction()) {
                     return ii.inState;
                 }
-                if (ii.status.getProductionState() == ii.maxState) {
-                    // FIXME: Simulate extraction
-                    return ii.inState;
-                } // FIXME: This seems to be duplicating tool items
                 return ii.wi.tryWorking(ii.inState, new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1));
             });
         }
         b.put(
                 ProductionStatus.EXTRACTING_PRODUCT,
-                i -> i.inState // FIXME: Simulate extraction
+                i -> i.wi.tryWorking(i.inState, new WorkSpot<>(i.fakePos, i.workBlockState.processingState(), 1))
         );
         b.put(
                 ProductionStatus.DROPPING_LOOT,
@@ -178,7 +174,7 @@ public class DeclarativeJobs {
                 outState = outState.withTimerReducedBy(fakePos, stepInterval);
             }
 
-            QT.FLAG_LOGGER.debug("State after warp: {}", outState);
+            QT.FLAG_LOGGER.debug("State after warp of {}: {}", ticksPassed, outState);
 
             return outState;
         };
