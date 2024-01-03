@@ -40,10 +40,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
-// TODO[ASAP]: Break ties to MC and unit test
+// TODO[ASAP]: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
@@ -114,7 +112,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final JobID jobId;
     private Signals signal;
     private WorkSpot<Integer, BlockPos> workSpot;
-    private final boolean prioritizeExtraction;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
@@ -125,20 +122,18 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull JobID jobId,
             ResourceLocation workRoomId,
             int maxState,
-            boolean prioritizeExtraction,
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            boolean sharedTimers,
-            ImmutableMap<ProductionStatus, String> specialRules,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct
+            ImmutableMap<ProductionStatus, String> specialStatusRules,
+            ImmutableList<String> specialGlobalRules,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         super(
-                ownerUUID, sharedTimers, inventoryCapacity, allowedToPickUp, buildRecipe(
+                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
@@ -149,10 +144,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                         STATUS_FACTORY
                 ),
                 STATUS_FACTORY,
-                specialRules
+                specialStatusRules, specialGlobalRules
         );
         this.jobId = jobId;
-        this.prioritizeExtraction = prioritizeExtraction;
         this.world = initWorldInteraction(
                 maxState,
                 ingredientsRequiredAtStates,
@@ -160,8 +154,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 toolsRequiredAtStates,
                 workRequiredAtStates,
                 timeRequiredAtStates,
-                workResult,
-                nullifyExcessProduct,
+                resultGenerator,
+                specialGlobalRules,
                 workInterval
         );
         this.maxState = maxState;
@@ -184,12 +178,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            ImmutableList<String> specialRules,
             int interval
     ) {
         return new WorldInteraction(
-                inventory,
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,
@@ -197,8 +190,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
-                workResult,
-                nullifyExcessProduct,
+                resultGenerator,
+                specialRules,
                 interval
         );
     }
@@ -282,7 +275,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 return entityCurrentJobSite.room;
             }
         };
-        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, this.prioritizeExtraction);
+        boolean prioritizeExtraction = this.specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION);
+        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, prioritizeExtraction);
 
         if (wrappingUp && !hasAnyLootToDrop()) {
             town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));

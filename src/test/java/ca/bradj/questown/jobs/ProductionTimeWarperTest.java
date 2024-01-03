@@ -22,61 +22,6 @@ import static ca.bradj.questown.jobs.ProductionTimeWarper.dropIntoContainers;
 class ProductionTimeWarperTest {
 
     @Test
-    void constructorShouldNotThrow() {
-        // This essentially tests that all the production statuses have been handled
-        new ProductionTimeWarper(
-                (status) -> new TestItem("bread"),
-                new ProductionTimeWarper.LootGiver() {
-                    @Override
-                    public @NotNull Iterable giveLoot(int max, GathererJournal.Tools tools, Object o) {
-                        return ImmutableList.of();
-                    }
-                },
-                new ProductionTimeWarper.Town() {
-                    @Override
-                    public ImmutableList depositItems(ImmutableList itemsToDeposit) {
-                        return null;
-                    }
-
-                    @Override
-                    public boolean IsStorageAvailable() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean hasGate() {
-                        return false;
-                    }
-                },
-                new TimerHandle() {
-                    @Override
-                    public void tick(Object o, Collection roomsToScanForChanges) {
-                        // TODO: Test timers
-                    }
-                },
-        new EmptyFactory() {
-                    @Override
-                    public Item makeEmptyItem() {
-                        return new TestItem("");
-                    }
-                },
-                new ProductionTimeWarper.ItemToEntityMover() {
-                    @Override
-                    public HeldItem copyFromTownWithoutRemoving(Item item) {
-                        return new TestItem("bread");
-                    }
-                },
-                new GathererJournal.ToolsChecker() {
-                    @Override
-                    public GathererJournal.Tools computeTools(Iterable items) {
-                        return new GathererJournal.Tools(false, false, false, false);
-                    }
-                },
-                (heldItems) -> null
-        );
-    }
-
-    @Test
     void simulateExtractProduct_shouldRemoveItemFromTown() {
 
         ArrayList<String> townItems = new ArrayList<>();

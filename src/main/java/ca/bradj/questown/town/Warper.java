@@ -2,8 +2,9 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.WarpResult;
 
-public interface Warper<TOWN extends TownState<?, ?, ?, ?, ?>> {
+public interface Warper<LOOT_SOURCE, TOWN extends TownState<?, ?, ?, ?, ?>> {
     TOWN warp(
+            LOOT_SOURCE lootSource,
             TOWN liveState,
             long currentTick,
             long ticksPassed,

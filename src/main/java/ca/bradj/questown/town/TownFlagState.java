@@ -123,7 +123,7 @@ public class TownFlagState {
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
             QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, liveState);
-            Warper<MCTownState> vWarper = JobsRegistry.getWarper(
+            Warper<ServerLevel, MCTownState> vWarper = JobsRegistry.getWarper(
                     i, v.journal.jobId()
             );
             // TODO[ASAP]: Stop passing ticks in.
@@ -142,7 +142,7 @@ public class TownFlagState {
             // After villager loop:
             // orderedWarps.values().forEach(runnables -> runnables.forEach(Runnable::run));
 
-            MCTownState affectedState = vWarper.warp(liveState, dayTime, ticksPassed, i);
+            MCTownState affectedState = vWarper.warp(sl, liveState, dayTime, ticksPassed, i);
             if (affectedState != null) {
                 liveState = affectedState;
             }

@@ -14,6 +14,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 
 public class GathererMap extends Item {
@@ -31,7 +32,7 @@ public class GathererMap extends Item {
         return null;
     }
 
-    public static @Nullable ResourceLocation computeBiome(ImmutableList<MCHeldItem> items) {
+    public static @Nullable ResourceLocation computeBiome(Collection<MCHeldItem> items) {
         ResourceLocation biome = null;
         for (MCHeldItem item : items) {
             if (item.get().get().equals(ItemsInit.GATHERER_MAP.get())) {

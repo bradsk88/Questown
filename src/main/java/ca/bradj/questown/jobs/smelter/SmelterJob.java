@@ -3,20 +3,18 @@ package ca.bradj.questown.jobs.smelter;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Work;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 
-import java.util.UUID;
-
-public class DSmelterJob extends DeclarativeJob {
+public class SmelterJob {
     public static final JobID ID = new JobID("smelter", "process_ore");
     public static final ItemStack RESULT = new ItemStack(Items.RAW_IRON, 2);
     public static final int MAX_STATE = 2;
@@ -45,43 +43,24 @@ public class DSmelterJob extends DeclarativeJob {
             1, 0,
             2, 0
     );
-    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
 
-    public DSmelterJob(
-            UUID ownerUUID,
-            int inventoryCapacity
-    ) {
-        super(
-                ownerUUID,
-                inventoryCapacity,
+    public static Work asWork() {
+        return WorksBehaviour.productionWork(
                 ID,
-                new ResourceLocation(Questown.MODID, "smeltery"),
+                (Block block) -> block instanceof OreProcessingBlock,
+                Questown.ResourceLocation("smeltery"),
+                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                RESULT,
                 MAX_STATE,
-                true,
-                100,
                 INGREDIENTS,
                 INGREDIENTS_QTY,
                 TOOLS,
                 WORK,
                 TIME,
-                SHARED_TIMERS_NOT_APPLICABLE,
-                ImmutableMap.of(),
-                (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(RESULT.copy())),
-                false
-        );
-    }
-
-    public static Work asWork() {
-        return WorksBehaviour.productionWork(
-                (town, uuid) -> new DSmelterJob(uuid, 6),
-                DSmelterJob.ID,
-                (Block block) -> block instanceof OreProcessingBlock,
-                Questown.ResourceLocation("smeltery"),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(DSmelterJob.RESULT)),
-                DSmelterJob.RESULT,
-
-                DSmelterJob.INGREDIENTS,
-                DSmelterJob.TOOLS
+                100,
+                ImmutableMap.of(), // No stage rules
+                WorksBehaviour.standardProductionRules(),
+                WorksBehaviour.singleItemOutput(RESULT::copy)
         );
     }
 }

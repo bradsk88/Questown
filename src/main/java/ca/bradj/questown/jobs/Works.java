@@ -1,14 +1,15 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
+import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
+import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
+import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
+import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.gatherer.ExplorerWork;
 import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
-import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.jobs.smelter.DSmelterJob;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
+import ca.bradj.questown.jobs.smelter.SmelterJob;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 // This file attempts to resemble a collection of JSON files - which is the ultimate vision of Questown.
 // Having a JSON file approach would allow other mods to easily integrate with Questown.
@@ -45,73 +46,13 @@ public class Works {
 //                (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
 //        ));
         b.put(BakerBreadWork.ID, BakerBreadWork.asWork());
-        b.put(DSmelterJob.ID, DSmelterJob.asWork());
+        b.put(SmelterJob.ID, SmelterJob.asWork());
         b.put(BlacksmithWoodenPickaxeJob.ID, BlacksmithWoodenPickaxeJob.asWork());
-//        b.put(CrafterBowlWork.ID, new Work(
-//                (town, uuid) -> new CrafterBowlWork(uuid, 6), // TODO: Add support for smaller inventories
-//                productionJobSnapshot(CrafterBowlWork.ID),
-//                (block) -> block instanceof CraftingTableBlock,
-//                Questown.ResourceLocation("crafting_room"),
-//                ProductionStatus.FACTORY.idle(),
-//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterBowlWork.RESULT)),
-//                CrafterBowlWork.RESULT,
-//                s -> getProductionNeeds(
-//                        CrafterBowlWork.INGREDIENTS_REQUIRED_AT_STATES,
-//                        CrafterBowlWork.TOOLS_REQUIRED_AT_STATES
-//                )
-//        ));
-//        b.put(CrafterStickWork.ID, new Work(
-//                (town, uuid) -> new CrafterStickWork(uuid, 6), // TODO: Add support for smaller inventories
-//                productionJobSnapshot(CrafterStickWork.ID),
-//                (block) -> block instanceof CraftingTableBlock,
-//                Questown.ResourceLocation("crafting_room"),
-//                ProductionStatus.FACTORY.idle(),
-//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterStickWork.RESULT)),
-//                CrafterStickWork.RESULT,
-//                s -> getProductionNeeds(
-//                        CrafterStickWork.INGREDIENTS_REQUIRED_AT_STATES,
-//                        CrafterStickWork.TOOLS_REQUIRED_AT_STATES
-//                )
-//        ));
-//        b.put(CrafterPaperWork.ID, new Work(
-//                (town, uuid) -> new CrafterPaperWork(uuid, 6), // TODO: Add support for smaller inventories
-//                productionJobSnapshot(CrafterPaperWork.ID),
-//                (block) -> block instanceof CraftingTableBlock,
-//                Questown.ResourceLocation("crafting_room"),
-//                ProductionStatus.FACTORY.idle(),
-//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPaperWork.RESULT)),
-//                CrafterPaperWork.RESULT,
-//                s -> getProductionNeeds(
-//                        CrafterPaperWork.INGREDIENTS_REQUIRED_AT_STATES,
-//                        CrafterPaperWork.TOOLS_REQUIRED_AT_STATES
-//                )
-//        ));
-//        b.put(CrafterPlanksWork.ID, new Work(
-//                (town, uuid) -> new CrafterPlanksWork(uuid, 6), // TODO: Add support for smaller inventories
-//                productionJobSnapshot(CrafterPlanksWork.ID),
-//                (block) -> block instanceof CraftingTableBlock,
-//                Questown.ResourceLocation("crafting_room"),
-//                ProductionStatus.FACTORY.idle(),
-//                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(CrafterPlanksWork.RESULT)),
-//                CrafterPlanksWork.RESULT,
-//                s -> getProductionNeeds(
-//                        CrafterPlanksWork.INGREDIENTS_REQUIRED_AT_STATES,
-//                        CrafterPlanksWork.TOOLS_REQUIRED_AT_STATES
-//                )
-//        ));
-//        b.put(GathererUnmappedAxeWork.ID, new Work(
-//                (town, uuid) -> new GathererUnmappedAxeWork(uuid, 6),
-//                productionJobSnapshot(GathererUnmappedAxeWork.ID),
-//                (block) -> block instanceof WelcomeMatBlock,
-//                GathererUnmappedAxeWork.JOB_SITE,
-//                ProductionStatus.FACTORY.idle(),
-//                t -> t.allKnownGatherItemsFn.apply(GathererTools.AXE_LOOT_TABLE_PREFIX),
-//                Items.WHEAT_SEEDS.getDefaultInstance(),
-//                s -> getProductionNeeds(
-//                        GathererUnmappedAxeWork.INGREDIENTS_REQUIRED_AT_STATES,
-//                        GathererUnmappedAxeWork.TOOLS_REQUIRED_AT_STATES
-//                )
-//        ));
+        b.put(CrafterBowlWork.ID, CrafterBowlWork.asWork());
+        b.put(CrafterStickWork.ID, CrafterStickWork.asWork());
+        b.put(CrafterPaperWork.ID, CrafterPaperWork.asWork());
+        b.put(CrafterPlanksWork.ID, CrafterPlanksWork.asWork());
+        b.put(GathererUnmappedAxeWork.ID, GathererUnmappedAxeWork.asWork());
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork.asWork());
         b.put(ExplorerWork.ID, ExplorerWork.asWork());
         works = b.build();

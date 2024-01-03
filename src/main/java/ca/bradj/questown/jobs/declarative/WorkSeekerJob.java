@@ -1,20 +1,18 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
@@ -39,8 +37,6 @@ public class WorkSeekerJob extends DeclarativeJob {
             BLOCK_STATE_NO_JOBS, 0,
             BLOCK_STATE_JOBS_AVAIlABLE, 0
     );
-    private static final boolean SHARED_TIMERS_NOT_APPLICABLE = false;
-
     private static final String WORK_ID = "seeking_work";
 
     public WorkSeekerJob(
@@ -54,17 +50,15 @@ public class WorkSeekerJob extends DeclarativeJob {
                 new JobID(rootId, WORK_ID),
                 SpecialQuests.JOB_BOARD,
                 MAX_STATE,
-                false,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
-                SHARED_TIMERS_NOT_APPLICABLE,
                 ImmutableMap.of(),
-                (a, b) -> ImmutableSet.of(),
-                false
+                WorksBehaviour.standardProductionRules(),
+                WorksBehaviour.noOutput()
         );
     }
 
@@ -84,25 +78,24 @@ public class WorkSeekerJob extends DeclarativeJob {
     protected @NotNull WorldInteraction initWorldInteraction(
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            ImmutableList<String> specialRules,
             int interval
     ) {
         return new WorldInteraction(
-                inventory,
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,
-                ingredientQtyRequiredAtStates,
+                ingredientsQtyRequiredAtStates,
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
-                workResult,
-                nullifyExcessProduct,
+                resultGenerator,
+                specialRules,
                 interval
         ) {
 

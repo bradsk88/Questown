@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -14,6 +15,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
@@ -21,14 +23,22 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Stack;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownState, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
-    private final BlockPos position;
-    private final Supplier<MCHeldItem> result;
-    private Map<Integer, Integer> ingredientQuantityRequiredAtStates;
+public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
+
+    public record Inputs(
+            MCTownState town,
+            ServerLevel level
+    ) {
+    }
+
+    private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
+    private final Map<Integer, Integer> ingredientQuantityRequiredAtStates;
 
     public MCTownStateWorldInteraction(
             JobID jobId,
@@ -40,28 +50,27 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Supplier<MCHeldItem> result
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         super(
                 jobId, villagerIndex, interval, maxState, Jobs.unMC(toolsRequiredAtStates),
                 workRequiredAtStates, Jobs.unMCHeld(ingredientsRequiredAtStates),
                 ingredientQuantityRequiredAtStates, timeRequiredAtStates
         );
-        this.position = new BlockPos(villagerIndex, villagerIndex, villagerIndex);
-        this.result = result;
+        this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = ingredientQuantityRequiredAtStates;
     }
 
     @Override
     protected MCTownState setHeldItem(
-            MCTownState uxtra,
+            Inputs uxtra,
             MCTownState tuwn,
             int villagerIndex,
             int itemIndex,
             MCHeldItem item
     ) {
         if (tuwn == null) {
-            tuwn = uxtra;
+            tuwn = uxtra.town();
         }
         TownState.VillagerData<MCHeldItem> villager = tuwn.villagers.get(villagerIndex);
         return tuwn.withVillagerData(villagerIndex, villager.withSetItem(itemIndex, item));
@@ -69,12 +78,12 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     @Override
     protected MCTownState degradeTool(
-            MCTownState mcTownState,
+            Inputs mcTownState,
             @Nullable MCTownState tuwn,
             Function<MCTownItem, Boolean> isExpectedTool
     ) {
         if (tuwn == null) {
-            tuwn = mcTownState;
+            tuwn = mcTownState.town();
         }
 
         int i = 0;
@@ -93,7 +102,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     @Override
     protected boolean canInsertItem(
-            MCTownState mcTownState,
+            Inputs mcTownState,
             MCHeldItem item,
             BlockPos bp
     ) {
@@ -101,47 +110,69 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(MCTownState mcTownState) {
-        return mcTownState;
+    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(Inputs mcTownState) {
+        return mcTownState.town();
     }
 
     @Override
     protected Collection<MCHeldItem> getHeldItems(
-            MCTownState mcTownState,
+            Inputs mcTownState,
             int villagerIndex
     ) {
-        return ProductionTimeWarper.getHeldItems(mcTownState, villagerIndex);
+        return ProductionTimeWarper.getHeldItems(mcTownState.town(), villagerIndex);
     }
 
     @Override
     protected MCTownState tryExtractOre(
-            MCTownState mcTownState,
+            @NotNull Inputs inputs,
             BlockPos position
     ) {
-        AbstractWorkStatusStore.State s = getJobBlockState(mcTownState, position);
+        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
             int i = 0;
-            for (MCHeldItem item : getHeldItems(mcTownState, villagerIndex)) {
+
+            Collection<MCHeldItem> items = getHeldItems(inputs, villagerIndex);
+            Iterable<MCHeldItem> generatedResult = resultGenerator.apply(inputs.level, items);
+
+            Stack<MCHeldItem> stack = new Stack<>();
+            generatedResult.forEach(stack::push);
+
+            if (stack.isEmpty()) {
+                QT.JOB_LOGGER.error(
+                        "No results during extraction phase. That's probably a bug. Town State: {}",
+                        inputs.town()
+                );
+                return inputs.town();
+            }
+
+            MCTownState ts;
+            for (MCHeldItem item : items) {
                 i++;
-                if (item.isEmpty()) {
-                    mcTownState = setHeldItem(mcTownState, mcTownState, villagerIndex, i, result.get());
-                    return mcTownState.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
+                if (!item.isEmpty()) {
+                    continue;
+                }
+                ts = setHeldItem(inputs, inputs.town(), villagerIndex, i, stack.pop());
+                ts = ts.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
+
+                if (stack.isEmpty()) {
+                    return ts;
                 }
             }
+            // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
         }
         return null;
     }
 
     @Override
     protected boolean isEntityClose(
-            MCTownState mcTownState,
+            Inputs mcTownState,
             BlockPos position
     ) {
         return true;
     }
 
     @Override
-    protected boolean isReady(MCTownState mcTownState) {
+    protected boolean isReady(Inputs mcTownState) {
         return true;
     }
 

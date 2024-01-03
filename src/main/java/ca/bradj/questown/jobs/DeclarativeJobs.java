@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -53,7 +54,7 @@ public class DeclarativeJobs {
 
     private record HandlerInputs(
             MCTownStateWorldInteraction wi,
-            MCTownState inState,
+            MCTownStateWorldInteraction.Inputs inState,
             ProductionStatus status,
             AbstractWorkStatusStore.State workBlockState,
             Integer maxState,
@@ -71,7 +72,7 @@ public class DeclarativeJobs {
                     HandlerInputs ii
             ) -> {
                 if (!ii.status.isWorkingOnProduction()) {
-                    return ii.inState;
+                    return ii.inState.town();
                 }
                 return ii.wi.tryWorking(ii.inState, new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1));
             });
@@ -82,11 +83,11 @@ public class DeclarativeJobs {
         );
         b.put(
                 ProductionStatus.DROPPING_LOOT,
-                i -> i.wi.simulateDropLoot(i.inState, i.status)
+                i -> i.wi.simulateDropLoot(i.inState.town(), i.status)
         );
         b.put(
                 ProductionStatus.COLLECTING_SUPPLIES,
-                i -> i.wi.simulateCollectSupplies(i.inState, i.workBlockState.processingState())
+                i -> i.wi.simulateCollectSupplies(i.inState.town(), i.workBlockState.processingState())
         );
         b.put(
                 ProductionStatus.RELAXING,
@@ -115,7 +116,7 @@ public class DeclarativeJobs {
         handler = b.build();
     }
 
-    public static Warper<MCTownState> warper(
+    public static Warper<ServerLevel, MCTownState> warper(
             MCTownStateWorldInteraction wi,
             int maxState,
             boolean prioritizeExtraction
@@ -128,7 +129,7 @@ public class DeclarativeJobs {
             ));
         }
 
-        return (inState, currentTick, ticksPassed, villagerNum) -> {
+        return (lootSrc, inState, currentTick, ticksPassed, villagerNum) -> {
             BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
 
             MCTownState outState = inState;
@@ -147,7 +148,7 @@ public class DeclarativeJobs {
             int stepInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
             for (long i = start; i <= max; i += stepInterval) {
                 final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
-                final MCTownState fState = outState;
+                final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(outState, lootSrc);
                 wi.injectTicks(stepInterval);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
@@ -165,7 +166,7 @@ public class DeclarativeJobs {
                     status = nuStatus;
                 }
                 MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
-                        wi, outState, status, ztate, maxState, fakePos
+                        wi, fState, status, ztate, maxState, fakePos
                 ));
                 if (affectedState != null) {
                     outState = affectedState;

@@ -38,7 +38,7 @@ public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-    > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
+        > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
 
     private final Marker marker;
 
@@ -56,8 +56,9 @@ public abstract class ProductionJob<
 
     protected final UUID ownerUUID;
     private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
-    private final boolean sharedTimers;
+
     public final ImmutableMap<STATUS, String> specialRules;
+    protected final ImmutableList<String> specialGlobalRules;
 
     @Override
     public abstract Signals getSignal();
@@ -68,14 +69,14 @@ public abstract class ProductionJob<
 
     public ProductionJob(
             UUID ownerUUID,
-            boolean sharedTimers,
             int inventoryCapacity,
             ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, String> specialRules
+            ImmutableMap<STATUS, String> specialRules,
+            ImmutableList<String> specialGlobalRules
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -85,7 +86,7 @@ public abstract class ProductionJob<
             }
         };
         this.ownerUUID = ownerUUID;
-        this.sharedTimers = sharedTimers;
+        this.specialGlobalRules = specialGlobalRules;
         this.allowedToPickUp = allowedToPickUp;
         this.marker = logMarker;
         this.recipe = recipe;
@@ -148,6 +149,7 @@ public abstract class ProductionJob<
     public boolean removeItem(MCHeldItem mct) {
         return journal.removeItem(mct);
     }
+
     protected abstract Map<Integer, Boolean> getSupplyItemStatus();
 
     protected void tryDropLoot(
@@ -235,10 +237,14 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findProductionSpot(ServerLevel level);
 
-    protected abstract BlockPos findJobSite(TownInterface town, WorkStateContainer<BlockPos> work);
+    protected abstract BlockPos findJobSite(
+            TownInterface town,
+            WorkStateContainer<BlockPos> work
+    );
 
     protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
-            TownInterface town, WorkStateContainer<BlockPos> work
+            TownInterface town,
+            WorkStateContainer<BlockPos> work
     );
 
     @Override
@@ -255,7 +261,7 @@ public abstract class ProductionJob<
 
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
         WorkStatusHandle<BlockPos, MCHeldItem> work;
-        if (this.sharedTimers) {
+        if (this.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
             work = town.getWorkStatusHandle(null);
         } else {
             work = town.getWorkStatusHandle(ownerUUID);

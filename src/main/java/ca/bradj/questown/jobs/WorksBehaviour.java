@@ -11,12 +11,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiFunction;
@@ -29,7 +31,7 @@ public class WorksBehaviour {
     private static final Predicate<Block> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
     private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
-    public static Warper<MCTownState> productionWarper(
+    public static Warper<ServerLevel, MCTownState> productionWarper(
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
@@ -40,7 +42,7 @@ public class WorksBehaviour {
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Function<TownData, ItemStack> result
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
                 id,
@@ -52,9 +54,32 @@ public class WorksBehaviour {
                 ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates,
-                () -> MCHeldItem.fromMCItemStack(result.get())
+                resultGenerator
         );
         return DeclarativeJobs.warper(wi, maxState, prioritizeExtraction);
+    }
+
+    public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> singleItemOutput(
+            Supplier<ItemStack> result
+    ) {
+        return (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(result.get()));
+    }
+
+    public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> noOutput() {
+        return (s, j) -> ImmutableSet.of();
+    }
+
+    public static ImmutableList<String> standardProductionRules() {
+        return ImmutableList.of(
+                SpecialRules.PRIORITIZE_EXTRACTION,
+                SpecialRules.SHARED_WORK_STATUS
+        );
+    }
+
+    public static Function<TownData, ImmutableSet<MCTownItem>> standardProductionResult(
+            Supplier<ItemStack> result
+    ) {
+        return (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()));
     }
 
 
@@ -62,7 +87,7 @@ public class WorksBehaviour {
 
     }
 
-    private interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
+    public interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
 
     }
 
@@ -82,11 +107,10 @@ public class WorksBehaviour {
     }
 
     public static Work productionWork(
-            JobFunc jobFunc,
             JobID jobId,
             Predicate<Block> isJobBlock,
             ResourceLocation baseRoom,
-            Function<TownData, ImmutableSet<MCTownItem>> results,
+            Function<TownData, ImmutableSet<MCTownItem>> currentlyPossibleResults,
             ItemStack initialRequest,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredients,
@@ -94,22 +118,31 @@ public class WorksBehaviour {
             ImmutableMap<Integer, Ingredient> tools,
             ImmutableMap<Integer, Integer> work,
             ImmutableMap<Integer, Integer> time,
-            boolean prioritizeExtraction,
-            int actionDuration
+            int actionDuration,
+            ImmutableMap<ProductionStatus, String> specialStatusRules,
+            ImmutableList<String> specialGlobalRules,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         return new Work(
-                jobFunc,
+                (TownInterface job, UUID uuid) -> new DeclarativeJob(
+                        uuid, 6, // TODO: Add support for different inventory sizes
+                        jobId, baseRoom, maxState, actionDuration,
+                        ingredients, ingredientQty, tools, work, time,
+                        specialStatusRules,
+                        specialGlobalRules,
+                        resultGenerator
+                ),
                 productionJobSnapshot(jobId),
                 isJobBlock,
                 baseRoom,
                 ProductionStatus.FACTORY.idle(),
-                results,
+                currentlyPossibleResults,
                 initialRequest,
                 status -> getProductionNeeds(ingredients, tools),
                 warpInput -> WorksBehaviour.productionWarper(
                         jobId,
                         warpInput,
-                        prioritizeExtraction,
+                        specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION),
                         actionDuration,
                         maxState,
                         tools,
@@ -117,12 +150,7 @@ public class WorksBehaviour {
                         ingredients,
                         ingredientQty,
                         time,
-                        new Supplier<ItemStack>() {
-                            @Override
-                            public ItemStack get() {
-                                return RESULT;
-                            }
-                        }
+                        resultGenerator
                 )
         );
     }

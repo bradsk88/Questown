@@ -4,15 +4,15 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -29,7 +29,7 @@ import java.util.function.Function;
 public class WorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Void> {
 
-    private final boolean nullifyExcessProduct;
+    private final ImmutableList<String> specialRules;
 
     public Void tryWorking(
             TownInterface town,
@@ -42,15 +42,12 @@ public class WorldInteraction
 
     private final Marker marker = MarkerManager.getMarker("WI");
 
-    // TODO: Can we deal with the inventory OR the journal (both causes confusion)
-    private final Container inventory;
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
-    private final BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult;
+    private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
 
     public WorldInteraction(
-            Container inventory,
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -58,8 +55,8 @@ public class WorldInteraction
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            BiFunction<ServerLevel, ProductionJournal<MCTownItem, MCHeldItem>, Iterable<MCHeldItem>> workResult,
-            boolean nullifyExcessProduct,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            ImmutableList<String> specialRules,
             int interval
     ) {
         super(
@@ -73,12 +70,11 @@ public class WorldInteraction
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates
         );
-        this.inventory = inventory;
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
-        this.workResult = workResult;
-        this.nullifyExcessProduct = nullifyExcessProduct;
+        this.resultGenerator = resultGenerator;
+        this.specialRules = specialRules;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -110,16 +106,22 @@ public class WorldInteraction
     ) {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (Integer.valueOf(maxState).equals(JobBlock.getState(jh, oldPos))) {
-            @Nullable AbstractWorkStatusStore.State newState = JobBlock.extractRawProduct(
-                    sl, jh, oldPos, this.workResult.apply(town.getServerLevel(), journal),
-                    journal::addItemIfSlotAvailable, nullifyExcessProduct
+            JobBlock.extractRawProduct(
+                    sl, jh, oldPos, this.resultGenerator.apply(town.getServerLevel(), journal.getItems()),
+                    journal::addItemIfSlotAvailable, specialRules.contains(SpecialRules.NULLIFY_EXCESS_RESULTS)
             );
         }
         return null;
     }
 
     @Override
-    protected Void setHeldItem(MCExtra uxtra, Void tuwn, int villagerIndex, int itemIndex, MCHeldItem item) {
+    protected Void setHeldItem(
+            MCExtra uxtra,
+            Void tuwn,
+            int villagerIndex,
+            int itemIndex,
+            MCHeldItem item
+    ) {
         journal.setItem(itemIndex, item);
         return null;
     }
@@ -127,7 +129,8 @@ public class WorldInteraction
     @Override
     protected Void degradeTool(
             MCExtra mcExtra,
-            Void tuwn, Function<MCTownItem, Boolean> toolCheck
+            Void tuwn,
+            Function<MCTownItem, Boolean> toolCheck
     ) {
         // FIXME: This tool degradation seem to work
         Optional<MCHeldItem> foundTool = journal.getItems()
@@ -137,7 +140,8 @@ public class WorldInteraction
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toItemStack();
-            is.hurtAndBreak(1, mcExtra.entity(), (x) -> {});
+            is.hurtAndBreak(1, mcExtra.entity(), (x) -> {
+            });
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
         }
         return null;
@@ -149,7 +153,10 @@ public class WorldInteraction
     }
 
     @Override
-    protected Collection<MCHeldItem> getHeldItems(MCExtra mcExtra, int villagerIndex) {
+    protected Collection<MCHeldItem> getHeldItems(
+            MCExtra mcExtra,
+            int villagerIndex
+    ) {
         return journal.getItems();
     }
 

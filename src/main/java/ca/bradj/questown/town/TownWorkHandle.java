@@ -8,6 +8,7 @@ import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -92,7 +93,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
         BlockPos flagPos = parent.getTownFlagBasePos();
         Collection<ResourceLocation> biomes = parent.getKnownBiomes();
-        JobsRegistry.TownData td = new JobsRegistry.TownData(prefix ->
+        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix ->
                 parent.getKnowledgeHandle().getAllKnownGatherResults(biomes, prefix)
         );
         ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);

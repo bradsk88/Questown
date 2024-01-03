@@ -16,6 +16,7 @@ import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -469,7 +470,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     //  being done, and assign the rest to people who are idle or
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
-        JobsRegistry.TownData td = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 getKnownBiomes(),
                 prefix
         ));
@@ -752,7 +753,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
 
         Collection<ResourceLocation> mapBiomes = getKnownBiomes();
-        JobsRegistry.TownData data = new JobsRegistry.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+        WorksBehaviour.TownData data = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
                 mapBiomes, prefix
         ));
 

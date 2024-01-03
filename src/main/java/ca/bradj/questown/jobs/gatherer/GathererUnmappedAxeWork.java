@@ -6,13 +6,16 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Journal;
 import ca.bradj.questown.jobs.SpecialRules;
+import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public class GathererUnmappedAxeWork extends NewLeaverWork {
@@ -50,34 +53,26 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
     );
-    private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
             ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
+    public GathererUnmappedAxeWork() {
+        super(PARAMS);
+    }
 
-    public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
-
-    public GathererUnmappedAxeWork(
-            UUID ownerUUID,
-            int inventoryCapacity
-    ) {
-        super(
-                ownerUUID,
-                PARAMS,
-                inventoryCapacity,
+    public static Work asWork() {
+        return NewLeaverWork.asWork(
                 ID,
-                JOB_SITE,
+                GathererTools.AXE_LOOT_TABLE_PREFIX,
+                Items.OAK_WOOD.getDefaultInstance(),
                 MAX_STATE,
-                true,
-                0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
-                TIMER_SHARING,
                 SPECIAL_RULES,
                 GathererUnmappedAxeWork::getFromLootTables
         );
@@ -89,9 +84,9 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
     // - Default "jobs/axe/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
-            Journal<?, MCHeldItem, ?> journal
+            Collection<MCHeldItem> items
     ) {
-        return Loots.getFromLootTables(level, journal, new GathererTools.LootTableParameters(
+        return Loots.getFromLootTables(level, items, new GathererTools.LootTableParameters(
                 GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
         ));
     }

@@ -19,7 +19,7 @@ import ca.bradj.questown.jobs.gatherer.GathererMappedAxeWork;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedAxeWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.jobs.smelter.DSmelterJob;
+import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -42,7 +43,7 @@ import static ca.bradj.questown.jobs.Works.works;
 
 public class JobsRegistry {
 
-    private static final SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
+    private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
     public static boolean isJobBlock(Block b) {
@@ -101,7 +102,7 @@ public class JobsRegistry {
             return switch (parts[0]) {
                 case "gatherer" -> GathererJob.ID;
                 case "baker" -> BakerBreadWork.ID;
-                case "smelter" -> DSmelterJob.ID;
+                case "smelter" -> SmelterJob.ID;
                 default -> throw new IllegalArgumentException("Unknown single-part job ID: " + parts[0]);
             };
         }
@@ -115,18 +116,17 @@ public class JobsRegistry {
         return new AbstractWorkStatusStore.State(0, 0, 0);
     }
 
-    public static Warper<MCTownState> getWarper(
+    public static Warper<ServerLevel, MCTownState> getWarper(
             int villagerIndex,
             JobID jobID
     ) {
         Work w = works.get(jobID);
         assert w != null;
-        return w.warper().apply(new WarpInput(villagerIndex));
+        return w.warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
     }
 
-
     public static boolean canSatisfy(
-            TownData town,
+            WorksBehaviour.TownData town,
             JobID p,
             Ingredient requestedResult
     ) {
@@ -174,7 +174,7 @@ public class JobsRegistry {
         return w.initialRequest();
     }
 
-    public static ImmutableSet<Ingredient> getAllOutputs(Works.TownData t) {
+    public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
         List<Ingredient> list = works.values().stream()
                 .map(v -> v.results().apply(t))
                 .flatMap(Collection::stream)
@@ -196,10 +196,6 @@ public class JobsRegistry {
 
     }
 
-    public record WarpInput(
-            int villagerIndex
-    ){};
-
     public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
             CrafterPlanksWork.ID,
             CrafterBowlWork.ID,
@@ -220,9 +216,9 @@ public class JobsRegistry {
                     ImmutableList.of(BakerBreadWork.ID),
                     ImmutableList.of(BakerBreadWork.ID)
             ),
-            DSmelterJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(DSmelterJob.ID),
-                    ImmutableList.of(DSmelterJob.ID)
+            SmelterJob.ID.rootId(), new Jerb(
+                    ImmutableList.of(SmelterJob.ID),
+                    ImmutableList.of(SmelterJob.ID)
             ),
             GathererJob.ID.rootId(), new Jerb(
                     ImmutableList.of(
@@ -242,6 +238,7 @@ public class JobsRegistry {
                     CRAFTER_DEFAULT_WORK
             )
     );
+
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,
             JobID jobName,
@@ -293,7 +290,7 @@ public class JobsRegistry {
             Work fn
     ) {
         if (journal == null && heldItems != null) {
-            journal = fn.snapshotFunc.apply(jobName, fn.initialStatus.name(), heldItems);
+            journal = fn.snapshotFunc().apply(jobName, fn.initialStatus().name(), heldItems);
         } else if (journal == null) {
             QT.JOB_LOGGER.error("Null items and journal. We probably just lost items.");
         }
@@ -328,6 +325,6 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);
             return GATHERER_SNAPSHOT_FUNC.apply(job, status, heldItems);
         }
-        return f.snapshotFunc.apply(job, status, heldItems);
+        return f.snapshotFunc().apply(job, status, heldItems);
     }
 }

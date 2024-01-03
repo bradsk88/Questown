@@ -20,7 +20,6 @@ public abstract class TownState<
         H extends HeldItem<H, I> & Item<H>,
         P, SELF
         > implements
-        ProductionTimeWarper.FoodRemover<I>,
         ProductionTimeWarper.Town<I, H>,
         ImmutableWorkStateContainer<P, SELF>,
         VillagerDataCollectionHolder<H>
@@ -60,26 +59,6 @@ public abstract class TownState<
                 ",\n\tcontainers=" + containers +
                 ",\n\tworldTimeAtSleep=" + worldTimeAtSleep +
                 "\n}";
-    }
-
-    // TODO: TownState should be immutable. Should this be "withFoodRemoved"?
-    @Override
-    public @Nullable I removeFood() {
-        ImmutableList<ContainerTarget<C, I>> containerTargets = ImmutableList.copyOf(containers);
-        I out = null;
-        for (int i = 0; i < containerTargets.size(); i++) {
-            ImmutableList<I> items = containerTargets.get(i).getItems();
-            for (int j = 0; j < items.size(); j++) {
-                if (items.get(j).isFood()) {
-                    ArrayList<I> newItems = new ArrayList<>(items);
-                    newItems.set(j, items.get(j).shrink());
-                    containers.get(i).setItems(newItems);
-                    out = items.get(j);
-                    break;
-                }
-            }
-        }
-        return out;
     }
 
     // TODO: TownState should be immutable. Should this be "withItemsDeposited"?
