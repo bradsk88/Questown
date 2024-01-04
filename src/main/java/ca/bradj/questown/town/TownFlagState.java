@@ -201,14 +201,18 @@ public class TownFlagState {
 
     // Returns true if changes detected
     public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
+        if (!e.isInitialized()) {
+            return false;
+        }
+
         long start = System.currentTimeMillis();
         long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
-        long timeSinceWake = gt - lastTick;
+        long timeSinceWake = gt - lastTick; // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
-        if (waking && e.isInitialized()) {
+        if (waking) {
             warp(e, flagTag, level, timeSinceWake);
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);

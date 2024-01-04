@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
+import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -22,11 +23,11 @@ import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
-    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Void> {
+    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
 
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
         private boolean extracted;
-        private final WorkStateContainer<Position> workStatuses;
+        private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
 
         public TestWI(
                 int maxState,
@@ -37,7 +38,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
                 Supplier<Collection<GathererJournalTest.TestItem>> journal,
                 InventoryHandle<GathererJournalTest.TestItem> inventory,
-                WorkStateContainer<Position> workStatuses
+                ImmutableWorkStateContainer<Position, Boolean> workStatuses
         ) {
             super(
                     new JobID("test", "test"),
@@ -84,7 +85,7 @@ class AbstractWorldInteractionTest {
                 }
             };
 
-            WorkStateContainer<Position> statuses = testWorkStateContainer();
+            ImmutableWorkStateContainer<Position, Boolean> statuses = testWorkStateContainer();
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
                     alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
@@ -93,13 +94,13 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Void tryExtractOre(
+        protected Boolean tryExtractOre(
                 Void unused,
                 Position position
         ) {
             extracted = true;
             getWorkStatuses(null).clearState(position);
-            return null;
+            return true;
         }
 
         @Override
@@ -121,15 +122,15 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Void setHeldItem(Void uxtra, Void tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+        protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
             inventory.set(itemIndex, item);
-            return tuwn;
+            return true;
         }
 
         @Override
-        protected Void degradeTool(
+        protected Boolean degradeTool(
                 Void unused,
-                Void tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+                Boolean tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
         ) {
             return tuwn;
         }
@@ -144,7 +145,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected WorkStateContainer<Position> getWorkStatuses(Void unused) {
+        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
             return workStatuses;
         }
 
@@ -155,10 +156,10 @@ class AbstractWorldInteractionTest {
     }
 
     @NotNull
-    private static WorkStateContainer<Position> testWorkStateContainer() {
+    private static ImmutableWorkStateContainer<Position, Boolean> testWorkStateContainer() {
         HashMap<Position, State> ztate = new HashMap<>();
 
-        WorkStateContainer<Position> statuses = new WorkStateContainer<Position>() {
+        ImmutableWorkStateContainer<Position, Boolean> statuses = new ImmutableWorkStateContainer<Position, Boolean>() {
             @Override
             public @Nullable State getJobBlockState(Position bp) {
                 return ztate.get(bp);
@@ -170,29 +171,30 @@ class AbstractWorldInteractionTest {
             }
 
             @Override
-            public Void setJobBlockState(
+            public Boolean setJobBlockState(
                     Position bp,
                     State bs
             ) {
                 ztate.put(bp, bs);
-                return null;
+                return true;
             }
 
             @Override
-            public Void setJobBlockStateWithTimer(
+            public Boolean setJobBlockStateWithTimer(
                     Position bp,
                     State bs,
                     int ticksToNextState
             ) {
                 ztate.put(bp, bs); // Ignoring time
-                return null;
+                return true;
             }
 
             @Override
-            public Void clearState(Position bp) {
+            public Boolean clearState(Position bp) {
                 ztate.remove(bp);
-                return null;
+                return true;
             }
+
         };
         return statuses;
     }

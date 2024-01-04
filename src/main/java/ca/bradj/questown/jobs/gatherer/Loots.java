@@ -85,7 +85,7 @@ public class Loots {
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
         ArrayList<ItemStack> rItems = new ArrayList<>();
-        int max = Math.min(minItems, level.random.nextInt(maxItems) + 1);
+        int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
         while (rItems.size() < max) {
             rItems.addAll(lootTable.getRandomItems(lc));
         }

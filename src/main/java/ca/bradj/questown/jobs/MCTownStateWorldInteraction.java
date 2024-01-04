@@ -86,15 +86,17 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             tuwn = mcTownState.town();
         }
 
-        int i = 0;
+        int i = -1;
         for (MCHeldItem item : this.getHeldItems(mcTownState, villagerIndex)) {
             i++;
             if (!isExpectedTool.apply(item.get())) {
                 continue;
             }
             ItemStack itemStack = item.get().toItemStack();
-            itemStack.getItem().damageItem(itemStack, 1, null, e -> {
-            }); // TODO: Get a reference to the villager?
+            itemStack.hurt(1, mcTownState.level.getRandom(), null);
+            if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
+                itemStack = ItemStack.EMPTY;
+            }
             return setHeldItem(mcTownState, tuwn, villagerIndex, i, MCHeldItem.fromMCItemStack(itemStack));
         }
         return tuwn;
@@ -129,7 +131,6 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     ) {
         AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
-            int i = 0;
 
             Collection<MCHeldItem> items = getHeldItems(inputs, villagerIndex);
             Iterable<MCHeldItem> generatedResult = resultGenerator.apply(inputs.level, items);
@@ -145,13 +146,14 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                 return inputs.town();
             }
 
-            MCTownState ts;
+            MCTownState ts = inputs.town();
+            int i = -1;
             for (MCHeldItem item : items) {
                 i++;
                 if (!item.isEmpty()) {
                     continue;
                 }
-                ts = setHeldItem(inputs, inputs.town(), villagerIndex, i, stack.pop());
+                ts = setHeldItem(inputs, ts, villagerIndex, i, stack.pop());
                 ts = ts.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
 
                 if (stack.isEmpty()) {
@@ -208,13 +210,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                 }
 
                 Function<MCTownItem, Boolean> toolChk = toolsRequiredAtStates.get(curState);
-                if (toolChk == null) {
-                    return ImmutableMap.of();
-                }
-                for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
-                    if (!container.hasItem(toolChk::apply)) {
-                        continue;
-                    }
+                if (toolChk != null) {
                     return ImmutableMap.of(workStates.processingState(), ImmutableList.of(mcRoom));
                 }
                 return ImmutableMap.of();

@@ -145,9 +145,11 @@ public class DeclarativeJobs {
             ProductionStatus status = ProductionStatus.FACTORY.idle();
 
             // TODO[ASAP]: Factor in timers and "walk time"
-            int stepInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
+            int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
+            int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
             for (long i = start; i <= max; i += stepInterval) {
                 final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
+
                 final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(outState, lootSrc);
                 wi.injectTicks(stepInterval);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);

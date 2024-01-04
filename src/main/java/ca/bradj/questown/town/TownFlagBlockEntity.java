@@ -57,6 +57,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -93,6 +94,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = "knowledge";
+    private static boolean stopped;
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
@@ -144,10 +146,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             BlockState state,
             TownFlagBlockEntity e
     ) {
-
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+
+        Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), -1, null);
+        if (nearestPlayer == null) {
+            QT.FLAG_LOGGER.error("No players detected in world");
+            return;
+        }
+        double distToPlayer = nearestPlayer.blockPosition().distSqr(e.worldPosition);
+        if (distToPlayer > Config.TOWN_TICK_RADIUS.get()) {
+            if (!stopped) {
+                QT.FLAG_LOGGER.info(
+                        "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
+                        blockPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
+                );
+            }
+            stopped = true;
+            return;
+        }
+
+        stopped = false;
 
         long start = System.currentTimeMillis();
 

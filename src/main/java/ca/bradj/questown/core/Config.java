@@ -12,6 +12,7 @@ public class Config {
     public static final String FILENAME = "questown-server.toml";
 
     public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_TICK_RADIUS;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
 
@@ -55,16 +56,19 @@ public class Config {
     static {
         // Scanning Config
         BUILDER.push("Questown.Config.Scanning");
-        DOOR_SEARCH_RADIUS = BUILDER.comment(
-                "The radius (around the town flag) where this mod will search for doors for room detection"
-        ).define("DoorSearchRadius", 100);
-        CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
-                "The radius (around the town flag) where this mod will search for campfires which attract visitors"
-        ).define("CampfireSearchRadius", 10);
         SCAN_FOR_DOORS = BUILDER.comment(
                 "RISKY: Set true to scan for vanilla doors in a radius around the town flag during room detection. " +
                         "This may be prone to crashes if rooms get too complex."
         ).define("ScanForDoors", false);
+        DOOR_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for doors for room detection"
+        ).define("DoorSearchRadius", 100);
+        TOWN_TICK_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for players. If no players are found, the flag will stop ticking."
+        ).define("TownTickRadius", 10000);
+        CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
+                "The radius (around the town flag) where this mod will search for campfires which attract visitors"
+        ).define("CampfireSearchRadius", 10);
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
         ).defineInRange("BiomeScanRadius", 20, 0, 100);
