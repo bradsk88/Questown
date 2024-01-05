@@ -1,5 +1,7 @@
 package ca.bradj.questown.town;
 
+import java.util.Collection;
+
 public interface Warper<LOOT_SOURCE, TOWN extends TownState<?, ?, ?, ?, ?>> {
     TOWN warp(
             LOOT_SOURCE lootSource,
@@ -13,4 +15,12 @@ public interface Warper<LOOT_SOURCE, TOWN extends TownState<?, ?, ?, ?, ?>> {
             // This is a heuristic approach to make the time warp easier to implement.
             int villagerNum
     );
+
+    Collection<Tick> getTicks(long referenceTick, long ticksPassed);
+
+
+    record Tick(
+            long tick,
+            long ticksSincePrevious
+    ){}
 }

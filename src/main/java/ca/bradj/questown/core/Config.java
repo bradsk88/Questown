@@ -113,8 +113,8 @@ public class Config {
                 "The number of ticks that farmers will wait between actions"
         ).define("FarmActionInterval", 100);
         BAKING_TIME_REQUIRED_BASELINE = BUILDER.comment(
-                "The number of ticks it takes for a villager to bake bread (will be rounded down to nearest 1000)"
-        ).defineInRange("BakingTime", 6000, 1000, 24000);
+                "The number of ticks it takes for a villager to bake bread"
+        ).defineInRange("BakingTime", 1000, 1000, 24000);
         FARMER_WEEDS_RARITY = BUILDER.comment(
                 "The chance that a farmer will find weeds (actually grass, for composting) on a still-growing crop block. 1 means \"constantly\"."
         ).defineInRange("FarmerWeedsRarity", 10, 1, 9999);

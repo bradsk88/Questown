@@ -121,33 +121,35 @@ public class TownFlagState {
                 (int max, GathererJournal.Tools tools, ResourceLocation biome) -> GathererJob.getLootFromLevel(e, max, tools, biome);
         MCTownState liveState = storedState;
 
+        List<Map.Entry<Long, Function<MCTownState, MCTownState>>> warpSteps = new ArrayList<>();
+
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            QT.FLAG_LOGGER.trace("[{}] Warping time by {} ticks, starting with journal: {}", v.uuid, ticksPassed, liveState);
+            QT.FLAG_LOGGER.trace(
+                    "[{}] Warping time by {} ticks, starting with journal: {}",
+                    v.uuid,
+                    ticksPassed,
+                    liveState
+            );
             Warper<ServerLevel, MCTownState> vWarper = JobsRegistry.getWarper(
                     i, v.journal.jobId()
             );
-            // TODO[ASAP]: Stop passing ticks in.
-            //  The way it works right now, each villager works through the passed
-            //  ticks as though they were the only villager present, and then we
-            //  move on to the next one who repeats the process. What we should
-            //  probably do is warp one chunk of time for each of the villagers
-            //  until we have reached the desired number of ticks. That better
-            //  simulates a village full of people (and we can maybe even run
-            //  each "chunk" on a separate game tick.
-            // E.g.
-            //
-            // Map<Integer, Runnable> warps = vWraper.getWarps(liveState, dayTime, ticksPassed, i);
-            // warps.forEach((time, runnable) -> orderedWarps.compute((time, runnables) -> runnables == null ? new Stack(runnable) : runnables.add(runnable));
-            //
-            // After villager loop:
-            // orderedWarps.values().forEach(runnables -> runnables.forEach(Runnable::run));
 
-            MCTownState affectedState = vWarper.warp(sl, liveState, dayTime, ticksPassed, i);
+            final int ii = i;
+            vWarper.getTicks(dayTime, ticksPassed).forEach(
+                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(tick.tick(), ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)))
+            );
+        }
+
+        warpSteps.sort(Map.Entry.comparingByKey());
+        for (Map.Entry<Long, Function<MCTownState, MCTownState>> warpStep : warpSteps) {
+            MCTownState affectedState = warpStep.getValue().apply(liveState);
             if (affectedState != null) {
                 liveState = affectedState;
             }
         }
+
+        QT.FLAG_LOGGER.debug("State after warp of {}: {}", ticksPassed, liveState);
 
         return new MCTownState(
                 liveState.villagers,

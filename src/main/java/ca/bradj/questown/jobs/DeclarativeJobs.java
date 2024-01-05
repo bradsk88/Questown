@@ -8,6 +8,7 @@ import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -129,57 +130,86 @@ public class DeclarativeJobs {
             ));
         }
 
-        return (lootSrc, inState, currentTick, ticksPassed, villagerNum) -> {
-            BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
+        return new Warper<>() {
+            @Override
+            public MCTownState warp(
+                    ServerLevel level,
+                    MCTownState inState,
+                    long currentTick,
+                    long ticksPassed,
+                    int villagerNum
+            ) {
+                BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
 
-            MCTownState outState = inState;
+                MCTownState outState = inState;
 
-            AbstractWorkStatusStore.State state = outState.workStates.get(fakePos);
-            if (state == null) {
-                outState = outState.setJobBlockState(fakePos, AbstractWorkStatusStore.State.fresh());
-            }
-
-            long start = currentTick;
-            long max = currentTick + ticksPassed;
-
-            ProductionStatus status = ProductionStatus.FACTORY.idle();
-
-            // TODO[ASAP]: Factor in timers and "walk time"
-            int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
-            int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
-            for (long i = start; i <= max; i += stepInterval) {
-                final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
-
-                final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(outState, lootSrc);
-                wi.injectTicks(stepInterval);
-                MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
-                @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-                        status, Signals.fromGameTime(i),
-                        wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
-                        wi.asTownJobs(
-                                ztate,
-                                fakeRoom,
-                                outState.containers
-                        ),
-                        DeclarativeJobs.alwaysInRoom(fakeRoom),
-                        DeclarativeJob.STATUS_FACTORY, prioritizeExtraction
-                );
-                if (nuStatus != null) {
-                    status = nuStatus;
-                }
-                MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
-                        wi, fState, status, ztate, maxState, fakePos
-                ));
-                if (affectedState != null) {
-                    outState = affectedState;
+                AbstractWorkStatusStore.State state = outState.workStates.get(fakePos);
+                if (state == null) {
+                    outState = outState.setJobBlockState(fakePos, AbstractWorkStatusStore.State.fresh());
                 }
 
-                outState = outState.withTimerReducedBy(fakePos, stepInterval);
+                long start = currentTick;
+                long max = currentTick + ticksPassed;
+
+                ProductionStatus status = ProductionStatus.FACTORY.idle();
+
+                // TODO[ASAP]: Factor in timers and "walk time"
+                int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
+                int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
+                for (long i = start; i <= max; i += stepInterval) {
+                    final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
+
+                    final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(
+                            outState,
+                            level
+                    );
+                    wi.injectTicks(stepInterval);
+                    MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
+                    @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
+                            status, Signals.fromGameTime(i),
+                            wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
+                            wi.asTownJobs(
+                                    ztate,
+                                    fakeRoom,
+                                    outState.containers
+                            ),
+                            DeclarativeJobs.alwaysInRoom(fakeRoom),
+                            DeclarativeJob.STATUS_FACTORY, prioritizeExtraction
+                    );
+                    if (nuStatus != null) {
+                        status = nuStatus;
+                    }
+                    MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
+                            wi, fState, status, ztate, maxState, fakePos
+                    ));
+                    if (affectedState != null) {
+                        outState = affectedState;
+                    }
+
+                    outState = outState.withTimerReducedBy(fakePos, stepInterval);
+                }
+
+                return outState;
             }
 
-            QT.FLAG_LOGGER.debug("State after warp of {}: {}", ticksPassed, outState);
+            @Override
+            public Collection<Tick> getTicks(
+                    long referenceTick,
+                    long ticksPassed
+            ) {
+                ImmutableList.Builder<Tick> b = ImmutableList.builder();
 
-            return outState;
+                long start = referenceTick;
+                long max = referenceTick + ticksPassed;
+
+                // TODO[ASAP]: Factor in timers and "walk time"
+                int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
+                int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
+                for (long i = start; i <= max; i += stepInterval) {
+                    b.add(new Tick(i, stepInterval));
+                }
+                return b.build();
+            }
         };
     }
 
