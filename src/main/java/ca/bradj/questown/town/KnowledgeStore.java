@@ -69,7 +69,7 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
     }
 
     @Override
-    public void registerFoundLoots(ImmutableList<ITEM_IN> items) {
+    public void registerFoundLoots(Collection<ITEM_IN> items) {
         items.forEach(item -> {
             if (item.foundInBiome() == null) {
                 return;
@@ -95,7 +95,7 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
             ITEM_OUT stripped = stripper.apply(item);
             known.add(stripped);
             if (sizeBefore != known.size()) {
-                QT.FLAG_LOGGER.debug("New item recorded as 'known': {} in biome {}", stripped.getShortName(), biome);
+                QT.FLAG_LOGGER.debug("New item recorded as 'known': {} in biome {}", stripped.getShortName(), bId);
             }
             biome.put(ltp, ImmutableSet.copyOf(known));
             knownGatherResults.put(bId, biome);

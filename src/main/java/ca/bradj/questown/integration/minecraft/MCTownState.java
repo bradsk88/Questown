@@ -3,20 +3,18 @@ package ca.bradj.questown.integration.minecraft;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownState;
-import ca.bradj.questown.town.interfaces.TimerHandle;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
 
 public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, BlockPos, MCTownState> {
+
+    // TODO: Move to the base class?
+    private final ArrayList<MCHeldItem> knowledge = new ArrayList<>();
 
     public MCTownState(
             @NotNull List<VillagerData<MCHeldItem>> villagers,
@@ -24,9 +22,11 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates,
             @NotNull ImmutableMap<BlockPos, Integer> workTimers,
             @NotNull List<BlockPos> gates,
+            @NotNull ImmutableList<MCHeldItem> knowledge,
             long worldTimeAtSleep
     ) {
         super(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
+        this.knowledge.addAll(knowledge);
     }
 
     @Override
@@ -38,8 +38,19 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             ImmutableList<BlockPos> gates,
             long worldTimeAtSleep
     ) {
-        return new MCTownState(
-                villagers, containers, workStates, workTimers, gates, worldTimeAtSleep
+        MCTownState mcTownState = new MCTownState(
+                villagers, containers, workStates, workTimers, gates, ImmutableList.copyOf(knowledge), worldTimeAtSleep
         );
+        return mcTownState;
+    }
+
+    public MCTownState withKnowledge(MCHeldItem item) {
+        MCTownState unchanged = unchanged();
+        unchanged.knowledge.add(item);
+        return unchanged;
+    }
+
+    public ImmutableList<MCHeldItem> knowledge() {
+        return ImmutableList.copyOf(knowledge);
     }
 }

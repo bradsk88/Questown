@@ -84,8 +84,9 @@ public class TownStateSerializer {
         // TODO[ASAP]: Load work states
         @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates = ImmutableMap.of();
         @NotNull ImmutableMap<BlockPos, Integer> workTimers = ImmutableMap.of();
+        @NotNull ImmutableList<MCHeldItem> knowledge = ImmutableList.of();
         List<BlockPos> gates = loadGates(tag, gg);
-        return new MCTownState(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
+        return new MCTownState(villagers, containers, workStates, workTimers, gates, knowledge, worldTimeAtSleep);
     }
 
     private ImmutableList<BlockPos> loadGates(

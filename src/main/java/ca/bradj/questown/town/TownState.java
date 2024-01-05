@@ -204,7 +204,7 @@ public abstract class TownState<
         );
     }
 
-    private SELF unchanged() {
+    protected final SELF unchanged() {
         return newTownState(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
     }
 

@@ -60,16 +60,16 @@ public class TownFlagState {
         }
 
         long dayTime = parent.getServerLevel().getDayTime();
-        MCTownState ts = new MCTownState(
+        return new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true).toList(),
                 // TODO[ASAP]: Store statuses for all villagers
                 parent.getWorkStatusHandle(null).getAll(),
                 ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
+                ImmutableList.of(), // TODO: Should we pass in current knowledge?
                 dayTime
         );
-        return ts;
     }
 
     static MCTownState advanceTime(
@@ -79,7 +79,7 @@ public class TownFlagState {
             ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) { // FIXME: Plus or minus some ticks?
-            Questown.LOGGER.debug("Already advanced time on this tick. Skipping.");
+            QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
             return null;
         }
 
@@ -98,6 +98,7 @@ public class TownFlagState {
                     ImmutableList.of(),
                     ImmutableMap.of(),
                     ImmutableMap.of(),
+                    ImmutableList.of(),
                     ImmutableList.of(),
                     0
             );
@@ -154,6 +155,7 @@ public class TownFlagState {
                 liveState.workStates,
                 liveState.workTimers,
                 liveState.gates,
+                liveState.knowledge(),
                 dayTime
         );
     }
@@ -240,6 +242,7 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
                 e.getPersistentData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -284,7 +287,7 @@ public class TownFlagState {
                 if (listenedBlocks.containsKey(bp)) {
                     Integer oldValue = listenedBlocks.get(bp);
                     if (!oldValue.equals(newValue)) {
-                        Questown.LOGGER.debug("Chest tags changed");
+                        QT.FLAG_LOGGER.debug("Chest tags changed");
                         containersChanged = true;
                     } else {
                         continue;

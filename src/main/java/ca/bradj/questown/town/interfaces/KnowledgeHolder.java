@@ -11,5 +11,5 @@ public interface KnowledgeHolder<BIOME, ITEM_IN, ITEM_OUT> {
             Collection<BIOME> mapBiomes, GathererTools.LootTablePrefix ltPrefix
     );
 
-    void registerFoundLoots(ImmutableList<ITEM_IN> items);
+    void registerFoundLoots(Collection<ITEM_IN> items);
 }

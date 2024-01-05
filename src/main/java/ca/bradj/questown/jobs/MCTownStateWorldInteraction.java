@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -153,8 +154,14 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                 if (!item.isEmpty()) {
                     continue;
                 }
-                ts = setHeldItem(inputs, ts, villagerIndex, i, stack.pop());
+                MCHeldItem newItem = stack.pop();
+                if (newItem.get().get() instanceof KnowledgeMetaItem) {
+                    ts = ts.withKnowledge(newItem);
+                }else {
+                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem);
+                }
                 ts = ts.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
+
 
                 if (stack.isEmpty()) {
                     return ts;

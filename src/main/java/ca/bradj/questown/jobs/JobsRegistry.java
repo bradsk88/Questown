@@ -21,6 +21,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
@@ -120,6 +121,9 @@ public class JobsRegistry {
             int villagerIndex,
             JobID jobID
     ) {
+        if (WorkSeekerJob.isSeekingWork(jobID)) {
+            return NoOpWarper.INSTANCE;
+        }
         Work w = works.get(jobID);
         assert w != null;
         return w.warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
