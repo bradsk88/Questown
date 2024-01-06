@@ -49,6 +49,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.jobs.GathererJournal.Status.*;
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
@@ -225,7 +226,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         ).stream().filter(v -> v != null).toList());
 
         if (workSpot != null) {
-            world.tryFarming(town, entityBlockPos, workSpot);
+            if (world.tryFarming(town, entityBlockPos, workSpot)) {
+                blockWithWeeds.clear();
+            }
         } else if (getStatus().isFarmingWork()) {
             QT.JOB_LOGGER.error("Workspot is null but status is {}. This is a bug.", getStatus());
         }
@@ -327,7 +330,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case RELAXING, IDLE, NO_SUPPLIES, NO_SPACE -> null;
             default -> throw new IllegalStateException(String.format("Unexpected status %s", getStatus()));
         };
-        if (out == null) {
+        if (out == null && !ImmutableList.of(
+                RELAXING, IDLE, NO_SUPPLIES, NO_SPACE
+        ).contains(getStatus())) {
             QT.JOB_LOGGER.warn(marker, "Unexpectedly null target for status: {}", getStatus());
         }
         return out;
@@ -338,7 +343,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         return Positions.ToBlock(
                 InclusiveSpaces.getRandomEnclosedPosition(
                         selectedFarm.getSpace(),
-                        range -> sl.getRandom().nextInt(range)
+                        sl.getRandom()
                 ),
                 selectedFarm.yCoord
         );
@@ -486,9 +491,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         ImmutableList.copyOf(FarmerAction.values()).forEach(
                 v -> {
                     WorkSpot<FarmerAction, BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
-                    b.put(v, ws != null);
                     if (ws != null && v.equals(ws.action)) {
                         workSpots.put(v, ws);
+                        b.put(v, true);
                     }
                 }
         );

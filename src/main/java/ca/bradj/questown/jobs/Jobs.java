@@ -290,6 +290,9 @@ public class Jobs {
             return false;
         }
 
+        if (target == null) {
+            return false;
+        }
 
         boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
