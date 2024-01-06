@@ -76,7 +76,7 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
                 JOB_SITE,
                 MAX_STATE,
                 true,
-                0,
+                1,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,

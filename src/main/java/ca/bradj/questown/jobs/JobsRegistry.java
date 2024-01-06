@@ -245,11 +245,13 @@ public class JobsRegistry {
             GathererJob.ID.rootId(), new Jerb(
                     ImmutableList.of(
                             ExplorerWork.ID,
-                            GathererMappedAxeWork.ID,
+                            GathererUnmappedNoToolWork.ID,
                             GathererUnmappedAxeWork.ID,
-                            GathererJob.ID
+                            GathererUnmappedPickaxeWork.ID,
+                            GathererUnmappedShovelWork.ID,
+                            GathererMappedAxeWork.ID
                     ),
-                    ImmutableList.of(GathererJob.ID)
+                    ImmutableList.of(GathererUnmappedNoToolWork.ID)
             ),
             BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
                     ImmutableList.of(BlacksmithWoodenPickaxeJob.ID),

@@ -268,31 +268,30 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 //        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
 //            return;
 //        }
-        // FIXME: UNcomment
-//        JobsClean.tryTakeContainerItems(this, entityPos, new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
-//            @Override
-//            public boolean isCloseTo() {
-//                if (suppliesTarget == null) {
-//                    return false;
-//                }
-//                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
-//            }
-//
-//            @Override
-//            public String toShortString() {
-//                return suppliesTarget.toShortString();
-//            }
-//
-//            @Override
-//            public List<MCTownItem> getItems() {
-//                return suppliesTarget.getItems();
-//            }
-//
-//            @Override
-//            public void removeItem(int i, int quantity) {
-//                suppliesTarget.getContainer().removeItem(i, quantity);
-//            }
-//        }, (item) -> holdItems.contains(item));
+        JobsClean.tryTakeContainerItems(i -> journal.addItem(MCHeldItem.fromTown(i)), new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+            @Override
+            public boolean isCloseTo() {
+                if (suppliesTarget == null) {
+                    return false;
+                }
+                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+            }
+
+            @Override
+            public String toShortString() {
+                return suppliesTarget.toShortString();
+            }
+
+            @Override
+            public List<MCTownItem> getItems() {
+                return suppliesTarget.getItems();
+            }
+
+            @Override
+            public void removeItem(int i, int quantity) {
+                suppliesTarget.getContainer().removeItem(i, quantity);
+            }
+        }, (MCTownItem item) -> holdItems.contains(item.get().asItem()));
     }
 
     @Override

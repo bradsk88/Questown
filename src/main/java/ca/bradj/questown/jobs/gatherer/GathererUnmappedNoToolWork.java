@@ -35,9 +35,8 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
     public static final JobID ID = new JobID("gatherer", "notool");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_TOOL = 1;
-    public static final int BLOCK_STATE_NEED_ROAM = 2;
-    public static final int BLOCK_STATE_DONE = 3;
+    public static final int BLOCK_STATE_NEED_ROAM = 1;
+    public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -75,7 +74,7 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
                 JOB_SITE,
                 MAX_STATE,
                 true,
-                0,
+                1,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
