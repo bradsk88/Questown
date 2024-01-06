@@ -51,9 +51,6 @@ public class ExplorerWork extends DeclarativeJob {
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
     );
-    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
-    );
     public static final ItemStack RESULT = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
     private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
@@ -80,7 +77,9 @@ public class ExplorerWork extends DeclarativeJob {
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
-                TIME_REQUIRED_AT_STATES,
+                ImmutableMap.of(
+                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                ),
                 TIMER_SHARING,
                 SPECIAL_RULES,
                 ExplorerWork::getFromLootTables,
