@@ -123,6 +123,11 @@ public class JobStatuses {
             IProductionJob<STATUS> job,
             IProductionStatusFactory<STATUS> factory
     ) {
+                if (factory.waitingForTimedState().equals(currentStatus)) {
+                    if (town.isUnfinishedTimeWorkPresent()) {
+                        return null;
+                    }
+                }
                 STATUS status = usualRoutine(
                         currentStatus, prioritizeExtraction, inventory,
                         new TownStateProvider() {

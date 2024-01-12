@@ -28,6 +28,9 @@ public class ProductionTimeWarper {
         Stack<H> stack = new Stack<>();
         itemz.stream().filter(v -> !v.isEmpty() && !v.isLocked()).forEach(stack::add);
         for (ContainerTarget<C, I> container : containers) {
+            if (stack.isEmpty()) {
+                return ImmutableList.of();
+            }
             if (container.isFull()) {
                 continue;
             }
