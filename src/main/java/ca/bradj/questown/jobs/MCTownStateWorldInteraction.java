@@ -155,10 +155,13 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                     continue;
                 }
                 MCHeldItem newItem = stack.pop();
+                if (newItem.get().toItemStack().getCount() > 1) {
+                    stack.push(newItem.shrink());
+                }
                 if (newItem.get().get() instanceof KnowledgeMetaItem) {
                     ts = ts.withKnowledge(newItem);
                 }else {
-                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem);
+                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem.unit());
                 }
                 ts = ts.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
 
@@ -236,12 +239,21 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
             @Override
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
-                return Jobs.getStatesWithUnfinishedWork(
+                Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> ImmutableList.of(
                                 () -> ImmutableList.of(roomBlock)
                         ),
                         bp -> workStates
                 );
+                ImmutableList.Builder<Integer> b = ImmutableList.builder();
+                statesWithUnfinishedWork.forEach(
+                        state -> {
+                            if (toolsRequiredAtStates.get(state) == null) {
+                                b.add(state);
+                            }
+                        }
+                );
+                return b.build();
             }
 
             @Override
