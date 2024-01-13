@@ -45,7 +45,7 @@ public class FalseDoorItem extends Item {
         if (ctx.getLevel() instanceof ServerLevel sl) {
             sl.setBlockAndUpdate(ctx.getClickedPos().above(), BlocksInit.FALSE_DOOR_BLOCK.get().defaultBlockState());
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.registerDoor(ctx.getClickedPos().above());
+            parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
             return InteractionResult.CONSUME;
         }
         return InteractionResult.FAIL;

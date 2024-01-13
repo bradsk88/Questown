@@ -2,14 +2,13 @@ package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.SpecialRules;
-import ca.bradj.questown.jobs.Work;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -39,7 +38,8 @@ public class NewLeaverWork {
     protected static ImmutableList<String> standardRules() {
         return ImmutableList.of(
                 SpecialRules.PRIORITIZE_EXTRACTION,
-                SpecialRules.NULLIFY_EXCESS_RESULTS // Gatherers cannot "carry more results home" than their inventory can hold
+                SpecialRules.NULLIFY_EXCESS_RESULTS
+                // Gatherers cannot "carry more results home" than their inventory can hold
         );
     }
 
@@ -58,20 +58,31 @@ public class NewLeaverWork {
     ) {
         return productionWork(
                 id,
-                block -> block instanceof WelcomeMatBlock,
-                SpecialQuests.TOWN_GATE,
-                t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
-                initialRequest,
-                maxState,
-                ingredientsRequiredAtStates,
-                ingredientQtyRequiredAtStates,
-                toolsRequiredAtStates,
-                workRequiredAtStates,
-                timeRequiredAtStates,
-                0,
-                specialRules,
-                standardRules(),
-                resultGenerator
+                new WorkDescription(
+                        t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
+                        initialRequest
+                ),
+                new WorkLocation(
+                        block -> block instanceof WelcomeMatBlock,
+                        SpecialQuests.TOWN_GATE
+                ),
+                new WorkStates(
+                        maxState,
+                        ingredientsRequiredAtStates,
+                        ingredientQtyRequiredAtStates,
+                        toolsRequiredAtStates,
+                        workRequiredAtStates,
+                        timeRequiredAtStates
+                ),
+                new WorkWorldInteractions(
+                        0,
+                        resultGenerator
+                ),
+                new WorkSpecialRules(
+                        specialRules,
+                        standardRules()
+                ),
+                SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()
         );
     }
 }

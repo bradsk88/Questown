@@ -3,13 +3,12 @@ package ca.bradj.questown.gui;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.gui.textures.Textures;
+import mezz.jei.common.Internal;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
@@ -65,7 +64,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, new TranslatableComponent(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -82,13 +81,26 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
+        renderMood(poseStack);
         renderHunger(poseStack);
     }
 
+    private void renderMood(PoseStack stack) {
+        Component title = Component.translatable("menu.mood");
+        renderBar(stack, 0, title, menu.getMoodPercent());
+    }
+
     private void renderHunger(PoseStack stack) {
+        int fullnessPercent = menu.getFullnessPercent();
+        Component title = Component.translatable("menu.hunger");
+        renderBar(stack, 1, title, fullnessPercent);
+    }
+
+    private void renderBar(PoseStack stack, int index, Component title, int fullnessPercent) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bxY = (this.height - backgroundHeight) / 2;
-        font.draw(stack, new TranslatableComponent("menu.hunger"), bgX + 8, bxY + 16, 0x00000000);
+        bxY = bxY + (25 * index);
+        font.draw(stack, title, bgX + 8, bxY + 16, 0x00000000);
         RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
         int x = 8 + bgX;
         int y = 28 + bxY;
@@ -96,7 +108,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int height = 5;
         blit(stack, x - 1, y, 0, 0, 64, halfWidth, height, 256, 256);
         blit(stack, x + 78, y, 0, 100, 64, halfWidth, height, 256, 256);
-        float fP = menu.getFullnessPercent() / 100f;
+        float fP = fullnessPercent / 100f;
         int greenY = 69;
         int leftWidth = (int) (halfWidth * (2 * (Math.min(0.5, fP))));
         int rightWidth = (int) ((halfWidth) * (2 * (Math.min(0.5, (fP) - 0.5))));

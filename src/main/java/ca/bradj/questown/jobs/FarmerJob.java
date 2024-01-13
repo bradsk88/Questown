@@ -8,7 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.farmer.WorldInteraction;
+import ca.bradj.questown.jobs.farmer.FarmerWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Warper;
@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
@@ -52,7 +52,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.GathererJournal.Status.*;
-import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
+import static ca.bradj.questown.jobs.farmer.FarmerWorldInteraction.getTilledState;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
 
@@ -63,7 +63,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private final Container inventory;
     private Signals signal;
     private FarmerJournal<MCTownItem, MCHeldItem> journal;
-    private WorldInteraction world;
+    private FarmerWorldInteraction world;
     private MCRoom selectedFarm;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
@@ -112,7 +112,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         );
         this.journal.addItemListener(this);
 
-        this.world = new WorldInteraction(inventory, journal);
+        this.world = new FarmerWorldInteraction(inventory, journal);
     }
 
     @Override
@@ -123,6 +123,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public void removeStatusListener(StatusListener inventoryAndStatusMenu) {
         this.journal.removeStatusListener(inventoryAndStatusMenu);
+    }
+
+    @Override
+    public boolean shouldStandStill() {
+        return false;
     }
 
     @Override
@@ -191,7 +196,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
         boolean isInFarm = false;
 
-        Collection<MCRoom> farms = town.getFarms();
+        Collection<MCRoom> farms = town.getRoomHandle().getFarms();
         if (!farms.contains(selectedFarm)) {
             selectedFarm = null;
         }
@@ -346,10 +351,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @NotNull
     private BlockPos getRandomFarmSpot(@NotNull ServerLevel sl) {
         return Positions.ToBlock(
-                InclusiveSpaces.getRandomEnclosedPosition(
-                        selectedFarm.getSpace(),
-                        sl.getRandom()
-                ),
+                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), (bound) -> sl.getRandom().nextInt(bound)),
                 selectedFarm.yCoord
         );
     }
@@ -622,7 +624,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         // Sometimes the farmer gets stuck leaving or entering the farm.  As a stop-gap, wiggle sometimes.
-        Random rand = town.getServerLevel().getRandom();
+        RandomSource rand = town.getServerLevel().getRandom();
         if (rand.nextInt(5) == 0) {
             return entityBlockPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
         }

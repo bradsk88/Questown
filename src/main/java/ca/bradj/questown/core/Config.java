@@ -1,6 +1,5 @@
 package ca.bradj.questown.core;
 
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public class Config {
@@ -51,6 +50,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> META_ROOM_DIAMETER;
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
@@ -58,6 +58,13 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
+
 
     static {
         // Scanning Config
@@ -143,10 +150,41 @@ public class Config {
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
-        ).defineInRange("BaseFullness", 3000, 1, 24000);
+        ).defineInRange("BaseFullness", 5000, 1, 24000);
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
         ).define("HungerEnabled", false);
+        MAX_TICKS_WITHOUT_DINING_TABLE = BUILDER.comment(
+                "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
+                        "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
+                        "for eating uncomfortably."
+        ).defineInRange("MaxTicksWithoutDiningTable", 2000L, 1L, 24000L);
+
+        // Villager Moods Config
+        BUILDER.push("Moods");
+        MOOD_TICK_INTERVAL = BUILDER.comment(
+                "How often (in ticks) the game will assess a villagers mood effects to determine their overall \"mood\""
+        ).defineInRange("MoodTickInterval", 10L, 1L, 24000L);
+        NEUTRAL_MOOD = BUILDER.comment(
+                "The default mood level for villagers who have no active mood effects"
+        ).defineInRange("NeutralMood", 75, 0, 100);
+
+        // Villager Mood Effect Durations
+        BUILDER.push("EffectDuration");
+        MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY = BUILDER.comment(
+                "When villagers eat uncomfortably"
+        ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
+        MOOD_EFFECT_DURATION_ATE_COMFORTABLY = BUILDER.comment(
+                "When villagers eat comfortably"
+        ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
+
+        // End Mood Effect Durations
+        BUILDER.pop();
+
+        // End Moods
+        BUILDER.pop();
+
+        // End Villagers
         BUILDER.pop();
 
         // Advanced Config
@@ -166,6 +204,12 @@ public class Config {
         FLAG_SUB_BLOCK_DETECTION_TICKS = BUILDER.comment(
                 "It may take a few ticks before the entity for the sub block shows up in the world. If the number exceeds this config value, the server will crash."
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);
+        META_ROOM_DIAMETER = BUILDER.comment(
+                "The radius of \"Meta-Rooms\" that exist around points of interest in the town. E.g." +
+                "There is a meta room around the town flag itself, and one around each welcome mat"
+        ).defineInRange("MetaRoomDiameter", 2, 1, 100);
+
+        // Time Warp
         BUILDER.push("TimeWarp").comment(
                 "Villages do a 'time warp' when the player returns from away - to simulate villager activity. This is an experimental feature."
         );
@@ -175,6 +219,9 @@ public class Config {
         TIME_WARP_MAX_TICKS = BUILDER.comment(
                 "Since the player can be gone for a very long time, we enforce a maximum warp to prevent the warp taking too long to compute."
         ).defineInRange("MaxTicks", 200000, 1, Integer.MAX_VALUE);
+        BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
+                "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
+        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
         BUILDER.pop(); // Yep, really thrice. Getting out of nested config
         BUILDER.pop();
         BUILDER.pop();

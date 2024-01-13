@@ -33,7 +33,7 @@ public class FindOpenBed extends Behavior<VisitorMobEntity> {
             Questown.LOGGER.error("No town exists. Cannot start.");
             return;
         }
-        Collection<BlockPos> bss = entity.town.findMatchedRecipeBlocks(
+        Collection<BlockPos> bss = entity.town.getRoomHandle().findMatchedRecipeBlocks(
                 i -> i instanceof BedBlock
         );
         for (BlockPos bp : bss) {

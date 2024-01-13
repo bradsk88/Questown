@@ -36,7 +36,7 @@ public class TownDoorItem extends Item {
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));
         if (interactionResult.equals(InteractionResult.CONSUME) && ctx.getLevel() instanceof ServerLevel sl) {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.registerDoor(ctx.getClickedPos().above());
+            parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
         }
         if (!Config.INFINITE_TOWN_DOORS.get()) {
             ctx.getItemInHand().shrink(1);

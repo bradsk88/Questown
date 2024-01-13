@@ -6,9 +6,11 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.gui.*;
+import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.gui.VillagerStats;
+import ca.bradj.questown.gui.VillagerStatsMenu;
+import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -197,17 +199,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         );
         return ImmutableList.of(
                 Pair.of(
-                        2,
+                        1,
                         walkTarget
                 ),
+                Pair.of(2, new Admire(100)),
+                Pair.of(3, new Admire(500)),
 //                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
-                Pair.of(3, new SleepInBed()),
+                Pair.of(4, new SleepInBed()),
                 Pair.of(
                         5,
                         new RunOne<>(
                                 ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
                                 ImmutableList.of(
-                                        Pair.of(new TownWalk(runSpeed), 1),
+                                        Pair.of(new TownWalk(walkSpeed), 1),
                                         Pair.of(new SetClosestHomeAsWalkTarget(0.5f), 1),
                                         Pair.of(new InsideBrownianWalk(0.5f), 4),
                                         Pair.of(new DoNothing(20, 40), 2)
@@ -447,7 +451,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         getInventory().getItem(i)
                 ));
             }
-            town.removeEntity(this);
+            if (town != null) {
+                town.removeEntity(this);
+            }
         }
     }
 
@@ -1012,20 +1018,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         town.getVillagerHandle().removeStatsListener(villagerStatsMenu);
     }
 
-    private static final Map<ResourceLocation, Consumer<VisitorMobEntity>> effects = ImmutableMap.of(
-            EffectMetaItem.Effects.FILL_HUNGER, VisitorMobEntity::fillHunger
-    );
-
-    private void fillHunger() {
-        town.getVillagerHandle().fillHunger(getUUID());
-    }
-
-    public void applyEffect(ResourceLocation effect) {
-        effects.get(effect).accept(this);
+    public boolean shouldStandStill() {
+        return job.shouldStandStill();
     }
 
     public interface ChangeListener {
         void Changed();
 
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 }

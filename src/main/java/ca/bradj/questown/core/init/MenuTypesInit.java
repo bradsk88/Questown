@@ -14,10 +14,13 @@ public class MenuTypesInit {
     // NOTE: You can't have more than one menu per container type.
 
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(
-            ForgeRegistries.CONTAINERS, Questown.MODID
+            ForgeRegistries.MENU_TYPES, Questown.MODID
     );
     public static RegistryObject<MenuType<TownQuestsContainer>> TOWN_QUESTS = MENUS.register(
             "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::ForClient)
+    );
+    public static RegistryObject<MenuType<VillagerQuestsContainer>> VILLAGER_QUESTS = MENUS.register(
+            "villager_quests", () -> IForgeMenuType.create(VillagerQuestsContainer::ForClient)
     );
     public static RegistryObject<MenuType<TownRemoveQuestsContainer>> TOWN_QUESTS_REMOVE = MENUS.register(
             "town_quests_remove", () -> IForgeMenuType.create(TownRemoveQuestsContainer::read)

@@ -2,19 +2,24 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
+import ca.bradj.questown.jobs.ExpirationRules;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
@@ -57,8 +62,10 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 ImmutableMap.of(),
-                WorksBehaviour.standardProductionRules(),
-                WorksBehaviour.noOutput()
+                WorksBehaviour.standardProductionRules().specialGlobalRules(),
+                ExpirationRules.never(),
+                WorksBehaviour.noOutput(),
+                SoundEvents.BOOK_PAGE_TURN.getLocation()
         );
     }
 
@@ -75,7 +82,7 @@ public class WorkSeekerJob extends DeclarativeJob {
     }
 
     @Override
-    protected @NotNull WorldInteraction initWorldInteraction(
+    protected @NotNull RealtimeWorldInteraction initWorldInteraction(
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -83,10 +90,11 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            ImmutableList<String> specialRules,
-            int interval
-    ) {
-        return new WorldInteraction(
+            Function<MCExtra, Claim> claimSpots,
+            int interval,
+            @Nullable ResourceLocation sound
+            ) {
+        return new RealtimeWorldInteraction(
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,
@@ -95,8 +103,9 @@ public class WorkSeekerJob extends DeclarativeJob {
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
                 resultGenerator,
-                specialRules,
-                interval
+                claimSpots,
+                interval,
+                sound
         ) {
 
             @Override
@@ -104,7 +113,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                     MCExtra extra,
                     BlockPos position
             ) {
-                extra.town().changeJobForVisitorFromBoard(ownerUUID);
+                extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID);
                 return true;
             }
         };

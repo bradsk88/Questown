@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableMap;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 class AbstractWorkWITest {
 
@@ -63,6 +65,27 @@ class AbstractWorkWITest {
                     state.clear();
                     return null;
                 }
+
+                @Override
+                public boolean claimSpot(
+                        Position bp,
+                        Claim claim
+                ) {
+                    return true;
+                }
+
+                @Override
+                public void clearClaim(Position position) {
+
+                }
+
+                @Override
+                public boolean canClaim(
+                        Position position,
+                        Supplier<Claim> makeClaim
+                ) {
+                    return true;
+                }
             };
         }
     }
@@ -76,19 +99,19 @@ class AbstractWorkWITest {
                 ImmutableMap.of(),
                 ImmutableMap.of()
         );
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(1, 0, 2),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(1, 0, 1),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(2, 0, 0),
                 wi.state.get(new Position(0, 0))
@@ -105,19 +128,19 @@ class AbstractWorkWITest {
                         2, (GathererJournalTest.TestItem t) -> true
                 )
         );
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(1, 0, 0),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(2, 0, 0),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 new AbstractWorkStatusStore.State(3, 0, 0),
                 wi.state.get(new Position(0, 0))

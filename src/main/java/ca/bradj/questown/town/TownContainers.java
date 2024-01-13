@@ -56,6 +56,7 @@ public class TownContainers {
         @NotNull
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {
         return townFlagBlockEntity
+                .getRoomHandle()
                 .getMatches()
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())

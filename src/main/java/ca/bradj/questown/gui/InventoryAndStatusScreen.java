@@ -191,6 +191,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             return;
         }
 
+        if (this.tabs.renderTooltip(
+                x, y, mouseX, mouseY,
+                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+        )) {
+            return;
+        }
+
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 // TODO[ASAP]: Render root AND current job

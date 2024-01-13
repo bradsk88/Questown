@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
+@Disabled("Just keeping these around as reference")
 public class GathererJournalTest {
 
     // TODO[ASAP]: Move to outer class

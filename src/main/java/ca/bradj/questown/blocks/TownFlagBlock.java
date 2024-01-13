@@ -11,6 +11,8 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -165,7 +167,12 @@ public class TownFlagBlock extends BaseEntityBlock {
             QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
             QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
 //            QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getJobs(), '\n'));
-            QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getMatches(), '\n'));
+            QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(), '\n'));
+
+            CompoundTag tTag = new CompoundTag();
+            entity.writeTownData(tTag);
+            String prettyJsonString = new GsonBuilder().setPrettyPrinting().create().toJson(JsonParser.parseString(tTag.toString()));
+            QT.FLAG_LOGGER.debug("NBT: {}", prettyJsonString);
             return InteractionResult.sidedSuccess(false);
         }
 
@@ -211,6 +218,10 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
+        }
+
+        if (itemInHand.getItem().equals(Items.GLASS_PANE)) {
+            converted = ItemsInit.PLATE_BLOCK.get().getDefaultInstance();
         }
 
         if (converted != null) {

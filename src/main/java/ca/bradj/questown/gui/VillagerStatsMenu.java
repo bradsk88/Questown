@@ -1,11 +1,8 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.core.BlockPos;
@@ -17,12 +14,11 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Stack;
-import java.util.UUID;
 import java.util.function.Consumer;
 
-public class VillagerStatsMenu extends AbstractContainerMenu implements StatusListener, Consumer<VillagerStatsData> {
-    private final DataSlot statusSlot;
+public class VillagerStatsMenu extends AbstractContainerMenu implements Consumer<VillagerStatsData> {
     private final DataSlot fullnessSlot;
+    private final DataSlot moodSlot;
     private final Stack<Runnable> closers = new Stack<>();
     private final Runnable openInvFn;
     private final Runnable openQuestsFn;
@@ -40,37 +36,32 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
     public <S extends IStatus<S>> VillagerStatsMenu(
             int windowId,
             VisitorMobEntity entity,
-            BlockPos flagPos
+            BlockPos flagPos,
+            VillagerStatsData initialData
     ) {
         super(MenuTypesInit.VILLAGER_STATS.get(), windowId);
 
-        this.addDataSlot(this.statusSlot = DataSlot.standalone());
-        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(entity.getStatusForServer()));
-
-        this.openInvFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
-        this.openQuestsFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
+        this.openInvFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
+        this.openQuestsFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
+        this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
 
-        entity.addStatusListener(this);
+        this.addDataSlot(this.moodSlot = DataSlot.standalone());
+        this.moodSlot.set((int) (initialData.moodPercent() * 100));
 
         entity.addStatsListener(this);
-        this.closers.add(() -> entity.removeStatusListener(this));
         this.closers.add(() -> entity.removeStatsListener(this));
     }
 
-    private Runnable makeOpenFn(
-            BlockPos fp,
-            UUID gathererId,
-            String type
-    ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
-                fp.getX(), fp.getY(), fp.getZ(),
-                gathererId, type
-        ));
-        return fn;
+    public static VillagerStatsData read(FriendlyByteBuf buf) {
+        return new VillagerStatsData(buf.readFloat(), buf.readFloat());
     }
 
+    public static void write(VillagerStatsData data, FriendlyByteBuf buf) {
+        buf.writeFloat(data.fullnessPercent());
+        buf.writeFloat(data.moodPercent());
+    }
 
     @Override
     public ItemStack quickMoveStack(Player player, int i) {
@@ -82,15 +73,6 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
         return true;
     }
 
-    public IStatus<?> getStatus() {
-        return SessionUniqueOrdinals.getStatus(this.statusSlot.get());
-    }
-
-    @Override
-    public void statusChanged(IStatus<?> newStatus) {
-//        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(newStatus));
-    }
-
     public void onClose() {
         closers.forEach(Runnable::run);
     }
@@ -99,10 +81,16 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
     public void accept(VillagerStatsData villagerStatsData) {
         int fullness = (int) (100 * villagerStatsData.fullnessPercent());
         this.fullnessSlot.set(fullness);
+        int mood = (int) (100 * villagerStatsData.moodPercent());
+        this.moodSlot.set(mood);
     }
 
     public int getFullnessPercent() {
         return fullnessSlot.get();
+    }
+
+    public int getMoodPercent() {
+        return moodSlot.get();
     }
 
     public void openInv() {

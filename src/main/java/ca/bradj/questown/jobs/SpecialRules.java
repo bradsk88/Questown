@@ -23,4 +23,24 @@ public class SpecialRules {
     // have a lower state. This is typically the most efficient option for production
     // jobs that have an element of "time".
     public static final String PRIORITIZE_EXTRACTION = "prioritize_extraction";
+
+    // If this rule is enabled, only one villager will be allowed to use the job block
+    // after the first ingredient has been inserted and until the product is extracted.
+    // E.g. For the "dining job" a plate can only be filled by one villager, who will
+    // "work" on that spot until they have finished their work, and then they will
+    // "release" to plate for others to use. Other villagers will try to claim other
+    // plates - ignoring claimed ones.
+    public static final String CLAIM_SPOT = "claim_spot";
+
+    // If this rule is enabled, the villager will scan the blocks BELOW the job block
+    // first, if there are any valid interaction spots on that level, they will navigate
+    // toward that spot. If this rule is not enabled, or there are no interaction spots
+    // on the layer below the job block, they will navigate to a spot on the same level
+    // as the job block.
+    public static final String PREFER_INTERACTION_BELOW = "claim_spot";
+
+    // If this rule is enabled, the villager will continue working into the evening until
+    // it is time for them to go to bed. If this rule is disabled, villagers will become
+    // idle in the evening.
+    public static final String WORK_IN_EVENING = "work_in_evening";
 }

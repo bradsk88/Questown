@@ -54,6 +54,15 @@ public class QTNBT {
         t.putString(keyify(key), location.toString());
     }
 
+
+    public static void putLong(
+            CompoundTag t,
+            String key,
+            long val
+    ) {
+        t.putLong(keyify(key), val);
+    }
+
     public static ResourceLocation getResourceLocation(
             CompoundTag tag,
             String key
@@ -73,5 +82,12 @@ public class QTNBT {
             String knowledge
     ) {
         return tag.getCompound(keyify(knowledge));
+    }
+
+    public static long getLong(
+            CompoundTag t,
+            String key
+    ) {
+        return t.getLong(keyify(key));
     }
 }

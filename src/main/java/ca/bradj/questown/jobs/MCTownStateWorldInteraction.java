@@ -8,8 +8,8 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -18,12 +18,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,7 +33,8 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     public record Inputs(
             MCTownState town,
-            ServerLevel level
+            ServerLevel level,
+            UUID uuid
     ) {
     }
 
@@ -44,21 +45,37 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             JobID jobId,
             int villagerIndex,
             int interval,
-            int maxState,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            WorkStates states,
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots
     ) {
         super(
-                jobId, villagerIndex, interval, maxState, Jobs.unMC(toolsRequiredAtStates),
-                workRequiredAtStates, Jobs.unMCHeld(ingredientsRequiredAtStates),
-                ingredientQuantityRequiredAtStates, timeRequiredAtStates
+                jobId, villagerIndex, interval, states.maxState(), Jobs.unMC(states.toolsRequired()),
+                states.workRequired(), Jobs.unMCHeld(states.ingredientsRequired()),
+                states.ingredientQtyRequired(), states.timeRequired(), claimSpots
         );
         this.resultGenerator = resultGenerator;
-        this.ingredientQuantityRequiredAtStates = ingredientQuantityRequiredAtStates;
+        this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
+    }
+
+    @Override
+    protected int getWorkSpeedOf10(Inputs inputs) {
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
+                Util.getTick(inputs.level())
+        );
+        return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
+    }
+
+    @Override
+    protected int getAffectedTime(Inputs inputs, Integer nextStepTime) {
+        return (int) (getTimeFactor(inputs) * nextStepTime);
+    }
+
+    private float getTimeFactor(Inputs inputs) {
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
+                Util.getTick(inputs.level())
+        );
+        return WorkEffects.calculateTimeFactor(effects);
     }
 
     @Override
@@ -112,7 +129,9 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(Inputs mcTownState) {
+    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(
+            Inputs mcTownState
+    ) {
         return mcTownState.town();
     }
 
@@ -131,8 +150,11 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     @Override
     protected MCTownState withEffectApplied(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
-        ResourceLocation effect = EffectMetaItem.getEffect(newItem.get().toItemStack());
-        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(effect));
+        ItemStack s = newItem.get().toItemStack();
+        ResourceLocation effect = EffectMetaItem.getEffect(s);
+        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(
+                new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level)))
+        ));
     }
 
     @Override
@@ -228,7 +250,8 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                         () -> ImmutableList.of(
                                 () -> ImmutableList.of(roomBlock)
                         ),
-                        bp -> workStates
+                        bp -> workStates,
+                        (bp) -> true
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(

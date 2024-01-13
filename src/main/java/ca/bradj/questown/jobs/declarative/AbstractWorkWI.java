@@ -42,6 +42,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (nextStepTime == null) {
             nextStepTime = 0;
         }
+        nextStepTime = getAugmentedTime(extra, nextStepTime);
         TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = updatedTown != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
@@ -50,6 +51,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
         return updatedTown;
     }
+
+    protected abstract Integer getAugmentedTime(EXTRA extra, Integer nextStepTime);
 
     protected abstract TOWN degradeTool(
             EXTRA extra,
@@ -69,7 +72,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (oldState == null) {
             oldState = initForState(curState);
         }
-        AbstractWorkStatusStore.State bs = oldState.decrWork();
+        AbstractWorkStatusStore.State bs = oldState.decrWork(getWorkSpeedOf10(extra));
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return null;
         }
@@ -83,6 +86,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
     }
 
+    protected abstract int getWorkSpeedOf10(EXTRA extra);
+
     private AbstractWorkStatusStore.State initForState(Integer curState) {
         Integer work = workRequiredAtStates.get(curState);
         if (work == null) {
@@ -91,5 +96,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         return AbstractWorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
-    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
+    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(
+            EXTRA extra
+    );
 }
+

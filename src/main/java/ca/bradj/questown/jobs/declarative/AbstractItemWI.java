@@ -4,35 +4,44 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN>
-        implements ItemWI<POS, EXTRA, TOWN>, AbstractWorkStatusStore.InsertionRules<ITEM> {
+public abstract class AbstractItemWI<
+        POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN
+        > implements ItemWI<POS, EXTRA, TOWN>, AbstractWorkStatusStore.InsertionRules<ITEM> {
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
     private final int villagerIndex;
+    private final Function<EXTRA, Claim> claimSpots;
+    private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
 
     public AbstractItemWI(
             int villagerIndex,
             ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            Function<EXTRA, Claim> claimSpots
     ) {
         this.villagerIndex = villagerIndex;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
+        this.claimSpots = claimSpots;
     }
 
     @Override
@@ -90,7 +99,18 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>,
             );
             if (town != null) {
                 QT.JOB_LOGGER.debug("Villager removed {} from their inventory {}", name, invBefore);
-                return town;
+
+                itemInsertedListener.forEach(v -> v.accept(extra, bp, item));
+
+                Claim claim = claimSpots.apply(extra);
+                if (claim != null) {
+                    if (getWorkStatuses(extra).claimSpot(bp, claim)) {
+                        return town;
+                    }
+                    return null;
+                } else {
+                    return town;
+                }
             }
         }
         return null;
@@ -131,11 +151,7 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>,
         }
 
         int count = curCount + 1;
-        boolean shrink = false;
-        if (canDo && count <= qtyRequired) {
-            shrink = true;
-        }
-
+        boolean shrink = canDo && count <= qtyRequired;
 
         TOWN updatedTown = maybeUpdateBlockState(oldState, bp, workToNextStep, timeToNextStep, canDo, count, qtyRequired, ws);
 
@@ -166,7 +182,8 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>,
         return null;
     }
 
-    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
+
+    protected abstract ImmutableWorkStateContainer<POS,TOWN> getWorkStatuses(EXTRA extra);
 
     protected abstract boolean canInsertItem(
             EXTRA extra,
@@ -182,5 +199,9 @@ public abstract class AbstractItemWI<POS, EXTRA, ITEM extends HeldItem<ITEM, ?>,
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQtyRequiredAtStates;
+    }
+
+    public void addItemInsertionListener(TriConsumer<EXTRA, POS, ITEM> listener) {
+        this.itemInsertedListener.add(listener);
     }
 }

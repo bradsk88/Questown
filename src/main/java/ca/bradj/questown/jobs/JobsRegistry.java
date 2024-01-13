@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.*;
@@ -28,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -48,10 +50,17 @@ public class JobsRegistry {
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
+        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(b));
+        // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
             return true;
         }
-        return Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(b));
+        // TODO: This might not be needed anymore
+        if (Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
+            return true;
+        }
+
+        return isWorkMatch;
     }
 
     public static Set<JobID> getAllJobs() {
@@ -61,7 +70,7 @@ public class JobsRegistry {
     }
 
     public static ResourceLocation getRoomForJobRootId(
-            Random rand,
+            RandomSource rand,
             String rootId
     ) {
         List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
@@ -111,9 +120,9 @@ public class JobsRegistry {
 
     public static AbstractWorkStatusStore.State getDefaultJobBlockState(Block b) {
         if (b instanceof JobBoardBlock) {
-            return new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
+            return AbstractWorkStatusStore.State.freshAtState(WorkSeekerJob.MAX_STATE);
         }
-        return new AbstractWorkStatusStore.State(0, 0, 0);
+        return AbstractWorkStatusStore.State.fresh();
     }
 
     public static Warper<ServerLevel, MCTownState> getWarper(
@@ -191,6 +200,10 @@ public class JobsRegistry {
         return ImmutableSet.copyOf(list);
     }
 
+    public static boolean isDining(JobID jobID) {
+        return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID);
+    }
+
 
     private record Jerb(
             ImmutableList<JobID> preferredWork,
@@ -231,7 +244,7 @@ public class JobsRegistry {
                             GathererUnmappedShovelWork.ID,
                             GathererUnmappedAxeWork.ID,
                             GathererMappedAxeWork.ID
-                            ),
+                    ),
                     ImmutableList.of(GathererUnmappedNoToolWork.ID)
             ),
             BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
@@ -274,8 +287,12 @@ public class JobsRegistry {
         if (WorkSeekerJob.isSeekingWork(jobName)) {
             j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
             journal = newWorkSeekerJournal(jobName, journal, heldItems);
-        }else if (DinerWork.isDining(jobName)) {
+        } else if (DinerWork.isDining(jobName)) {
             Work dw = DinerWork.asWork(jobName.rootId());
+            j = dw.jobFunc().apply(town, ownerUUID);
+            journal = newJournal(jobName, journal, heldItems, dw);
+        } else if (DinerNoTableWork.isDining(jobName)) {
+            Work dw = DinerNoTableWork.asWork(jobName.rootId());
             j = dw.jobFunc().apply(town, ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {

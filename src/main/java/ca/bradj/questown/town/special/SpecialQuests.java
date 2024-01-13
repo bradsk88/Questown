@@ -16,6 +16,7 @@ public class SpecialQuests {
     public static final ResourceLocation CAMPFIRE = new ResourceLocation(Questown.MODID, "special_quest.campfire");
     public static final ResourceLocation BROKEN = new ResourceLocation(Questown.MODID, "special_quest.broken");
     public static final ResourceLocation TOWN_GATE = new ResourceLocation(Questown.MODID, "special_quest.town_gate");
+    public static final ResourceLocation TOWN_FLAG = new ResourceLocation(Questown.MODID, "special_quest.town_flag");
     public static final ResourceLocation FARM = new ResourceLocation(Questown.MODID, "special_quest.farm");
 
     public static final Map<ResourceLocation, RoomRecipe> SPECIAL_QUESTS = ImmutableMap.of(
@@ -25,6 +26,8 @@ public class SpecialQuests {
             new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE),
             TOWN_GATE,
             new RoomRecipe(TOWN_GATE, NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())), Integer.MAX_VALUE),
+            TOWN_FLAG,
+            new RoomRecipe(TOWN_FLAG, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get())), Integer.MAX_VALUE),
             FARM,
             new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FENCE_GATE.get())), Integer.MAX_VALUE)
     );

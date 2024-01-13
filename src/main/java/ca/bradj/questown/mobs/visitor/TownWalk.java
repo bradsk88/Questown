@@ -49,6 +49,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (level.getGameTime() - this.nextUpdate < REPEAT_BUFFER) {
             return false;
         }
+        if (e.shouldStandStill()) {
+            return false;
+        }
         this.target = e.newWanderTarget();
         if (target == null) {
             return false;

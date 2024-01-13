@@ -75,7 +75,7 @@ public class SessionUniqueOrdinals {
     public static int getOrdinal(IStatus<?> newStatus) {
         int i = claimed.indexOf(newStatus);
         if (i < 0) {
-            QT.GUI_LOGGER.error("Trying to get ordinal for unregistered status");
+            QT.GUI_LOGGER.error("Trying to get ordinal for unregistered status" + newStatus);
         }
         return i;
     }

@@ -8,16 +8,14 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.SpecialRules;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -117,22 +115,30 @@ public class ExplorerWork {
     public static Work asWork() {
         return WorksBehaviour.productionWork(
                 ID,
-                block -> block instanceof WelcomeMatBlock,
-                JOB_SITE,
-                WorksBehaviour.standardProductionResult(RESULT::copy),
-                RESULT,
-                MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
-                ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                WorksBehaviour.standardDescription(() -> RESULT),
+                new WorkLocation(
+                        block -> block instanceof WelcomeMatBlock,
+                        JOB_SITE
                 ),
-                0,
-                SPECIAL_RULES,
-                NewLeaverWork.standardRules(),
-                ExplorerWork::getFromLootTables
+                new WorkStates(
+                        MAX_STATE,
+                        INGREDIENTS_REQUIRED_AT_STATES,
+                        INGREDIENT_QTY_REQUIRED_AT_STATES,
+                        TOOLS_REQUIRED_AT_STATES,
+                        WORK_REQUIRED_AT_STATES,
+                        ImmutableMap.of(
+                                BLOCK_STATE_NEED_ROAM,
+                                Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                        )
+                ),
+                new WorkWorldInteractions(
+                        0, ExplorerWork::getFromLootTables
+                ),
+                new WorkSpecialRules(
+                        SPECIAL_RULES,
+                        NewLeaverWork.standardRules()
+                ),
+                SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()
         );
     }
 }

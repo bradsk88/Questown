@@ -718,4 +718,35 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.WAITING, s);
     }
 
+    @Test
+    void StatusShouldBe_CollectingSupplies_IfWorkIsNeededOnClaimedSpot_AndIngrRequiredOnUnclaimed() {
+        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+
+        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+                // Villager has no items (otherwise would choose status: dropping loot)
+                BLOCK_READY_FOR_INGREDIENTS, false,
+                BLOCK_READY_FOR_WORK, false
+        );
+        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
+                BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
+        );
+
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true,
+                new TestInventory(false, false, invItemsForWork),
+                new TestEntityLoc(null), // <- Entity is NOT in job site
+                new TestJobTownWithTime(
+                        hasSupplies, true,
+                        ImmutableList.of(), // There are no finished products available to pick up
+                        workToBeDone,
+                        true // A time-based job is ticking away
+                ),
+                new NoOpProductionJob(), // Causes us to skip the "use supplies" work
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.WAITING, s);
+    }
+
 }

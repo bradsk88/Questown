@@ -6,6 +6,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
+import ca.bradj.questown.town.TownRoomsHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -38,7 +39,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private int scanLevel = 0;
     private int scanBuffer = 0;
-    private TownFlagBlockEntity changeListener;
+    private TownRoomsHandle changeListener;
     private final ArrayList<Integer> times = new ArrayList<>();
 
     Set<TownPosition> getRegisteredDoors() {
@@ -53,7 +54,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
 
-    public TownRoomsMap(TownFlagBlockEntity entity) {
+    public TownRoomsMap(TownRoomsHandle entity) {
         changeListener = entity;
 //        getOrCreateRooms(0);
     }
@@ -262,17 +263,6 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
         this.registeredDoors.addAll(registeredDoors);
         this.registeredFenceGates.addAll(registeredFenceGates);
-    }
-
-    /**
-     * @Deprecated Used for a migration only.
-     */
-    public ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> getRecipes(int i) {
-        return activeRecipes.get(i);
-    }
-
-    public void addChangeListener(TownFlagBlockEntity townFlagBlockEntity) {
-        this.changeListener = townFlagBlockEntity; // TODO: Interface
     }
 
     public Collection<MCRoom> getAllRooms() {

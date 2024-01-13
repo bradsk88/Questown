@@ -5,6 +5,7 @@ import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -22,15 +23,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -176,7 +183,7 @@ public class Jobs {
             BlockPos entityBlockPos
     ) {
         // TODO: Support multiple tiers of job site (i.e. more than one resource location)
-        return town.getRoomsMatching(id).stream()
+        return town.getRoomHandle().getRoomsMatching(id).stream()
                 .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
                 .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
                 .filter(v -> InclusiveSpaces.contains(
@@ -219,12 +226,16 @@ public class Jobs {
 
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
-            Function<BlockPos, AbstractWorkStatusStore.State> ticksSource
+            Function<BlockPos, AbstractWorkStatusStore.State> ticksSource,
+            Predicate<BlockPos> canClaim
     ) {
         Collection<? extends Supplier<Collection<BlockPos>>> rooms = town.get();
         HashSet<Integer> b = new HashSet<>();
         rooms.forEach(v -> {
             for (BlockPos e : v.get()) {
+                if (!canClaim.test(e)) {
+                    continue;
+                }
                 @Nullable AbstractWorkStatusStore.State apply = ticksSource.apply(e);
                 if (apply != null && apply.workLeft() > 0) {
                     b.add(apply.processingState());
