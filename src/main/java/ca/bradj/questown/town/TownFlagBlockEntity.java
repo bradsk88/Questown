@@ -107,7 +107,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final UUID uuid = UUID.randomUUID();
     private final TownFlagState state = new TownFlagState(this);
     public long advancedTimeOnTick = -1;
-    final List<LivingEntity> entities = new ArrayList<>();
     private boolean isInitializedQuests = false;
     private boolean everScanned = false;
     private boolean changed = false;
@@ -133,6 +132,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final TownKnowledgeStore knowledgeHandle = new TownKnowledgeStore();
     private final TownQuestsHandle questsHandle = new TownQuestsHandle();
     private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
+
+    private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -226,6 +227,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.pois.tick(sl, blockPos);
 
+        e.villagerHandle.tick();
+
         e.everScanned = true;
 
         profileTick(e, start);
@@ -254,9 +257,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             this.asapRewards.push(r);
         }
         this.setChanged();
-        for (LivingEntity e : entities) {
-            e.stopSleeping();
-        }
+        villagerHandle.forEach(LivingEntity::stopSleeping);
         getTileData().putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
@@ -497,7 +498,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 getKnownBiomes(),
                 prefix
         ));
-        entities.stream()
+        villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
                 .filter(e -> {
@@ -769,7 +770,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             UUID uuid,
             Collection<WorkRequest> requestedResults
     ) {
-        Optional<LivingEntity> f = entities.stream().filter(v -> uuid.equals(v.getUUID())).findFirst();
+        Optional<LivingEntity> f = villagerHandle.stream().filter(v -> uuid.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.BLOCK_LOGGER.error("No entities found for UUID: {}", uuid);
             return null;
@@ -816,7 +817,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             UUID visitorUUID,
             JobID jobID
     ) {
-        Optional<VisitorMobEntity> f = entities.stream()
+        Optional<VisitorMobEntity> f = villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
                 .filter(v -> v.getUUID().equals(visitorUUID))
@@ -854,7 +855,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public Collection<UUID> getUnemployedVillagers() {
-        return entities.stream()
+        return villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
                 .filter(VisitorMobEntity::canAcceptJob)
@@ -904,12 +905,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public ImmutableSet<UUID> getVillagers() {
-        return ImmutableSet.copyOf(this.entities.stream().map(Entity::getUUID).collect(Collectors.toSet()));
+        return ImmutableSet.copyOf(villagerHandle.stream().map(Entity::getUUID).collect(Collectors.toSet()));
     }
 
     @Override
     public void removeEntity(VisitorMobEntity visitorMobEntity) {
-        entities.remove(visitorMobEntity);
+        villagerHandle.remove(visitorMobEntity);
         setChanged();
     }
 
@@ -926,7 +927,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     @Override
     public void registerEntity(VisitorMobEntity vEntity) {
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", uuid, vEntity);
-        this.entities.add(vEntity);
+        villagerHandle.add(vEntity);
         vEntity.addChangeListener(() -> {
             QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
             this.setChanged();
@@ -1059,7 +1060,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         Set<String> allJobs = JobsRegistry.getAllJobs().stream()
                 .map(JobID::rootId)
                 .collect(Collectors.toSet());
-        Set<String> allFilledJobs = entities.stream()
+        Set<String> allFilledJobs = villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
                 .map(VisitorMobEntity::getJobId)
@@ -1081,10 +1082,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .flatMap(v -> v.getContainedBlocks().values().stream())
                 .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem())))
                 .count();
-        if (beds == 0 && entities.isEmpty()) {
+        if (beds == 0 && villagerHandle.isEmpty()) {
             return false;
         }
-        return (beds / 2) >= entities.size();
+        return (beds / 2) >= villagerHandle.size();
     }
 
     @Override
@@ -1188,7 +1189,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     @Override
     public void validateEntity(VisitorMobEntity visitorMobEntity) {
-        if (entities.contains(visitorMobEntity)) {
+        if (villagerHandle.exists(visitorMobEntity)) {
             return;
         }
         QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
@@ -1196,7 +1197,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void recallVillagers() {
-        entities.forEach(v -> {
+        villagerHandle.forEach(v -> {
             BlockPos visitorJoinPos = getTownFlagBasePos();
             QT.FLAG_LOGGER.debug("Moving {} to {}", v, visitorJoinPos);
             v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
@@ -1244,9 +1245,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void freezeVillagers(Integer ticks) {
-        entities.stream()
+        villagerHandle.stream()
                 .filter(VisitorMobEntity.class::isInstance)
                 .map(VisitorMobEntity.class::cast)
                 .forEach(v -> v.freeze(ticks));
+    }
+
+    public TownVillagerHandle getVillagerHandle() {
+        return villagerHandle;
     }
 }
