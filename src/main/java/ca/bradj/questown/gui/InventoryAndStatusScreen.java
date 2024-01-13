@@ -33,6 +33,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
     private final QuestsScreen questScreen;
+    private final IDrawableStatic tab;
+    private final IDrawableStatic unTab;
+    private int questTabX;
+    private int tabsY;
+    private int statsTabX;
+    private boolean alternateTab;
 
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu gathererInv,
@@ -45,6 +51,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
+        this.tab = textures.getTabSelected();
+        this.unTab = textures.getTabUnselected();
     }
 
     @Override
@@ -63,6 +71,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                         }
                 )
         );
+
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        this.tabsY = bgY - this.unTab.getHeight() + 4;
+        this.questTabX = bgX + 4;
+        this.statsTabX = bgX + unTab.getWidth() + 4;
     }
 
     private void openQuestsScreen() {
@@ -79,8 +93,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         this.renderTooltip(stack, mouseX, mouseY);
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bxY = (this.height - backgroundHeight) / 2;
+        int x = 100 + bgX;
+        int y = 40 + bxY;
+        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
+        blit(stack, x, y, 0, 16, 27, 9, 9, 256, 256);
+        blit(stack, x, y, 0, 52, 27, 9, 9, 256, 256);
     }
 
     @Override
@@ -90,9 +109,26 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int mouseX,
             int mouseY
     ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        if (alternateTab) {
+            this.unTab.draw(stack, this.questTabX, this.tabsY);
+            this.tab.draw(stack, this.statsTabX, this.tabsY);
+        } else {
+            this.tab.draw(stack, this.questTabX, this.tabsY);
+            this.unTab.draw(stack, this.statsTabX, this.tabsY);
+        }
+        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
+        blit(stack, statsTabX + 11, tabsY + 11, 0, 0, 15, 9, 9, 256, 256);
+        if (!alternateTab) {
+            renderInventory(stack);
+        }
+    }
+
+    private void renderInventory(PoseStack stack) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
         renderStatus(stack);
         int yCoord = 0;
         for (int i = 0; i < menu.slots.size(); i++) {
@@ -170,6 +206,15 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         String jobId = menu.getRootJobId();
         Component jobName = Component.translatable("jobs." + jobId);
 
+        if (mouseX > questTabX && mouseX < questTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
+            super.renderTooltip(stack, Component.translatable("tooltips.quests"), mouseX, mouseY);
+            return;
+        }
+        if (mouseX > statsTabX && mouseX < statsTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
+            super.renderTooltip(stack, Component.translatable("tooltips.stats"), mouseX, mouseY);
+            return;
+        }
+
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 // TODO[ASAP]: Render root AND current job
@@ -211,6 +256,19 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         }
 
         super.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        if (mouseX > questTabX && mouseX < questTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
+            this.alternateTab = false;
+        }
+        if (mouseX > statsTabX && mouseX < statsTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
+            this.alternateTab = true;
+        }
+        return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 
     private boolean renderLocksTooltip(

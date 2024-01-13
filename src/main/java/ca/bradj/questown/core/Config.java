@@ -55,6 +55,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
+    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
 
     static {
         // Scanning Config
@@ -137,6 +138,10 @@ public class Config {
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
+        BASE_FULLNESS = BUILDER.comment(
+                "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
+                        "When it reaches zero, the villager will seek out food."
+        ).defineInRange("BaseFullness", 3000, 1, 24000);
         BUILDER.pop();
 
         // Advanced Config
