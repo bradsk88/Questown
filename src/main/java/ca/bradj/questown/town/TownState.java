@@ -57,6 +57,8 @@ public abstract class TownState<
         return "TownState{" +
                 "\n\tvillagers=" + villagers +
                 ",\n\tcontainers=" + containers +
+                ",\n\tstates=" + workStates +
+                ",\n\ttimers=" + workTimers +
                 ",\n\tworldTimeAtSleep=" + worldTimeAtSleep +
                 "\n}";
     }
