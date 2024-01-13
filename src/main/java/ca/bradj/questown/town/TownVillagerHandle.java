@@ -1,19 +1,22 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class TownVillagerHandle {
 
     final List<LivingEntity> entities = new ArrayList<>();
+    final Map<UUID, Integer> fullness = new HashMap<>();
 
     public void tick() {
-
+        entities.forEach(e ->
+                fullness.compute(e.getUUID(), (k, v) -> v == null ? Config.BASE_FULLNESS.get() : v - 1)
+        );
     }
 
     public Stream<LivingEntity> stream() {
