@@ -35,6 +35,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final QuestsScreen questScreen;
     private final IDrawableStatic tab;
     private final IDrawableStatic unTab;
+    private final VillagerStatsScreen statsScreen;
     private int questTabX;
     private int tabsY;
     private int statsTabX;
@@ -47,6 +48,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         super(gathererInv, playerInv, title);
         this.questScreen = new QuestsScreen(menu.questMenu, playerInv, title);
+        this.statsScreen = new VillagerStatsScreen(menu.statsMenu, playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
@@ -266,7 +268,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             this.alternateTab = false;
         }
         if (mouseX > statsTabX && mouseX < statsTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            this.alternateTab = true;
+            this.minecraft.setScreen(statsScreen);
         }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
