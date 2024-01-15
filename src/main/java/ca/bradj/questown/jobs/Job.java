@@ -5,7 +5,6 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
@@ -71,4 +70,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     boolean isInitialized();
 
     JobID getId();
+
+    void removeStatusListener(StatusListener inventoryAndStatusMenu);
 }

@@ -117,6 +117,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public void removeStatusListener(StatusListener inventoryAndStatusMenu) {
+        this.journal.removeStatusListener(inventoryAndStatusMenu);
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }

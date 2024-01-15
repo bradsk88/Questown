@@ -27,7 +27,7 @@ public class FarmerJournal<I extends Item<I>, H extends HeldItem<H, I>> {
         };
     }
 
-    private void removeStatusListener(StatusListener o) {
+    void removeStatusListener(StatusListener o) {
         this.statusListeners.remove(o);
     }
 

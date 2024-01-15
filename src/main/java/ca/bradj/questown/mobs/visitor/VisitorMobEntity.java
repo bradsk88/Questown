@@ -6,7 +6,9 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
+import ca.bradj.questown.gui.InventoryAndStatusMenu;
 import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.gui.VillagerStats;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
@@ -95,7 +97,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class VisitorMobEntity extends PathfinderMob {
+public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())
@@ -990,6 +992,10 @@ public class VisitorMobEntity extends PathfinderMob {
 
     public boolean isTickFrozen() {
         return freezeTicks > 0;
+    }
+
+    public void removeStatusListener(StatusListener inventoryAndStatusMenu) {
+        job.removeStatusListener(inventoryAndStatusMenu);
     }
 
     public interface ChangeListener {

@@ -4,9 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.gui.InventoryAndStatusMenu;
-import ca.bradj.questown.gui.TownQuestsContainer;
-import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -153,18 +151,14 @@ public class Jobs {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                TownQuestsContainer questsMenu = new TownQuestsContainer(windowId, quests, e.getFlagPos());
+                VillagerMenus vms = new VillagerMenus();
+                vms.initQuestsMenu(windowId, quests, e.getFlagPos());
+                vms.initVillagerStatsMenu(windowId, e);
                 return new InventoryAndStatusMenu(
-                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, questsMenu, jobId
+                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, vms, jobId
                 );
             }
-        }, data -> {
-            data.writeInt(capacity);
-            data.writeInt(e.getId());
-            data.writeUtf(jobId.rootId());
-            data.writeUtf(jobId.jobId());
-            TownQuestsContainer.write(data, quests, e.getFlagPos());
-        });
+        }, data -> VillagerMenus.write(data, quests, e, capacity, jobId));
         return true; // Different jobs might have screens or not
     }
 
