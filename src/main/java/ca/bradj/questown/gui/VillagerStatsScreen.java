@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,9 +14,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Supplier;
 
 public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMenu> {
     private static final int backgroundWidth = 176;
@@ -25,8 +23,8 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic tab;
     private final IDrawableStatic unTab;
-    private final QuestsScreen questScreen;
-    private final InventoryAndStatusScreen invScreen;
+    private final Supplier<QuestsScreen> questScreen;
+    private final Supplier<InventoryAndStatusScreen> invScreen;
     private int tabsY;
     private int invTabX;
     private int questTabX;
@@ -35,11 +33,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
             Inventory playerInv,
-            Component title
+            Component title,
+            Supplier<QuestsScreen> questScreen,
+            Supplier<InventoryAndStatusScreen> inventoryAndStatusScreen
     ) {
         super(menu, playerInv, title);
-        this.questScreen = new QuestsScreen(menu.questsMenu(), playerInv, title);
-        this.invScreen = new InventoryAndStatusScreen(menu.invMenu(), playerInv, title);
+        this.questScreen = questScreen;
+        this.invScreen = inventoryAndStatusScreen;
         super.imageWidth = 256;
         super.imageHeight = 220;
 
@@ -47,6 +47,19 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         this.background = textures.getRecipeGuiBackground();
         this.tab = textures.getTabSelected();
         this.unTab = textures.getTabUnselected();
+    }
+
+    public static VillagerStatsScreen withInventoryScreen(
+            InventoryAndStatusScreen inventoryAndStatusScreen,
+            VillagerStatsMenu menu,
+            Inventory playerInv,
+            Component title
+    ) {
+        return new VillagerStatsScreen(
+                menu, playerInv, title,
+                () -> new QuestsScreen(menu.questsMenu(), playerInv, title),
+                () -> inventoryAndStatusScreen
+        );
     }
 
     @Override
@@ -127,10 +140,10 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         if (mouseX > invTabX && mouseX < invTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            this.minecraft.setScreen(invScreen);
+            this.minecraft.setScreen(invScreen.get());
         }
         if (mouseX > questTabX && mouseX < questTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            this.minecraft.setScreen(questScreen);
+            this.minecraft.setScreen(questScreen.get());
         }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }

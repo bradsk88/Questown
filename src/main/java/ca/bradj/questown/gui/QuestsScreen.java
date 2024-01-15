@@ -92,6 +92,17 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
     }
 
+    public static QuestsScreen withInventoryScreen(
+            InventoryAndStatusScreen inventoryAndStatusScreen,
+            VillagerStatsMenu menu,
+            Inventory playerInv,
+            Component title
+    ) {
+        return new QuestsScreen(
+            menu.questsMenu(), playerInv, title
+        );
+    }
+
     @Override
     protected void init() {
         int y = (this.height - backgroundHeight) / 2;

@@ -46,9 +46,6 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             Inventory inv,
             FriendlyByteBuf buf
     ) {
-        int size = buf.readInt();
-        VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
-        JobID id = new JobID(buf.readUtf(), buf.readUtf());
         VillagerMenus menus = VillagerMenus.fromNetwork(windowId, inv.player, buf);
         return menus.invMenu;
     }
