@@ -71,4 +71,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     boolean isInitialized();
 
     JobID getId();
+
+    void removeStatusListener(StatusListener inventoryAndStatusMenu);
 }

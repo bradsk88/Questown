@@ -31,6 +31,9 @@ public class MenuTypesInit {
     public static RegistryObject<MenuType<InventoryAndStatusMenu>> GATHERER_INVENTORY = MENUS.register(
             "gatherer_inventory", () -> IForgeMenuType.create(InventoryAndStatusMenu::ForClientSide)
     );
+    public static RegistryObject<MenuType<VillagerStatsMenu>> VILLAGER_STATS = MENUS.register(
+            "villager_stats", () -> IForgeMenuType.create(VillagerStatsMenu::ForClientSide)
+    );
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);

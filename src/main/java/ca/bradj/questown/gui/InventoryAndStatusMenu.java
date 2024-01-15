@@ -23,6 +23,7 @@ import net.minecraftforge.items.wrapper.InvWrapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Stack;
 
 public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
 
@@ -36,7 +37,9 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
     private final JobID jobId;
-    public final TownQuestsContainer questMenu;
+    public final VillagerMenus menus;
+
+    private final Stack<Runnable> closers = new Stack<>();
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -46,16 +49,8 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         int size = buf.readInt();
         VisitorMobEntity e = (VisitorMobEntity) inv.player.level.getEntity(buf.readInt());
         JobID id = new JobID(buf.readUtf(), buf.readUtf());
-        TownQuestsContainer qMenu = new TownQuestsContainer(windowId, TownQuestsContainer.readQuests(buf), TownQuestsContainer.readFlagPos(buf));
-        return new InventoryAndStatusMenu(windowId,
-                // Minecraft will handle filling this container by syncing from server
-                new SimpleContainer(size) {
-                    @Override
-                    public int getMaxStackSize() {
-                        return 1;
-                    }
-                }, inv, e.getSlotLocks(), e, qMenu, id
-        );
+        VillagerMenus menus = VillagerMenus.fromNetwork(windowId, inv.player, buf);
+        return menus.invMenu;
     }
 
 
@@ -65,12 +60,12 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             Inventory inv,
             Collection<Boolean> slotLocks,
             VisitorMobEntity gatherer,
-            TownQuestsContainer questMenu,
+            VillagerMenus menus,
             JobID jobId
 // For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
-        this.questMenu = questMenu;
+        this.menus = menus;
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.jobId = jobId;
@@ -89,6 +84,8 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         }
 
         gatherer.addStatusListener(this);
+
+        this.closers.add(() -> gatherer.removeStatusListener(this));
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -274,5 +271,17 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
 
     public Collection<Ingredient> getWantedResources() {
         return JobsRegistry.getWantedResourcesProvider(this.jobId).apply(getStatus());
+    }
+
+    public void onClose() {
+
+    }
+
+    public TownQuestsContainer questsMenu() {
+        return menus.questsMenu;
+    }
+
+    public VillagerStatsMenu statsMenu() {
+        return menus.statsMenu;
     }
 }

@@ -114,6 +114,11 @@ public abstract class ProductionJob<
     }
 
     @Override
+    public void removeStatusListener(StatusListener o) {
+        this.journal.removeStatusListener(o);
+    }
+
+    @Override
     public STATUS getStatus() {
         return journal.getStatus();
     }
