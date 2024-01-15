@@ -8,8 +8,8 @@ import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.Internal;
 import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.common.gui.textures.Textures;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -33,14 +33,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final DrawableNineSliceTexture background;
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
-    private final QuestsScreen questScreen;
-    private final IDrawableStatic tab;
-    private final IDrawableStatic unTab;
-    private final VillagerStatsScreen statsScreen;
-    private int tabsY;
-    private int invTabX;
-    private int questTabX;
-    private int statsTabX;
+    private final Tabs tabs;
 
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu menu,
@@ -48,14 +41,36 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Component title
     ) {
         super(menu, playerInv, title);
-        this.questScreen = new QuestsScreen(menu.questsMenu(), playerInv, title);
-        this.statsScreen = new VillagerStatsScreen(menu.statsMenu(), playerInv, title);
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
-        this.tab = textures.getTabSelected();
-        this.unTab = textures.getTabUnselected();
+        // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
+        this.tabs = new Tabs(ImmutableList.of(
+                new Tab(
+                        (stack, x, y) -> {}, // TODO: Render icon
+                        () -> {},
+                        "tooltips.inventory",
+                        true
+                ),
+                new Tab(
+                        (stack, x, y) -> {}, // TODO: Render icon
+                        () -> minecraft.setScreen(QuestsScreen.withInventoryScreen(this, menu.statsMenu(), playerInv, title)),
+                        "tooltips.quests",
+                        false
+                ),
+                new Tab(
+                        (stack, x, y) -> {
+                            int txBefore = RenderSystem.getShaderTexture(0);
+                            RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
+                            GuiComponent.blit(stack, x + 11, y + 11, 0, 0, 15, 9, 9, 256, 256);
+                            RenderSystem.setShaderTexture(0, txBefore);
+                        },
+                        () -> minecraft.setScreen(VillagerStatsScreen.withInventoryScreen(this, menu.statsMenu(), playerInv, title)),
+                        "tooltips.stats",
+                        false
+                )
+        ));
     }
 
     @Override
@@ -80,17 +95,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                         }
                 )
         );
-
-        int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
-        this.tabsY = bgY - this.unTab.getHeight() + 4;
-        this.invTabX = bgX + (unTab.getWidth() * 0) + 4;
-        this.questTabX = bgX + (unTab.getWidth() * 1) + 4;
-        this.statsTabX = bgX + (unTab.getWidth() * 2) + 4;
     }
 
     private void openQuestsScreen() {
-        this.minecraft.setScreen(questScreen);
+//        this.minecraft.setScreen(questScreen);
     }
 
     @Override
@@ -122,11 +130,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tab.draw(stack, this.invTabX, this.tabsY);
-        this.unTab.draw(stack, this.questTabX, this.tabsY);
-        this.unTab.draw(stack, this.statsTabX, this.tabsY);
-        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
-        blit(stack, statsTabX + 11, tabsY + 11, 0, 0, 15, 9, 9, 256, 256);
+        this.tabs.draw(stack, bgX, bgY);
         renderInventory(stack);
     }
 
@@ -210,12 +214,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         String jobId = menu.getRootJobId();
         Component jobName = Component.translatable("jobs." + jobId);
 
-        if (mouseX > questTabX && mouseX < questTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            super.renderTooltip(stack, Component.translatable("tooltips.quests"), mouseX, mouseY);
-            return;
-        }
-        if (mouseX > statsTabX && mouseX < statsTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            super.renderTooltip(stack, Component.translatable("tooltips.stats"), mouseX, mouseY);
+        if (this.tabs.renderTooltip(
+                x, y, mouseX, mouseY,
+                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+        )) {
             return;
         }
 
@@ -266,9 +268,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        if (mouseX > statsTabX && mouseX < statsTabX + tab.getWidth() && mouseY > tabsY && mouseY < y) {
-            this.minecraft.setScreen(statsScreen);
-        }
+        this.tabs.mouseClicked(x, y ,mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

@@ -15,6 +15,7 @@ import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.input.MouseUtil;
+import net.minecraft.client.gui.screens.achievement.StatsScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -88,6 +89,17 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             return head;
         }).toList();
 
+    }
+
+    public static QuestsScreen withInventoryScreen(
+            InventoryAndStatusScreen inventoryAndStatusScreen,
+            VillagerStatsMenu menu,
+            Inventory playerInv,
+            Component title
+    ) {
+        return new QuestsScreen(
+            menu.questsMenu(), playerInv, title
+        );
     }
 
     @Override
