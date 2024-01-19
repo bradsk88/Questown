@@ -9,7 +9,6 @@ import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -40,9 +39,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu menu,
             Inventory playerInv,
-            Component title,
-            Function<Screen, Screen> questScreen,
-            Function<Screen, Screen> statsScreen
+            Component title
     ) {
         super(menu, playerInv, title);
         Textures textures = Internal.getTextures();
@@ -50,7 +47,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
-        this.tabs = new VillagerTabs(null, () -> questScreen.apply(this), () -> statsScreen.apply(this));
+        this.tabs = new VillagerTabs(null, menu::openQuests, menu::openStats);
     }
 
     @Override
@@ -241,7 +238,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.tabs.mouseClicked(minecraft, x, y ,mouseX, mouseY);
+        this.tabs.mouseClicked(x, y ,mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

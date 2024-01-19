@@ -2,20 +2,17 @@ package ca.bradj.questown.gui;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class VillagerTabs extends Tabs implements SubUI {
+
     public VillagerTabs(
-            @Nullable Supplier<Screen> invScreenFn,
-            @Nullable Supplier<Screen> qScreenFn,
-            @Nullable Supplier<Screen> sScreenFn
+            @Nullable Runnable invScreenFn,
+            @Nullable Runnable qScreenFn,
+            @Nullable Runnable sScreenFn
     ) {
         super(ImmutableList.of(
                 new Tab(
@@ -44,10 +41,10 @@ public class VillagerTabs extends Tabs implements SubUI {
         ));
     }
 
-    private static Consumer<Minecraft> setScreen(Supplier<Screen> s) {
+    private static Runnable setScreen(Runnable s) {
         if (s == null) {
-            return (mc) -> {};
+            return () -> {};
         }
-        return (mc) -> mc.setScreen(s.get());
+        return s;
     }
 }

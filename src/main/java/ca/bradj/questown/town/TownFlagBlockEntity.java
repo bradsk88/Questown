@@ -1251,7 +1251,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 .forEach(v -> v.freeze(ticks));
     }
 
-    public TownVillagerHandle getVillagerHandle() {
+    public VillagerHolder getVillagerHandle() {
         return villagerHandle;
     }
 }

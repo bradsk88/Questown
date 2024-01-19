@@ -67,8 +67,8 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             TownQuestsContainer container,
             Inventory playerInv,
             Component title,
-            Supplier<Screen> inventoryAndStatusScreen,
-            Supplier<Screen> statsScreen
+            Runnable inventoryAndStatusScreen,
+            Runnable statsScreen
     ) {
         this(
                 container, playerInv, title,
@@ -313,7 +313,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         }
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.tabs.mouseClicked(minecraft, bgX, bgY, x, y);
+        this.tabs.mouseClicked(bgX, bgY, x, y);
         return super.mouseClicked(x, y, p_97750_);
     }
 
@@ -488,7 +488,12 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             }
 
             @Override
-            public void mouseClicked(Minecraft minecraft, int bgX, int bgY, double x, double y) {
+            public void mouseClicked(
+                    int bgX,
+                    int bgY,
+                    double x,
+                    double y
+            ) {
             }
 
             @Override

@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 
 public record Tab(
         TriConsumer<PoseStack, Integer, Integer> renderFunc,
-        Consumer<Minecraft> onClick,
+        Runnable onClick,
         String titleKey,
         boolean selected
 ) {

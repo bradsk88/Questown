@@ -6,14 +6,12 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.gui.InventoryAndStatusMenu;
-import ca.bradj.questown.gui.UIQuest;
-import ca.bradj.questown.gui.VillagerStats;
-import ca.bradj.questown.gui.VisitorQuestsContainer;
+import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
@@ -92,6 +90,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -995,6 +994,21 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public void removeStatusListener(StatusListener inventoryAndStatusMenu) {
         job.removeStatusListener(inventoryAndStatusMenu);
+    }
+
+    public void addStatsListener(VillagerStatsMenu villagerStatsMenu) {
+        if (town == null || town.getServerLevel() == null) {
+            return;
+        }
+        town.getVillagerHandle().addStatsListener(villagerStatsMenu);
+    }
+
+
+    public void removeStatsListener(Consumer<VillagerStatsData> villagerStatsMenu) {
+        if (town == null || town.getServerLevel() == null) {
+            return;
+        }
+        town.getVillagerHandle().removeStatsListener(villagerStatsMenu);
     }
 
     public interface ChangeListener {

@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.common.Internal;
 import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.common.gui.textures.Textures;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMenu> {
     private static final int backgroundWidth = 176;
@@ -26,9 +24,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
             Inventory playerInv,
-            Component title,
-            Supplier<Screen> questScreen,
-            Supplier<Screen> inventoryAndStatusScreen
+            Component title
     ) {
         super(menu, playerInv, title);
         super.imageWidth = 256;
@@ -36,7 +32,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
 
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
-        this.tabs = new VillagerTabs(inventoryAndStatusScreen, questScreen, null);
+        this.tabs = new VillagerTabs(menu::openInv, menu::openQuests, null);
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        menu.onClose();
     }
 
     @Override
@@ -89,9 +91,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
         int x = 8 + bgX;
         int y = 28 + bxY;
-        blit(stack, x - 1, y, 0, 0, 64, 82, 5, 256, 256);
-        blit(stack, x + 78, y, 0, 100, 64, 82, 5, 256, 256);
-        blit(stack, x - 1, y, 0, 0, 69, 82, 5, 256, 256);
+        int halfWidth = 82;
+        int height = 5;
+        blit(stack, x - 1, y, 0, 0, 64, halfWidth, height, 256, 256);
+        blit(stack, x + 78, y, 0, 100, 64, halfWidth, height, 256, 256);
+        float fP = menu.getFullnessPercent() / 100f;
+        blit(stack, x - 1, y, 0, 0, 69, (int) (halfWidth * (2 * (Math.max(0.5, fP)))), height, 256, 256);
+        blit(stack, x + 78, y, 0, 100, 64, (int) (halfWidth * (2 * (Math.max(0.5, fP-0.5)))), height, 256, 256);
     }
 
     @Override
@@ -132,7 +138,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.tabs.mouseClicked(minecraft, x, y, mouseX, mouseY);
+        this.tabs.mouseClicked(x, y, mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

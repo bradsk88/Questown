@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 public interface SubUI {
     void draw(PoseStack poseStack, int bgX, int bgY);
 
-    void mouseClicked(Minecraft minecraft, int bgX, int bgY, double x, double y);
+    void mouseClicked(int bgX, int bgY, double x, double y);
 
     boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o);
 }

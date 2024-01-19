@@ -11,22 +11,29 @@ import java.util.Collection;
 import java.util.List;
 
 public class VillagerMenus {
+    final VisitorMobEntity entity;
     InventoryAndStatusMenu invMenu;
     VillagerStatsMenu statsMenu;
     TownQuestsContainer questsMenu;
+
+    public VillagerMenus(VisitorMobEntity e) {
+        this.entity = e;
+    }
 
     public static VillagerMenus fromNetwork(
             int windowId,
             Player player,
             FriendlyByteBuf buf
     ) {
-        VillagerMenus menus = new VillagerMenus();
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(buf.readInt());
+        VillagerMenus menus = new VillagerMenus(e);
         JobID jobId = new JobID(buf.readUtf(), buf.readUtf());
         int invSize = buf.readInt();
-        menus.initQuestsMenu(windowId, TownQuestsContainer.readQuests(buf), TownQuestsContainer.readFlagPos(buf));
-        menus.initVillagerStatsMenu(windowId, e);
-        menus.initInventory(windowId, jobId, player, e, invSize);
+        Collection<UIQuest> quests = TownQuestsContainer.readQuests(buf);
+        BlockPos flagPos = TownQuestsContainer.readFlagPos(buf);
+        menus.initQuestsMenu(windowId, quests, flagPos);
+        menus.initVillagerStatsMenu(windowId, flagPos);
+        menus.initInventory(windowId, jobId, player, e, invSize, flagPos);
         return menus;
     }
 
@@ -38,7 +45,10 @@ public class VillagerMenus {
         TownQuestsContainer.write(data, quests, e.getFlagPos());
     }
 
-    private InventoryAndStatusMenu initInventory(int windowId, JobID jobId, Player player, VisitorMobEntity e, int invSize) {
+    private InventoryAndStatusMenu initInventory(
+            int windowId, JobID jobId, Player player,
+            VisitorMobEntity e, int invSize, BlockPos flagPos
+    ) {
         invMenu = new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(invSize) {
@@ -46,7 +56,7 @@ public class VillagerMenus {
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, player.getInventory(), e.getSlotLocks(), e, this, jobId
+                }, player.getInventory(), e.getSlotLocks(), e, jobId, flagPos
         );
         return invMenu;
     }
@@ -56,8 +66,8 @@ public class VillagerMenus {
         return questsMenu;
     }
 
-    public VillagerStatsMenu initVillagerStatsMenu(int windowId, VisitorMobEntity e) {
-        statsMenu = new VillagerStatsMenu(windowId, e, this);
+    public VillagerStatsMenu initVillagerStatsMenu(int windowId, BlockPos flagPos) {
+        statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos);
         return statsMenu;
     }
 }
