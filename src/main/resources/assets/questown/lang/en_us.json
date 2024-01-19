@@ -217,6 +217,7 @@
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
   "menu.decline": "Decline",
   "menu.back": "Back",
+  "menu.hunger": "Hunger",
   "#questown:villager_food": "Food",
   "#questown:axes": "Axes",
   "#minecraft:coals": "Coal"

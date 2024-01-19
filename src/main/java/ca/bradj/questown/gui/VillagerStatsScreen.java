@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.common.Internal;
 import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
@@ -9,6 +10,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
@@ -38,14 +40,6 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     @Override
-    protected void init() {
-        super.init();
-
-        int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
-    }
-
-    @Override
     public boolean keyReleased(
             int keyCode,
             int scanCode,
@@ -59,6 +53,23 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     @Override
+    protected void renderLabels(PoseStack p_97808_, int p_97809_, int p_97810_) {
+    }
+
+    @Override
+    protected void renderTooltip(PoseStack stack, int mouseX, int mouseY) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        if (this.tabs.renderTooltip(
+                bgX, bgY, mouseX, mouseY,
+                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+        )) {
+            return;
+        }
+        super.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    @Override
     public void render(
             PoseStack poseStack,
             int mouseX,
@@ -67,6 +78,20 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     ) {
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
+
+        renderHunger(poseStack);
+    }
+
+    private void renderHunger(PoseStack stack) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bxY = (this.height - backgroundHeight) / 2;
+        font.draw(stack, Component.translatable("menu.hunger"), bgX + 8, bxY + 16, 0x00000000);
+        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
+        int x = 8 + bgX;
+        int y = 28 + bxY;
+        blit(stack, x - 1, y, 0, 0, 64, 82, 5, 256, 256);
+        blit(stack, x + 78, y, 0, 100, 64, 82, 5, 256, 256);
+        blit(stack, x - 1, y, 0, 0, 69, 82, 5, 256, 256);
     }
 
     @Override
@@ -102,6 +127,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     ) {
         return true;
     }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
         int x = (this.width - backgroundWidth) / 2;
