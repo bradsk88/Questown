@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -133,32 +134,10 @@ public class Jobs {
     }
 
     public static boolean openInventoryAndStatusScreen(
-            int capacity,
             ServerPlayer sp,
-            VisitorMobEntity e,
-            JobID jobId
+            VisitorMobEntity e
     ) {
-        List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), e.getQuestsWithRewards());
-        NetworkHooks.openScreen(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return Component.empty();
-            }
-
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                VillagerMenus vms = new VillagerMenus();
-                vms.initQuestsMenu(windowId, quests, e.getFlagPos());
-                vms.initVillagerStatsMenu(windowId, e);
-                return new InventoryAndStatusMenu(
-                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, vms, jobId
-                );
-            }
-        }, data -> VillagerMenus.write(data, quests, e, capacity, jobId));
+        e.getTown().getVillagerHandle().showUI(sp, OpenVillagerMenuMessage.INVENTORY, e.getUUID());
         return true; // Different jobs might have screens or not
     }
 

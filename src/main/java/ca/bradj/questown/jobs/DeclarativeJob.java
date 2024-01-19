@@ -644,7 +644,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        return Jobs.openInventoryAndStatusScreen(journal.getCapacity(), sp, e, jobId);
+        return Jobs.openInventoryAndStatusScreen(sp, e);
     }
 
     @Override

@@ -1,11 +1,14 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -20,10 +23,7 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
 
@@ -37,9 +37,11 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
     private final JobID jobId;
-    public final VillagerMenus menus;
 
     private final Stack<Runnable> closers = new Stack<>();
+
+    private final Runnable openQuestsFn;
+    private final Runnable openStatsFn;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -57,15 +59,16 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             Inventory inv,
             Collection<Boolean> slotLocks,
             VisitorMobEntity gatherer,
-            VillagerMenus menus,
-            JobID jobId
+            JobID jobId,
+            BlockPos flagPos
 // For checking validity
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
-        this.menus = menus;
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.jobId = jobId;
+        this.openQuestsFn = makeOpenFn(flagPos, gatherer.getUUID(), OpenVillagerMenuMessage.QUESTS);
+        this.openStatsFn = makeOpenFn(flagPos, gatherer.getUUID(), OpenVillagerMenuMessage.STATS);
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
@@ -83,6 +86,18 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
         gatherer.addStatusListener(this);
 
         this.closers.add(() -> gatherer.removeStatusListener(this));
+    }
+
+    private Runnable makeOpenFn(
+            BlockPos fp,
+            UUID gathererId,
+            String type
+    ) {
+        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
+                fp.getX(), fp.getY(), fp.getZ(),
+                gathererId, type
+        ));
+        return fn;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -271,14 +286,14 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     }
 
     public void onClose() {
-
+        closers.forEach(Runnable::run);
     }
 
-    public TownQuestsContainer questsMenu() {
-        return menus.questsMenu;
+    public void openQuests() {
+        this.openQuestsFn.run();
     }
 
-    public VillagerStatsMenu statsMenu() {
-        return menus.statsMenu;
+    public void openStats() {
+        this.openStatsFn.run();
     }
 }

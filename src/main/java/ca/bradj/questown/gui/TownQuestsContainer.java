@@ -21,7 +21,7 @@ import java.util.UUID;
 public class TownQuestsContainer extends AbstractContainerMenu {
 
     private final Collection<UIQuest> quests;
-    private final BlockPos flagPos;
+    final BlockPos flagPos;
 
     public TownQuestsContainer(
             int windowId,

@@ -14,7 +14,10 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -24,7 +27,9 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.NetworkHooks;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -80,39 +85,11 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
-        InvScreenFactory f = new InvScreenFactory();
-        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), f::get);
+        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
+        MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new
         ));
-    }
-
-    public static class InvScreenFactory {
-        private Function<Screen, Screen> qScreen;
-        private Function<Screen, Screen> sScreen;
-
-        InventoryAndStatusScreen get(
-                InventoryAndStatusMenu menu,
-                Inventory inv,
-                Component title
-        ) {
-            this.qScreen = (invScreen) -> new QuestsScreen(
-                    menu.questsMenu(), inv, Component.empty(),
-                    () -> invScreen,
-                    () -> sScreen.apply(invScreen)
-            );
-            this.sScreen = (invScreen) -> new VillagerStatsScreen(
-                    menu.statsMenu(), inv, Component.empty(),
-                    () -> qScreen.apply(invScreen),
-                    () -> invScreen
-            );
-            return new InventoryAndStatusScreen(
-                    menu, inv, title,
-                    (invScreen) -> this.qScreen.apply(invScreen),
-                    (invScreen) -> this.sScreen.apply(invScreen)
-            );
-        };
-
     }
 }

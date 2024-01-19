@@ -56,6 +56,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_HUNGER_FULLNESS;
 
     static {
         // Scanning Config
@@ -139,7 +140,7 @@ public class Config {
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
         BASE_FULLNESS = BUILDER.comment(
-                "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
+                "The amount of fullnessPercent that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
         ).defineInRange("BaseFullness", 3000, 1, 24000);
         BUILDER.pop();
@@ -170,6 +171,9 @@ public class Config {
         TIME_WARP_MAX_TICKS = BUILDER.comment(
                 "Since the player can be gone for a very long time, we enforce a maximum warp to prevent the warp taking too long to compute."
         ).defineInRange("MaxTicks", 200000, 1, Integer.MAX_VALUE);
+        DEFAULT_HUNGER_FULLNESS = BUILDER.comment(
+                "Villagers get hungry. This number determines the \"max\" value of the hunger gauge for a typical villager."
+        ).defineInRange("DefaultHungerFullness", 5000, 1, 24000);
         BUILDER.pop(); // Yep, really thrice. Getting out of nested config
         BUILDER.pop();
         BUILDER.pop();

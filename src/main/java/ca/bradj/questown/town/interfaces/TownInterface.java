@@ -138,6 +138,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     RoomsHolder getRoomHandle();
 
+    VillagerHolder getVillagerHandle();
+
     void removeEntity(VisitorMobEntity visitorMobEntity);
 
     interface MatchRecipe {

@@ -23,22 +23,27 @@ public class QuestownNetwork {
         registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(AddWorkFromUIMessage::encode).
                 decoder(AddWorkFromUIMessage::decode).
-                consumer(AddWorkFromUIMessage::handle).
+                consumerNetworkThread(AddWorkFromUIMessage::handle).
                 add();
         registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveWorkFromUIMessage::encode).
                 decoder(RemoveWorkFromUIMessage::decode).
-                consumer(RemoveWorkFromUIMessage::handle).
+                consumerNetworkThread(RemoveWorkFromUIMessage::handle).
                 add();
         registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(OpenQuestsMenuMessage::encode).
                 decoder(OpenQuestsMenuMessage::decode).
-                consumer(OpenQuestsMenuMessage::handle).
+                consumerNetworkThread(OpenQuestsMenuMessage::handle).
                 add();
         registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveQuestFromUIMessage::encode).
                 decoder(RemoveQuestFromUIMessage::decode).
-                consumer(RemoveQuestFromUIMessage::handle).
+                consumerNetworkThread(RemoveQuestFromUIMessage::handle).
+                add();
+        registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(OpenVillagerMenuMessage::encode).
+                decoder(OpenVillagerMenuMessage::decode).
+                consumerNetworkThread(OpenVillagerMenuMessage::handle).
                 add();
     }
 

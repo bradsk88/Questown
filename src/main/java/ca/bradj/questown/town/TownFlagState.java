@@ -45,7 +45,7 @@ public class TownFlagState {
 
     @Nullable MCTownState captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> vB = ImmutableList.builder();
-        for (LivingEntity entity : parent.getVillagerHandle().entities) {
+        for (LivingEntity entity : parent.getVillagerHandle().entities()) {
             if (entity instanceof VisitorMobEntity) {
                 if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
@@ -172,7 +172,7 @@ public class TownFlagState {
             TownFlagBlockEntity e,
             ServerLevel sl
     ) {
-        ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.getVillagerHandle().entities);
+        ImmutableList<LivingEntity> entitiesSnapshot = ImmutableList.copyOf(e.getVillagerHandle().entities());
         for (LivingEntity entity : entitiesSnapshot) {
             e.getVillagerHandle().remove(entity);
             entity.stopSleeping();

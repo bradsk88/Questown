@@ -48,12 +48,12 @@ public class Tabs {
         }
     }
 
-    public void mouseClicked(Minecraft minecraft, int bgX, int bgY, double mouseX, double mouseY) {
+    public void mouseClicked(int bgX, int bgY, double mouseX, double mouseY) {
         int tabsY = bgY - this.unTab.getHeight();
         for (int i = 0; i < tabs.size(); i++) {
             int tabX = bgX + (unTab.getWidth() * i);
             if (mouseX > tabX && mouseX < tabX + tab.getWidth() && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
-                tabs.get(i).onClick().accept(minecraft);
+                tabs.get(i).onClick().run();
                 return;
             }
         }
