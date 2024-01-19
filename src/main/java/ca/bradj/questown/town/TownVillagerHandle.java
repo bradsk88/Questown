@@ -34,7 +34,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public void tick() {
         entities.forEach(e -> {
             UUID u = e.getUUID();
-            int oldVal = fullness.getOrDefault(u, Config.DEFAULT_HUNGER_FULLNESS.get());
+            int oldVal = fullness.getOrDefault(u, Config.BASE_FULLNESS.get());
             int newVal = Math.max(0, oldVal - 1);
             fullness.put(u, newVal);
             if (oldVal != newVal) {
@@ -44,7 +44,7 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     public VillagerStatsData getStats(UUID uuid) {
-        float fullnessPercent = (float) fullness.get(uuid) / Config.DEFAULT_HUNGER_FULLNESS.get();
+        float fullnessPercent = (float) fullness.get(uuid) / Config.BASE_FULLNESS.get();
         return new VillagerStatsData(
                 // TODO: Get max fullness from villager
                 fullnessPercent
