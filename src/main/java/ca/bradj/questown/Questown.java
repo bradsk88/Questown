@@ -8,6 +8,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -22,6 +23,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.Logger;
+
+import java.util.function.Function;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(Questown.MODID)
@@ -74,7 +77,17 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
-        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
+        MenuScreens.<InventoryAndStatusMenu, InventoryAndStatusScreen>register(MenuTypesInit.GATHERER_INVENTORY.get(), (menu, inv, title) -> {
+            Function<Screen, Screen> qScreen = (invScreen) -> new QuestsScreen(
+                    menu.questsMenu(), inv, title
+            );
+            Function<Screen, Screen> sScreen = (invScreen) -> new VillagerStatsScreen(
+                    menu.statsMenu(), inv, title,
+                    () -> qScreen.apply(invScreen),
+                    () -> invScreen
+            );
+            return new InventoryAndStatusScreen(menu, inv, title, qScreen, sScreen);
+        });
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new

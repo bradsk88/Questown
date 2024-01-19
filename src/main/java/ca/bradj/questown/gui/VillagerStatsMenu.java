@@ -65,4 +65,8 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
     public InventoryAndStatusMenu invMenu() {
         return menus.invMenu;
     }
+
+    public VillagerStatsMenu statsMenu() {
+        return menus.statsMenu;
+    }
 }

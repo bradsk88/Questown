@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.Internal;
 import mezz.jei.common.gui.textures.Textures;
+import net.minecraft.client.Minecraft;
 
 import java.util.function.Consumer;
 
@@ -40,17 +41,19 @@ public class Tabs {
             if (tabs.get(i).selected()) {
                 tab = this.tab;
             }
-            tab.draw(stack, bgX + (tab.getWidth() * i), bgY - tab.getHeight());
-            tabs.get(i).renderFunc().accept(stack, bgX, bgY);
+            int tabX = bgX + (tab.getWidth() * i);
+            int tabY = bgY - tab.getHeight();
+            tab.draw(stack, tabX + 6, tabY + 3);
+            tabs.get(i).renderFunc().accept(stack, tabX, tabY);
         }
     }
 
-    public void mouseClicked(int bgX, int bgY, double mouseX, double mouseY) {
+    public void mouseClicked(Minecraft minecraft, int bgX, int bgY, double mouseX, double mouseY) {
         int tabsY = bgY - this.unTab.getHeight();
         for (int i = 0; i < tabs.size(); i++) {
             int tabX = bgX + (unTab.getWidth() * i);
             if (mouseX > tabX && mouseX < tabX + tab.getWidth() && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
-                tabs.get(i).onClick().run();
+                tabs.get(i).onClick().accept(minecraft);
                 return;
             }
         }
