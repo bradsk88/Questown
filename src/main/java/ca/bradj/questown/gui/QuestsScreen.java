@@ -92,8 +92,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
 
     }
 
-    public static QuestsScreen withInventoryScreen(
-            InventoryAndStatusScreen inventoryAndStatusScreen,
+    public static QuestsScreen fromOtherScreen(
             VillagerStatsMenu menu,
             Inventory playerInv,
             Component title
