@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class VillagerTabs extends Tabs {
+public class VillagerTabs extends Tabs implements SubUI {
     public VillagerTabs(
             @Nullable Supplier<Screen> invScreenFn,
             @Nullable Supplier<Screen> qScreenFn,

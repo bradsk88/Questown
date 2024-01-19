@@ -91,13 +91,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         this.renderTooltip(stack, mouseX, mouseY);
-        int bgX = (this.width - backgroundWidth) / 2;
-        int bxY = (this.height - backgroundHeight) / 2;
-        int x = 100 + bgX;
-        int y = 40 + bxY;
-        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
-        blit(stack, x, y, 0, 16, 27, 9, 9, 256, 256);
-        blit(stack, x, y, 0, 52, 27, 9, 9, 256, 256);
     }
 
     @Override

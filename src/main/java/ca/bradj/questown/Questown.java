@@ -12,7 +12,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -24,6 +26,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.Logger;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -73,25 +76,43 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::new);
+        MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
-        MenuScreens.<InventoryAndStatusMenu, InventoryAndStatusScreen>register(MenuTypesInit.GATHERER_INVENTORY.get(), (menu, inv, title) -> {
-            Function<Screen, Screen> qScreen = (invScreen) -> new QuestsScreen(
-                    menu.questsMenu(), inv, title
-            );
-            Function<Screen, Screen> sScreen = (invScreen) -> new VillagerStatsScreen(
-                    menu.statsMenu(), inv, title,
-                    () -> qScreen.apply(invScreen),
-                    () -> invScreen
-            );
-            return new InventoryAndStatusScreen(menu, inv, title, qScreen, sScreen);
-        });
+        InvScreenFactory f = new InvScreenFactory();
+        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), f::get);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new
         ));
     }
 
+    public static class InvScreenFactory {
+        private Function<Screen, Screen> qScreen;
+        private Function<Screen, Screen> sScreen;
+
+        InventoryAndStatusScreen get(
+                InventoryAndStatusMenu menu,
+                Inventory inv,
+                Component title
+        ) {
+            this.qScreen = (invScreen) -> new QuestsScreen(
+                    menu.questsMenu(), inv, Component.empty(),
+                    () -> invScreen,
+                    () -> sScreen.apply(invScreen)
+            );
+            this.sScreen = (invScreen) -> new VillagerStatsScreen(
+                    menu.statsMenu(), inv, Component.empty(),
+                    () -> qScreen.apply(invScreen),
+                    () -> invScreen
+            );
+            return new InventoryAndStatusScreen(
+                    menu, inv, title,
+                    (invScreen) -> this.qScreen.apply(invScreen),
+                    (invScreen) -> this.sScreen.apply(invScreen)
+            );
+        };
+
+    }
 }

@@ -15,6 +15,7 @@ import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.input.MouseUtil;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -28,7 +29,9 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
@@ -55,13 +58,25 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
     private final Map<Position, Runnable> removes = new HashMap<>();
+    private final SubUI tabs;
     private int currentPage = 0;
 
     public QuestsScreen(
             TownQuestsContainer container,
             Inventory playerInv,
-            Component title
+            Component title,
+            Supplier<Screen> inventoryAndStatusScreen,
+            Supplier<Screen> statsScreen
     ) {
+        this(
+                container, playerInv, title,
+                new VillagerTabs(
+                        inventoryAndStatusScreen, null, statsScreen
+                )
+        );
+    }
+
+    public QuestsScreen(TownQuestsContainer container, Inventory playerInv, Component title, SubUI villagerTabs) {
         super(container, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
@@ -88,17 +103,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             head.getOrCreateTag().putString(PlayerHeadItem.TAG_SKULL_OWNER, v.villagerUUID());
             return head;
         }).toList();
-
-    }
-
-    public static QuestsScreen fromOtherScreen(
-            VillagerStatsMenu menu,
-            Inventory playerInv,
-            Component title
-    ) {
-        return new QuestsScreen(
-            menu.questsMenu(), playerInv, title
-        );
+        this.tabs = villagerTabs;
     }
 
     @Override
@@ -128,6 +133,23 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     }
 
     @Override
+    protected void renderLabels(PoseStack p_97808_, int p_97809_, int p_97810_) {
+    }
+
+    @Override
+    protected void renderTooltip(PoseStack stack, int mouseX, int mouseY) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        if (this.tabs.renderTooltip(
+                bgX, bgY, mouseX, mouseY,
+                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+        )) {
+            return;
+        }
+        super.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    @Override
     public void render(
             PoseStack poseStack,
             int mouseX,
@@ -137,8 +159,10 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
-        int x = ((this.width - backgroundWidth) / 2);
-        int y = (this.height - backgroundHeight) / 2;
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        int x = bgX;
+        int y = bgY;
         int pageStringY = y + PAGE_PADDING;
 
         renderPageNum(poseStack, x);
@@ -223,6 +247,8 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+
+        this.tabs.draw(poseStack, bgX, bgY);
     }
 
     private void renderRemovalButton(
@@ -283,6 +309,9 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
                 return true;
             }
         }
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        this.tabs.mouseClicked(minecraft, bgX, bgY, x, y);
         return super.mouseClicked(x, y, p_97750_);
     }
 
@@ -448,5 +477,22 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
             double mouseY
     ) {
         return true;
+    }
+
+    public static QuestsScreen forTown(TownQuestsContainer container, Inventory playerInv, Component title) {
+        return new QuestsScreen(container, playerInv, title, new SubUI() {
+            @Override
+            public void draw(PoseStack poseStack, int bgX, int bgY) {
+            }
+
+            @Override
+            public void mouseClicked(Minecraft minecraft, int bgX, int bgY, double x, double y) {
+            }
+
+            @Override
+            public boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o) {
+                return false;
+            }
+        });
     }
 }
