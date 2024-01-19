@@ -100,12 +100,9 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
     public void accept(VillagerStatsData villagerStatsData) {
         int fullness = (int) (100 * villagerStatsData.fullnessPercent());
         this.fullnessSlot.set(fullness);
-        this.slotsChanged(null);
-        QT.VILLAGER_LOGGER.debug("Listener Fullness: {}", fullnessSlot.get());
     }
 
     public int getFullnessPercent() {
-        QT.VILLAGER_LOGGER.debug("Menu Fullness: {}", fullnessSlot.get());
         return fullnessSlot.get();
     }
 

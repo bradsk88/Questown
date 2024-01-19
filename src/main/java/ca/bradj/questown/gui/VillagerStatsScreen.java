@@ -96,8 +96,11 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         blit(stack, x - 1, y, 0, 0, 64, halfWidth, height, 256, 256);
         blit(stack, x + 78, y, 0, 100, 64, halfWidth, height, 256, 256);
         float fP = menu.getFullnessPercent() / 100f;
-        blit(stack, x - 1, y, 0, 0, 69, (int) (halfWidth * (2 * (Math.max(0.5, fP)))), height, 256, 256);
-        blit(stack, x + 78, y, 0, 100, 64, (int) (halfWidth * (2 * (Math.max(0.5, fP-0.5)))), height, 256, 256);
+        int greenY = 69;
+        int leftWidth = (int) (halfWidth * (2 * (Math.min(0.5, fP))));
+        int rightWidth = (int) ((halfWidth) * (2 * (Math.min(0.5, (fP) - 0.5))));
+        blit(stack, x - 1, y, 0, 0, greenY, leftWidth, height, 256, 256);
+        blit(stack, x + 78, y, 0, 100, greenY, rightWidth, height, 256, 256);
     }
 
     @Override
