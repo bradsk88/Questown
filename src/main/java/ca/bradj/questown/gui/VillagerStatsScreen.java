@@ -3,12 +3,13 @@ package ca.bradj.questown.gui;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.common.gui.textures.Textures;
+import mezz.jei.Internal;
+import mezz.jei.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
@@ -64,7 +65,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, new TranslatableComponent(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -87,7 +88,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     private void renderHunger(PoseStack stack) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bxY = (this.height - backgroundHeight) / 2;
-        font.draw(stack, Component.translatable("menu.hunger"), bgX + 8, bxY + 16, 0x00000000);
+        font.draw(stack, new TranslatableComponent("menu.hunger"), bgX + 8, bxY + 16, 0x00000000);
         RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
         int x = 8 + bgX;
         int y = 28 + bxY;

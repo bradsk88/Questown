@@ -2,10 +2,9 @@ package ca.bradj.questown.gui;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
+import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.textures.Textures;
-import net.minecraft.client.Minecraft;
+import mezz.jei.gui.textures.Textures;
 
 import java.util.function.Consumer;
 

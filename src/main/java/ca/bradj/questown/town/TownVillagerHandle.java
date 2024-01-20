@@ -9,6 +9,7 @@ import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
@@ -92,10 +93,10 @@ public class TownVillagerHandle implements VillagerHolder {
                 )
         );
 
-        NetworkHooks.openScreen(sender, new MenuProvider() {
+        NetworkHooks.openGui(sender, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return Component.empty();
+                return new TranslatableComponent("");
             }
 
             @Override

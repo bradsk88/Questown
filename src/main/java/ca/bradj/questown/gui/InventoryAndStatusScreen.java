@@ -186,7 +186,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, new TranslatableComponent(key), mouseX, mouseY)
         )) {
             return;
         }

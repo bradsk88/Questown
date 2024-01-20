@@ -27,7 +27,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
@@ -623,7 +622,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         // Sometimes the farmer gets stuck leaving or entering the farm.  As a stop-gap, wiggle sometimes.
-        RandomSource rand = town.getServerLevel().getRandom();
+        Random rand = town.getServerLevel().getRandom();
         if (rand.nextInt(5) == 0) {
             return entityBlockPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
         }
