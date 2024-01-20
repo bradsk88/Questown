@@ -1,11 +1,10 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.items.KnowledgeMetaItem;
+import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -16,6 +15,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -24,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Stack;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -126,53 +125,39 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState tryExtractOre(
-            @NotNull Inputs inputs,
-            BlockPos position
-    ) {
-        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
-        if (s != null && s.processingState() == maxState) {
+    protected MCTownState setJobBlockState(@NotNull Inputs inputs, MCTownState ts, BlockPos position, AbstractWorkStatusStore.State fresh) {
+        return ts.setJobBlockState(position, fresh);
+    }
 
-            Collection<MCHeldItem> items = getHeldItems(inputs, villagerIndex);
-            Iterable<MCHeldItem> generatedResult = resultGenerator.apply(inputs.level, items);
+    @Override
+    protected MCTownState withEffectApplied(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+        ResourceLocation effect = EffectMetaItem.getEffect(newItem.get().toItemStack());
+        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(effect));
+    }
 
-            Stack<MCHeldItem> stack = new Stack<>();
-            generatedResult.forEach(stack::push);
+    @Override
+    protected MCTownState withKnowledge(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+        return ts.withKnowledge(newItem);
+    }
 
-            if (stack.isEmpty()) {
-                QT.JOB_LOGGER.error(
-                        "No results during extraction phase. That's probably a bug. Town State: {}",
-                        inputs.town()
-                );
-                return inputs.town();
-            }
+    @Override
+    protected boolean isInstanze(MCTownItem mcTownItem, Class<?> clazz) {
+        return clazz.isInstance(mcTownItem.get().asItem());
+    }
 
-            MCTownState ts = inputs.town();
-            int i = -1;
-            for (MCHeldItem item : items) {
-                i++;
-                if (!item.isEmpty()) {
-                    continue;
-                }
-                MCHeldItem newItem = stack.pop();
-                if (newItem.get().toItemStack().getCount() > 1) {
-                    stack.push(newItem.shrink());
-                }
-                if (newItem.get().get() instanceof KnowledgeMetaItem) {
-                    ts = ts.withKnowledge(newItem);
-                }else {
-                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem.unit());
-                }
-                ts = ts.setJobBlockState(position, AbstractWorkStatusStore.State.fresh());
+    @Override
+    protected boolean isMulti(MCTownItem mcTownItem) {
+        return mcTownItem.toItemStack().getCount() > 1;
+    }
 
+    @Override
+    protected MCTownState getTown(Inputs inputs) {
+        return inputs.town();
+    }
 
-                if (stack.isEmpty()) {
-                    return ts;
-                }
-            }
-            // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
-        }
-        return null;
+    @Override
+    protected Iterable<MCHeldItem> getResults(Inputs inputs, Collection<MCHeldItem> mcHeldItems) {
+        return resultGenerator.apply(inputs.level, mcHeldItems);
     }
 
     @Override

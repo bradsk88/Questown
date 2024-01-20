@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -61,7 +62,7 @@ public class JobsRegistry {
             RandomSource rand,
             String rootId
     ) {
-        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet()
+        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
                 .stream()
                 .filter(v -> v.getKey().rootId().equals(rootId))
                 .toList();
@@ -271,6 +272,10 @@ public class JobsRegistry {
         if (WorkSeekerJob.isSeekingWork(jobName)) {
             j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
             journal = newWorkSeekerJournal(jobName, journal, heldItems);
+        }else if (DinerWork.isDining(jobName)) {
+            Work dw = DinerWork.asWork(jobName.rootId());
+            j = dw.jobFunc().apply(town, ownerUUID);
+            journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
             j = Works.get(GathererUnmappedNoToolWork.ID).get().jobFunc().apply(town, ownerUUID);

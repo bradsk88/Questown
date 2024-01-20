@@ -8,6 +8,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -1010,6 +1011,18 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle().removeStatsListener(villagerStatsMenu);
+    }
+
+    private static final Map<ResourceLocation, Consumer<VisitorMobEntity>> effects = ImmutableMap.of(
+            EffectMetaItem.Effects.FILL_HUNGER, VisitorMobEntity::fillHunger
+    );
+
+    private void fillHunger() {
+        town.getVillagerHandle().fillHunger(getUUID());
+    }
+
+    public void applyEffect(ResourceLocation effect) {
+        effects.get(effect).accept(this);
     }
 
     public interface ChangeListener {

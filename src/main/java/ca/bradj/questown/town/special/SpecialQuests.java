@@ -30,6 +30,7 @@ public class SpecialQuests {
     );
     public static final ResourceLocation BEDROOM = new ResourceLocation(Questown.MODID, "bedroom");
     public static final ResourceLocation JOB_BOARD = new ResourceLocation(Questown.MODID, "job_board");
+    public static final ResourceLocation DINING_ROOM = new ResourceLocation(Questown.MODID, "dining_room");
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);

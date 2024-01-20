@@ -22,4 +22,6 @@ public interface VillagerHolder {
             String type,
             UUID villagerId
     );
+
+    void fillHunger(UUID uuid);
 }

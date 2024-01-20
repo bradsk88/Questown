@@ -5,11 +5,13 @@ import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -61,11 +63,17 @@ public class Works {
         works = b.build();
     }
 
-    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet() {
-        return works.entrySet();
+    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootID) {
+        ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
+        b.addAll(works.entrySet());
+        b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootID), () -> DinerWork.asWork(rootID)));
+        return b.build();
     }
 
     public static Supplier<Work> get(JobID jobID) {
+        if (DinerWork.isDining(jobID)) {
+            return () -> DinerWork.asWork(jobID.rootId());
+        }
         return works.get(jobID);
     }
 }

@@ -1,7 +1,6 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
@@ -19,7 +18,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraftforge.network.NetworkHooks;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -30,6 +28,7 @@ public class TownVillagerHandle implements VillagerHolder {
     final List<LivingEntity> entities = new ArrayList<>();
     final Map<UUID, Integer> fullness = new HashMap<>();
     private List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
+    private List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
 
     public void tick() {
         entities.forEach(e -> {
@@ -39,6 +38,9 @@ public class TownVillagerHandle implements VillagerHolder {
             fullness.put(u, newVal);
             if (oldVal != newVal) {
                 listeners.forEach(l -> l.accept(getStats(u)));
+                if (newVal == 0) {
+                    hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
+                }
             }
         });
     }
@@ -107,6 +109,12 @@ public class TownVillagerHandle implements VillagerHolder {
         }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId()));
     }
 
+    @Override
+    public void fillHunger(UUID uuid) {
+        // TODO: Get max fullness from villager
+        fullness.put(uuid, Config.BASE_FULLNESS.get());
+    }
+
     void forEach(Consumer<? super LivingEntity> c) {
         this.entities.forEach(c);
     }
@@ -130,6 +138,10 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void addStatsListener(Consumer<VillagerStatsData> l) {
         this.listeners.add(l);
+    }
+
+    public void addHungryListener(Consumer<VisitorMobEntity> l) {
+        this.hungryListeners.add(l);
     }
 
     @Override
