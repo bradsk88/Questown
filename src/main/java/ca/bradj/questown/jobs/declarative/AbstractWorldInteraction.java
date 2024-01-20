@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.items.EffectMetaItem;
+import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.JobID;
@@ -8,10 +10,12 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Stack;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -192,10 +196,69 @@ public abstract class AbstractWorldInteraction<
         return ingredientsRequiredAtStates;
     }
 
-    protected abstract TOWN tryExtractOre(
-            EXTRA extra,
+    protected TOWN tryExtractOre(
+            @NotNull EXTRA inputs,
             POS position
-    );
+    ) {
+        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
+        if (s != null && s.processingState() == maxState) {
+
+            Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
+            Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
+
+            Stack<HELD_ITEM> stack = new Stack<>();
+            generatedResult.forEach(stack::push);
+
+            TOWN ts = getTown(inputs);
+            if (stack.isEmpty()) {
+                QT.JOB_LOGGER.error(
+                        "No results during extraction phase. That's probably a bug. Town State: {}",
+                        ts
+                );
+                return ts;
+            }
+
+            int i = -1;
+            for (HELD_ITEM item : items) {
+                i++;
+                if (!item.isEmpty()) {
+                    continue;
+                }
+                HELD_ITEM newItem = stack.pop();
+                if (isMulti(newItem.get())) {
+                    stack.push(newItem.shrink());
+                }
+                if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
+                    ts = withKnowledge(inputs, ts, newItem);
+                } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
+                    ts = withEffectApplied(inputs, ts, newItem);
+                } else {
+                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem.unit());
+                }
+                ts = setJobBlockState(inputs, ts, position, AbstractWorkStatusStore.State.fresh());
+
+                if (stack.isEmpty()) {
+                    return ts;
+                }
+            }
+            // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
+        }
+        return null;
+    }
+
+    protected abstract TOWN setJobBlockState(@NotNull EXTRA inputs, TOWN ts, POS position, AbstractWorkStatusStore.State fresh);
+
+    protected abstract TOWN withEffectApplied(@NotNull EXTRA inputs, TOWN ts, HELD_ITEM newItem);
+
+    protected abstract TOWN withKnowledge(@NotNull EXTRA inputs, TOWN ts, HELD_ITEM newItem);
+
+    protected abstract boolean isInstanze(INNER_ITEM innerItem, Class<?> clazz);
+
+    protected abstract boolean isMulti(INNER_ITEM innerItem);
+
+    protected abstract TOWN getTown(EXTRA inputs);
+
+    protected abstract Iterable<HELD_ITEM> getResults(EXTRA inputs, Collection<HELD_ITEM> items);
 
     protected abstract boolean isEntityClose(EXTRA extra, POS position);
 

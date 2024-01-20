@@ -17,6 +17,7 @@ import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -416,6 +417,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                         t.knowledgeHandle
                 );
             }
+            return true;
+        });
+        initializers.add(t -> {
+            t.villagerHandle.addHungryListener(e -> {
+                t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(e.getJobId().rootId()));
+            });
             return true;
         });
     }

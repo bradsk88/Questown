@@ -1,8 +1,7 @@
 package ca.bradj.questown.commands;
 
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.jobs.Works;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -23,9 +22,7 @@ public class JobArgument implements ArgumentType<JobID> {
     private Collection<JobID> jobIDs;
 
     public JobArgument() {
-        ImmutableList.Builder<JobID> b = ImmutableList.builder();
-        JobsRegistry.getAllJobs().forEach(b::add);
-        jobIDs = b.build();
+        jobIDs = Works.ids();
     }
 
     public static @NotNull ArgumentType<JobID> job() {

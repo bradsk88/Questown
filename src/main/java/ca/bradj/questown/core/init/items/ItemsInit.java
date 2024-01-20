@@ -93,6 +93,12 @@ public class ItemsInit {
             KnowledgeMetaItem::new
     );
 
+
+    public static final RegistryObject<Item> EFFECT = ITEMS.register(
+            EffectMetaItem.ITEM_ID,
+            EffectMetaItem::new
+    );
+
     public static void register(IEventBus bus) {
         ITEMS.register(bus);
     }

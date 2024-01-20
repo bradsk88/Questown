@@ -1,11 +1,11 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -14,12 +14,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Map;
@@ -35,7 +34,7 @@ public class WorldInteraction
     public Boolean tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
-            LivingEntity entity,
+            VisitorMobEntity entity,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
         return tryWorking(new MCExtra(town, work, entity), workSpot);
@@ -93,34 +92,6 @@ public class WorldInteraction
     }
 
     @Override
-    protected Boolean tryExtractOre(
-            MCExtra extra,
-            BlockPos position
-    ) {
-        return tryExtractOre(extra.town(), extra.work(), position);
-    }
-
-    protected Boolean tryExtractOre(
-            TownInterface town,
-            ImmutableWorkStateContainer<BlockPos, Boolean> jh,
-            BlockPos pos
-    ) {
-        //TODO: Extract common implementation between this and MCTSWI
-        @Nullable ServerLevel sl = town.getServerLevel();
-        if (Integer.valueOf(maxState).equals(JobBlock.getState(jh::getJobBlockState, pos))) {
-            AbstractWorkStatusStore.State after = JobBlock.extractRawProduct(
-                    sl, jh, pos, this.resultGenerator.apply(town.getServerLevel(), journal.getItems()),
-                    journal::addItemIfSlotAvailable, specialRules.contains(SpecialRules.NULLIFY_EXCESS_RESULTS)
-            );
-            if (after != null) {
-                jh.setJobBlockState(pos, AbstractWorkStatusStore.State.fresh());
-                return true;
-            }
-        }
-        return null;
-    }
-
-    @Override
     protected Boolean setHeldItem(
             MCExtra uxtra,
             Boolean tuwn,
@@ -164,6 +135,44 @@ public class WorldInteraction
             int villagerIndex
     ) {
         return journal.getItems();
+    }
+
+    @Override
+    protected Boolean setJobBlockState(@NotNull MCExtra inputs, Boolean ts, BlockPos position, AbstractWorkStatusStore.State state) {
+        inputs.work().setJobBlockState(position, state);
+        return true;
+    }
+
+    @Override
+    protected Boolean withEffectApplied(@NotNull MCExtra inputs, Boolean ts, MCHeldItem newItem) {
+        inputs.entity().applyEffect(EffectMetaItem.getEffect(newItem.get().toItemStack()));
+        return null;
+    }
+
+    @Override
+    protected Boolean withKnowledge(@NotNull MCExtra inputs, Boolean ts, MCHeldItem newItem) {
+        inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(newItem));
+        return null;
+    }
+
+    @Override
+    protected boolean isInstanze(MCTownItem mcTownItem, Class<?> clazz) {
+        return clazz.isInstance(mcTownItem.get());
+    }
+
+    @Override
+    protected boolean isMulti(MCTownItem mcTownItem) {
+        return mcTownItem.toItemStack().getCount() > 1;
+    }
+
+    @Override
+    protected Boolean getTown(MCExtra inputs) {
+        return true; // TODO: Is this right?
+    }
+
+    @Override
+    protected Iterable<MCHeldItem> getResults(MCExtra inputs, Collection<MCHeldItem> mcHeldItems) {
+        return resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
     }
 
     @Override

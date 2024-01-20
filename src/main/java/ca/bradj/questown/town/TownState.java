@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -269,6 +270,11 @@ public abstract class TownState<
                     xPosition, yPosition, zPosition,
                     (ImmutableSnapshot) journal.withItems(items), uuid
             );
+        }
+
+        public VillagerData<I> withEffect(ResourceLocation effect) {
+            //FIXME: Add hunger to time travel
+            return this;
         }
     }
 }

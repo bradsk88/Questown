@@ -331,7 +331,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         if (entityCurrentJobSite != null) {
-            tryWorking(town, work, entity, entityCurrentJobSite);
+            tryWorking(town, work, (VisitorMobEntity) entity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
         if (!wrappingUp) {
@@ -381,7 +381,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private void tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
-            LivingEntity entity,
+            VisitorMobEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         ServerLevel sl = town.getServerLevel();
