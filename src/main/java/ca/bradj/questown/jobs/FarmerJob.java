@@ -7,9 +7,11 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.farmer.WorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -24,6 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
@@ -48,6 +51,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.jobs.GathererJournal.Status.*;
 import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
@@ -144,6 +148,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
     @Override
     public boolean isJumpingAllowed(BlockState onBlock) {
+        if (!journal.getStatus().isFarmingWork()) {
+            return true;
+        }
         return onBlock.is(Blocks.COMPOSTER);
     }
 
@@ -200,7 +207,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         BlockPos entityBlockPos = entity.blockPosition();
         if (selectedFarm != null) {
-            isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm));
+            isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm, entityBlockPos));
             if (!isInFarm) {
                 isInFarm = areAllPartsOfEntityInFarm(entity.position());
             }
@@ -252,10 +259,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private void tryDropLoot(
             BlockPos entityPos
     ) {
-        // TODO: Introduce this status for farmer
-//        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
-//            return;
-//        }
+        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
+            return;
+        }
         if (this.dropping) {
             Questown.LOGGER.debug("Trying to drop too quickly");
         }
@@ -265,35 +271,33 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private void tryGetSupplies(
             BlockPos entityPos
     ) {
-        // TODO: Introduce this status for farmer
-//        if (journal.getStatus() != GathererJournal.Status.DROPPING_LOOT) {
-//            return;
-//        }
-        // FIXME: UNcomment
-//        JobsClean.tryTakeContainerItems(this, entityPos, new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
-//            @Override
-//            public boolean isCloseTo() {
-//                if (suppliesTarget == null) {
-//                    return false;
-//                }
-//                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
-//            }
-//
-//            @Override
-//            public String toShortString() {
-//                return suppliesTarget.toShortString();
-//            }
-//
-//            @Override
-//            public List<MCTownItem> getItems() {
-//                return suppliesTarget.getItems();
-//            }
-//
-//            @Override
-//            public void removeItem(int i, int quantity) {
-//                suppliesTarget.getContainer().removeItem(i, quantity);
-//            }
-//        }, (item) -> holdItems.contains(item));
+        if (journal.getStatus() != COLLECTING_SUPPLIES) {
+            return;
+        }
+        JobsClean.<BlockPos, MCTownItem>tryTakeContainerItems(i -> journal.addItem(MCHeldItem.fromTown(i)), new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+            @Override
+            public boolean isCloseTo() {
+                if (suppliesTarget == null) {
+                    return false;
+                }
+                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+            }
+
+            @Override
+            public String toShortString() {
+                return suppliesTarget.toShortString();
+            }
+
+            @Override
+            public List<MCTownItem> getItems() {
+                return suppliesTarget.getItems();
+            }
+
+            @Override
+            public void removeItem(int i, int quantity) {
+                suppliesTarget.getContainer().removeItem(i, quantity);
+            }
+        }, (MCTownItem item) -> holdItems.contains(item.get()));
     }
 
     @Override
@@ -318,7 +322,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         ) : null;
 
         BlockPos out = switch (getStatus()) {
-            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm);
+            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm, entityBlockPos);
             case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position();
             case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position();
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position();
@@ -331,7 +335,9 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case RELAXING, IDLE, NO_SUPPLIES, NO_SPACE -> null;
             default -> throw new IllegalStateException(String.format("Unexpected status %s", getStatus()));
         };
-        if (out == null) {
+        if (out == null && !ImmutableList.of(
+                RELAXING, IDLE, NO_SUPPLIES, NO_SPACE
+        ).contains(getStatus())) {
             QT.JOB_LOGGER.warn(marker, "Unexpectedly null target for status: {}", getStatus());
         }
         return out;
@@ -483,17 +489,17 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         workSpots.clear();
         Collection<WorkSpot<FarmerAction, BlockPos>> spots = listAllWorkspots(level, selectedFarm);
 
-        ImmutableMap.Builder<FarmerAction, Boolean> b = ImmutableMap.builder();
+        Map<FarmerAction, Boolean> b = new HashMap<>();
         ImmutableList.copyOf(FarmerAction.values()).forEach(
                 v -> {
                     WorkSpot<FarmerAction, BlockPos> ws = getWorkSpot(spots, ImmutableList.of(v));
-                    b.put(v, ws != null);
                     if (ws != null && v.equals(ws.action())) {
                         workSpots.put(v, ws);
+                        b.put(v, true);
                     }
                 }
         );
-        ImmutableMap<FarmerAction, Boolean> possibleWork = b.build();
+        ImmutableMap<FarmerAction, Boolean> possibleWork = ImmutableMap.copyOf(b);
 
         e.signal = Signals.fromGameTime(level.getDayTime());
         e.journal.tick(
@@ -605,11 +611,19 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Nullable
     private static BlockPos getGateInteractionSpot(
             TownInterface town,
-            @Nullable MCRoom foundRoom
+            @Nullable MCRoom foundRoom,
+            BlockPos entityBlockPos
     ) {
         if (foundRoom == null) {
             return null;
         }
+
+        // Sometimes the farmer gets stuck leaving or entering the farm.  As a stop-gap, wiggle sometimes.
+        RandomSource rand = town.getServerLevel().getRandom();
+        if (rand.nextInt(5) == 0) {
+            return entityBlockPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
+        }
+
         BlockPos fencePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
         Optional<XWall> backXWall = foundRoom.getBackXWall();
         if (backXWall.isPresent()) {
@@ -625,7 +639,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
             return fencePos.offset(1, 0, 0);
         }
-        return fencePos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(town.getServerLevel().getRandom()));
+        return fencePos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
     }
 
     @Override
@@ -739,5 +753,44 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             return FarmerAction.COMPOST;
         }
         return FarmerAction.UNDEFINED;
+    }
+
+    public static class SimpleWarper implements Warper<ServerLevel, MCTownState> {
+        public SimpleWarper(WorksBehaviour.WarpInput i) {
+        }
+
+        @Override
+        public MCTownState warp(
+                ServerLevel level,
+                MCTownState liveState,
+                long currentTick,
+                long ticksPassed,
+                int villagerNum
+        ) {
+            liveState.depositItems(ImmutableList.copyOf(
+                    Collections.nCopies(
+                            level.random.nextInt(3),
+                            MCHeldItem.fromTown(Items.WHEAT.asItem().getDefaultInstance())
+                    )
+            ));
+            return liveState;
+        }
+
+        @Override
+        public Collection<Tick> getTicks(
+                long referenceTick,
+                long ticksPassed
+        ) {
+            ImmutableList.Builder<Tick> b = ImmutableList.builder();
+
+            // Calculate the number of days in the range
+            long days = ticksPassed / 24000;
+
+            // Populate the result array with 12000 for each day
+            for (int i = 0; i < days; i++) {
+                b.add(new Tick(12000 + (24000 * i), 24000));
+            }
+            return b.build();
+        }
     }
 }
