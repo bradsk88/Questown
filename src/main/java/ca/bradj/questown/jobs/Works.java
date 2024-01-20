@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
@@ -8,13 +9,20 @@ import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
+import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import static ca.bradj.questown.jobs.WorksBehaviour.NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK;
+import static ca.bradj.questown.jobs.WorksBehaviour.getProductionNeeds;
 
 // This file attempts to resemble a collection of JSON files - which is the ultimate vision of Questown.
 // Having a JSON file approach would allow other mods to easily integrate with Questown.
@@ -33,20 +41,20 @@ public class Works {
     static {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         // TODO: Replace with production job
-//        b.put(FarmerJob.ID, new Work(
-//                (town, uuid) -> new FarmerJob(uuid, 6),
-//                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-//                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-//                SpecialQuests.FARM,
-//                GathererJournal.Status.IDLE,
-//                t -> ImmutableSet.of(
-//                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
-//                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
-//                ),
-//                Items.WHEAT.getDefaultInstance(),
-//                // TODO: Review this - probably should be different by status
-//                (s) -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS))
-//        ));
+        b.put(FarmerJob.ID, () -> new Work(
+                (town, uuid) -> new FarmerJob(uuid, 6),
+                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
+                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
+                SpecialQuests.FARM,
+                GathererJournal.Status.IDLE,
+                t -> ImmutableSet.of(
+                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
+                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+                ),
+                Items.WHEAT.getDefaultInstance(),
+                s -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS.getDefaultInstance())),
+                FarmerJob.SimpleWarper::new
+        ));
         b.put(BakerBreadWork.ID, BakerBreadWork::asWork);
         b.put(SmelterJob.ID, SmelterJob::asWork);
         b.put(BlacksmithWoodenPickaxeJob.ID, BlacksmithWoodenPickaxeJob::asWork);

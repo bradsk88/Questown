@@ -1,5 +1,6 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public class Config {
@@ -56,6 +57,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
 
     static {
         // Scanning Config
@@ -124,7 +126,7 @@ public class Config {
         ).defineInRange("BakingTime", 1000, 1000, 24000);
         FARMER_WEEDS_RARITY = BUILDER.comment(
                 "The chance that a farmer will find weeds (actually grass, for composting) on a still-growing crop block. 1 means \"constantly\"."
-        ).defineInRange("FarmerWeedsRarity", 10, 1, 9999);
+        ).defineInRange("FarmerWeedsRarity", 1000, 1, 9999);
         SMELTER_WORK_REQUIRED = BUILDER.comment(
                 "The number of times a smelter must work on a block of ore to extract the raw materials inside"
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
@@ -142,6 +144,9 @@ public class Config {
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
         ).defineInRange("BaseFullness", 3000, 1, 24000);
+        HUNGER_ENABLED = BUILDER.comment(
+                "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
+        ).define("HungerEnabled", false);
         BUILDER.pop();
 
         // Advanced Config
