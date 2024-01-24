@@ -38,12 +38,6 @@
     },
     "processing_state=2": {
       "model": "questown:block/ore_processing_block_done"
-    },
-    "processing_state=3": {
-      "model": "questown:block/ore_processing_block_done"
-    },
-    "processing_state=4": {
-      "model": "questown:block/ore_processing_block_done"
     }
   }
 }

@@ -17,7 +17,7 @@ public class MenuTypesInit {
             ForgeRegistries.MENU_TYPES, Questown.MODID
     );
     public static RegistryObject<MenuType<TownQuestsContainer>> TOWN_QUESTS = MENUS.register(
-            "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::new)
+            "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::ForClient)
     );
     public static RegistryObject<MenuType<TownRemoveQuestsContainer>> TOWN_QUESTS_REMOVE = MENUS.register(
             "town_quests_remove", () -> IForgeMenuType.create(TownRemoveQuestsContainer::read)

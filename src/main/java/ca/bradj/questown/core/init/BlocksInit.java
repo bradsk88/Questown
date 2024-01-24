@@ -40,4 +40,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> BLACKSMITHS_TABLE_BLOCK = BLOCKS.register(
             BlacksmithsTableBlock.ITEM_ID, BlacksmithsTableBlock::new
     );
+    public static final RegistryObject<Block> PLATE_BLOCK = BLOCKS.register(
+            PlateBlock.ITEM_ID, PlateBlock::new
+    );
 }
