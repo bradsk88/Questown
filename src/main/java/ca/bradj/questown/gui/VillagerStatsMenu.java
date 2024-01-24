@@ -51,7 +51,6 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
         this.openQuestsFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
-        this.fullnessSlot.set(88);
 
         entity.addStatusListener(this);
 

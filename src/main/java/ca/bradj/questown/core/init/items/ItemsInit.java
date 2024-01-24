@@ -66,6 +66,14 @@ public class ItemsInit {
             )
     );
 
+    public static final RegistryObject<Item> PLATE_BLOCK = ITEMS.register(
+            PlateBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.PLATE_BLOCK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
             TownDoorItem.ITEM_ID,
             TownDoorItem::new

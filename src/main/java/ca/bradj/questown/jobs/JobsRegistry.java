@@ -48,6 +48,9 @@ public class JobsRegistry {
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
+        if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
+            return true;
+        }
         return Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(b));
     }
 

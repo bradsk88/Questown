@@ -32,12 +32,13 @@ public class TownQuestsContainer extends AbstractContainerMenu {
         this.flagPos = flagPos;
     }
 
-    public TownQuestsContainer(
+    public static TownQuestsContainer ForClient(
             int windowId,
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        this(windowId, readQuests(data), readFlagPos(data));
+        VillagerMenus menus = VillagerMenus.fromNetwork(windowId, inv.player, data);
+        return menus.questsMenu;
     }
 
     public static void write(

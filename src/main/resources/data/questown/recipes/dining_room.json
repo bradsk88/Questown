@@ -3,16 +3,16 @@
   "recipe_strength": 1,
   "ingredients": [
     {
-      "item": "minecraft:pumpkin"
+      "item": "questown:plate_block"
     },
     {
-      "item": "minecraft:pumpkin"
+      "item": "questown:plate_block"
     },
     {
-      "item": "minecraft:pumpkin"
+      "item": "questown:plate_block"
     },
     {
-      "item": "minecraft:pumpkin"
+      "item": "questown:plate_block"
     }
   ]
 }
