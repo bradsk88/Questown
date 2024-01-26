@@ -91,5 +91,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         return AbstractWorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
-    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
+    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(
+            EXTRA extra
+    );
 }
+

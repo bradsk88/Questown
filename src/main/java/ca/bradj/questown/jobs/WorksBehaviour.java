@@ -1,10 +1,12 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
@@ -35,6 +37,7 @@ public class WorksBehaviour {
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
+            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
             int maxState,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
@@ -54,7 +57,8 @@ public class WorksBehaviour {
                 ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates,
-                resultGenerator
+                resultGenerator,
+                claimSpots
         );
         return DeclarativeJobs.warper(wi, maxState, prioritizeExtraction);
     }
@@ -143,6 +147,12 @@ public class WorksBehaviour {
                         jobId,
                         warpInput,
                         specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION),
+                        inputs -> {
+                            if (!specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
+                                return null;
+                            }
+                            return new Claim(inputs.uuid(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+                        },
                         actionDuration,
                         maxState,
                         tools,

@@ -4,8 +4,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
@@ -76,6 +77,7 @@ public class WorkSeekerJob extends DeclarativeJob {
 
     @Override
     protected @NotNull WorldInteraction initWorldInteraction(
+            UUID ownerUUID,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -83,11 +85,12 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            ImmutableList<String> specialRules,
+            Function<MCExtra, Claim> claimSpots,
             int interval
     ) {
         return new WorldInteraction(
                 journal,
+                ownerUUID,
                 maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
@@ -95,7 +98,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
                 resultGenerator,
-                specialRules,
+                claimSpots,
                 interval
         ) {
 
@@ -104,7 +107,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                     MCExtra extra,
                     BlockPos position
             ) {
-                extra.town().changeJobForVisitorFromBoard(ownerUUID);
+                extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID);
                 return true;
             }
         };

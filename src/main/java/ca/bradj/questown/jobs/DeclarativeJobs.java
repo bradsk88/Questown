@@ -156,7 +156,8 @@ public class DeclarativeJobs {
 
                 final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(
                         outState,
-                        level
+                        level,
+                        inState.getVillager(villagerNum).uuid
                 );
                 wi.injectTicks((int) ticksPassed);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);

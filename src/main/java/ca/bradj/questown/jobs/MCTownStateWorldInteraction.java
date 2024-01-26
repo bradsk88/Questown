@@ -9,6 +9,7 @@ import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -24,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,7 +35,8 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     public record Inputs(
             MCTownState town,
-            ServerLevel level
+            ServerLevel level,
+            UUID uuid
     ) {
     }
 
@@ -50,12 +53,13 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots
     ) {
         super(
                 jobId, villagerIndex, interval, maxState, Jobs.unMC(toolsRequiredAtStates),
                 workRequiredAtStates, Jobs.unMCHeld(ingredientsRequiredAtStates),
-                ingredientQuantityRequiredAtStates, timeRequiredAtStates
+                ingredientQuantityRequiredAtStates, timeRequiredAtStates, claimSpots
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = ingredientQuantityRequiredAtStates;
@@ -112,7 +116,9 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(Inputs mcTownState) {
+    protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(
+            Inputs mcTownState
+    ) {
         return mcTownState.town();
     }
 

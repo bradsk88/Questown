@@ -23,4 +23,12 @@ public class SpecialRules {
     // have a lower state. This is typically the most efficient option for production
     // jobs that have an element of "time".
     public static final String PRIORITIZE_EXTRACTION = "prioritize_extraction";
+
+    // If this rule is enabled, only one villager will be allowed to use the job block
+    // after the first ingredient has been inserted and until the product is extracted.
+    // E.g. For the "dining job" a plate can only be filled by one villager, who will
+    // "work" on that spot until they have finished their work, and then they will
+    // "release" to plate for others to use. Other villagers will try to claim other
+    // plates - ignoring claimed ones.
+    public static final String CLAIM_SPOT = "claim_spot";
 }

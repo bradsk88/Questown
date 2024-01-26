@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -16,20 +17,19 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class WorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
-    private final ImmutableList<String> specialRules;
+    private final UUID villagerUUID;
 
     public Boolean tryWorking(
             TownInterface town,
@@ -40,23 +40,20 @@ public class WorldInteraction
         return tryWorking(new MCExtra(town, work, entity), workSpot);
     }
 
-    private final Marker marker = MarkerManager.getMarker("WI");
-
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
 
     public WorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
-            int maxState,
+            UUID villagerUUID, int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            ImmutableList<String> specialRules,
+            Function<MCExtra, Claim> claimSpots,
             int interval
     ) {
         super(
@@ -68,13 +65,13 @@ public class WorldInteraction
                 workRequiredAtStates,
                 stripMC(ingredientsRequiredAtStates),
                 ingredientQtyRequiredAtStates,
-                timeRequiredAtStates
+                timeRequiredAtStates,
+                claimSpots
         );
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
-        this.timeRequiredAtStates = timeRequiredAtStates;
         this.resultGenerator = resultGenerator;
-        this.specialRules = specialRules;
+        this.villagerUUID = villagerUUID;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -125,7 +122,9 @@ public class WorldInteraction
     }
 
     @Override
-    protected ImmutableWorkStateContainer<BlockPos, Boolean> getWorkStatuses(MCExtra extra) {
+    protected ImmutableWorkStateContainer<BlockPos, Boolean> getWorkStatuses(
+            MCExtra extra
+    ) {
         return extra.work();
     }
 

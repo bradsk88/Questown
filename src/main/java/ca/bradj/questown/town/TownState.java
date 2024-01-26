@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public abstract class TownState<
         C extends ContainerTarget.Container<I>,
@@ -276,5 +277,21 @@ public abstract class TownState<
             //FIXME: Add hunger to time travel
             return this;
         }
+    }
+
+
+    // Claiming is not implemented for time warp. It's mostly a visual thing, anyway.
+    @Override
+    public boolean claimSpot(P bp, Claim claim) {
+        return true;
+    }
+
+    @Override
+    public void clearClaim(P position) {
+    }
+
+    @Override
+    public boolean canClaim(P position, Supplier<Claim> makeClaim) {
+        return true;
     }
 }

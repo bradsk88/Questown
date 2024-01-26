@@ -5,7 +5,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
-import ca.bradj.questown.town.interfaces.WorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -99,7 +98,7 @@ class AbstractWorldInteractionTest {
                 Position position
         ) {
             extracted = true;
-            getWorkStatuses(null).clearState(position);
+            getWorkStatuses(null, true).clearState(position);
             return true;
         }
 
@@ -145,7 +144,9 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
+        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused,
+                                                                                 Boolean ts
+        ) {
             return workStatuses;
         }
 

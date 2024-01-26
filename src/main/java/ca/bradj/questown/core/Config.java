@@ -58,6 +58,8 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
+
 
     static {
         // Scanning Config
@@ -175,6 +177,9 @@ public class Config {
         TIME_WARP_MAX_TICKS = BUILDER.comment(
                 "Since the player can be gone for a very long time, we enforce a maximum warp to prevent the warp taking too long to compute."
         ).defineInRange("MaxTicks", 200000, 1, Integer.MAX_VALUE);
+        BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
+                "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
+        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
         BUILDER.pop(); // Yep, really thrice. Getting out of nested config
         BUILDER.pop();
         BUILDER.pop();

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -9,13 +10,11 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
 
@@ -89,6 +88,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     private final HashMap<POS, State> jobStatuses = new HashMap<>();
     private final HashMap<POS, Integer> timeJobStatuses = new HashMap<>();
+    private final HashMap<POS, Claim> claims = new HashMap<>();
+
     int curIdx = 0;
 
     public AbstractWorkStatusStore(
@@ -196,6 +197,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             ROOM o
     ) {
         timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(k, (kk, vv) -> vv == null ? null : vv - 1));
+        claims.forEach((k, v) -> claims.compute(k, (kk, vv) -> {
+            if (vv == null) {
+                return null;
+            }
+            return vv.ticked();
+        }));
         ImmutableMap.copyOf(timeJobStatuses)
                 .entrySet()
                 .stream()
@@ -238,5 +245,36 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     @Override
     public ImmutableMap<POS, State> getAll() {
         return ImmutableMap.copyOf(jobStatuses);
+    }
+
+    @Override
+    public boolean claimSpot(
+            POS bp,
+            Claim claim
+    ) {
+        Claim c = claims.get(bp);
+        if (c == null) {
+            claims.put(bp, claim);
+            return true;
+        }
+        if (c.owner().equals(claim.owner())) {
+            claims.put(bp, claim);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void clearClaim(POS position) {
+        claims.remove(position);
+    }
+
+    @Override
+    public boolean canClaim(POS position, Supplier<Claim> makeClaim) {
+        Claim c = claims.get(position);
+        if (c == null) {
+            return true;
+        }
+        return c.owner().equals(makeClaim.get().owner());
     }
 }

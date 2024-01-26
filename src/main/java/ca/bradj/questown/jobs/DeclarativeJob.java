@@ -5,6 +5,7 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.WorldInteraction;
@@ -13,6 +14,7 @@ import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -158,14 +160,19 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         );
         this.jobId = jobId;
         this.world = initWorldInteraction(
-                maxState,
+                ownerUUID, maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
                 toolsRequiredAtStates,
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 resultGenerator,
-                specialGlobalRules,
+                extra -> {
+                    if (specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
+                        return new Claim(ownerUUID, Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+                    }
+                    return null;
+                },
                 workInterval
         );
         this.maxState = maxState;
@@ -183,6 +190,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @NotNull
     protected WorldInteraction initWorldInteraction(
+            UUID ownerUUID,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -190,11 +198,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            ImmutableList<String> specialRules,
+            Function<MCExtra, Claim> claimSpots,
             int interval
     ) {
         return new WorldInteraction(
                 journal,
+                ownerUUID,
                 maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
@@ -202,7 +211,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
                 resultGenerator,
-                specialRules,
+                claimSpots,
                 interval
         );
     }
