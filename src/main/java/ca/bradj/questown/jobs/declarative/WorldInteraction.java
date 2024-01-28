@@ -4,6 +4,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.jobs.WorkOutput;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -15,29 +16,41 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class WorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
-    private final UUID villagerUUID;
-
-    public Boolean tryWorking(
+    public WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
-            WorkSpot<Integer, BlockPos> workSpot
+            Collection<WorkSpot<Integer, BlockPos>> workSpots
     ) {
-        return tryWorking(new MCExtra(town, work, entity), workSpot);
+        RandomSource random = town.getServerLevel().getRandom();
+        ArrayList<WorkSpot<Integer, BlockPos>> shuffled = new ArrayList<>(workSpots);
+        shuffle(shuffled, random);
+        for (WorkSpot<Integer, BlockPos> workSpot : shuffled){
+            WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
+            if (v != null) {
+                return v;
+            }
+        }
+        return new WorkOutput<>(null, ImmutableList.copyOf(shuffled).get(0));
+    }
+
+    private static void shuffle(List<?> list, RandomSource rnd) {
+        int size = list.size();
+        for(int i = size; i > 1; --i) {
+            Collections.swap(list, i - 1, rnd.nextInt(i));
+        }
     }
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
@@ -46,7 +59,7 @@ public class WorldInteraction
 
     public WorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
-            UUID villagerUUID, int maxState,
+            int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
@@ -71,7 +84,6 @@ public class WorldInteraction
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.resultGenerator = resultGenerator;
-        this.villagerUUID = villagerUUID;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(

@@ -67,8 +67,16 @@ public class DeclarativeJobs {
                 HandlerInputs,
                 @Nullable MCTownState
                 >> b = ImmutableMap.builder();
-        Function<HandlerInputs, MCTownState> tryWorking = ii ->
-                ii.wi.tryWorking(ii.inState, new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1, ii.fakePos));
+        Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
+            @Nullable WorkOutput<MCTownState, WorkSpot<Integer, BlockPos>> v = ii.wi.tryWorking(
+                    ii.inState,
+                    new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1, ii.fakePos)
+            );
+            if (v == null) {
+                return null;
+            }
+            return v.town();
+        };
 
         for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {
             b.put(ProductionStatus.fromJobBlockStatus(i), (

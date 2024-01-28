@@ -77,7 +77,6 @@ public class WorkSeekerJob extends DeclarativeJob {
 
     @Override
     protected @NotNull WorldInteraction initWorldInteraction(
-            UUID ownerUUID,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -90,7 +89,6 @@ public class WorkSeekerJob extends DeclarativeJob {
     ) {
         return new WorldInteraction(
                 journal,
-                ownerUUID,
                 maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,

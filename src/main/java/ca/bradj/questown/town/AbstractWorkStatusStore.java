@@ -236,6 +236,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                     @Nullable Consumer<State> cas = cascadingBlockRevealer.apply(tickSource, pp);
                     if (cas != null) {
                         cascading.put(pp, cas);
+                        cas.accept(def);
                     }
                 });
             }
@@ -249,6 +250,17 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     @Override
     public boolean claimSpot(
+            POS bp,
+            Claim claim
+    ) {
+        if (doClaimSpot(bp, claim)) {
+            QT.JOB_LOGGER.debug("Spot {} claimed: {}", bp, claim);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean doClaimSpot(
             POS bp,
             Claim claim
     ) {
@@ -266,15 +278,17 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     @Override
     public void clearClaim(POS position) {
-        claims.remove(position);
+        Claim claim = claims.remove(position);
+        QT.JOB_LOGGER.debug("Claim {} released: {}", position, claim);
     }
 
     @Override
     public boolean canClaim(POS position, Supplier<Claim> makeClaim) {
-        Claim c = claims.get(position);
-        if (c == null) {
+        Claim prevClaim = claims.get(position);
+        if (prevClaim == null) {
             return true;
         }
-        return c.owner().equals(makeClaim.get().owner());
+        Claim newClaim = makeClaim.get();
+        return prevClaim.owner().equals(newClaim.owner());
     }
 }

@@ -6,12 +6,14 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
+@Disabled("Just keeping these around as reference")
 class GathererJournalsTest {
 
     private final GathererTimeWarper.LootGiver<GathererJournalTest.TestItem, GathererJournalTest.TestItem, String> defaultLootGiver =

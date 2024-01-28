@@ -5,10 +5,7 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.MCExtra;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.declarative.WorldInteraction;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -28,6 +25,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.mojang.datafixers.types.Func;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -122,7 +120,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final @NotNull Integer maxState;
     private final JobID jobId;
     private Signals signal;
-    private WorkSpot<Integer, BlockPos> workSpot;
+    private @Nullable WorkSpot<Integer, BlockPos> workSpot;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
@@ -156,11 +154,17 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                         STATUS_FACTORY
                 ),
                 STATUS_FACTORY,
-                specialStatusRules, specialGlobalRules
+                specialStatusRules, specialGlobalRules,
+                () -> {
+                    if (specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
+                        return makeClaim(ownerUUID);
+                    }
+                    return null;
+                }
         );
         this.jobId = jobId;
         this.world = initWorldInteraction(
-                ownerUUID, maxState,
+                maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
                 toolsRequiredAtStates,
@@ -169,7 +173,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 resultGenerator,
                 extra -> {
                     if (specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
-                        return new Claim(ownerUUID, Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+                        return makeClaim(ownerUUID);
                     }
                     return null;
                 },
@@ -183,6 +187,11 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.workRequiredAtStates = workRequiredAtStates;
     }
 
+    @NotNull
+    private static Claim makeClaim(UUID ownerUUID) {
+        return new Claim(ownerUUID, Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+    }
+
     @Override
     public JobID getId() {
         return jobId;
@@ -190,7 +199,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
     @NotNull
     protected WorldInteraction initWorldInteraction(
-            UUID ownerUUID,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -203,7 +211,6 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     ) {
         return new WorldInteraction(
                 journal,
-                ownerUUID,
                 maxState,
                 ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates,
@@ -228,8 +235,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             }
             // Hold on to tools required for this state and all previous states
             for (int i = 0; i <= s; i++) {
-                final int ii = i;
-                Ingredient tool = toolsRequiredAtStates.get(ii);
+                Ingredient tool = toolsRequiredAtStates.get(i);
                 if (tool != null) {
                     bb.add(item -> {
                         ItemStack itemStack = item.toItemStack();
@@ -286,7 +292,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                                 .stream()
                                 .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet())
                                 .toList(),
-                        getJobBlockState
+                        getJobBlockState,
+                        (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
@@ -331,12 +338,12 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         if (noSuppliesTicks > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
-            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            seekFallbackWork(town);
             return;
         }
 
         if (wrappingUp && !hasAnyLootToDrop()) {
-            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            seekFallbackWork(town);
             return;
         }
 
@@ -347,6 +354,10 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         if (!wrappingUp) {
             tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
         }
+    }
+
+    private void seekFallbackWork(TownInterface town) {
+        town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
     }
 
     private void tryGetSupplies(
@@ -395,7 +406,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
         ServerLevel sl = town.getServerLevel();
-        Map<Integer, WorkSpot<Integer, BlockPos>> workSpots = listAllWorkspots(
+        Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpots = listAllWorkSpots(
                 work::getJobBlockState, entityCurrentJobSite.room,
                 sl::isEmptyBlock,
                 () -> Direction.getRandom(sl.random)
@@ -407,25 +418,33 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
 
         this.workSpot = null;
+        Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpots.get(maxState);
 
         if (status.isExtractingProduct()) {
-            this.workSpot = workSpots.get(maxState);
+            allSpots = workSpots.get(maxState);
         }
 
-        if (workSpot == null) {
-            WorkSpot<Integer, BlockPos> workSpot1 = workSpots.get(status.getProductionState());
+        if (allSpots == null) {
+            Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
             if (workSpot1 == null) {
                 QT.JOB_LOGGER.error(
                         "Worker somehow has different status than all existing work spots. This is probably a bug.");
                 return;
             }
-            this.workSpot = workSpot1;
+            allSpots = workSpot1;
         }
 
-        Boolean worked = this.world.tryWorking(town, work, entity, workSpot);
-        if (worked != null && worked) {
+        if (allSpots.isEmpty()) {
+            return;
+        }
+
+        WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = this.world.tryWorking(
+                town, work, entity, allSpots
+        );
+        this.workSpot = worked.spot();
+        if (worked.town() != null && worked.town()) {
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-            boolean finishedWork = workSpot.action().equals(maxState); // TODO: Check all workspots before seeking work
+            boolean finishedWork = worked.spot().action().equals(maxState); // TODO: Check all workspots before seeking work
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     town.getKnowledgeHandle()
@@ -436,7 +455,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         }
     }
 
-    Map<Integer, WorkSpot<Integer, BlockPos>> listAllWorkspots(
+    Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
             Function<BlockPos, AbstractWorkStatusStore.State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
@@ -448,25 +467,34 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
 
         Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
 
-        Map<Integer, WorkSpot<Integer, BlockPos>> b = new HashMap<>();
+        Map<Integer, List<WorkSpot<Integer, BlockPos>>> b = new HashMap<>();
         jobSite.getSpaces().stream()
                 .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
                 .forEach(v -> {
-                    BlockPos bp = Positions.ToBlock(v, jobSite.yCoord);
-                    @Nullable Integer blockAction = JobBlock.getState(town, bp);
-                    if (blockAction != null && !b.containsKey(blockAction)) {
-                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
-                    }
+                    tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord), b, is);
                     // TODO: Depend on job and/or villager?
                     //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
                     //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
-                    bp = Positions.ToBlock(v, jobSite.yCoord + 1);
-                    blockAction = JobBlock.getState(town, bp);
-                    if (blockAction != null && !b.containsKey(blockAction)) {
-                        b.put(blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
-                    }
+                    tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord + 1), b, is);
                 });
         return ImmutableMap.copyOf(b);
+    }
+
+    private static void tryAddSpot(
+            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            BlockPos bp,
+            Map<Integer, List<WorkSpot<Integer, BlockPos>>> b,
+            Function<BlockPos, BlockPos> is
+    ) {
+        @Nullable Integer blockAction = JobBlock.getState(town, bp);
+        List<WorkSpot<Integer, BlockPos>> curSpots = b.get(blockAction);
+        if (blockAction != null) {
+            if (curSpots == null) {
+                curSpots = new ArrayList<>();
+            }
+            curSpots.add(new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
+            b.put(blockAction, curSpots);
+        }
     }
 
     private BlockPos findInteractionSpot(BlockPos bp, Room jobSite, Predicate<BlockPos> isEmpty, Supplier<Direction> random) {
@@ -590,7 +618,8 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     @Override
     protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work
+            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Predicate<BlockPos> canClaim
     ) {
         // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
         HashMap<Integer, List<MCRoom>> b = new HashMap<>();
@@ -607,6 +636,9 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
                 for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
                     AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
                     if (jobBlockState == null) {
+                        continue;
+                    }
+                    if (!canClaim.test(e.getKey())) {
                         continue;
                     }
                     if (jobBlockState.ingredientCount() < ingredientQtyRequiredAtStates.get(state)) {

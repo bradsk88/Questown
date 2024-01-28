@@ -5,9 +5,11 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.item.ItemStack;
@@ -66,7 +68,10 @@ public class DinerWork {
                 TIME_REQUIRED_AT_STATES,
                 PAUSE_FOR_ACTION,
                 ImmutableMap.of(), // No stage rules
-                WorksBehaviour.standardProductionRules(),
+                ImmutableList.<String>builder().add(
+                        SpecialRules.SHARED_WORK_STATUS,
+                        SpecialRules.CLAIM_SPOT
+                ).build(),
                 WorksBehaviour.singleItemOutput(RESULT::copy)
         );
     }

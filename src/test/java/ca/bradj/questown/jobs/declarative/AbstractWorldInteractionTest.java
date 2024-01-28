@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -37,7 +39,8 @@ class AbstractWorldInteractionTest {
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
                 Supplier<Collection<GathererJournalTest.TestItem>> journal,
                 InventoryHandle<GathererJournalTest.TestItem> inventory,
-                ImmutableWorkStateContainer<Position, Boolean> workStatuses
+                ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+                Supplier<Claim> claim
         ) {
             super(
                     new JobID("test", "test"),
@@ -48,7 +51,8 @@ class AbstractWorldInteractionTest {
                     workRequiredAtStates,
                     ingredientsRequiredAtStates,
                     ingredientQuantityRequiredAtStates,
-                    timeRequiredAtStates
+                    timeRequiredAtStates,
+                    (v) -> claim.get()
             );
             this.workStatuses = workStatuses;
             this.inventory = inventory;
@@ -88,7 +92,8 @@ class AbstractWorldInteractionTest {
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
                     alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
-                    inventory, inventoryHandle, statuses
+                    inventory, inventoryHandle, statuses,
+                    () -> new Claim(UUID.randomUUID(), 100)
             );
         }
 
@@ -98,8 +103,62 @@ class AbstractWorldInteractionTest {
                 Position position
         ) {
             extracted = true;
-            getWorkStatuses(null, true).clearState(position);
+            getWorkStatuses(null).clearState(position);
             return true;
+        }
+
+        @Override
+        protected Boolean setJobBlockState(
+                @NotNull Void inputs,
+                Boolean ts,
+                Position position,
+                State fresh
+        ) {
+            return null;
+        }
+
+        @Override
+        protected Boolean withEffectApplied(
+                @NotNull Void inputs,
+                Boolean ts,
+                GathererJournalTest.TestItem newItem
+        ) {
+            return null;
+        }
+
+        @Override
+        protected Boolean withKnowledge(
+                @NotNull Void inputs,
+                Boolean ts,
+                GathererJournalTest.TestItem newItem
+        ) {
+            return null;
+        }
+
+        @Override
+        protected boolean isInstanze(
+                GathererJournalTest.TestItem testItem,
+                Class<?> clazz
+        ) {
+            return false;
+        }
+
+        @Override
+        protected boolean isMulti(GathererJournalTest.TestItem testItem) {
+            return false;
+        }
+
+        @Override
+        protected Boolean getTown(Void inputs) {
+            return null;
+        }
+
+        @Override
+        protected Iterable<GathererJournalTest.TestItem> getResults(
+                Void inputs,
+                Collection<GathererJournalTest.TestItem> testItems
+        ) {
+            return null;
         }
 
         @Override
@@ -144,9 +203,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused,
-                                                                                 Boolean ts
-        ) {
+        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
             return workStatuses;
         }
 
@@ -196,6 +253,27 @@ class AbstractWorldInteractionTest {
                 return true;
             }
 
+            @Override
+            public boolean claimSpot(
+                    Position bp,
+                    Claim claim
+            ) {
+                return true;
+            }
+
+            @Override
+            public void clearClaim(Position position) {
+
+            }
+
+            @Override
+            public boolean canClaim(
+                    Position position,
+                    Supplier<Claim> makeClaim
+            ) {
+                return true;
+            }
+
         };
         return statuses;
     }
@@ -212,13 +290,13 @@ class AbstractWorldInteractionTest {
                 () -> inserted.set(true)
         );
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
 
         wi.tryWorking(null, arbitrarySpot(0)); // Try doing work
         wi.tryWorking(null, arbitrarySpot(0)); // Run once more to extract and reset state
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertFalse(inserted.get());
         Assertions.assertTrue(wi.extracted); // Extracted
         Assertions.assertNull(state);
@@ -237,12 +315,12 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertFalse(wi.extracted);
 
         Assertions.assertEquals(State.fresh().incrProcessing(), state);
@@ -264,14 +342,14 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(inserted.get());
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.processingState());
         Assertions.assertEquals(100, state.workLeft());
@@ -297,7 +375,7 @@ class AbstractWorldInteractionTest {
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
         wi.tryWorking(null, arbitrarySpot(0)); // Process
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.processingState());
         Assertions.assertEquals(99, state.workLeft());
@@ -325,7 +403,7 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(0)); // Process (see test above)
 
         wi.tryWorking(null, arbitrarySpot(0)); // Extract
-        @Nullable State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        @Nullable State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(wi.extracted);
     }
@@ -346,14 +424,14 @@ class AbstractWorldInteractionTest {
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
 
         wi.tryWorking(null, arbitrarySpot(0));
 
         Assertions.assertFalse(wi.extracted);
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(1, state.processingState());
         Assertions.assertEquals(100, state.workLeft());
@@ -380,11 +458,11 @@ class AbstractWorldInteractionTest {
         );
         WorkSpot<Integer, Position> spot = arbitrarySpot(0);
 
-        Assertions.assertNull(wi.getJobBlockState(null, spot.position));
+        Assertions.assertNull(wi.getJobBlockState(null, spot.position()));
 
         wi.tryWorking(null, spot);
 
-        State state = wi.getJobBlockState(null, spot.position);
+        State state = wi.getJobBlockState(null, spot.position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(1, state.processingState());
         Assertions.assertEquals(100, state.workLeft()); // Not processed
@@ -413,7 +491,7 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(0));
         wi.tryWorking(null, arbitrarySpot(1));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(1).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(1).position());
         Assertions.assertNotNull(state);
         Assertions.assertFalse(wi.extracted);
         Assertions.assertEquals(1, state.processingState());
@@ -443,7 +521,7 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
@@ -469,7 +547,7 @@ class AbstractWorldInteractionTest {
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state); // Not processed
         Assertions.assertFalse(inserted.get()); // Not inserted
         Assertions.assertFalse(wi.extracted); // Not extracted
@@ -498,7 +576,7 @@ class AbstractWorldInteractionTest {
 
         Assertions.assertFalse(inserted.get()); // Not inserted
         Assertions.assertFalse(wi.extracted); // Not extracted
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());
         Assertions.assertEquals(0, state.ingredientCount());
@@ -531,7 +609,7 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(1));
         wi.tryWorking(null, arbitrarySpot(2));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
@@ -573,12 +651,13 @@ class AbstractWorldInteractionTest {
                         inserted.set(true);
                     }
                 },
-                testWorkStateContainer()
+                testWorkStateContainer(),
+                () -> new Claim(UUID.randomUUID(), 100)
         );
 
         wi.tryWorking(null, arbitrarySpot(0));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position);
+        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertFalse(wi.extracted); // Not Extracted
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertNotNull(state);
@@ -587,7 +666,7 @@ class AbstractWorldInteractionTest {
 
     @NotNull
     private static WorkSpot<Integer, Position> arbitrarySpot(int state) {
-        return new WorkSpot<>(new Position(1, 2), state, 0);
+        return new WorkSpot<>(new Position(1, 2), state, 0, new Position(0, 1));
     }
 
 }

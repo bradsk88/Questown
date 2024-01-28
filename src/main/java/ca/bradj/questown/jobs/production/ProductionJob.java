@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -33,6 +34,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
@@ -49,6 +51,7 @@ public abstract class ProductionJob<
     protected final Container inventory;
     protected final JOURNAL journal;
     private final IProductionStatusFactory<STATUS> statusFactory;
+    private final Supplier<Claim> claimSupplier;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -80,7 +83,8 @@ public abstract class ProductionJob<
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
             ImmutableMap<STATUS, String> specialRules,
-            ImmutableList<String> specialGlobalRules
+            ImmutableList<String> specialGlobalRules,
+            Supplier<Claim> claimSupplier
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -107,6 +111,7 @@ public abstract class ProductionJob<
         this.statusFactory = sFac;
 
         this.specialRules = specialRules;
+        this.claimSupplier = claimSupplier;
     }
 
     @Override
@@ -263,7 +268,8 @@ public abstract class ProductionJob<
 
     protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work
+            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Predicate<BlockPos> canClaim
     );
 
     @Override
@@ -272,11 +278,11 @@ public abstract class ProductionJob<
             LivingEntity entity,
             Direction facingPos
     ) {
+        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(
-                town, getWorkStatusHandle(town)::getJobBlockState
+                town, work::getJobBlockState, (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
         );
 
-        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
 

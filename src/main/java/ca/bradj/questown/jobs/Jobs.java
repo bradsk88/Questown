@@ -226,12 +226,16 @@ public class Jobs {
 
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
-            Function<BlockPos, AbstractWorkStatusStore.State> ticksSource
+            Function<BlockPos, AbstractWorkStatusStore.State> ticksSource,
+            Predicate<BlockPos> canClaim
     ) {
         Collection<? extends Supplier<Collection<BlockPos>>> rooms = town.get();
         HashSet<Integer> b = new HashSet<>();
         rooms.forEach(v -> {
             for (BlockPos e : v.get()) {
+                if (!canClaim.test(e)) {
+                    continue;
+                }
                 @Nullable AbstractWorkStatusStore.State apply = ticksSource.apply(e);
                 if (apply != null && apply.workLeft() > 0) {
                     b.add(apply.processingState());

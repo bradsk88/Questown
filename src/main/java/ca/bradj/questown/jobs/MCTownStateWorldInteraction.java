@@ -234,7 +234,8 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
                         () -> ImmutableList.of(
                                 () -> ImmutableList.of(roomBlock)
                         ),
-                        bp -> workStates
+                        bp -> workStates,
+                        (bp) -> true
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(
