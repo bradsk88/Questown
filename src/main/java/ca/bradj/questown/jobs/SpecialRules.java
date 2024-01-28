@@ -31,4 +31,11 @@ public class SpecialRules {
     // "release" to plate for others to use. Other villagers will try to claim other
     // plates - ignoring claimed ones.
     public static final String CLAIM_SPOT = "claim_spot";
+
+    // If this rule is enabled, the villager will scan the blocks BELOW the job block
+    // first, if there are any valid interaction spots on that level, they will navigate
+    // toward that spot. If this rule is not enabled, or there are no interaction spots
+    // on the layer below the job block, they will navigate to a spot on the same level
+    // as the job block.
+    public static final String PREFER_INTERACTION_BELOW = "claim_spot";
 }

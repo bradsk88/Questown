@@ -347,7 +347,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         }
 
         if (wrappingUp && !hasAnyLootToDrop()) {
-            seekFallbackWork(town);
+            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
             return;
         }
 
@@ -448,7 +448,9 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-            boolean finishedWork = worked.spot().action().equals(maxState); // TODO: Check all workspots before seeking workRequired
+            boolean finishedWork = worked.spot()
+                    .action()
+                    .equals(maxState); // TODO: Check all workspots before seeking workRequired
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     town.getKnowledgeHandle()
@@ -501,7 +503,35 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         }
     }
 
-    private BlockPos findInteractionSpot(BlockPos bp, Room jobSite, Predicate<BlockPos> isEmpty, Supplier<Direction> random) {
+    private BlockPos findInteractionSpot(
+            BlockPos bp,
+            Room jobSite,
+            Predicate<BlockPos> isEmpty,
+            Supplier<Direction> random
+    ) {
+        @Nullable BlockPos spot;
+
+        if (specialGlobalRules.contains(SpecialRules.PREFER_INTERACTION_BELOW)) {
+            spot = doFindInteractionSpot(bp.below(), jobSite, isEmpty);
+            if (spot != null) {
+                return spot;
+            }
+        }
+
+        spot = doFindInteractionSpot(bp, jobSite, isEmpty);
+        if (spot != null) {
+            return spot;
+        }
+
+        return bp.relative(random.get());
+    }
+
+    @Nullable
+    private BlockPos doFindInteractionSpot(
+            BlockPos bp,
+            Room jobSite,
+            Predicate<BlockPos> isEmpty
+    ) {
         Direction d = getDoorDirectionFromCenter(jobSite);
         if (isEmpty.test(bp.relative(d))) {
             return bp.relative(d);
@@ -515,7 +545,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             // 1x1 room (plus walls)
             return Positions.ToBlock(jobSite.getDoorPos(), bp.getY());
         }
-        return bp.relative(random.get());
+        return null;
     }
 
     private Direction getDoorDirectionFromCenter(Room jobSite) {
