@@ -1,12 +1,7 @@
 package ca.bradj.questown.jobs.crafter;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.SpecialRules;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.WorksBehaviour;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -39,28 +34,26 @@ public class Crafters {
     ) {
         return productionWork(
                 id,
-                block -> block instanceof CraftingTableBlock,
-                new ResourceLocation(Questown.MODID, "crafting_room"),
-                WorksBehaviour.standardProductionResult(result),
-                result.get(),
-                maxState,
-                ingredientsRequiredAtStates,
-                ingredientQtyRequiredAtStates,
-                toolsRequiredAtStates,
-                workRequiredAtStates,
-                timeRequiredAtStates,
-                actionDuration,
-                ImmutableMap.of(),
-                standardRules(),
-                WorksBehaviour.singleItemOutput(result)
+                WorksBehaviour.standardDescription(result),
+                new WorkLocation(
+                        block -> block instanceof CraftingTableBlock,
+                        new ResourceLocation(Questown.MODID, "crafting_room")
+                ),
+                new WorkStates(
+                        maxState,
+                        ingredientsRequiredAtStates,
+                        ingredientQtyRequiredAtStates,
+                        toolsRequiredAtStates,
+                        workRequiredAtStates,
+                        timeRequiredAtStates
+                ),
+                new WorkWorldInteractions(
+                        actionDuration,
+                        WorksBehaviour.singleItemOutput(result)
+                ),
+                WorksBehaviour.standardProductionRules()
         );
 
-    }
-
-    private static ImmutableList<String> standardRules() {
-        return ImmutableList.of(
-                SpecialRules.PRIORITIZE_EXTRACTION
-        );
     }
 }
 

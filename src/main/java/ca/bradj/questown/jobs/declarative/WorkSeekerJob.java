@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
+import ca.bradj.questown.jobs.ExpirationRules;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.Claim;
@@ -58,7 +59,8 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 ImmutableMap.of(),
-                WorksBehaviour.standardProductionRules(),
+                WorksBehaviour.standardProductionRules().specialGlobalRules(),
+                ExpirationRules.never(),
                 WorksBehaviour.noOutput()
         );
     }

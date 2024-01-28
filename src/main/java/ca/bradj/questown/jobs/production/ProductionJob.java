@@ -39,6 +39,12 @@ import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
 
+/**
+ * @deprecated Use DeclarativeJob
+ * @param <STATUS>
+ * @param <SNAPSHOT>
+ * @param <JOURNAL>
+ */
 public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,

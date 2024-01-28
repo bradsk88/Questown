@@ -3,9 +3,7 @@ package ca.bradj.questown.jobs.blacksmith;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.tags.ItemTags;
@@ -56,20 +54,27 @@ public class BlacksmithWoodenPickaxeJob {
     public static Work asWork() {
         return productionWork(
                 ID,
-                (block) -> block instanceof BlacksmithsTableBlock,
-                Questown.ResourceLocation("smithy"),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
-                RESULT,
-                MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
-                TIME_REQUIRED_AT_STATES,
-                PAUSE_FOR_ACTION,
-                ImmutableMap.of(), // No stage rules
-                WorksBehaviour.standardProductionRules(),
-                WorksBehaviour.singleItemOutput(RESULT::copy)
+                new WorkDescription(
+                        t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                        RESULT
+                ),
+                new WorkLocation(
+                        (block) -> block instanceof BlacksmithsTableBlock,
+                        Questown.ResourceLocation("smithy")
+                ),
+                new WorkStates(
+                        MAX_STATE,
+                        INGREDIENTS_REQUIRED_AT_STATES,
+                        INGREDIENT_QTY_REQUIRED_AT_STATES,
+                        TOOLS_REQUIRED_AT_STATES,
+                        WORK_REQUIRED_AT_STATES,
+                        TIME_REQUIRED_AT_STATES
+                ),
+                new WorkWorldInteractions(
+                        PAUSE_FOR_ACTION,
+                        WorksBehaviour.singleItemOutput(RESULT::copy)
+                ),
+                WorksBehaviour.standardProductionRules()
         );
     }
 }

@@ -3,9 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
@@ -49,25 +47,26 @@ public class BakerBreadWork {
     public static Work asWork() {
         return productionWork(
                 ID,
-                WORK_BLOCK_CLASS::isInstance,
-                WORK_ROOM_ID,
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
-                RESULT,
-                MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
-                ImmutableMap.of(
-                        BLOCK_STATE_NEED_WHEAT, 0,
-                        BLOCK_STATE_NEED_COAL, 0,
-                        BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE.get(),
-                        BLOCK_STATE_DONE, 0
+                WorksBehaviour.standardDescription(() -> RESULT),
+                new WorkLocation(
+                        WORK_BLOCK_CLASS::isInstance,
+                        WORK_ROOM_ID
                 ),
-                ACTION_DURATION,
-                ImmutableMap.of(), // No stage rules
-                WorksBehaviour.standardProductionRules(),
-                WorksBehaviour.singleItemOutput(RESULT::copy)
+                new WorkStates(
+                        MAX_STATE,
+                        INGREDIENTS_REQUIRED_AT_STATES,
+                        INGREDIENT_QTY_REQUIRED_AT_STATES,
+                        TOOLS_REQUIRED_AT_STATES,
+                        WORK_REQUIRED_AT_STATES,
+                        ImmutableMap.of(
+                                BLOCK_STATE_NEED_WHEAT, 0,
+                                BLOCK_STATE_NEED_COAL, 0,
+                                BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE.get(),
+                                BLOCK_STATE_DONE, 0
+                        )
+                ),
+                WorksBehaviour.standardWorldInteractions(ACTION_DURATION, () -> RESULT),
+                WorksBehaviour.standardProductionRules()
         );
     }
 }

@@ -1,20 +1,15 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.SpecialRules;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.PumpkinBlock;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
@@ -37,7 +32,7 @@ public class DinerWork {
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_EAT, 10,
+            BLOCK_STATE_NEED_EAT, 100,
             BLOCK_STATE_DONE, 0
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -49,30 +44,42 @@ public class DinerWork {
     public static final ItemStack RESULT = EffectMetaItem.applyEffect(
             ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER
     );
-    public static final int PAUSE_FOR_ACTION = 100;
+    public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
             String rootId
     ) {
         return productionWork(
                 new JobID(rootId, ID),
-                (block) -> block instanceof PumpkinBlock,
-                SpecialQuests.DINING_ROOM,
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
-                RESULT,
-                MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
-                TIME_REQUIRED_AT_STATES,
-                PAUSE_FOR_ACTION,
-                ImmutableMap.of(), // No stage rules
-                ImmutableList.<String>builder().add(
-                        SpecialRules.SHARED_WORK_STATUS,
-                        SpecialRules.CLAIM_SPOT
-                ).build(),
-                WorksBehaviour.singleItemOutput(RESULT::copy)
+                WorksBehaviour.standardDescription(() -> RESULT),
+                new WorkLocation(
+                        (block) -> block instanceof PlateBlock,
+                        SpecialQuests.DINING_ROOM
+                ),
+                new WorkStates(
+                        MAX_STATE,
+                        INGREDIENTS_REQUIRED_AT_STATES,
+                        INGREDIENT_QTY_REQUIRED_AT_STATES,
+                        TOOLS_REQUIRED_AT_STATES,
+                        WORK_REQUIRED_AT_STATES,
+                        TIME_REQUIRED_AT_STATES
+                ),
+                WorksBehaviour.standardWorldInteractions(
+                        PAUSE_FOR_ACTION, () -> RESULT
+                ),
+                new WorkSpecialRules(
+                        ImmutableMap.of(), // No stage rules
+                        ImmutableList.of(
+                                SpecialRules.SHARED_WORK_STATUS,
+                                SpecialRules.CLAIM_SPOT
+                        )
+                ),
+                new ExpirationRules(
+                        // TODO[ASAP]: Fall back to eating without table
+                        //  (currently just keeps trying to dine)
+                        Integer.MAX_VALUE,
+                        jobId -> jobId
+                )
         );
     }
 

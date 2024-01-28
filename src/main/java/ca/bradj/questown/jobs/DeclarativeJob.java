@@ -5,9 +5,11 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.*;
+import ca.bradj.questown.jobs.declarative.MCExtra;
+import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.WorldInteraction;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
-import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -25,7 +27,6 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.mojang.datafixers.types.Func;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -50,7 +51,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 // TODO[ASAP]: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
-public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
+public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
@@ -119,6 +120,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
+    private final ExpirationRules expiration;
     private Signals signal;
     private @Nullable WorkSpot<Integer, BlockPos> workSpot;
 
@@ -140,6 +142,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<ProductionStatus, String> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
+            ExpirationRules expiration,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         super(
@@ -185,6 +188,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
+        this.expiration = expiration;
     }
 
     @NotNull
@@ -337,7 +341,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
             noSuppliesTicks = 0;
         }
 
-        if (noSuppliesTicks > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
+        if (noSuppliesTicks > expiration.maxTicksWithoutSupplies()) {
             seekFallbackWork(town);
             return;
         }
@@ -357,7 +361,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
     }
 
     private void seekFallbackWork(TownInterface town) {
-        town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+        town.changeJobForVisitor(ownerUUID, expiration.fallbackFunc().apply(jobId));
     }
 
     private void tryGetSupplies(
@@ -444,7 +448,7 @@ public class DeclarativeJob extends ProductionJob<ProductionStatus, SimpleSnapsh
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-            boolean finishedWork = worked.spot().action().equals(maxState); // TODO: Check all workspots before seeking work
+            boolean finishedWork = worked.spot().action().equals(maxState); // TODO: Check all workspots before seeking workRequired
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     town.getKnowledgeHandle()

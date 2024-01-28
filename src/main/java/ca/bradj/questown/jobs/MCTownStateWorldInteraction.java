@@ -19,7 +19,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,22 +46,17 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             JobID jobId,
             int villagerIndex,
             int interval,
-            int maxState,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots
     ) {
         super(
-                jobId, villagerIndex, interval, maxState, Jobs.unMC(toolsRequiredAtStates),
-                workRequiredAtStates, Jobs.unMCHeld(ingredientsRequiredAtStates),
-                ingredientQuantityRequiredAtStates, timeRequiredAtStates, claimSpots
+                jobId, villagerIndex, interval, states.maxState(), Jobs.unMC(states.toolsRequired()),
+                states.workRequired(), Jobs.unMCHeld(states.ingredientsRequired()),
+                states.ingredientQtyRequired(), states.timeRequired(), claimSpots
         );
         this.resultGenerator = resultGenerator;
-        this.ingredientQuantityRequiredAtStates = ingredientQuantityRequiredAtStates;
+        this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
     }
 
     @Override

@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
@@ -39,28 +40,18 @@ public class WorksBehaviour {
             boolean prioritizeExtraction,
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
-            int maxState,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
                 id,
                 warpInput.villagerIndex(),
                 pauseForAction,
-                maxState,
-                toolsRequiredAtStates,
-                workRequiredAtStates,
-                ingredientsRequiredAtStates,
-                ingredientQtyRequiredAtStates,
-                timeRequiredAtStates,
+                states,
                 resultGenerator,
                 claimSpots
         );
-        return DeclarativeJobs.warper(wi, maxState, prioritizeExtraction);
+        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
 
     public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> singleItemOutput(
@@ -73,10 +64,13 @@ public class WorksBehaviour {
         return (s, j) -> ImmutableSet.of();
     }
 
-    public static ImmutableList<String> standardProductionRules() {
-        return ImmutableList.of(
-                SpecialRules.PRIORITIZE_EXTRACTION,
-                SpecialRules.SHARED_WORK_STATUS
+    public static WorkSpecialRules standardProductionRules() {
+        return new WorkSpecialRules(
+                ImmutableMap.of(), // No stage rules
+                ImmutableList.of(
+                        SpecialRules.PRIORITIZE_EXTRACTION,
+                        SpecialRules.SHARED_WORK_STATUS
+                )
         );
     }
 
@@ -84,6 +78,23 @@ public class WorksBehaviour {
             Supplier<ItemStack> result
     ) {
         return (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()));
+    }
+
+    public static WorkDescription standardDescription(Supplier<ItemStack> result) {
+        return new WorkDescription(
+                WorksBehaviour.standardProductionResult(result),
+                result.get()
+        );
+    }
+
+    public static WorkWorldInteractions standardWorldInteractions(
+            int pauseForAction,
+            Supplier<ItemStack> result
+    ) {
+        return new WorkWorldInteractions(
+            pauseForAction,
+            singleItemOutput(result.get()::copy)
+        );
     }
 
 
@@ -112,56 +123,76 @@ public class WorksBehaviour {
 
     public static Work productionWork(
             JobID jobId,
-            Predicate<Block> isJobBlock,
-            ResourceLocation baseRoom,
-            Function<TownData, ImmutableSet<MCTownItem>> currentlyPossibleResults,
-            ItemStack initialRequest,
-            int maxState,
-            ImmutableMap<Integer, Ingredient> ingredients,
-            ImmutableMap<Integer, Integer> ingredientQty,
-            ImmutableMap<Integer, Ingredient> tools,
-            ImmutableMap<Integer, Integer> work,
-            ImmutableMap<Integer, Integer> time,
-            int actionDuration,
-            ImmutableMap<ProductionStatus, String> specialStatusRules,
-            ImmutableList<String> specialGlobalRules,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            WorkDescription description,
+            WorkLocation location,
+            WorkStates state,
+            WorkWorldInteractions world,
+            WorkSpecialRules special
+    ) {
+        return productionWork(
+                jobId,
+                description,
+                location,
+                state,
+                world,
+                special,
+                productionExpiration()
+        );
+    }
+
+    public static Work productionWork(
+            JobID jobId,
+            WorkDescription description,
+            WorkLocation location,
+            WorkStates states,
+            WorkWorldInteractions world,
+            WorkSpecialRules special,
+            ExpirationRules expiration
     ) {
         return new Work(
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
-                        jobId, baseRoom, maxState, actionDuration,
-                        ingredients, ingredientQty, tools, work, time,
-                        specialStatusRules,
-                        specialGlobalRules,
-                        resultGenerator
+                        jobId, location.baseRoom(), states.maxState(),
+                        world.actionDuration(),
+                        states.ingredientsRequired(),
+                        states.ingredientQtyRequired(),
+                        states.toolsRequired(),
+                        states.workRequired(),
+                        states.timeRequired(),
+                        special.specialStatusRules(),
+                        special.specialGlobalRules(),
+                        expiration,
+                        world.resultGenerator()
                 ),
                 productionJobSnapshot(jobId),
-                isJobBlock,
-                baseRoom,
+                location.isJobBlock(),
+                location.baseRoom(),
                 ProductionStatus.FACTORY.idle(),
-                currentlyPossibleResults,
-                initialRequest,
-                status -> getProductionNeeds(ingredients, tools),
+                description.currentlyPossibleResults(),
+                description.initialRequest(),
+                status -> getProductionNeeds(states.ingredientsRequired(), states.toolsRequired()),
                 warpInput -> WorksBehaviour.productionWarper(
                         jobId,
                         warpInput,
-                        specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION),
+                        special.containsGlobal(SpecialRules.PRIORITIZE_EXTRACTION),
                         inputs -> {
-                            if (!specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
+                            if (!special.containsGlobal(SpecialRules.CLAIM_SPOT)) {
                                 return null;
                             }
                             return new Claim(inputs.uuid(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
                         },
-                        actionDuration,
-                        maxState,
-                        tools,
-                        work,
-                        ingredients,
-                        ingredientQty,
-                        time,
-                        resultGenerator
+                        world.actionDuration(),
+                        states,
+                        world.resultGenerator()
                 )
+        );
+    }
+
+    @NotNull
+    public static ExpirationRules productionExpiration() {
+        return new ExpirationRules(
+                Config.MAX_TICKS_WITHOUT_SUPPLIES.get(),
+                WorkSeekerJob::getIDForRoot
         );
     }
 

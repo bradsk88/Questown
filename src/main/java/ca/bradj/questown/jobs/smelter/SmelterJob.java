@@ -4,9 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.item.ItemStack;
@@ -47,20 +45,27 @@ public class SmelterJob {
     public static Work asWork() {
         return WorksBehaviour.productionWork(
                 ID,
-                (Block block) -> block instanceof OreProcessingBlock,
-                Questown.ResourceLocation("smeltery"),
-                t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
-                RESULT,
-                MAX_STATE,
-                INGREDIENTS,
-                INGREDIENTS_QTY,
-                TOOLS,
-                WORK,
-                TIME,
-                100,
-                ImmutableMap.of(), // No stage rules
-                WorksBehaviour.standardProductionRules(),
-                WorksBehaviour.singleItemOutput(RESULT::copy)
+                new WorkDescription(
+                        t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                        RESULT
+                ),
+                new WorkLocation(
+                        (Block block) -> block instanceof OreProcessingBlock,
+                        Questown.ResourceLocation("smeltery")
+                ),
+                new WorkStates(
+                        MAX_STATE,
+                        INGREDIENTS,
+                        INGREDIENTS_QTY,
+                        TOOLS,
+                        WORK,
+                        TIME
+                ),
+                new WorkWorldInteractions(
+                        100,
+                        WorksBehaviour.singleItemOutput(RESULT::copy)
+                ),
+                WorksBehaviour.standardProductionRules()
         );
     }
 }
