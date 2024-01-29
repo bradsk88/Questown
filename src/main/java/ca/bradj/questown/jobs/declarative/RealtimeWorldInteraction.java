@@ -35,6 +35,8 @@ import java.util.function.Function;
 public class RealtimeWorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
+    private int soundTicksLeft;
+
     public WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
@@ -231,8 +233,11 @@ public class RealtimeWorldInteraction
             BlockPos pos
     ) {
         @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound);
-        int soundChance = 5; // TODO[ASAP]: Get from job
+        int soundChance = 10; // TODO[ASAP]: Get from job
         if (mcExtra.town().getServerLevel().getRandom().nextInt(soundChance) == 0) {
+            this.soundTicksLeft = 5;
+        }
+        if (Math.max(this.soundTicksLeft--, 0) > 0) {
             Util.playNeutralSound(mcExtra.town().getServerLevel(), pos, s);
         }
     }

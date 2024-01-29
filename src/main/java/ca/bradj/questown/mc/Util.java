@@ -11,8 +11,8 @@ public class Util {
             BlockPos pos,
             SoundEvent sound
     ) {
-        float volume = 1.0f;
-        float pitchUpOrDown = 0.0f;
+        float volume = 0.5f;
+        float pitchUpOrDown = 1.0F + (serverLevel.random.nextFloat() - serverLevel.random.nextFloat()) * 0.4F;
         serverLevel.playSound(
                 null,
                 pos,
