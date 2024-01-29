@@ -8,7 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.declarative.WorldInteraction;
+import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -116,7 +116,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     );
 
     private static final Marker marker = MarkerManager.getMarker("DJob");
-    private final WorldInteraction world;
+    private final RealtimeWorldInteraction world;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
@@ -143,7 +143,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             ImmutableMap<ProductionStatus, String> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            @Nullable ResourceLocation sound
     ) {
         super(
                 ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -180,7 +181,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
                     }
                     return null;
                 },
-                workInterval
+                workInterval,
+                sound
         );
         this.maxState = maxState;
         this.workRoomId = workRoomId;
@@ -202,7 +204,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     }
 
     @NotNull
-    protected WorldInteraction initWorldInteraction(
+    protected RealtimeWorldInteraction initWorldInteraction(
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
@@ -211,9 +213,10 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
-            int interval
+            int interval,
+            @Nullable ResourceLocation sound
     ) {
-        return new WorldInteraction(
+        return new RealtimeWorldInteraction(
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,
@@ -223,7 +226,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
                 toolsRequiredAtStates,
                 resultGenerator,
                 claimSpots,
-                interval
+                interval,
+                sound
         );
     }
 

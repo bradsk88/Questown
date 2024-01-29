@@ -20,6 +20,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -127,7 +128,8 @@ public class WorksBehaviour {
             WorkLocation location,
             WorkStates state,
             WorkWorldInteractions world,
-            WorkSpecialRules special
+            WorkSpecialRules special,
+            @Nullable ResourceLocation workSound
     ) {
         return productionWork(
                 jobId,
@@ -136,6 +138,7 @@ public class WorksBehaviour {
                 state,
                 world,
                 special,
+                workSound,
                 productionExpiration()
         );
     }
@@ -147,8 +150,9 @@ public class WorksBehaviour {
             WorkStates states,
             WorkWorldInteractions world,
             WorkSpecialRules special,
+            @Nullable ResourceLocation workSound,
             ExpirationRules expiration
-    ) {
+            ) {
         return new Work(
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
@@ -162,7 +166,8 @@ public class WorksBehaviour {
                         special.specialStatusRules(),
                         special.specialGlobalRules(),
                         expiration,
-                        world.resultGenerator()
+                        world.resultGenerator(),
+                        workSound
                 ),
                 productionJobSnapshot(jobId),
                 location.isJobBlock(),

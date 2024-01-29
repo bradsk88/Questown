@@ -8,6 +8,7 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -80,7 +81,8 @@ public class NewLeaverWork {
                 new WorkSpecialRules(
                         specialRules,
                         standardRules()
-                )
+                ),
+                SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()
         );
     }
 }

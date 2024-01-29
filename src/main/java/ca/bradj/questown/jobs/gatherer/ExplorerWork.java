@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -136,7 +137,8 @@ public class ExplorerWork {
                 new WorkSpecialRules(
                         SPECIAL_RULES,
                         NewLeaverWork.standardRules()
-                )
+                ),
+                SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()
         );
     }
 }

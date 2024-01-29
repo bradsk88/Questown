@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.CraftingTableBlock;
@@ -51,7 +52,8 @@ public class Crafters {
                         actionDuration,
                         WorksBehaviour.singleItemOutput(result)
                 ),
-                WorksBehaviour.standardProductionRules()
+                WorksBehaviour.standardProductionRules(),
+                SoundEvents.WOOD_HIT.getLocation()
         );
 
     }

@@ -6,6 +6,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkOutput;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -15,17 +16,23 @@ import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class WorldInteraction
+public class RealtimeWorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
     public WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
@@ -53,11 +60,13 @@ public class WorldInteraction
         }
     }
 
+
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
+    private final @Nullable ResourceLocation sound;
 
-    public WorldInteraction(
+    public RealtimeWorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -67,7 +76,8 @@ public class WorldInteraction
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
-            int interval
+            int interval,
+            @Nullable ResourceLocation sound
     ) {
         super(
                 journal.getJobId(),
@@ -84,6 +94,7 @@ public class WorldInteraction
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.resultGenerator = resultGenerator;
+        this.sound = sound;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -198,6 +209,32 @@ public class WorldInteraction
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQtyRequiredAtStates;
+    }
+
+    @Override
+    public @Nullable WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
+            MCExtra mcExtra,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = super.tryWorking(
+                mcExtra,
+                workSpot
+        );
+        if (o != null && o.town() != null && o.town()) {
+            playSound(mcExtra, o.spot().interactionSpot());
+        }
+        return o;
+    }
+
+    private void playSound(
+            MCExtra mcExtra,
+            BlockPos pos
+    ) {
+        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound);
+        int soundChance = 5; // TODO[ASAP]: Get from job
+        if (mcExtra.town().getServerLevel().getRandom().nextInt(soundChance) == 0) {
+            Util.playNeutralSound(mcExtra.town().getServerLevel(), pos, s);
+        }
     }
 
     @Override

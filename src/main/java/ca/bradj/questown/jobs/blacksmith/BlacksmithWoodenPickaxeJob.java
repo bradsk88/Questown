@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -74,7 +75,8 @@ public class BlacksmithWoodenPickaxeJob {
                         PAUSE_FOR_ACTION,
                         WorksBehaviour.singleItemOutput(RESULT::copy)
                 ),
-                WorksBehaviour.standardProductionRules()
+                WorksBehaviour.standardProductionRules(),
+                SoundEvents.WOOD_HIT.getLocation()
         );
     }
 }

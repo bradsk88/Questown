@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -74,6 +75,7 @@ public class DinerWork {
                                 SpecialRules.CLAIM_SPOT
                         )
                 ),
+                SoundEvents.GENERIC_EAT.getLocation(),
                 new ExpirationRules(
                         // TODO[ASAP]: Fall back to eating without table
                         //  (currently just keeps trying to dine)

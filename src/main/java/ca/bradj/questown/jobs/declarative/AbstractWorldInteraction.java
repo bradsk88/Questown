@@ -149,7 +149,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra
     );
 
-    public @Nullable WorkOutput<TOWN, WorkSpot<Integer, POS>> tryWorking(
+    public @Nullable WorkOutput<@Nullable TOWN, WorkSpot<Integer, POS>> tryWorking(
             EXTRA extra,
             WorkSpot<Integer, POS> workSpot
     ) {

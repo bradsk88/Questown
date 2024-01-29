@@ -8,7 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.farmer.WorldInteraction;
+import ca.bradj.questown.jobs.farmer.FarmerWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Warper;
@@ -52,7 +52,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.GathererJournal.Status.*;
-import static ca.bradj.questown.jobs.farmer.WorldInteraction.getTilledState;
+import static ca.bradj.questown.jobs.farmer.FarmerWorldInteraction.getTilledState;
 
 public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
 
@@ -63,7 +63,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private final Container inventory;
     private Signals signal;
     private FarmerJournal<MCTownItem, MCHeldItem> journal;
-    private WorldInteraction world;
+    private FarmerWorldInteraction world;
     private MCRoom selectedFarm;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     private ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
@@ -112,7 +112,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         );
         this.journal.addItemListener(this);
 
-        this.world = new WorldInteraction(inventory, journal);
+        this.world = new FarmerWorldInteraction(inventory, journal);
     }
 
     @Override

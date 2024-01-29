@@ -32,14 +32,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class WorldInteraction {
+public class FarmerWorldInteraction {
 
     private final Marker marker = MarkerManager.getMarker("WI").addParents(MarkerManager.getMarker("Farmer"));
     private final Container inventory;
     private final FarmerJournal<MCTownItem, MCHeldItem> journal;
     private int ticksSinceLastFarmAction;
 
-    public WorldInteraction(
+    public FarmerWorldInteraction(
             Container inventory,
             FarmerJournal<MCTownItem, MCHeldItem> journal
     ) {
