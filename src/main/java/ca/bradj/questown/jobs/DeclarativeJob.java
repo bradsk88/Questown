@@ -589,6 +589,9 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
 
     @Override
     public Signals getSignal() {
+        if (specialGlobalRules.contains(SpecialRules.WORK_IN_EVENING)) {
+            return Signals.NOON;
+        }
         return signal;
     }
 

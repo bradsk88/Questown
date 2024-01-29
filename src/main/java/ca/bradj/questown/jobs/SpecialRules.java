@@ -38,4 +38,9 @@ public class SpecialRules {
     // on the layer below the job block, they will navigate to a spot on the same level
     // as the job block.
     public static final String PREFER_INTERACTION_BELOW = "claim_spot";
+
+    // If this rule is enabled, the villager will continue working into the evening until
+    // it is time for them to go to bed. If this rule is disabled, villagers will become
+    // idle in the evening.
+    public static final String WORK_IN_EVENING = "work_in_evening";
 }

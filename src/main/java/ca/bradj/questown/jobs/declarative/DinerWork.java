@@ -72,7 +72,8 @@ public class DinerWork {
                         ImmutableMap.of(), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.SHARED_WORK_STATUS,
-                                SpecialRules.CLAIM_SPOT
+                                SpecialRules.CLAIM_SPOT,
+                                SpecialRules.WORK_IN_EVENING
                         )
                 ),
                 SoundEvents.GENERIC_EAT.getLocation(),

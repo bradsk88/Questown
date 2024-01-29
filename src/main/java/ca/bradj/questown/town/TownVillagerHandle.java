@@ -153,4 +153,12 @@ public class TownVillagerHandle implements VillagerHolder {
     public Collection<LivingEntity> entities() {
         return this.entities;
     }
+
+    public void makeAllTotallyHungry() {
+        entities.forEach(e -> {
+            UUID u = e.getUUID();
+            fullness.put(u, 1);
+            // Listeners will be notified on next tick
+        });
+    }
 }

@@ -258,6 +258,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         }
         this.setChanged();
         villagerHandle.forEach(LivingEntity::stopSleeping);
+        villagerHandle.makeAllTotallyHungry();
         getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
