@@ -1,36 +1,20 @@
 {
   "variants": {
-    "qtstate=0,facing=west": {
+    "facing=west": {
       "y": 0,
       "model": "questown:block/plate"
     },
-    "qtstate=0,facing=north": {
+    "facing=north": {
       "y": 90,
       "model": "questown:block/plate"
     },
-    "qtstate=0,facing=east": {
+    "facing=east": {
       "y": 180,
       "model": "questown:block/plate"
     },
-    "qtstate=0,facing=south": {
+    "facing=south": {
       "y": 270,
       "model": "questown:block/plate"
-    },
-    "qtstate=1,facing=west": {
-      "y": 0,
-      "model": "questown:block/plate_filled"
-    },
-    "qtstate=1,facing=north": {
-      "y": 90,
-      "model": "questown:block/plate_filled"
-    },
-    "qtstate=1,facing=east": {
-      "y": 180,
-      "model": "questown:block/plate_filled"
-    },
-    "qtstate=1,facing=south": {
-      "y": 270,
-      "model": "questown:block/plate_filled"
     }
   }
 }

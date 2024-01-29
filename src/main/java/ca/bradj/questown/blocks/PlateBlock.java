@@ -1,5 +1,6 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import com.google.common.collect.ImmutableList;
@@ -7,10 +8,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -19,17 +23,14 @@ import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
-public class PlateBlock extends Block implements StatefulJobBlock {
+public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock {
     public static final String ITEM_ID = "plate_block";
-
-    public static final IntegerProperty STATE = IntegerProperty.create(
-            "qtstate", 0, 1
-    );
 
     protected static final VoxelShape SHAPE = Block.box(2.0D, 0.0D, 2.0D, 14.0D, 2.0D, 14.0D);
 
@@ -44,7 +45,6 @@ public class PlateBlock extends Block implements StatefulJobBlock {
         registerDefaultState(
                 this.stateDefinition.any()
                         .setValue(FACING, Direction.NORTH)
-                        .setValue(STATE, 0)
         );
     }
 
@@ -76,12 +76,11 @@ public class PlateBlock extends Block implements StatefulJobBlock {
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         return this.defaultBlockState().
-                setValue(FACING, ctx.getHorizontalDirection().getOpposite()).
-                setValue(STATE, 0);
+                setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(FACING, STATE);
+        p_51385_.add(FACING);
     }
 
     @Override
@@ -102,8 +101,25 @@ public class PlateBlock extends Block implements StatefulJobBlock {
         if (bs.processingState() > 1) {
             bs = bs.setProcessing(0);
         }
-        BlockState s = sl.getBlockState(pp);
-        s = s.setValue(STATE, bs.processingState());
-        sl.setBlockAndUpdate(pp, s);
+        if (bs.processingState() == 1) {
+            ((PlateBlockEntity) sl.getBlockEntity(pp)).setFood(
+                    // TODO: Set real food
+                    Items.APPLE.getDefaultInstance()
+            );
+        } else {
+            ((PlateBlockEntity) sl.getBlockEntity(pp)).setFood(
+                    // TODO: Set real food
+                    Items.AIR.getDefaultInstance()
+            );
+        }
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(
+            BlockPos p_153215_,
+            BlockState p_153216_
+    ) {
+        return new PlateBlockEntity(p_153215_, p_153216_);
     }
 }

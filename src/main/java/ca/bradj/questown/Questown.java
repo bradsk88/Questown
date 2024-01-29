@@ -1,5 +1,6 @@
 package ca.bradj.questown;
 
+import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
@@ -11,6 +12,7 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -90,6 +92,10 @@ public class Questown {
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new
+        ));
+        event.enqueueWork(() -> BlockEntityRenderers.register(
+                TilesInit.PLATE.get(),
+                PlateBlockEntityRenderer::new
         ));
     }
 }

@@ -45,6 +45,11 @@ public class QuestownNetwork {
                 decoder(OpenVillagerMenuMessage::decode).
                 consumerNetworkThread(OpenVillagerMenuMessage::handle).
                 add();
+        registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(SyncBlockItemMessage::encode).
+                decoder(SyncBlockItemMessage::decode).
+                consumerMainThread(SyncBlockItemMessage::handle).
+                add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {
