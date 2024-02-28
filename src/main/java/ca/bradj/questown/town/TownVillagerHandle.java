@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
@@ -27,8 +28,8 @@ public class TownVillagerHandle implements VillagerHolder {
 
     final List<LivingEntity> entities = new ArrayList<>();
     final Map<UUID, Integer> fullness = new HashMap<>();
-    private List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
-    private List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
+    private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
+    private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
 
     public void tick() {
         entities.forEach(e -> {
@@ -115,6 +116,11 @@ public class TownVillagerHandle implements VillagerHolder {
         fullness.put(uuid, Config.BASE_FULLNESS.get());
     }
 
+    @Override
+    public void makeAngry(UUID uuid) {
+        // TODO: Implement happiness (happy = 100% work speed angry = 50% work speed)
+    }
+
     void forEach(Consumer<? super LivingEntity> c) {
         this.entities.forEach(c);
     }
@@ -160,5 +166,14 @@ public class TownVillagerHandle implements VillagerHolder {
             fullness.put(u, 1);
             // Listeners will be notified on next tick
         });
+    }
+
+    @Override
+    public boolean isDining(UUID uuid) {
+        return entities.stream()
+                .filter(v -> uuid.equals(v.getUUID()))
+                .map(v -> JobsRegistry.isDining(((VisitorMobEntity)v).getJobId()))
+                .findFirst()
+                .orElse(false);
     }
 }

@@ -183,7 +183,7 @@ public class Jobs {
             BlockPos entityBlockPos
     ) {
         // TODO: Support multiple tiers of job site (i.e. more than one resource location)
-        return town.getRoomsMatching(id).stream()
+        return town.getRoomHandle().getRoomsMatching(id).stream()
                 .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
                 .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
                 .filter(v -> InclusiveSpaces.contains(

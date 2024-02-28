@@ -29,7 +29,7 @@ public class TownFenceGateItem extends Item {
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));
         if (interactionResult.equals(InteractionResult.CONSUME) && ctx.getLevel() instanceof ServerLevel sl) {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.registerFenceGate(ctx.getClickedPos().above());
+            parent.getRoomHandle().registerFenceGate(ctx.getClickedPos().above());
         }
         return interactionResult;
     }

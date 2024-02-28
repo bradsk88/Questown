@@ -1014,11 +1014,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private static final Map<ResourceLocation, Consumer<VisitorMobEntity>> effects = ImmutableMap.of(
-            EffectMetaItem.Effects.FILL_HUNGER, VisitorMobEntity::fillHunger
+            EffectMetaItem.Effects.FILL_HUNGER, VisitorMobEntity::fillHunger,
+            EffectMetaItem.Effects.FILL_HUNGER_ANGRY, VisitorMobEntity::fillHungerAngry
     );
 
     private void fillHunger() {
         town.getVillagerHandle().fillHunger(getUUID());
+    }
+    private void fillHungerAngry() {
+        town.getVillagerHandle().fillHunger(getUUID());
+        town.getVillagerHandle().makeAngry(getUUID());
     }
 
     public void applyEffect(ResourceLocation effect) {

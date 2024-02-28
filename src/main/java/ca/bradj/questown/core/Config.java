@@ -1,6 +1,5 @@
 package ca.bradj.questown.core;
 
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public class Config {
@@ -51,6 +50,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> META_ROOM_DIAMETER;
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
@@ -59,6 +59,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
 
 
     static {
@@ -149,6 +150,11 @@ public class Config {
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
         ).define("HungerEnabled", false);
+        MAX_TICKS_WITHOUT_DINING_TABLE = BUILDER.comment(
+                "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
+                        "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
+                        "for eating uncomfortably."
+        ).defineInRange("MaxTicksWithoutDiningTable", 2000L, 1L, 24000L);
         BUILDER.pop();
 
         // Advanced Config
@@ -168,6 +174,12 @@ public class Config {
         FLAG_SUB_BLOCK_DETECTION_TICKS = BUILDER.comment(
                 "It may take a few ticks before the entity for the sub block shows up in the world. If the number exceeds this config value, the server will crash."
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);
+        META_ROOM_DIAMETER = BUILDER.comment(
+                "The radius of \"Meta-Rooms\" that exist around points of interest in the town. E.g." +
+                "There is a meta room around the town flag itself, and one around each welcome mat"
+        ).defineInRange("MetaRoomDiameter", 2, 1, 100);
+
+        // Time Warp
         BUILDER.push("TimeWarp").comment(
                 "Villages do a 'time warp' when the player returns from away - to simulate villager activity. This is an experimental feature."
         );

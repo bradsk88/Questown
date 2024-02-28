@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
 import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
 import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
 import ca.bradj.questown.jobs.crafter.CrafterStickWork;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
@@ -22,7 +23,6 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK;
-import static ca.bradj.questown.jobs.WorksBehaviour.getProductionNeeds;
 
 // This file attempts to resemble a collection of JSON files - which is the ultimate vision of Questown.
 // Having a JSON file approach would allow other mods to easily integrate with Questown.
@@ -81,6 +81,9 @@ public class Works {
     public static Supplier<Work> get(JobID jobID) {
         if (DinerWork.isDining(jobID)) {
             return () -> DinerWork.asWork(jobID.rootId());
+        }
+        if (DinerNoTableWork.isDining(jobID)) {
+            return () -> DinerNoTableWork.asWork(jobID.rootId());
         }
         return works.get(jobID);
     }

@@ -7,8 +7,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
+import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -127,6 +127,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
     private int noSuppliesTicks;
+    private int ticksSinceStart;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -264,6 +265,13 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        this.ticksSinceStart++;
+        if (this.ticksSinceStart > this.expiration.maxTicks()) {
+            JobID apply = expiration.maxTicksFallbackFn().apply(jobId);
+            QT.JOB_LOGGER.debug("Reached max ticks for {}. Falling back to {}.", jobId, apply);
+            town.changeJobForVisitor(ownerUUID, apply);
+            return;
+        }
         this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
@@ -365,7 +373,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     }
 
     private void seekFallbackWork(TownInterface town) {
-        town.changeJobForVisitor(ownerUUID, expiration.fallbackFunc().apply(jobId));
+        town.changeJobForVisitor(ownerUUID, expiration.noSuppliesFallbackFn().apply(jobId));
     }
 
     private void tryGetSupplies(

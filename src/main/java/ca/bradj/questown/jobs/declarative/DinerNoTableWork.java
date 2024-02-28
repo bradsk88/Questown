@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.PlateBlock;
-import ca.bradj.questown.core.Config;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -15,8 +14,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
-public class DinerWork {
-    public static final String ID = "dining";
+public class DinerNoTableWork {
+    public static final String ID = "dining_no_table";
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_EAT = 1;
@@ -44,7 +43,7 @@ public class DinerWork {
     );
 
     public static final ItemStack RESULT = EffectMetaItem.applyEffect(
-            ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER
+            ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER_ANGRY
     );
     public static final int PAUSE_FOR_ACTION = 10;
 
@@ -55,8 +54,8 @@ public class DinerWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
-                        (block) -> block instanceof PlateBlock,
-                        SpecialQuests.DINING_ROOM
+                        (block) -> block instanceof TownFlagBlock,
+                        SpecialQuests.TOWN_FLAG
                 ),
                 new WorkStates(
                         MAX_STATE,
@@ -72,8 +71,6 @@ public class DinerWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(), // No stage rules
                         ImmutableList.of(
-                                SpecialRules.SHARED_WORK_STATUS,
-                                SpecialRules.CLAIM_SPOT,
                                 SpecialRules.WORK_IN_EVENING
                         )
                 ),
@@ -81,8 +78,9 @@ public class DinerWork {
                 new ExpirationRules(
                         Integer.MAX_VALUE,
                         jobId -> jobId,
-                        Config.MAX_TICKS_WITHOUT_DINING_TABLE.get(),
-                        jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
+                        // TODO: Change this to "max ticks without food" and switch to "town abandoner" job
+                        Integer.MAX_VALUE,
+                        jobId -> jobId
                 )
         );
     }

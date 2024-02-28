@@ -197,7 +197,9 @@ public class WorksBehaviour {
     public static ExpirationRules productionExpiration() {
         return new ExpirationRules(
                 Config.MAX_TICKS_WITHOUT_SUPPLIES.get(),
-                WorkSeekerJob::getIDForRoot
+                WorkSeekerJob::getIDForRoot,
+                Integer.MAX_VALUE,
+                jobId -> jobId
         );
     }
 

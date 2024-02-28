@@ -79,13 +79,6 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Override
     boolean isVillagerMissing(UUID uuid);
 
-    /** @deprecated Use getRoomHandle **/
-    Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId);
-
-    Collection<MCRoom> getFarms();
-
-    void registerFenceGate(BlockPos above);
-
     void validateEntity(VisitorMobEntity visitorMobEntity);
 
     Collection<UUID> getUnemployedVillagers();
@@ -98,8 +91,6 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     );
 
     void changeJobForVisitorFromBoard(UUID ownerUUID);
-
-    Collection<BlockPos> findMatchedRecipeBlocks(MatchRecipe mr);
 
     Collection<String> getAvailableRootJobs();
 

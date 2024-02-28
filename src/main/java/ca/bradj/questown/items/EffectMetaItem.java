@@ -23,6 +23,7 @@ public class EffectMetaItem extends Item {
 
     public static class Effects {
         public static final ResourceLocation FILL_HUNGER = Questown.ResourceLocation("fill_hunger");
+        public static final ResourceLocation FILL_HUNGER_ANGRY = Questown.ResourceLocation("fill_hunger_angry");
     }
 
 }

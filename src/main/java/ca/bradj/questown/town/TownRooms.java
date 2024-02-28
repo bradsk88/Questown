@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener<MCRoom> {
 
@@ -45,34 +46,34 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     private final ActiveRooms<MCRoom> rooms = new ActiveRooms<>();
     private final int scanLevel;
-    private final TownFlagBlockEntity entity;
+    private final Supplier<TownFlagBlockEntity> entitySupplier;
 
     public TownRooms(
             int scanLevel,
-            TownFlagBlockEntity entity
+            Supplier<TownFlagBlockEntity> entitySupplier
     ) {
-        this.entity = entity;
+        this.entitySupplier = entitySupplier;
         this.scanLevel = scanLevel;
         rooms.addChangeListener(this);
     }
 
     int getY() {
-        return entity.getTownFlagBasePos().getY() + scanLevel;
+        return entitySupplier.get().getTownFlagBasePos().getY() + scanLevel;
     }
 
     @Override
     public boolean IsEmpty(Position dp) {
-        return WallDetection.IsEmpty(entity.getServerLevel(), dp, getY());
+        return WallDetection.IsEmpty(entitySupplier.get().getServerLevel(), dp, getY());
     }
 
     @Override
     public boolean IsWall(Position dp) {
-        return WallDetection.IsWall(entity.getServerLevel(), dp, getY());
+        return WallDetection.IsWall(entitySupplier.get().getServerLevel(), dp, getY());
     }
 
     @Override
     public boolean IsDoor(Position dp) {
-        return WallDetection.IsDoor(entity.getServerLevel(), dp, getY());
+        return WallDetection.IsDoor(entitySupplier.get().getServerLevel(), dp, getY());
     }
 
     public void update(ImmutableMap<Position, Optional<MCRoom>> rooms) {
@@ -88,6 +89,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             MCRoom room
     ) {
+        TownFlagBlockEntity entity = entitySupplier.get();
         grantAdvancement(doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
@@ -108,6 +110,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     private void grantAdvancement(
             Position doorPos
     ) {
+        TownFlagBlockEntity entity = entitySupplier.get();
         // TODO: Do we need to be smarter than this?
         //  Is it possible we will grant the advancement to the wrong player?
         ServerLevel level = entity.getServerLevel();
@@ -132,7 +135,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             MCRoom oldRoom,
             MCRoom newRoom
     ) {
-
+        TownFlagBlockEntity entity = entitySupplier.get();
         addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         ServerLevel serverLevel = entity.getServerLevel();
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(serverLevel, newRoom);
@@ -153,6 +156,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             Position doorPos,
             MCRoom room
     ) {
+        TownFlagBlockEntity entity = entitySupplier.get();
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
         entity.broadcastMessage(
                 "messages.building.room_destroyed",

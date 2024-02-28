@@ -191,7 +191,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
         boolean isInFarm = false;
 
-        Collection<MCRoom> farms = town.getFarms();
+        Collection<MCRoom> farms = town.getRoomHandle().getFarms();
         if (!farms.contains(selectedFarm)) {
             selectedFarm = null;
         }

@@ -24,4 +24,8 @@ public interface VillagerHolder {
     );
 
     void fillHunger(UUID uuid);
+
+    void makeAngry(UUID uuid);
+
+    boolean isDining(UUID uuid);
 }
