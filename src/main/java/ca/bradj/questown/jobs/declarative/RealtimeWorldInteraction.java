@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -19,11 +20,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -97,6 +97,12 @@ public class RealtimeWorldInteraction
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.resultGenerator = resultGenerator;
         this.sound = sound;
+        super.addItemInsertionListener((extra, bp, item) -> {
+            Block block = extra.town().getServerLevel().getBlockState(bp).getBlock();
+            if (block instanceof InsertedItemAware iia) {
+                iia.handleInsertedItem(extra, bp, item);
+            }
+        });
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(

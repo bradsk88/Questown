@@ -8,6 +8,7 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,6 +102,7 @@ public abstract class AbstractWorldInteraction<
                 return self.canInsertItem(extra, item, bp);
             }
         };
+
         this.workWI = new AbstractWorkWI<>(
                 workRequiredAtStates,
                 timeRequiredAtStates,
@@ -332,4 +334,8 @@ public abstract class AbstractWorldInteraction<
     ) {
         return itemWI.getWorkStatuses(extra).getJobBlockState(bp);
     }
+
+    protected void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
+        this.itemWI.addItemInsertionListener(listener);
+    };
 }

@@ -2,6 +2,8 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -29,7 +31,7 @@ import java.util.List;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
-public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock {
+public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock, InsertedItemAware {
     public static final String ITEM_ID = "plate_block";
 
     protected static final VoxelShape SHAPE = Block.box(2.0D, 0.0D, 2.0D, 14.0D, 2.0D, 14.0D);
@@ -101,14 +103,8 @@ public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock {
         if (bs.processingState() > 1) {
             bs = bs.setProcessing(0);
         }
-        if (bs.processingState() == 1) {
+        if (bs.processingState() != 1) {
             ((PlateBlockEntity) sl.getBlockEntity(pp)).setFood(
-                    // TODO: Set real food
-                    Items.APPLE.getDefaultInstance()
-            );
-        } else {
-            ((PlateBlockEntity) sl.getBlockEntity(pp)).setFood(
-                    // TODO: Set real food
                     Items.AIR.getDefaultInstance()
             );
         }
@@ -121,5 +117,12 @@ public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock {
             BlockState p_153216_
     ) {
         return new PlateBlockEntity(p_153215_, p_153216_);
+    }
+
+    @Override
+    public void handleInsertedItem(MCExtra extra, BlockPos bp, MCHeldItem item) {
+        ((PlateBlockEntity) extra.town().getServerLevel().getBlockEntity(bp)).setFood(
+                item.get().toItemStack()
+        );
     }
 }

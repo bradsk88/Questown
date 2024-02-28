@@ -7,9 +7,12 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -23,6 +26,7 @@ public abstract class AbstractItemWI<
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
+    private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
 
     public AbstractItemWI(
             int villagerIndex,
@@ -95,6 +99,9 @@ public abstract class AbstractItemWI<
             );
             if (town != null) {
                 QT.JOB_LOGGER.debug("Villager removed {} from their inventory {}", name, invBefore);
+
+                itemInsertedListener.forEach(v -> v.accept(extra, bp, item));
+
                 Claim claim = claimSpots.apply(extra);
                 if (claim != null) {
                     if (getWorkStatuses(extra).claimSpot(bp, claim)) {
@@ -192,5 +199,9 @@ public abstract class AbstractItemWI<
     @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQtyRequiredAtStates;
+    }
+
+    public void addItemInsertionListener(TriConsumer<EXTRA, POS, ITEM> listener) {
+        this.itemInsertedListener.add(listener);
     }
 }
