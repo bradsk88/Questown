@@ -42,6 +42,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (nextStepTime == null) {
             nextStepTime = 0;
         }
+        nextStepTime = getAugmentedTime(extra, nextStepTime);
         TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = updatedTown != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
@@ -50,6 +51,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
         return updatedTown;
     }
+
+    protected abstract Integer getAugmentedTime(EXTRA extra, Integer nextStepTime);
 
     protected abstract TOWN degradeTool(
             EXTRA extra,

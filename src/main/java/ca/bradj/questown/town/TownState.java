@@ -216,6 +216,7 @@ public abstract class TownState<
         public final UUID uuid;
         public final double xPosition, yPosition, zPosition;
         public final ImmutableSnapshot<I, ?> journal;
+        private final List<Effect> effects = new ArrayList<>();
 
         public VillagerData(
                 double xPosition,
@@ -273,9 +274,23 @@ public abstract class TownState<
             );
         }
 
-        public VillagerData<I> withEffect(ResourceLocation effect) {
-            //FIXME: Add hunger to time travel
+        public VillagerData<I> withEffect(Effect effect) {
+            effects.add(effect);
             return this;
+        }
+
+        public Collection<Effect> getEffectsAndClearExpired(long currentTick) {
+            ImmutableList.Builder<Effect> b = ImmutableList.builder();
+            ImmutableList.Builder<Effect> r = ImmutableList.builder();
+            effects.forEach(e -> {
+                if (e.untilTick() <= currentTick) {
+                    b.add(e);
+                    return;
+                }
+                r.add(e);
+            });
+            effects.removeAll(r.build());
+            return b.build();
         }
     }
 

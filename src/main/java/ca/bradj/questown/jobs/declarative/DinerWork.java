@@ -44,7 +44,7 @@ public class DinerWork {
     );
 
     public static final ItemStack RESULT = EffectMetaItem.applyEffect(
-            ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER
+            ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER, 1
     );
     public static final int PAUSE_FOR_ACTION = 10;
 

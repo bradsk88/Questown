@@ -22,4 +22,8 @@ public class Util {
                 pitchUpOrDown
         );
     }
+
+    public static long getTick(ServerLevel level) {
+        return level.getGameTime();
+    }
 }

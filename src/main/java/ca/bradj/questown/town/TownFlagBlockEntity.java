@@ -52,7 +52,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -604,7 +603,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                     .setValue(HorizontalDirectionalBlock.FACING, value)
             );
             registerJobsBoard(e.getKey());
-            jobHandle.setJobBlockState(e.getKey(), new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0));
+            jobHandle.setJobBlockState(e.getKey(), AbstractWorkStatusStore.State.freshAtState(WorkSeekerJob.MAX_STATE));
         }
         return null;
     }

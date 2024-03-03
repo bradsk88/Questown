@@ -1,7 +1,6 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -28,14 +27,27 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
     private final Consumer<ITEM> shrinker;
 
-    public record State(
-            int processingState,
-            int ingredientCount,
-            int workLeft
-    ) {
+    public static class State {
+        private final int processingState;
+        private final int ingredientCount;
+        private final int workLeft;
+
+        private State(
+                int processingState,
+                int ingredientCounts,
+                int workLeft
+        ) {
+            this.processingState = processingState;
+            this.ingredientCount = ingredientCounts;
+            this.workLeft = workLeft;
+        }
 
         public static State fresh() {
             return new State(0, 0, 0);
+        }
+
+        public static State freshAtState(int s) {
+            return new State(s, 0, 0);
         }
 
         public State setProcessing(int s) {
@@ -43,7 +55,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
 
         public State setWorkLeft(int newVal) {
-            return new State(processingState, ingredientCount, newVal);
+            return new State(processingState, ingredientCount, newVal * 2);
         }
 
         public State setCount(int count) {
@@ -55,7 +67,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return "State{" +
                     "processingState=" + processingState +
                     ", ingredientCount=" + ingredientCount +
-                    ", workLeft=" + workLeft +
+                    ", workLeft=" + (0.5f * workLeft) +
                     '}';
         }
 
@@ -63,7 +75,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return "[" +
                     "state=" + processingState +
                     ", ingCount=" + ingredientCount +
-                    ", workLeft=" + workLeft +
+                    ", workLeft=" + (0.5f * workLeft) +
                     ']';
         }
 
@@ -76,11 +88,27 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
 
         public State decrWork() {
+            return setWorkLeft(Math.max(workLeft - 2, 0));
+        }
+
+        public State decrWorkLess() {
             return setWorkLeft(Math.max(workLeft - 1, 0));
         }
 
         public boolean isFresh() {
             return fresh().equals(this);
+        }
+
+        public int processingState() {
+            return processingState;
+        }
+
+        public int workLeft() {
+            return workLeft;
+        }
+
+        public int ingredientCount() {
+            return ingredientCount;
         }
     }
 

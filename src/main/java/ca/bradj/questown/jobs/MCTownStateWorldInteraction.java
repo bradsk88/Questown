@@ -8,8 +8,10 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.Effect;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -57,6 +59,19 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
+    }
+
+    @Override
+    protected int getAugmentedTime(Inputs inputs, Integer nextStepTime) {
+        return (int) (getTimeFactor(inputs) * nextStepTime);
+    }
+
+    private float getTimeFactor(Inputs inputs) {
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
+                Util.getTick(inputs.level())
+        );
+        // TODO: Implement this
+        return WorkEffects.calculateTimeFactor(effects);
     }
 
     @Override
@@ -131,8 +146,11 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
 
     @Override
     protected MCTownState withEffectApplied(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
-        ResourceLocation effect = EffectMetaItem.getEffect(newItem.get().toItemStack());
-        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(effect));
+        ItemStack s = newItem.get().toItemStack();
+        ResourceLocation effect = EffectMetaItem.getEffect(s);
+        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(
+                new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level)))
+        ));
     }
 
     @Override

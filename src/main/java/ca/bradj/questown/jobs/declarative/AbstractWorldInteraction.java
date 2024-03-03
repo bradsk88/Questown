@@ -109,6 +109,11 @@ public abstract class AbstractWorldInteraction<
                 toolsRequiredAtStates
         ) {
             @Override
+            protected Integer getAugmentedTime(EXTRA extra, Integer nextStepTime) {
+                return self.getAugmentedTime(extra, nextStepTime);
+            }
+
+            @Override
             protected TOWN degradeTool(
                     EXTRA extra,
                     @Nullable TOWN tuwn,
@@ -126,6 +131,8 @@ public abstract class AbstractWorldInteraction<
         };
         this.claimSpots = claimSpots;
     }
+
+    protected abstract int getAugmentedTime(EXTRA extra, Integer nextStepTime);
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,
