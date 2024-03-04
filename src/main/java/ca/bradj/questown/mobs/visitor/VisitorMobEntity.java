@@ -200,9 +200,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         );
         return ImmutableList.of(
                 Pair.of(
-                        2,
+                        1,
                         walkTarget
                 ),
+                Pair.of(2, new Admire(100)),
 //                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
                 Pair.of(3, new SleepInBed()),
                 Pair.of(
@@ -210,7 +211,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         new RunOne<>(
                                 ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
                                 ImmutableList.of(
-                                        Pair.of(new TownWalk(runSpeed), 1),
+                                        Pair.of(new TownWalk(walkSpeed), 1),
                                         Pair.of(new SetClosestHomeAsWalkTarget(0.5f), 1),
                                         Pair.of(new InsideBrownianWalk(0.5f), 4),
                                         Pair.of(new DoNothing(20, 40), 2)
@@ -1013,6 +1014,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle().removeStatsListener(villagerStatsMenu);
+    }
+
+    public boolean shouldStandStill() {
+        return job.shouldStandStill();
     }
 
     public interface ChangeListener {

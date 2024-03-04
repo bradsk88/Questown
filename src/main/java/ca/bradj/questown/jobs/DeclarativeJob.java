@@ -204,6 +204,11 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         return jobId;
     }
 
+    @Override
+    public boolean shouldStandStill() {
+        return this.workSpot != null;
+    }
+
     @NotNull
     protected RealtimeWorldInteraction initWorldInteraction(
             int maxState,
@@ -272,6 +277,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             town.changeJobForVisitor(ownerUUID, apply);
             return;
         }
+        this.workSpot = null;
         this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
@@ -432,8 +438,6 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
             return;
         }
-
-        this.workSpot = null;
         Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpots.get(maxState);
 
         if (status.isExtractingProduct()) {

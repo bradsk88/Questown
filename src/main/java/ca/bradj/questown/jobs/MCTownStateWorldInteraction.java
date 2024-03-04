@@ -9,10 +9,7 @@ import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.Effect;
-import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -59,6 +56,14 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
+    }
+
+    @Override
+    protected int getWorkSpeedOf10(Inputs inputs) {
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
+                Util.getTick(inputs.level())
+        );
+        return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
     }
 
     @Override

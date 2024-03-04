@@ -123,6 +123,11 @@ public abstract class AbstractWorldInteraction<
             }
 
             @Override
+            protected int getWorkSpeedOf10(EXTRA extra) {
+                return self.getWorkSpeedOf10(extra);
+            }
+
+            @Override
             protected ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(
                     EXTRA extra
             ) {
@@ -131,6 +136,8 @@ public abstract class AbstractWorldInteraction<
         };
         this.claimSpots = claimSpots;
     }
+
+    protected abstract int getWorkSpeedOf10(EXTRA extra);
 
     protected abstract int getAffectedTime(EXTRA extra, Integer nextStepTime);
 

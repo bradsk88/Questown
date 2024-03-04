@@ -25,11 +25,13 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, Boolean> airCheck;
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
-    private final Consumer<ITEM> shrinker;
 
     public static class State {
         private final int processingState;
         private final int ingredientCount;
+
+        // IMPORTANT: This value should only be modified by setWorkLeft and
+        // internalSetWorkLeft so that the 10x scaling is preserved.
         private final int workLeft;
 
         private State(
@@ -55,7 +57,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
 
         public State setWorkLeft(int newVal) {
-            return new State(processingState, ingredientCount, newVal * 2);
+            return new State(processingState, ingredientCount, newVal * 10);
         }
 
         private State internalSetWorkLeft(int newVal) {
@@ -71,7 +73,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return "State{" +
                     "processingState=" + processingState +
                     ", ingredientCount=" + ingredientCount +
-                    ", workLeft=" + (0.5f * workLeft) +
+                    ", workLeft=" + (0.1f * workLeft) +
                     '}';
         }
 
@@ -79,7 +81,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return "[" +
                     "state=" + processingState +
                     ", ingCount=" + ingredientCount +
-                    ", workLeft=" + (0.5f * workLeft) +
+                    ", workLeft=" + (0.1f * workLeft) +
                     ']';
         }
 
@@ -91,12 +93,13 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return setCount(ingredientCount + 1);
         }
 
-        public State decrWork() {
-            return internalSetWorkLeft(Math.max(workLeft - 2, 0));
-        }
-
-        public State decrWorkLess() {
-            return internalSetWorkLeft(Math.max(workLeft - 1, 0));
+        public State decrWork(
+                int amountOf10
+        ) {
+            if (amountOf10 > 10 || amountOf10 < 1) {
+                throw new IllegalArgumentException("Only 1-10 are allowed (got: " + amountOf10 + ")");
+            }
+            return internalSetWorkLeft(Math.max(workLeft - amountOf10, 0));
         }
 
         public boolean isFresh() {
@@ -108,7 +111,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
 
         public int workLeft() {
-            return workLeft;
+            return (int) (0.1f * workLeft);
         }
 
         public int ingredientCount() {
@@ -128,14 +131,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
             BiFunction<TICK_SOURCE, POS, Boolean> airCheck,
             BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory,
-            BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer,
-            Consumer<ITEM> shrinker
+            BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer
     ) {
         this.posFactory = posFactory;
         this.airCheck = airCheck;
         this.defaultStateFactory = defaultStateFactory;
         this.cascadingBlockRevealer = cascadingBlockRevealer;
-        this.shrinker = shrinker;
     }
 
     @Override

@@ -72,7 +72,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (oldState == null) {
             oldState = initForState(curState);
         }
-        AbstractWorkStatusStore.State bs = oldState.decrWork();
+        AbstractWorkStatusStore.State bs = oldState.decrWork(getWorkSpeedOf10(extra));
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return null;
         }
@@ -85,6 +85,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             return sl.setJobBlockStateWithTimer(bp, bs, nextStepTime);
         }
     }
+
+    protected abstract int getWorkSpeedOf10(EXTRA extra);
 
     private AbstractWorkStatusStore.State initForState(Integer curState) {
         Integer work = workRequiredAtStates.get(curState);

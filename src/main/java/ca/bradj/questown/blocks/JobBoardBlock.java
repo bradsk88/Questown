@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -48,6 +49,7 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
                 Entity::new,
                 Entity::tick
         );
+        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override

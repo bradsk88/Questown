@@ -35,8 +35,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                         return (state) -> sjb.setProcessingState(level, pos, state);
                     }
                     return null;
-                },
-                MCHeldItem::shrink
+                }
         );
     }
 }

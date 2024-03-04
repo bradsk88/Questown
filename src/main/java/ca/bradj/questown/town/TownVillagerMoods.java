@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +32,16 @@ public class TownVillagerMoods {
     private final Map<UUID, Integer> mood = new HashMap<>();
     private long moodTick = Config.MOOD_TICK_INTERVAL.get();
 
+    public static int compute(Collection<Effect> effects) {
+        Integer neutral = Config.NEUTRAL_MOOD.get();
+        Integer computed = effects.stream()
+                .map(Effect::effect)
+                .map(buffs::get)
+                .reduce(Integer::sum)
+                .orElse(neutral);
+        return Math.max(Math.min(neutral + computed, 100), 0);
+    }
+
     public void tick(long currentTick) {
         if (!initialized) {
             throw new IllegalStateException("Moods registry not initialized");
@@ -40,15 +51,7 @@ public class TownVillagerMoods {
             return;
         }
         moodTick = Config.MOOD_TICK_INTERVAL.get();
-        moodEffects.forEach((uuid, effects) -> {
-            Integer neutral = Config.NEUTRAL_MOOD.get();
-            Integer computed = effects.stream()
-                    .map(Effect::effect)
-                    .map(buffs::get)
-                    .reduce(Integer::sum)
-                    .orElse(neutral);
-            mood.put(uuid, Math.max(Math.min(neutral + computed, 100), 0));
-        });
+        moodEffects.forEach((uuid, effects) -> mood.put(uuid, compute(effects)));
         moodEffects.keySet().forEach(
                 i -> moodEffects.computeIfPresent(i, (uuid, effects) -> removeExpired(currentTick, effects))
         );

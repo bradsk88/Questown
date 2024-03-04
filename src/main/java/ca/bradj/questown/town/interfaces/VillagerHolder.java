@@ -32,5 +32,7 @@ public interface VillagerHolder {
 
     void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid);
 
-    int getAffectedTime(UUID uuid);
+    int getAffectedTime(UUID uuid, Integer timeToAugment);
+
+    int getWorkSpeed(UUID uuid);
 }

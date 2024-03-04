@@ -150,7 +150,7 @@ public class Config {
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
-        ).defineInRange("BaseFullness", 3000, 1, 24000);
+        ).defineInRange("BaseFullness", 5000, 1, 24000);
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
         ).define("HungerEnabled", false);

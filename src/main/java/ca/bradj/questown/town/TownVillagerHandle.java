@@ -45,7 +45,7 @@ public class TownVillagerHandle implements VillagerHolder {
         entities.forEach(e -> {
             UUID u = e.getUUID();
             int oldVal = fullness.getOrDefault(u, Config.BASE_FULLNESS.get());
-            int newVal = Math.max(0, oldVal - 1);
+            int newVal = Math.max(0, oldVal - 10);
             fullness.put(u, newVal);
             listeners.forEach(l -> l.accept(getStats(u)));
             if (oldVal != newVal) {
@@ -199,7 +199,13 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public int getAffectedTime(UUID uuid) {
-        return 0;
+    public int getAffectedTime(UUID uuid, Integer timeToAugment) {
+        float offset = (Config.NEUTRAL_MOOD.get() - moods.getMood(uuid));
+        return (int) ((1f + offset) * timeToAugment);
+    }
+
+    @Override
+    public int getWorkSpeed(UUID uuid) {
+        return (int) (moods.getMood(uuid) * 10);
     }
 }

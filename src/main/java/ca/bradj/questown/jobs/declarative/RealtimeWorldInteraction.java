@@ -120,8 +120,16 @@ public class RealtimeWorldInteraction
     }
 
     @Override
+    protected int getWorkSpeedOf10(MCExtra mcExtra) {
+        return Math.max(
+                mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()),
+                1
+        );
+    }
+
+    @Override
     protected int getAffectedTime(MCExtra mcExtra, Integer timeToAugment) {
-        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID());
+        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
     }
 
     @Override
