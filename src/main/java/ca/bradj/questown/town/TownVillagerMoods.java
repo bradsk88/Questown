@@ -47,7 +47,7 @@ public class TownVillagerMoods {
                     .map(buffs::get)
                     .reduce(Integer::sum)
                     .orElse(neutral);
-            mood.put(uuid, Math.max(Math.min(neutral + computed, neutral), 0));
+            mood.put(uuid, Math.max(Math.min(neutral + computed, 100), 0));
         });
         moodEffects.keySet().forEach(
                 i -> moodEffects.computeIfPresent(i, (uuid, effects) -> removeExpired(currentTick, effects))

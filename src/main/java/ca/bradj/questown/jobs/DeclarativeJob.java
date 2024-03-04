@@ -266,7 +266,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         this.ticksSinceStart++;
-        if (this.ticksSinceStart > this.expiration.maxTicks()) {
+        if (workSpot == null && this.ticksSinceStart > this.expiration.maxTicks()) {
             JobID apply = expiration.maxTicksFallbackFn().apply(jobId);
             QT.JOB_LOGGER.debug("Reached max ticks for {}. Falling back to {}.", jobId, apply);
             town.changeJobForVisitor(ownerUUID, apply);

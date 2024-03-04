@@ -222,6 +222,7 @@
   "menu.decline": "Decline",
   "menu.back": "Back",
   "menu.hunger": "Hunger",
+  "menu.mood": "Mood",
   "#questown:villager_food": "Food",
   "#questown:axes": "Axes",
   "#minecraft:coals": "Coal"
