@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -23,6 +22,7 @@ import java.util.function.Consumer;
 public class VillagerStatsMenu extends AbstractContainerMenu implements StatusListener, Consumer<VillagerStatsData> {
     private final DataSlot statusSlot;
     private final DataSlot fullnessSlot;
+    private final DataSlot moodSlot;
     private final Stack<Runnable> closers = new Stack<>();
     private final Runnable openInvFn;
     private final Runnable openQuestsFn;
@@ -51,6 +51,7 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
         this.openQuestsFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
+        this.addDataSlot(this.moodSlot = DataSlot.standalone());
 
         entity.addStatusListener(this);
 
@@ -99,10 +100,16 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
     public void accept(VillagerStatsData villagerStatsData) {
         int fullness = (int) (100 * villagerStatsData.fullnessPercent());
         this.fullnessSlot.set(fullness);
+        int mood = (int) (100 * villagerStatsData.moodPercent());
+        this.moodSlot.set(mood);
     }
 
     public int getFullnessPercent() {
         return fullnessSlot.get();
+    }
+
+    public int getMoodPercent() {
+        return moodSlot.get();
     }
 
     public void openInv() {

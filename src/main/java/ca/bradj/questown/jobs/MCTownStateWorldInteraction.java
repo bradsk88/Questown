@@ -62,7 +62,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected int getAugmentedTime(Inputs inputs, Integer nextStepTime) {
+    protected int getAffectedTime(Inputs inputs, Integer nextStepTime) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
     }
 
@@ -70,7 +70,6 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
         Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
                 Util.getTick(inputs.level())
         );
-        // TODO: Implement this
         return WorkEffects.calculateTimeFactor(effects);
     }
 

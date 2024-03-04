@@ -1,8 +1,9 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -11,6 +12,8 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+
+import java.util.Collection;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
@@ -42,8 +45,9 @@ public class DinerNoTableWork {
             BLOCK_STATE_DONE, 0
     );
 
-    public static final ItemStack RESULT = EffectMetaItem.applyEffect(
-            ItemsInit.EFFECT.get().getDefaultInstance(), EffectMetaItem.Effects.FILL_HUNGER_ANGRY
+    private static final Collection<ItemStack> RESULTS = ImmutableList.of(
+            EffectMetaItem.withConsumableEffect(EffectMetaItem.ConsumableEffects.FILL_HUNGER),
+            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get())
     );
     public static final int PAUSE_FOR_ACTION = 10;
 
@@ -52,7 +56,7 @@ public class DinerNoTableWork {
     ) {
         return productionWork(
                 new JobID(rootId, ID),
-                WorksBehaviour.standardDescription(() -> RESULT),
+                WorksBehaviour.noResultDescription(),
                 new WorkLocation(
                         (block) -> block instanceof TownFlagBlock,
                         SpecialQuests.TOWN_FLAG
@@ -65,8 +69,9 @@ public class DinerNoTableWork {
                         WORK_REQUIRED_AT_STATES,
                         TIME_REQUIRED_AT_STATES
                 ),
-                WorksBehaviour.standardWorldInteractions(
-                        PAUSE_FOR_ACTION, () -> RESULT
+                new WorkWorldInteractions(
+                        PAUSE_FOR_ACTION,
+                        (lvl, hand) -> MCHeldItem.fromMCItemStacks(RESULTS)
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(), // No stage rules

@@ -4,12 +4,14 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,17 +30,25 @@ public class TownVillagerHandle implements VillagerHolder {
 
     final List<LivingEntity> entities = new ArrayList<>();
     final Map<UUID, Integer> fullness = new HashMap<>();
+
+    private final TownVillagerMoods moods = new TownVillagerMoods();
+
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
 
-    public void tick() {
+    public void tick(long currentTick) {
+        tickHunger();
+        moods.tick(currentTick);
+    }
+
+    private void tickHunger() {
         entities.forEach(e -> {
             UUID u = e.getUUID();
             int oldVal = fullness.getOrDefault(u, Config.BASE_FULLNESS.get());
             int newVal = Math.max(0, oldVal - 1);
             fullness.put(u, newVal);
+            listeners.forEach(l -> l.accept(getStats(u)));
             if (oldVal != newVal) {
-                listeners.forEach(l -> l.accept(getStats(u)));
                 if (newVal == 0) {
                     hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
                 }
@@ -50,7 +60,8 @@ public class TownVillagerHandle implements VillagerHolder {
         float fullnessPercent = (float) fullness.get(uuid) / Config.BASE_FULLNESS.get();
         return new VillagerStatsData(
                 // TODO: Get max fullness from villager
-                fullnessPercent
+                fullnessPercent,
+                moods.getMood(uuid)
         );
     }
 
@@ -85,7 +96,7 @@ public class TownVillagerHandle implements VillagerHolder {
                 OpenVillagerMenuMessage.INVENTORY, (windowId, inv, p) -> new InventoryAndStatusMenu(
                         windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, e.getJobId(), e.getFlagPos()
                 ),
-                OpenVillagerMenuMessage.QUESTS,(windowId, inv, p) -> new TownQuestsContainer(
+                OpenVillagerMenuMessage.QUESTS, (windowId, inv, p) -> new TownQuestsContainer(
                         windowId, quests, e.getFlagPos()
                 ),
                 OpenVillagerMenuMessage.STATS, (windowId, inv, p) -> new VillagerStatsMenu(
@@ -172,8 +183,23 @@ public class TownVillagerHandle implements VillagerHolder {
     public boolean isDining(UUID uuid) {
         return entities.stream()
                 .filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> JobsRegistry.isDining(((VisitorMobEntity)v).getJobId()))
+                .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
                 .findFirst()
                 .orElse(false);
+    }
+
+    @Override
+    public void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {
+        // TODO: Generalize
+        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
+            fillHunger(uuid);
+            return;
+        }
+        moods.tryApplyEffect(effect, expireOnTick, uuid);
+    }
+
+    @Override
+    public int getAffectedTime(UUID uuid) {
+        return 0;
     }
 }

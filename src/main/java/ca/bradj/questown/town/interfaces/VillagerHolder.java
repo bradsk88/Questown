@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.town.VillagerStatsData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -28,4 +29,8 @@ public interface VillagerHolder {
     void makeAngry(UUID uuid);
 
     boolean isDining(UUID uuid);
+
+    void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid);
+
+    int getAffectedTime(UUID uuid);
 }

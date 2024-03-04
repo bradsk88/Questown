@@ -58,6 +58,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return new State(processingState, ingredientCount, newVal * 2);
         }
 
+        private State internalSetWorkLeft(int newVal) {
+            return new State(processingState, ingredientCount, newVal);
+        }
+
         public State setCount(int count) {
             return new State(processingState, count, workLeft);
         }
@@ -88,11 +92,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
 
         public State decrWork() {
-            return setWorkLeft(Math.max(workLeft - 2, 0));
+            return internalSetWorkLeft(Math.max(workLeft - 2, 0));
         }
 
         public State decrWorkLess() {
-            return setWorkLeft(Math.max(workLeft - 1, 0));
+            return internalSetWorkLeft(Math.max(workLeft - 1, 0));
         }
 
         public boolean isFresh() {

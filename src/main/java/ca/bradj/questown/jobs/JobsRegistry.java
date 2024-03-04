@@ -20,7 +20,6 @@ import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
@@ -121,9 +120,9 @@ public class JobsRegistry {
 
     public static AbstractWorkStatusStore.State getDefaultJobBlockState(Block b) {
         if (b instanceof JobBoardBlock) {
-            return new AbstractWorkStatusStore.State(WorkSeekerJob.MAX_STATE, 0, 0);
+            return AbstractWorkStatusStore.State.freshAtState(WorkSeekerJob.MAX_STATE);
         }
-        return new AbstractWorkStatusStore.State(0, 0, 0);
+        return AbstractWorkStatusStore.State.fresh();
     }
 
     public static Warper<ServerLevel, MCTownState> getWarper(

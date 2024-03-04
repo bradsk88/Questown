@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.function.TriFunction;
@@ -85,6 +86,13 @@ public class WorksBehaviour {
         return new WorkDescription(
                 WorksBehaviour.standardProductionResult(result),
                 result.get()
+        );
+    }
+
+    public static WorkDescription noResultDescription() {
+        return new WorkDescription(
+                (td) -> ImmutableSet.of(MCTownItem.Air()),
+                Items.AIR.getDefaultInstance()
         );
     }
 

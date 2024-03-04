@@ -1,6 +1,7 @@
 package ca.bradj.questown.items;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,9 +27,21 @@ public class EffectMetaItem extends Item {
         return QTNBT.getLong(s.getOrCreateTag(), "effect_duration") + tick;
     }
 
-    public static class Effects {
+    public static ItemStack withConsumableEffect(ResourceLocation effect) {
+        return applyEffect(ItemsInit.EFFECT.get().getDefaultInstance(), effect, 1);
+    }
+
+    public static ItemStack withLastingEffect(ResourceLocation effect, long duration) {
+        return applyEffect(ItemsInit.EFFECT.get().getDefaultInstance(), effect, duration);
+    }
+
+    public static class ConsumableEffects {
         public static final ResourceLocation FILL_HUNGER = Questown.ResourceLocation("fill_hunger");
-        public static final ResourceLocation FILL_HUNGER_ANGRY = Questown.ResourceLocation("fill_hunger_angry");
+    }
+
+    public static class MoodEffects {
+        public static final ResourceLocation UNCOMFORTABLE_EATING = Questown.ResourceLocation("uncomfortable_eating");
+        public static final ResourceLocation COMFORTABLE_EATING = Questown.ResourceLocation("comfortable_eating");
     }
 
 }

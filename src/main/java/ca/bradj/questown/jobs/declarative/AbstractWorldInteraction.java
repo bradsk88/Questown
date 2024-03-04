@@ -110,7 +110,7 @@ public abstract class AbstractWorldInteraction<
         ) {
             @Override
             protected Integer getAugmentedTime(EXTRA extra, Integer nextStepTime) {
-                return self.getAugmentedTime(extra, nextStepTime);
+                return self.getAffectedTime(extra, nextStepTime);
             }
 
             @Override
@@ -132,7 +132,7 @@ public abstract class AbstractWorldInteraction<
         this.claimSpots = claimSpots;
     }
 
-    protected abstract int getAugmentedTime(EXTRA extra, Integer nextStepTime);
+    protected abstract int getAffectedTime(EXTRA extra, Integer nextStepTime);
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,

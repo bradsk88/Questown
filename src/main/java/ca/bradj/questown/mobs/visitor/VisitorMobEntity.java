@@ -6,9 +6,11 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.gui.*;
+import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.gui.VillagerStats;
+import ca.bradj.questown.gui.VillagerStatsMenu;
+import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -1013,25 +1015,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         town.getVillagerHandle().removeStatsListener(villagerStatsMenu);
     }
 
-    private static final Map<ResourceLocation, Consumer<VisitorMobEntity>> effects = ImmutableMap.of(
-            EffectMetaItem.Effects.FILL_HUNGER, VisitorMobEntity::fillHunger,
-            EffectMetaItem.Effects.FILL_HUNGER_ANGRY, VisitorMobEntity::fillHungerAngry
-    );
-
-    private void fillHunger() {
-        town.getVillagerHandle().fillHunger(getUUID());
-    }
-    private void fillHungerAngry() {
-        town.getVillagerHandle().fillHunger(getUUID());
-        town.getVillagerHandle().makeAngry(getUUID());
-    }
-
-    public void applyEffect(ResourceLocation effect) {
-        effects.get(effect).accept(this);
-    }
-
     public interface ChangeListener {
         void Changed();
 
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 }

@@ -60,6 +60,10 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
+    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
 
 
     static {
@@ -155,6 +159,32 @@ public class Config {
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
                         "for eating uncomfortably."
         ).defineInRange("MaxTicksWithoutDiningTable", 2000L, 1L, 24000L);
+
+        // Villager Moods Config
+        BUILDER.push("Moods");
+        MOOD_TICK_INTERVAL = BUILDER.comment(
+                "How often (in ticks) the game will assess a villagers mood effects to determine their overall \"mood\""
+        ).defineInRange("MoodTickInterval", 10L, 1L, 24000L);
+        NEUTRAL_MOOD = BUILDER.comment(
+                "The default mood level for villagers who have no active mood effects"
+        ).defineInRange("NeutralMood", 75, 0, 100);
+
+        // Villager Mood Effect Durations
+        BUILDER.push("EffectDuration");
+        MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY = BUILDER.comment(
+                "When villagers eat uncomfortably"
+        ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
+        MOOD_EFFECT_DURATION_ATE_COMFORTABLY = BUILDER.comment(
+                "When villagers eat comfortably"
+        ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
+
+        // End Mood Effect Durations
+        BUILDER.pop();
+
+        // End Moods
+        BUILDER.pop();
+
+        // End Villagers
         BUILDER.pop();
 
         // Advanced Config

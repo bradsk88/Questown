@@ -22,6 +22,7 @@ import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
@@ -214,7 +215,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         e.pois.tick(sl, blockPos);
 
-        e.villagerHandle.tick();
+        e.villagerHandle.tick(Util.getTick(sl));
 
         e.everScanned = true;
 

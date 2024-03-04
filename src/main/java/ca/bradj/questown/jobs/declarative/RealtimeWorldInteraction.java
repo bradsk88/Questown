@@ -120,6 +120,11 @@ public class RealtimeWorldInteraction
     }
 
     @Override
+    protected int getAffectedTime(MCExtra mcExtra, Integer timeToAugment) {
+        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID());
+    }
+
+    @Override
     protected Boolean setHeldItem(
             MCExtra uxtra,
             Boolean tuwn,
@@ -175,7 +180,14 @@ public class RealtimeWorldInteraction
 
     @Override
     protected Boolean withEffectApplied(@NotNull MCExtra inputs, Boolean ts, MCHeldItem newItem) {
-        inputs.entity().applyEffect(EffectMetaItem.getEffect(newItem.get().toItemStack()));
+        ItemStack stack = newItem.get().toItemStack();
+        ResourceLocation effect = EffectMetaItem.getEffect(stack);
+        Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
+        inputs.town().getVillagerHandle().applyEffect(
+                effect,
+                effectExpiry,
+                inputs.entity().getUUID()
+        );
         return null;
     }
 
