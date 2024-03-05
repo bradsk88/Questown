@@ -28,13 +28,26 @@ import java.util.stream.Stream;
 
 public class TownVillagerHandle implements VillagerHolder {
 
-    final List<LivingEntity> entities = new ArrayList<>();
-    final Map<UUID, Integer> fullness = new HashMap<>();
+    public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
 
+    final Map<UUID, Integer> fullness = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
+    private final List<LivingEntity> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
+
+    public void initialize(
+            Map<UUID, Integer> fullness,
+            Map<UUID, ImmutableList<Effect>> moodEffects
+    ) {
+        if (!this.fullness.isEmpty()) {
+            throw new IllegalStateException("Attempting to initialize already active fullness");
+        }
+        this.fullness.putAll(fullness);
+
+        this.moods.initialize(moodEffects);
+    }
 
     public void tick(long currentTick) {
         tickHunger();
@@ -47,11 +60,11 @@ public class TownVillagerHandle implements VillagerHolder {
             int oldVal = fullness.getOrDefault(u, Config.BASE_FULLNESS.get());
             int newVal = Math.max(0, oldVal - 10);
             fullness.put(u, newVal);
-            listeners.forEach(l -> l.accept(getStats(u)));
-            if (oldVal != newVal) {
-                if (newVal == 0) {
-                    hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
-                }
+            if (newVal != oldVal) {
+                listeners.forEach(l -> l.accept(getStats(u)));
+            }
+            if (newVal == 0) {
+                hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
             }
         });
     }

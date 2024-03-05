@@ -70,8 +70,8 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        MenuScreens.register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
-        MenuScreens.register(MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
+        MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
+        MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);

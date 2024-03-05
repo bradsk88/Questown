@@ -93,6 +93,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = "knowledge";
+    private static final String NBT_VILLAGERS = "villagers";
     private static boolean stopped;
     final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
@@ -376,15 +377,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             }
             return true;
         });
+
         initializers.add(t -> {
+            CompoundTag tag = t.getPersistentData();
+            if (QTNBT.contains(tag, NBT_VILLAGERS)) {
+                CompoundTag data = QTNBT.getCompound(tag, NBT_VILLAGERS);
+                long currentTick = Util.getTick(t.getServerLevel());
+                TownVillagerHandle.SERIALIZER.deserialize(data, t.villagerHandle, currentTick);
+            }
             t.villagerHandle.addHungryListener(e -> {
-                if (Config.HUNGER_ENABLED.get()) {
-                    if (t.getVillagerHandle().isDining(e.getUUID())) {
-                        return;
-                    }
-                    t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(e.getJobId().rootId()));
+                if (t.getVillagerHandle().isDining(e.getUUID())) {
+                    return;
                 }
+                t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(e.getJobId().rootId()));
             });
+            t.villagerHandle.addStatsListener(s -> t.setChanged());
             return true;
         });
     }
@@ -408,6 +415,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(roomsHandle.getRegisteredRooms()));
         tag.put(NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(workHandle));
         QTNBT.put(tag, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(knowledgeHandle));
+        QTNBT.put(tag, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(villagerHandle, Util.getTick(getServerLevel())));
         // TODO: Serialization for ASAPss
     }
 
@@ -756,7 +764,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
         List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(v.getJobId()));
 
-        // TODO[ASAP]: Allow work to be "claimed" so that if there are multiple
+        // TODO[TEST]: Allow work to be "claimed" so that if there are multiple
         //  requests that can be satisfied by one job, the villagers with that
         //  job will distribute themselves across those requests.
 
