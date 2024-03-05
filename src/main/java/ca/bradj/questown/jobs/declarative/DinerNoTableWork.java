@@ -20,28 +20,31 @@ import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 public class DinerNoTableWork {
     public static final String ID = "dining_no_table";
 
-    public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_EAT = 1;
+    public static final int BLOCK_STATE_NEED_EAT = 0;
+    public static final int BLOCK_STATE_CONSUME_FOOD = 1;
     public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
+            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 1
+            BLOCK_STATE_CONSUME_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+            // Food is listed as a "tool" so the villager will render it in hand while they eat
+            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_FOOD),
+            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 0,
             BLOCK_STATE_NEED_EAT, 25,
+            BLOCK_STATE_CONSUME_FOOD, 0,
             BLOCK_STATE_DONE, 0
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 0,
             BLOCK_STATE_NEED_EAT, 0,
+            BLOCK_STATE_CONSUME_FOOD, 0,
             BLOCK_STATE_DONE, 0
     );
 

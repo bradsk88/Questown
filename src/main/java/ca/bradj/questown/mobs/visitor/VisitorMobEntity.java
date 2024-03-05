@@ -204,8 +204,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         walkTarget
                 ),
                 Pair.of(2, new Admire(100)),
+                Pair.of(3, new Admire(500)),
 //                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
-                Pair.of(3, new SleepInBed()),
+                Pair.of(4, new SleepInBed()),
                 Pair.of(
                         5,
                         new RunOne<>(
