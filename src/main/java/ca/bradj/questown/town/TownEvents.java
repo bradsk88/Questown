@@ -10,6 +10,6 @@ public final class TownEvents {
 
     @SubscribeEvent()
     public static void register(FMLCommonSetupEvent event) {
-        event.enqueueWork(TownVillagerMoods::initialize);
+        event.enqueueWork(TownVillagerMoods::staticInitialize);
     }
 }

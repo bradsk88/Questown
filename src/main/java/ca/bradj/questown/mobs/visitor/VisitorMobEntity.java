@@ -452,7 +452,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         getInventory().getItem(i)
                 ));
             }
-            town.removeEntity(this);
+            if (town != null) {
+                town.removeEntity(this);
+            }
         }
     }
 

@@ -389,7 +389,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
     }
 
-    private void writeTownData(CompoundTag tag) {
+    public void writeTownData(CompoundTag tag) {
         if (level == null) {
             return;
         }

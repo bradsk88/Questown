@@ -47,8 +47,8 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(entity.getStatusForServer()));
 
-        this.openInvFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
-        this.openQuestsFn = makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
+        this.openInvFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
+        this.openQuestsFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.addDataSlot(this.moodSlot = DataSlot.standalone());
@@ -59,19 +59,6 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements StatusLi
         this.closers.add(() -> entity.removeStatusListener(this));
         this.closers.add(() -> entity.removeStatsListener(this));
     }
-
-    private Runnable makeOpenFn(
-            BlockPos fp,
-            UUID gathererId,
-            String type
-    ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
-                fp.getX(), fp.getY(), fp.getZ(),
-                gathererId, type
-        ));
-        return fn;
-    }
-
 
     @Override
     public ItemStack quickMoveStack(Player player, int i) {

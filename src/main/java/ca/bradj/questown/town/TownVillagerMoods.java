@@ -15,20 +15,24 @@ import java.util.UUID;
 
 public class TownVillagerMoods {
 
+    // Static
     static Map<ResourceLocation, Integer> buffs;
-    private static boolean initialized = false;
+    private static boolean staticInitialized = false;
 
-    static void initialize() {
+    static void staticInitialize() {
         ImmutableMap.Builder<ResourceLocation, Integer> b = ImmutableMap.builder();
 
         b.put(EffectMetaItem.MoodEffects.COMFORTABLE_EATING, 5);
         b.put(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, -5);
 
         buffs = b.build();
-        initialized = true;
+        staticInitialized = true;
     }
 
+    // Persisted
     private final Map<UUID, ImmutableList<Effect>> moodEffects = new HashMap<>();
+
+    // Computed at runtime
     private final Map<UUID, Integer> mood = new HashMap<>();
     private long moodTick = Config.MOOD_TICK_INTERVAL.get();
 
@@ -43,7 +47,7 @@ public class TownVillagerMoods {
     }
 
     public void tick(long currentTick) {
-        if (!initialized) {
+        if (!staticInitialized) {
             throw new IllegalStateException("Moods registry not initialized");
         }
         moodTick--;
@@ -78,5 +82,16 @@ public class TownVillagerMoods {
             QT.VILLAGER_LOGGER.debug("Effect has been applied to {}: {}", uuid, e);
         }
         moodEffects.put(uuid, b.build());
+    }
+
+    public void initialize(Map<UUID, ImmutableList<Effect>> moodEffects) {
+        if (!this.moodEffects.isEmpty()) {
+            throw new IllegalStateException("Attempting to initialize already active mood effects");
+        }
+        this.moodEffects.putAll(moodEffects);
+    }
+
+    public ImmutableMap<UUID, ImmutableList<Effect>> getEffects() {
+        return ImmutableMap.copyOf(moodEffects);
     }
 }

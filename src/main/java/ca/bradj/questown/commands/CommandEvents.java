@@ -15,5 +15,6 @@ public class CommandEvents {
         TimeWarpCommand.register(event.getDispatcher());
         FreezeCommand.register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
+        FlagCommand.register(event.getDispatcher());
     }
 }

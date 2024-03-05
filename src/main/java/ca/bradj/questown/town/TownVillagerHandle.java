@@ -31,7 +31,7 @@ public class TownVillagerHandle implements VillagerHolder {
     final List<LivingEntity> entities = new ArrayList<>();
     final Map<UUID, Integer> fullness = new HashMap<>();
 
-    private final TownVillagerMoods moods = new TownVillagerMoods();
+    final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
@@ -96,8 +96,8 @@ public class TownVillagerHandle implements VillagerHolder {
                 OpenVillagerMenuMessage.INVENTORY, (windowId, inv, p) -> new InventoryAndStatusMenu(
                         windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, e.getJobId(), e.getFlagPos()
                 ),
-                OpenVillagerMenuMessage.QUESTS, (windowId, inv, p) -> new TownQuestsContainer(
-                        windowId, quests, e.getFlagPos()
+                OpenVillagerMenuMessage.QUESTS, (windowId, inv, p) -> new VillagerQuestsContainer(
+                        windowId, e.getUUID(), quests, e.getFlagPos()
                 ),
                 OpenVillagerMenuMessage.STATS, (windowId, inv, p) -> new VillagerStatsMenu(
                         windowId, e, e.getFlagPos()

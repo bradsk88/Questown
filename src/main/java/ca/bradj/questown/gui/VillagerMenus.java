@@ -9,12 +9,13 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class VillagerMenus {
     final VisitorMobEntity entity;
     InventoryAndStatusMenu invMenu;
     VillagerStatsMenu statsMenu;
-    TownQuestsContainer questsMenu;
+    VillagerQuestsContainer questsMenu;
 
     public VillagerMenus(VisitorMobEntity e) {
         this.entity = e;
@@ -29,9 +30,9 @@ public class VillagerMenus {
         VillagerMenus menus = new VillagerMenus(e);
         JobID jobId = new JobID(buf.readUtf(), buf.readUtf());
         int invSize = buf.readInt();
-        Collection<UIQuest> quests = TownQuestsContainer.readQuests(buf);
-        BlockPos flagPos = TownQuestsContainer.readFlagPos(buf);
-        menus.initQuestsMenu(windowId, quests, flagPos);
+        Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
+        BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
+        menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos);
         menus.initVillagerStatsMenu(windowId, flagPos);
         menus.initInventory(windowId, jobId, player, e, invSize, flagPos);
         return menus;
@@ -42,7 +43,7 @@ public class VillagerMenus {
         data.writeUtf(jobId.rootId());
         data.writeUtf(jobId.jobId());
         data.writeInt(capacity);
-        TownQuestsContainer.write(data, quests, e.getFlagPos());
+        VillagerQuestsContainer.write(data, quests, e.getFlagPos());
     }
 
     private InventoryAndStatusMenu initInventory(
@@ -61,8 +62,10 @@ public class VillagerMenus {
         return invMenu;
     }
 
-    public TownQuestsContainer initQuestsMenu(int windowId, Collection<UIQuest> quests, BlockPos flagPos) {
-        questsMenu = new TownQuestsContainer(windowId, quests, flagPos);
+    public VillagerQuestsContainer initQuestsMenu(
+            int windowId, UUID uuid, Collection<UIQuest> quests, BlockPos flagPos
+    ) {
+        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos);
         return questsMenu;
     }
 

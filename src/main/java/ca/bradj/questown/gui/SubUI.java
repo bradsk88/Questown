@@ -11,4 +11,20 @@ public interface SubUI {
     void mouseClicked(int bgX, int bgY, double x, double y);
 
     boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o);
+
+    class Empty implements SubUI {
+
+        @Override
+        public void draw(PoseStack poseStack, int bgX, int bgY) {
+        }
+
+        @Override
+        public void mouseClicked(int bgX, int bgY, double x, double y) {
+        }
+
+        @Override
+        public boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o) {
+            return false;
+        }
+    }
 }

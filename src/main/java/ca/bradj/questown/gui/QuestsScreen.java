@@ -15,8 +15,6 @@ import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.gui.input.MouseUtil;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -31,10 +29,9 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
+public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractContainerScreen<C> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -62,7 +59,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
     private int currentPage = 0;
 
     public QuestsScreen(
-            TownQuestsContainer container,
+            C container,
             Inventory playerInv,
             Component title,
             Runnable inventoryAndStatusScreen,
@@ -76,7 +73,7 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         );
     }
 
-    public QuestsScreen(TownQuestsContainer container, Inventory playerInv, Component title, SubUI villagerTabs) {
+    public QuestsScreen(C container, Inventory playerInv, Component title, SubUI villagerTabs) {
         super(container, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
@@ -479,25 +476,16 @@ public class QuestsScreen extends AbstractContainerScreen<TownQuestsContainer> {
         return true;
     }
 
-    public static QuestsScreen forTown(TownQuestsContainer container, Inventory playerInv, Component title) {
-        return new QuestsScreen(container, playerInv, title, new SubUI() {
-            @Override
-            public void draw(PoseStack poseStack, int bgX, int bgY) {
-            }
+    public static QuestsScreen<TownQuestsContainer> forTown(TownQuestsContainer container, Inventory playerInv, Component title) {
+        return new QuestsScreen<>(container, playerInv, title, new SubUI.Empty());
+    }
 
-            @Override
-            public void mouseClicked(
-                    int bgX,
-                    int bgY,
-                    double x,
-                    double y
-            ) {
-            }
-
-            @Override
-            public boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o) {
-                return false;
-            }
-        });
+    public static QuestsScreen<VillagerQuestsContainer> forVillager(
+            VillagerQuestsContainer menu, Inventory inventory, Component component
+    ) {
+        return new QuestsScreen<>(
+                menu, inventory, component,
+                new VillagerTabs(menu::openInv, null, menu::openStats)
+        );
     }
 }
