@@ -220,6 +220,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
         }
 
+        if (itemInHand.getItem().equals(Items.GLASS_PANE)) {
+            converted = ItemsInit.PLATE_BLOCK.get().getDefaultInstance();
+        }
+
         if (converted != null) {
             StoreFlagInputOnOutputNBT(itemInHand, converted);
             player.setItemInHand(hand, converted);
