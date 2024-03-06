@@ -87,6 +87,14 @@ public class TownQuestsHandle implements QuestsHolder {
         });
     }
 
+    @Override
+    public Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        return t.quests.getBatches().stream().filter(
+                v -> uuid.equals(v.getOwner())
+        ).toList();
+    }
+
     private void showConfirmUI(ServerPlayer sp, MCQuestBatch batch) {
         final TownInterface t = unsafeGetTown();
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);

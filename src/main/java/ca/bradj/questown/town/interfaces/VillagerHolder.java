@@ -35,4 +35,6 @@ public interface VillagerHolder {
     int getAffectedTime(UUID uuid, Integer timeToAugment);
 
     int getWorkSpeed(UUID uuid);
+
+    VillagerStatsData getStats(UUID uuid);
 }

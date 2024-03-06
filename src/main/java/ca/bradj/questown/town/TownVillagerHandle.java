@@ -7,6 +7,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -103,7 +104,13 @@ public class TownVillagerHandle implements VillagerHolder {
 
         VisitorMobEntity e = (VisitorMobEntity) f.get();
 
-        List<UIQuest> quests = ImmutableList.of(); // TODO: Load quests
+        TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(e.getFlagPos());
+
+        List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream().map(
+                v -> UIQuest.fromLevel(sender.getLevel(), v)
+        ).flatMap(List::stream).toList();
+
+        VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
 
         ImmutableMap<String, TriFunction<Integer, Inventory, Player, AbstractContainerMenu>> showers = ImmutableMap.of(
                 OpenVillagerMenuMessage.INVENTORY, (windowId, inv, p) -> new InventoryAndStatusMenu(
@@ -113,7 +120,7 @@ public class TownVillagerHandle implements VillagerHolder {
                         windowId, e.getUUID(), quests, e.getFlagPos()
                 ),
                 OpenVillagerMenuMessage.STATS, (windowId, inv, p) -> new VillagerStatsMenu(
-                        windowId, e, e.getFlagPos()
+                        windowId, e, e.getFlagPos(), stats
                 )
         );
 
@@ -131,7 +138,7 @@ public class TownVillagerHandle implements VillagerHolder {
             ) {
                 return showers.get(type).apply(windowId, inv, p);
             }
-        }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId()));
+        }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
     }
 
     @Override
