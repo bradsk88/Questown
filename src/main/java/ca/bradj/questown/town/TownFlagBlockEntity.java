@@ -384,9 +384,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 CompoundTag data = QTNBT.getCompound(tag, NBT_VILLAGERS);
                 long currentTick = Util.getTick(t.getServerLevel());
                 TownVillagerHandle.SERIALIZER.deserialize(data, t.villagerHandle, currentTick);
+                t.villagerHandle.associate(t);
             }
             t.villagerHandle.addHungryListener(e -> {
                 if (t.getVillagerHandle().isDining(e.getUUID())) {
+                    return;
+                }
+                if (!t.getVillagerHandle().canDine(e.getUUID())) {
                     return;
                 }
                 t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(e.getJobId().rootId()));
@@ -771,6 +775,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         // For now, we use randomization to give work requests a fair chance of being selected
         Collections.shuffle(preference);
 
+        // TODO[ASAP]: Use a job attempt counter to determine which preference they choose
+        //  With full random, the villager could theoretically never choose a job that
+        //  is possible with the items currently in town. Under true random, they could
+        //  potentially just keep choosing "gather with axe" over and over while there
+        //  are no axes in town, without trying "gather with shovel" while there IS a
+        //  shovel in town. Using a counter would allow the villager to consider every
+        //  job option.
+
         for (JobID p : preference) {
             List<Ingredient> i = requestedResults.stream().map(WorkRequest::asIngredient).toList();
             for (Ingredient requestedResult : i) {
@@ -793,6 +805,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             UUID visitorUUID,
             JobID jobID
     ) {
+        this.changeJobForVisitor(visitorUUID, jobID, false);
+    }
+
+    public void changeJobForVisitor(
+            UUID visitorUUID,
+            JobID jobID,
+            boolean announce
+    ) {
         Optional<VisitorMobEntity> f = villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
@@ -803,6 +823,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         } else {
             doSetJob(visitorUUID, jobID, f.get());
             setChanged();
+            if (announce) {
+                broadcastMessage("messages.jobs.changed", jobID.toNiceString(), visitorUUID);
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public abstract class AbstractItemWI<
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
+    private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
@@ -33,7 +34,7 @@ public abstract class AbstractItemWI<
             ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates,
             Function<EXTRA, Claim> claimSpots
     ) {
         this.villagerIndex = villagerIndex;
@@ -87,12 +88,7 @@ public abstract class AbstractItemWI<
             if (nextStepWork == null) {
                 nextStepWork = 0;
             }
-            Integer nextStepTime = timeRequiredAtStates.getOrDefault(
-                    curState + 1, 0
-            );
-            if (nextStepTime == null) {
-                nextStepTime = 0;
-            }
+            Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
             final int ii = i;
             TOWN town = tryInsertItem(extra, this, state, item, bp, nextStepWork, nextStepTime,
                     (uxtra, tuwn) -> setHeldItem(uxtra, tuwn, villagerIndex, ii, item.shrink())
@@ -126,8 +122,8 @@ public abstract class AbstractItemWI<
             AbstractWorkStatusStore.State oldState,
             ITEM item,
             POS bp,
-            Integer workToNextStep,
-            Integer timeToNextStep,
+            Integer workInNextStep,
+            Integer timeInNextStep,
             BiFunction<EXTRA, TOWN, TOWN> shrinkItem
     ) {
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
@@ -153,7 +149,7 @@ public abstract class AbstractItemWI<
         int count = curCount + 1;
         boolean shrink = canDo && count <= qtyRequired;
 
-        TOWN updatedTown = maybeUpdateBlockState(oldState, bp, workToNextStep, timeToNextStep, canDo, count, qtyRequired, ws);
+        TOWN updatedTown = maybeUpdateBlockState(oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
 
         if (shrink) {
             return shrinkItem.apply(extra, updatedTown);
@@ -162,7 +158,7 @@ public abstract class AbstractItemWI<
     }
 
     @Nullable
-    private static <POS, TOWN> TOWN maybeUpdateBlockState(AbstractWorkStatusStore.State oldState, POS bp, Integer workToNextStep, Integer timeToNextStep, boolean canDo, int count, Integer qtyRequired, ImmutableWorkStateContainer<POS, TOWN> ws) {
+    private static <POS, TOWN> TOWN maybeUpdateBlockState(AbstractWorkStatusStore.State oldState, POS bp, Integer workInNextStep, Integer timeInNextStep, boolean canDo, int count, Integer qtyRequired, ImmutableWorkStateContainer<POS, TOWN> ws) {
         if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
             AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             return ws.setJobBlockState(bp, blockState);
@@ -171,10 +167,10 @@ public abstract class AbstractItemWI<
         if (canDo && count <= qtyRequired) {
             AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             if (count == qtyRequired) {
-                blockState = blockState.setWorkLeft(workToNextStep).setCount(0).setProcessing(oldState.processingState() + 1);
+                blockState = blockState.setWorkLeft(workInNextStep).setCount(0).setProcessing(oldState.processingState() + 1);
             }
-            if (count == qtyRequired && timeToNextStep > 0) {
-                return ws.setJobBlockStateWithTimer(bp, blockState, timeToNextStep);
+            if (count == qtyRequired && timeInNextStep > 0) {
+                return ws.setJobBlockStateWithTimer(bp, blockState, timeInNextStep);
             } else {
                 return ws.setJobBlockState(bp, blockState);
             }

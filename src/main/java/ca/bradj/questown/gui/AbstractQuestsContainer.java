@@ -19,9 +19,14 @@ import java.util.UUID;
 
 public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     protected final Collection<UIQuest> quests;
-    final BlockPos flagPos;
+    protected final BlockPos flagPos;
 
-    public AbstractQuestsContainer(MenuType<?> townQuestsContainerMenuType, int windowId, Collection<UIQuest> quests, BlockPos flagPos) {
+    public AbstractQuestsContainer(
+            MenuType<?> townQuestsContainerMenuType,
+            int windowId,
+            Collection<UIQuest> quests,
+            BlockPos flagPos
+    ) {
         super(townQuestsContainerMenuType, windowId);
         this.quests = quests;
         this.flagPos = flagPos;

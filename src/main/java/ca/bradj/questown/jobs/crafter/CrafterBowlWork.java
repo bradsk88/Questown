@@ -36,6 +36,8 @@ public class CrafterBowlWork {
     public static Work asWork() {
         return Crafters.asWork(
                 ID,
+                CrafterStickWork.ID,
+                Items.BOWL.getDefaultInstance(),
                 RESULT::copy,
                 Crafters.MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,

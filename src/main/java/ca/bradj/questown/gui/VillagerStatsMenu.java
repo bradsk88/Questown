@@ -5,23 +5,28 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Collection;
 import java.util.Stack;
 import java.util.function.Consumer;
 
-public class VillagerStatsMenu extends AbstractContainerMenu implements Consumer<VillagerStatsData> {
+public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<VillagerStatsData>, VillagerTabsEmbedding {
+    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
+            OpenVillagerMenuMessage.INVENTORY,
+            OpenVillagerMenuMessage.QUESTS,
+            OpenVillagerMenuMessage.SKILLS
+    );
     private final DataSlot fullnessSlot;
     private final DataSlot moodSlot;
     private final Stack<Runnable> closers = new Stack<>();
     private final Runnable openInvFn;
-    private final Runnable openQuestsFn;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -39,10 +44,9 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements Consumer
             BlockPos flagPos,
             VillagerStatsData initialData
     ) {
-        super(MenuTypesInit.VILLAGER_STATS.get(), windowId);
+        super(MenuTypesInit.VILLAGER_STATS.get(), windowId, flagPos, entity.getUUID());
 
         this.openInvFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
-        this.openQuestsFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.QUESTS);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
@@ -93,11 +97,8 @@ public class VillagerStatsMenu extends AbstractContainerMenu implements Consumer
         return moodSlot.get();
     }
 
-    public void openInv() {
-        this.openInvFn.run();
-    }
-
-    public void openQuests() {
-        this.openQuestsFn.run();
+    @Override
+    public Collection<String> getEnabledTabs() {
+        return ENABLED_TABS;
     }
 }

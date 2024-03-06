@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.crafter;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -24,6 +25,8 @@ public class Crafters {
 
     static Work asWork(
             JobID id,
+            JobID parentId,
+            ItemStack icon,
             Supplier<ItemStack> result,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -34,7 +37,9 @@ public class Crafters {
             int actionDuration
     ) {
         return productionWork(
+                icon,
                 id,
+                parentId,
                 WorksBehaviour.standardDescription(result),
                 new WorkLocation(
                         block -> block instanceof CraftingTableBlock,
@@ -42,11 +47,11 @@ public class Crafters {
                 ),
                 new WorkStates(
                         maxState,
-                        ingredientsRequiredAtStates,
-                        ingredientQtyRequiredAtStates,
-                        toolsRequiredAtStates,
-                        workRequiredAtStates,
-                        timeRequiredAtStates
+                        Util.constant(ingredientsRequiredAtStates),
+                        Util.constant(ingredientQtyRequiredAtStates),
+                        Util.constant(toolsRequiredAtStates),
+                        Util.constant(workRequiredAtStates),
+                        Util.constant(timeRequiredAtStates)
                 ),
                 new WorkWorldInteractions(
                         actionDuration,

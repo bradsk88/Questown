@@ -64,7 +64,7 @@ public abstract class AbstractWorldInteraction<
                 ingredientsRequiredAtStates,
                 ingredientQuantityRequiredAtStates,
                 workRequiredAtStates,
-                timeRequiredAtStates,
+                (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
                 claimSpots
         ) {
             @Override
@@ -105,14 +105,9 @@ public abstract class AbstractWorldInteraction<
 
         this.workWI = new AbstractWorkWI<>(
                 workRequiredAtStates,
-                timeRequiredAtStates,
+                (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
                 toolsRequiredAtStates
         ) {
-            @Override
-            protected Integer getAugmentedTime(EXTRA extra, Integer nextStepTime) {
-                return self.getAffectedTime(extra, nextStepTime);
-            }
-
             @Override
             protected TOWN degradeTool(
                     EXTRA extra,
@@ -198,7 +193,7 @@ public abstract class AbstractWorldInteraction<
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(tryExtractOre(extra, workSpot.position()), workSpot);
+                return new WorkOutput<>(tryExtractProduct(extra, workSpot.position()), workSpot);
             }
         }
 
@@ -251,7 +246,7 @@ public abstract class AbstractWorldInteraction<
         return ingredientsRequiredAtStates;
     }
 
-    protected TOWN tryExtractOre(
+    protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position
     ) {

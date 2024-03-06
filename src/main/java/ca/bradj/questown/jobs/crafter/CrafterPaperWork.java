@@ -36,6 +36,8 @@ public class CrafterPaperWork {
     public static Work asWork() {
         return Crafters.asWork(
                 ID,
+                CrafterStickWork.ID,
+                Items.PAPER.getDefaultInstance(),
                 RESULT::copy,
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,

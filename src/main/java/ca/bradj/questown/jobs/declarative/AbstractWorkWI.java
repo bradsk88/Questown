@@ -4,20 +4,22 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
+    private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> toolsRequiredAtStates;
 
     public AbstractWorkWI(
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<Integer, Function<ITEM, Boolean>> toolsRequiredAtStates
+            BiFunction<EXTRA, Integer, Integer> timeRequiredAtStates,
+            ImmutableMap<Integer, @NotNull Function<ITEM, Boolean>> toolsRequiredAtStates
     ) {
         this.workRequiredAtStates = workRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
@@ -36,13 +38,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (nextStepWork == null) {
             nextStepWork = 0;
         }
-        Integer nextStepTime = timeRequiredAtStates.getOrDefault(
-                curState + 1, 0
-        );
-        if (nextStepTime == null) {
-            nextStepTime = 0;
-        }
-        nextStepTime = getAugmentedTime(extra, nextStepTime);
+        Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
         TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = updatedTown != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
@@ -51,8 +47,6 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
         return updatedTown;
     }
-
-    protected abstract Integer getAugmentedTime(EXTRA extra, Integer nextStepTime);
 
     protected abstract TOWN degradeTool(
             EXTRA extra,

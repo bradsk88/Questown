@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.sounds.SoundEvents;
@@ -54,7 +55,9 @@ public class BlacksmithWoodenPickaxeJob {
 
     public static Work asWork() {
         return productionWork(
+                Items.WOODEN_PICKAXE.getDefaultInstance(),
                 ID,
+                null,
                 new WorkDescription(
                         t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
                         RESULT
@@ -65,11 +68,11 @@ public class BlacksmithWoodenPickaxeJob {
                 ),
                 new WorkStates(
                         MAX_STATE,
-                        INGREDIENTS_REQUIRED_AT_STATES,
-                        INGREDIENT_QTY_REQUIRED_AT_STATES,
-                        TOOLS_REQUIRED_AT_STATES,
-                        WORK_REQUIRED_AT_STATES,
-                        TIME_REQUIRED_AT_STATES
+                        Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                        Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                        Util.constant(TOOLS_REQUIRED_AT_STATES),
+                        Util.constant(WORK_REQUIRED_AT_STATES),
+                        Util.constant(TIME_REQUIRED_AT_STATES)
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,

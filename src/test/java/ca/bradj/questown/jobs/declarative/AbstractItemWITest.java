@@ -115,7 +115,7 @@ class AbstractItemWITest {
                     ingredientsRequiredAtStates,
                     ingredientQtyRequiredAtStates,
                     workRequiredAtStates,
-                    timeRequiredAtStates,
+                    (x, i) -> timeRequiredAtStates.get(i),
                     (v) -> new Claim(UUID.randomUUID(), 100)
             );
             this.inventory = inventory;

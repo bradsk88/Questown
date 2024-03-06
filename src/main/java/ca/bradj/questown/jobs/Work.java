@@ -10,11 +10,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public record Work(
+        @Nullable JobID parentID,
+        ItemStack icon,
         WorksBehaviour.JobFunc jobFunc,
         WorksBehaviour.SnapshotFunc snapshotFunc,
         Predicate<Block> isJobBlock,

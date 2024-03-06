@@ -74,7 +74,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
 
     @NotNull
     private List<RoomRecipeMatch<MCRoom>> getWelcomeMatMetaRooms(@NotNull TownFlagBlockEntity t) {
-        // TODO[ASAP]: Cache these
+        // TODO: Cache these
         Function<MCRoom, ImmutableMap<BlockPos, Block>> fn = room -> RecipeDetection.getBlocksInRoom(
                 t.getServerLevel(),
                 room,

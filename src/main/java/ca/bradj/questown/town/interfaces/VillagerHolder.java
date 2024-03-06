@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,4 +38,10 @@ public interface VillagerHolder {
     int getWorkSpeed(UUID uuid);
 
     VillagerStatsData getStats(UUID uuid);
+
+    Collection<JobID> getJobs();
+
+    void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce);
+
+    boolean canDine(UUID uuid);
 }

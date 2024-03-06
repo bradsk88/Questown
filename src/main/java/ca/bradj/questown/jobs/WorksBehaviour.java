@@ -131,7 +131,9 @@ public class WorksBehaviour {
     }
 
     public static Work productionWork(
+            ItemStack icon,
             JobID jobId,
+            JobID parentId,
             WorkDescription description,
             WorkLocation location,
             WorkStates state,
@@ -140,6 +142,8 @@ public class WorksBehaviour {
             @Nullable ResourceLocation workSound
     ) {
         return productionWork(
+                parentId,
+                icon,
                 jobId,
                 description,
                 location,
@@ -152,6 +156,8 @@ public class WorksBehaviour {
     }
 
     public static Work productionWork(
+            JobID parentID,
+            ItemStack icon,
             JobID jobId,
             WorkDescription description,
             WorkLocation location,
@@ -162,6 +168,8 @@ public class WorksBehaviour {
             ExpirationRules expiration
             ) {
         return new Work(
+                parentID,
+                icon,
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
                         jobId, location.baseRoom(), states.maxState(),
@@ -204,9 +212,9 @@ public class WorksBehaviour {
     @NotNull
     public static ExpirationRules productionExpiration() {
         return new ExpirationRules(
-                Config.MAX_TICKS_WITHOUT_SUPPLIES.get(),
+                Config.MAX_TICKS_WITHOUT_SUPPLIES::get,
                 WorkSeekerJob::getIDForRoot,
-                Integer.MAX_VALUE,
+                () -> Long.MAX_VALUE,
                 jobId -> jobId
         );
     }

@@ -52,10 +52,22 @@ public class QuestownNetwork {
                 OpenVillagerMenuMessage::handle
         ).add();
         Util.withConsumer(
+                registerMessage(ChangeVillagerJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(ChangeVillagerJobMessage::encode).
+                decoder(ChangeVillagerJobMessage::decode),
+                ChangeVillagerJobMessage::handle
+        ).add();
+        Util.withConsumer(
                 registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
                 encoder(SyncBlockItemMessage::encode).
                 decoder(SyncBlockItemMessage::decode),
                 SyncBlockItemMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(OpenVillagerAdvancementsMenuMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(OpenVillagerAdvancementsMenuMessage::encode).
+                decoder(OpenVillagerAdvancementsMenuMessage::decode),
+                OpenVillagerAdvancementsMenuMessage::handle
         ).add();
     }
 

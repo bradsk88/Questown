@@ -28,8 +28,7 @@ class WorkStatusStoreTest {
                     (room, pos) -> ImmutableList.of(pos),
                     (lvl, pos) -> false,
                     (lvl, pos) -> null,
-                    (lvl, pos) -> null,
-                    TestItem::shrink
+                    (lvl, pos) -> null
             );
         }
 
@@ -46,7 +45,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnValueForSetBlock() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, new AbstractWorkStatusStore.State(0, 0, 0), 10);
+        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 10);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertEquals(10, tl);
     }
@@ -55,7 +54,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnLessValueForSetBlockAfterTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, new AbstractWorkStatusStore.State(0, 0, 0), 10);
+        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 10);
         tick(s);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertEquals(9, tl);
@@ -65,7 +64,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnNullForSetBlockAfterFinalTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, new AbstractWorkStatusStore.State(0, 0, 0), 1); // Only one tick left
+        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 1); // Only one tick left
         tick(s);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertNull(tl);
@@ -75,7 +74,7 @@ class WorkStatusStoreTest {
     void Test_ShouldMoveToNextStateAfterFinalTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, new AbstractWorkStatusStore.State(0, 0, 0), 1); // Only one tick left
+        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 1); // Only one tick left
         tick(s);
         AbstractWorkStatusStore.State state = s.getJobBlockState(pos);
         Assertions.assertNotNull(state);

@@ -2,9 +2,12 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -20,7 +23,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,6 +41,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private final List<LivingEntity> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
+    private TownFlagBlockEntity town;
 
     public void initialize(
             Map<UUID, Integer> fullness,
@@ -80,6 +84,16 @@ public class TownVillagerHandle implements VillagerHolder {
         );
     }
 
+    @Override
+    public Collection<JobID> getJobs() {
+        return entities.stream().map(v -> ((VisitorMobEntity) v).getJobId()).toList();
+    }
+
+    @Override
+    public void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce) {
+        this.town.changeJobForVisitor(villagerUUID, newJob, announce);
+    }
+
     public Stream<LivingEntity> stream() {
         return entities.stream();
     }
@@ -113,18 +127,38 @@ public class TownVillagerHandle implements VillagerHolder {
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
 
-        ImmutableMap<String, TriFunction<Integer, Inventory, Player, AbstractContainerMenu>> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, (windowId, inv, p) -> new InventoryAndStatusMenu(
+        ImmutableMap<String, Runnable> showers = ImmutableMap.of(
+                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(sender, (windowId, inv, p) -> new InventoryAndStatusMenu(
                         windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, e.getJobId(), e.getFlagPos()
-                ),
-                OpenVillagerMenuMessage.QUESTS, (windowId, inv, p) -> new VillagerQuestsContainer(
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.QUESTS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
                         windowId, e.getUUID(), quests, e.getFlagPos()
-                ),
-                OpenVillagerMenuMessage.STATS, (windowId, inv, p) -> new VillagerStatsMenu(
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.STATS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerStatsMenu(
                         windowId, e, e.getFlagPos(), stats
-                )
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.SKILLS, () -> {
+                    QuestownNetwork.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sender),
+                            new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
+                    );
+                }
         );
 
+        Runnable runnable = showers.get(type);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+        }
+        runnable.run();
+    }
+
+    private static void openMenu(
+            ServerPlayer sender,
+            TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
+            List<UIQuest> quests,
+            VisitorMobEntity e,
+            VillagerStatsData stats
+    ) {
         Util.openScreen(sender, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -137,7 +171,7 @@ public class TownVillagerHandle implements VillagerHolder {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return showers.get(type).apply(windowId, inv, p);
+                return shower.apply(windowId, inv, p);
             }
         }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
     }
@@ -210,6 +244,15 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
+    public boolean canDine(UUID uuid) {
+        return entities.stream()
+                .filter(v -> uuid.equals(v.getUUID()))
+                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
+                .findFirst()
+                .orElse(false);
+    }
+
+    @Override
     public void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {
         // TODO: Generalize
         if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
@@ -221,12 +264,19 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public int getAffectedTime(UUID uuid, Integer timeToAugment) {
-        float offset = (Config.NEUTRAL_MOOD.get() - moods.getMood(uuid));
+        float offset = ((Config.NEUTRAL_MOOD.get() / 100f) - moods.getMood(uuid));
         return (int) ((1f + offset) * timeToAugment);
     }
 
     @Override
     public int getWorkSpeed(UUID uuid) {
         return (int) (moods.getMood(uuid) * 10);
+    }
+
+    /**
+     * @deprecated Eventually this handle should not require a reference to the flag entity
+     */
+    public void associate(TownFlagBlockEntity t) {
+        this.town = t;
     }
 }

@@ -15,7 +15,6 @@ import java.util.Objects;
 @Disabled("Just keeping these around as reference")
 public class GathererJournalTest {
 
-    // TODO[ASAP]: Move to outer class
     public static class TestItem implements Item<TestItem>, HeldItem<TestItem, TestItem> {
         public final String value;
 

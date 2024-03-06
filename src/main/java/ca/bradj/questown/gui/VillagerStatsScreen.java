@@ -30,7 +30,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         super.imageHeight = 220;
 
         this.background = JEI.getRecipeGuiBackground();
-        this.tabs = new VillagerTabs(menu::openInv, menu::openQuests, null);
+        this.tabs = VillagerTabs.forMenu(menu);
     }
 
     @Override

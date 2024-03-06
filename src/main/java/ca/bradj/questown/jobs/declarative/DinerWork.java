@@ -3,14 +3,17 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
@@ -55,6 +58,8 @@ public class DinerWork {
             String rootId
     ) {
         return productionWork(
+                null,
+                ItemsInit.PLATE_BLOCK.get().getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
@@ -63,11 +68,11 @@ public class DinerWork {
                 ),
                 new WorkStates(
                         MAX_STATE,
-                        INGREDIENTS_REQUIRED_AT_STATES,
-                        INGREDIENT_QTY_REQUIRED_AT_STATES,
-                        TOOLS_REQUIRED_AT_STATES,
-                        WORK_REQUIRED_AT_STATES,
-                        TIME_REQUIRED_AT_STATES
+                        Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                        Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                        Util.constant(TOOLS_REQUIRED_AT_STATES),
+                        Util.constant(WORK_REQUIRED_AT_STATES),
+                        Util.constant(TIME_REQUIRED_AT_STATES)
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,
@@ -83,9 +88,9 @@ public class DinerWork {
                 ),
                 SoundEvents.GENERIC_EAT.getLocation(),
                 new ExpirationRules(
-                        Integer.MAX_VALUE,
+                        () -> Long.MAX_VALUE,
                         jobId -> jobId,
-                        Config.MAX_TICKS_WITHOUT_DINING_TABLE.get(),
+                        Config.MAX_TICKS_WITHOUT_DINING_TABLE::get,
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )
         );

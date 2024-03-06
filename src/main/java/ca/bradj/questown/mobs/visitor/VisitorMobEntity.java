@@ -1022,6 +1022,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.shouldStandStill();
     }
 
+    public boolean canStopWorkingAtAnyTime() {
+        // TODO: Is it really this simple?
+        return this.entityData.get(visible);
+    }
+
     public interface ChangeListener {
         void Changed();
 

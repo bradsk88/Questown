@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
@@ -28,7 +29,8 @@ import static ca.bradj.questown.jobs.WorksBehaviour.NOT_REQUIRED_BECUASE_HAS_NO_
 // Having a JSON file approach would allow other mods to easily integrate with Questown.
 public class Works {
 
-    private static final ImmutableMap<JobID, Supplier<Work>> works;
+    private static ImmutableMap<JobID, Supplier<Work>> works;
+    private static boolean initialized;
 
     public static Collection<Supplier<Work>> values() {
         return works.values();
@@ -38,10 +40,12 @@ public class Works {
         return works.keySet();
     }
 
-    static {
+    public static void staticInitialize() {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         // TODO: Replace with production job
         b.put(FarmerJob.ID, () -> new Work(
+                null,
+                Items.WHEAT.getDefaultInstance(),
                 (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
@@ -65,13 +69,23 @@ public class Works {
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
         b.put(GathererUnmappedAxeWork.ID, GathererUnmappedAxeWork::asWork);
+        b.put(GathererUnmappedHalfDayAxeWork.ID, GathererUnmappedHalfDayAxeWork::asWork);
+        b.put(GathererUnmappedFullDayAxeWork.ID, GathererUnmappedFullDayAxeWork::asWork);
         b.put(GathererUnmappedPickaxeWork.ID, GathererUnmappedPickaxeWork::asWork);
         b.put(GathererUnmappedNoToolWork.ID, GathererUnmappedNoToolWork::asWork);
         b.put(GathererUnmappedShovelWork.ID, GathererUnmappedShovelWork::asWork);
+        b.put(GathererUnmappedRodQuarterDayWork.ID, GathererUnmappedRodQuarterDayWork::asWork);
         works = b.build();
+
+        works.forEach((id, work) -> {
+            VillagerAdvancements.register(id, work.get().parentID());
+        });
+
+        initialized = true;
     }
 
     public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootID) {
+        assert initialized;
         ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
         b.addAll(works.entrySet());
         b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootID), () -> DinerWork.asWork(rootID)));
@@ -79,6 +93,7 @@ public class Works {
     }
 
     public static Supplier<Work> get(JobID jobID) {
+        assert initialized;
         if (DinerWork.isDining(jobID)) {
             return () -> DinerWork.asWork(jobID.rootId());
         }

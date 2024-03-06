@@ -98,7 +98,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Boolean tryExtractOre(
+        protected Boolean tryExtractProduct(
                 Void unused,
                 Position position
         ) {
@@ -177,6 +177,16 @@ class AbstractWorldInteractionTest {
         @Override
         public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
             return null;
+        }
+
+        @Override
+        protected int getWorkSpeedOf10(Void unused) {
+            return 10;
+        }
+
+        @Override
+        protected int getAffectedTime(Void unused, Integer nextStepTime) {
+            return nextStepTime;
         }
 
         @Override

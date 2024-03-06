@@ -48,7 +48,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
-        this.tabs = new VillagerTabs(null, menu::openQuests, menu::openStats);
+        this.tabs = VillagerTabs.forMenu(menu);
     }
 
     @Override
@@ -201,7 +201,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                // TODO[ASAP]: Render root AND current job
+                // TODO: Render root AND current job
                 IStatus<?> status = menu.getStatus();
                 @Nullable String cat = status.getCategoryId();
                 if (cat == null) {

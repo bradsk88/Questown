@@ -8,13 +8,12 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -25,8 +24,13 @@ import net.minecraftforge.items.wrapper.InvWrapper;
 
 import java.util.*;
 
-public class InventoryAndStatusMenu extends AbstractContainerMenu implements StatusListener {
+public class InventoryAndStatusMenu extends AbstractVillagerMenu implements StatusListener {
 
+    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
+            OpenVillagerMenuMessage.QUESTS,
+            OpenVillagerMenuMessage.STATS,
+            OpenVillagerMenuMessage.SKILLS
+    );
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
 
@@ -63,7 +67,7 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
             BlockPos flagPos
 // For checking validity
     ) {
-        super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId);
+        super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId, flagPos, gatherer.getUUID());
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.jobId = jobId;
@@ -296,4 +300,10 @@ public class InventoryAndStatusMenu extends AbstractContainerMenu implements Sta
     public void openStats() {
         this.openStatsFn.run();
     }
+
+    @Override
+    public Collection<String> getEnabledTabs() {
+        return ENABLED_TABS;
+    }
+
 }
