@@ -192,7 +192,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                // TODO[ASAP]: Render root AND current job
+                // TODO: Render root AND current job
                 IStatus<?> status = menu.getStatus();
                 @Nullable String cat = status.getCategoryId();
                 if (cat == null) {

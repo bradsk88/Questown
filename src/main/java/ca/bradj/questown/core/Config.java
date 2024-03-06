@@ -139,7 +139,7 @@ public class Config {
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
         GATHERER_TIME_REQUIRED_BASELINE = BUILDER.comment(
                 "The number of ticks the gatherer/explorer will spend outside of town collecting items. All villagers will start with this baseline, but it might get altered by villager or town modifiers."
-        ).defineInRange("GathererTimeRequiredBaseline", 6000, 1, 24000);
+        ).defineInRange("GathererTimeRequiredBaseline", 2000, 1, 24000);
         BUILDER.pop();
 
         // Villagers Config
@@ -176,7 +176,7 @@ public class Config {
         ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
         MOOD_EFFECT_DURATION_ATE_COMFORTABLY = BUILDER.comment(
                 "When villagers eat comfortably"
-        ).defineInRange("AteUncomfortably", 3000L, 0L, 24000L);
+        ).defineInRange("AteComfortably", 3000L, 0L, 24000L);
 
         // End Mood Effect Durations
         BUILDER.pop();

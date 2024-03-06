@@ -771,6 +771,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         // For now, we use randomization to give work requests a fair chance of being selected
         Collections.shuffle(preference);
 
+        // TODO[ASAP]: Use a job attempt counter to determine which preference they choose
+        //  With full random, the villager could theoretically never choose a job that
+        //  is possible with the items currently in town. Under true random, they could
+        //  potentially just keep choosing "gather with axe" over and over while there
+        //  are no axes in town, without trying "gather with shovel" while there IS a
+        //  shovel in town. Using a counter would allow the villager to consider every
+        //  job option.
+
         for (JobID p : preference) {
             List<Ingredient> i = requestedResults.stream().map(WorkRequest::asIngredient).toList();
             for (Ingredient requestedResult : i) {

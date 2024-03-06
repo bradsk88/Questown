@@ -5,6 +5,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -78,6 +79,11 @@ public class TownVillagerHandle implements VillagerHolder {
                 fullnessPercent,
                 moods.getMood(uuid)
         );
+    }
+
+    @Override
+    public Collection<JobID> getJobs() {
+        return entities.stream().map(v -> ((VisitorMobEntity) v).getJobId()).toList();
     }
 
     public Stream<LivingEntity> stream() {
