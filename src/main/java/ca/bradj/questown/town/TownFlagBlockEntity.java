@@ -183,7 +183,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             e.morningTick(e.mornings.pop());
         }
 
-        CompoundTag tag = e.getPersistentData();
+        CompoundTag tag = Util.getBlockStoredTagData(e);
         boolean stateChanged = e.state.tick(e, tag, sl);
 
         if ((stateChanged || e.changed) && e.everScanned) {
@@ -248,7 +248,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         this.setChanged();
         villagerHandle.forEach(LivingEntity::stopSleeping);
         villagerHandle.makeAllTotallyHungry();
-        getPersistentData().putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        Util.getBlockStoredTagData(this).putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
     private static void profileTick(
@@ -320,7 +320,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private static void loadNextTick(Queue<Function<TownFlagBlockEntity, Boolean>> initializers) {
         // TODO: Store active rooms? (Cost to re-compute is low, I think)
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_ROOMS)) {
                 TownRoomsMapSerializer.INSTANCE.deserialize(tag.getCompound(NBT_ROOMS), t, t.roomsHandle.getRegisteredRooms());
             }
@@ -328,7 +328,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_QUEST_BATCHES)) {
                 CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
                 MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
@@ -338,7 +338,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_MORNING_REWARDS)) {
                 CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
                 t.morningRewards.deserializeNbt(t, data);
@@ -347,7 +347,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_WELCOME_MATS)) {
                 ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
                 Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
@@ -357,7 +357,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_JOBS)) {
                 TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), t.workHandle);
             }
@@ -365,7 +365,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (!t.knowledgeHandle.isInitialized()) {
                 return false;
             }
@@ -379,7 +379,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         });
 
         initializers.add(t -> {
-            CompoundTag tag = t.getPersistentData();
+            CompoundTag tag = Util.getBlockStoredTagData(t);
             if (QTNBT.contains(tag, NBT_VILLAGERS)) {
                 CompoundTag data = QTNBT.getCompound(tag, NBT_VILLAGERS);
                 long currentTick = Util.getTick(t.getServerLevel());
@@ -559,7 +559,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            p.displayClientMessage(Component.translatable(key, args), false);
+            p.displayClientMessage(Util.translatable(key, args), false);
         }
     }
 
@@ -628,8 +628,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         ResourceLocation newMatchID = newMatch.getRecipeID();
         broadcastMessage(
                 "messages.building.room_changed",
-                Component.translatable("room." + oldMatchID.getPath()),
-                Component.translatable("room." + newMatchID.getPath()),
+                Util.translatable("room." + oldMatchID.getPath()),
+                Util.translatable("room." + newMatchID.getPath()),
                 newRoom.getDoorPos().getUIString()
         );
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
@@ -660,7 +660,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     ) {
         broadcastMessage(
                 "messages.building.room_destroyed",
-                Component.translatable("room." + oldRecipeId.getRecipeID().getPath()),
+                Util.translatable("room." + oldRecipeId.getRecipeID().getPath()),
                 roomDoorPos.getDoorPos().getUIString()
         );
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
@@ -1058,13 +1058,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             VisitorMobEntity visitorMobEntity,
             ServerLevel sl
     ) {
-        if (!getPersistentData().contains(NBT_TOWN_STATE)) {
+        if (!Util.getBlockStoredTagData(this).contains(NBT_TOWN_STATE)) {
             QT.FLAG_LOGGER.error(
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
         MCTownState state = TownStateSerializer.INSTANCE.load(
-                getPersistentData().getCompound(NBT_TOWN_STATE),
+                Util.getBlockStoredTagData(this).getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats().contains(bp)
         );
         Optional<TownState.VillagerData<MCHeldItem>> match = state.villagers.stream()
@@ -1153,7 +1153,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     }
 
     public void warpTime(int ticks) {
-        state.warp(this, getPersistentData(), getServerLevel(), ticks);
+        state.warp(this, Util.getBlockStoredTagData(this), getServerLevel(), ticks);
     }
 
     public void freezeVillagers(Integer ticks) {

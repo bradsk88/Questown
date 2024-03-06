@@ -1,11 +1,10 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.common.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -18,7 +17,7 @@ import java.util.List;
 public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMenu> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
-    private final DrawableNineSliceTexture background;
+    private final JEI.NineNine background;
     private final VillagerTabs tabs;
 
     public VillagerStatsScreen(
@@ -30,8 +29,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
+        this.background = JEI.getRecipeGuiBackground();
         this.tabs = new VillagerTabs(menu::openInv, menu::openQuests, null);
     }
 
@@ -64,7 +62,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Util.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -86,13 +84,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     private void renderMood(PoseStack stack) {
-        Component title = Component.translatable("menu.mood");
+        Component title = Util.translatable("menu.mood");
         renderBar(stack, 0, title, menu.getMoodPercent());
     }
 
     private void renderHunger(PoseStack stack) {
         int fullnessPercent = menu.getFullnessPercent();
-        Component title = Component.translatable("menu.hunger");
+        Component title = Util.translatable("menu.hunger");
         renderBar(stack, 1, title, fullnessPercent);
     }
 

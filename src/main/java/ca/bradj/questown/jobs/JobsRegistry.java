@@ -20,6 +20,7 @@ import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
@@ -29,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -70,14 +70,14 @@ public class JobsRegistry {
     }
 
     public static ResourceLocation getRoomForJobRootId(
-            RandomSource rand,
+            ServerLevel rand,
             String rootId
     ) {
         List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
                 .stream()
                 .filter(v -> v.getKey().rootId().equals(rootId))
                 .toList();
-        return x.get(rand.nextInt(x.size())).getValue().get().baseRoom();
+        return x.get(Util.nextInt(rand, x.size())).getValue().get().baseRoom();
     }
 
     public static ImmutableList<JobID> getPreferredWorkIds(JobID jobId) {

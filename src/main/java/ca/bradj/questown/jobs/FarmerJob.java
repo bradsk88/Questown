@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.farmer.FarmerWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -26,7 +27,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
@@ -624,9 +624,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         // Sometimes the farmer gets stuck leaving or entering the farm.  As a stop-gap, wiggle sometimes.
-        RandomSource rand = town.getServerLevel().getRandom();
-        if (rand.nextInt(5) == 0) {
-            return entityBlockPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
+        if (Util.nextInt(town.getServerLevel(), 5) == 0) {
+            return entityBlockPos.relative(Util.getRandomHorizontal(town.getServerLevel()));
         }
 
         BlockPos fencePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
@@ -644,7 +643,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             }
             return fencePos.offset(1, 0, 0);
         }
-        return fencePos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(rand));
+        return fencePos.relative(Util.getRandomHorizontal(town.getServerLevel()));
     }
 
     @Override
