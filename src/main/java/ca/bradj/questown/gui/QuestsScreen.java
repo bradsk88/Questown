@@ -1,6 +1,8 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -8,13 +10,9 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.gui.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -27,7 +25,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -49,8 +46,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<UIQuest> quests;
-    private final DrawableNineSliceTexture background;
-    private final DrawableNineSliceTexture cardBackground;
+    private final JEI.NineNine background;
+    private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
@@ -79,18 +76,17 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         super.imageHeight = 220;
 
         this.quests = ImmutableList.copyOf(container.GetQuests());
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
-        this.cardBackground = textures.getRecipeBackground();
+        this.background = JEI.getRecipeGuiBackground();
+        this.cardBackground = JEI.getRecipeBackground();
 
-        IDrawableStatic arrowNext = textures.getArrowNext();
-        IDrawableStatic arrowPrevious = textures.getArrowPrevious();
+        IDrawableStatic arrowNext = JEI.getArrowNext();
+        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
 
-        this.nextPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage(), textures
+        this.nextPage = JEI.guiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage(), textures
+        this.previousPage = JEI.guiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
         this.heads = quests.stream().map(v -> {
             if (v.villagerUUID() == null) {
@@ -139,7 +135,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Component.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Util.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -185,12 +181,12 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             Component recipeName = recipe.getName();
             if (recipe.fromRecipe != null) {
                 Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = Component.translatable("quests.upgrade", fromName, recipeName);
+                recipeName = Util.translatable("quests.upgrade", fromName, recipeName);
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = Component.translatable("quests.completed_suffix", recipeName);
+                recipeName = Util.translatable("quests.completed_suffix", recipeName);
             }
             if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
@@ -208,7 +204,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = Component.translatable("quests.job_owner", vID);
+            Component tooltip = Util.translatable("quests.job_owner", vID);
 
             if (recipe.getBatchUUID() != null) {
                 renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
@@ -220,7 +216,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
 
             boolean hasJob = jobName.isEmpty();
             if (!hasJob) {
-                tooltip = Component.translatable("quests.job_change", vID, jobName);
+                tooltip = Util.translatable("quests.job_change", vID, jobName);
             }
 
             boolean showHead = !hasJob;
@@ -259,7 +255,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
         this.font.drawShadow(
                 poseStack,
-                Component.literal("x"),
+                Util.literal("x"),
                 removeX + borderPadding - 1,
                 idY + borderPadding - 1,
                 0xFFFFFF
@@ -270,7 +266,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
                 mouseY,
                 removeX,
                 idY,
-                Component.translatable("job_board.remove_work")
+                Util.translatable("job_board.remove_work")
         );
         this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
     }
@@ -454,8 +450,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             double scrollY,
             double scrollDelta
     ) {
-        final double x = MouseUtil.getX();
-        final double y = MouseUtil.getY();
+        final double x = JEI.getX();
+        final double y = JEI.getY();
         if (isMouseOver(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();

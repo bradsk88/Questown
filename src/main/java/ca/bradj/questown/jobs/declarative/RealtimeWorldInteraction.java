@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -28,7 +27,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -43,9 +45,8 @@ public class RealtimeWorldInteraction
             VisitorMobEntity entity,
             Collection<WorkSpot<Integer, BlockPos>> workSpots
     ) {
-        RandomSource random = town.getServerLevel().getRandom();
         ArrayList<WorkSpot<Integer, BlockPos>> shuffled = new ArrayList<>(workSpots);
-        shuffle(shuffled, random);
+        Util.shuffle(shuffled, town.getServerLevel());
         for (WorkSpot<Integer, BlockPos> workSpot : shuffled){
             WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
             if (v != null) {
@@ -54,14 +55,6 @@ public class RealtimeWorldInteraction
         }
         return new WorkOutput<>(null, ImmutableList.copyOf(shuffled).get(0));
     }
-
-    private static void shuffle(List<?> list, RandomSource rnd) {
-        int size = list.size();
-        for(int i = size; i > 1; --i) {
-            Collections.swap(list, i - 1, rnd.nextInt(i));
-        }
-    }
-
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;

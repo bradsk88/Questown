@@ -1,11 +1,9 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.textures.Textures;
-import net.minecraft.client.Minecraft;
 
 import java.util.function.Consumer;
 
@@ -16,9 +14,8 @@ public class Tabs {
 
     public Tabs(ImmutableList<Tab> tabs) {
         this.tabs = tabs;
-        Textures textures = Internal.getTextures();
-        this.tab = textures.getTabSelected();
-        this.unTab = textures.getTabUnselected();
+        this.tab = JEI.getTabSelected();
+        this.unTab = JEI.getTabUnselected();
     }
 
     public boolean renderTooltip(

@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.mc.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
@@ -20,41 +21,42 @@ public class QuestownNetwork {
     );
 
     public static void init() {
-        registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+        Util.withConsumer(
+                registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(AddWorkFromUIMessage::encode).
-                decoder(AddWorkFromUIMessage::decode).
-                consumerNetworkThread(AddWorkFromUIMessage::handle).
-                add();
-        registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                decoder(AddWorkFromUIMessage::decode),
+                AddWorkFromUIMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveWorkFromUIMessage::encode).
-                decoder(RemoveWorkFromUIMessage::decode).
-                consumerNetworkThread(RemoveWorkFromUIMessage::handle).
-                add();
-        registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                decoder(RemoveWorkFromUIMessage::decode),
+                RemoveWorkFromUIMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(OpenQuestsMenuMessage::encode).
-                decoder(OpenQuestsMenuMessage::decode).
-                consumerNetworkThread(OpenQuestsMenuMessage::handle).
-                add();
-        registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                decoder(OpenQuestsMenuMessage::decode),
+                OpenQuestsMenuMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveQuestFromUIMessage::encode).
-                decoder(RemoveQuestFromUIMessage::decode).
-                consumerNetworkThread(RemoveQuestFromUIMessage::handle).
-                add();
-        registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                decoder(RemoveQuestFromUIMessage::decode),
+                RemoveQuestFromUIMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(OpenVillagerMenuMessage::encode).
-                decoder(OpenVillagerMenuMessage::decode).
-                consumerNetworkThread(OpenVillagerMenuMessage::handle).
-                add();
-        registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                decoder(OpenVillagerMenuMessage::decode),
+                OpenVillagerMenuMessage::handle
+        ).add();
+        Util.withConsumer(
+                registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
                 encoder(SyncBlockItemMessage::encode).
-                decoder(SyncBlockItemMessage::decode).
-                consumerMainThread(SyncBlockItemMessage::handle).
-                add();
-        registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(OpenVillagerMenuMessage::encode).
-                decoder(OpenVillagerMenuMessage::decode).
-                consumer(OpenVillagerMenuMessage::handle).
-                add();
+                decoder(SyncBlockItemMessage::decode),
+                SyncBlockItemMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

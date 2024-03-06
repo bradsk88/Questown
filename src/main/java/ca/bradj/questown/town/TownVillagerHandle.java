@@ -6,6 +6,7 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
@@ -124,10 +125,10 @@ public class TownVillagerHandle implements VillagerHolder {
                 )
         );
 
-        NetworkHooks.openScreen(sender, new MenuProvider() {
+        Util.openScreen(sender, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return Component.empty();
+                return Util.literal("");
             }
 
             @Override
