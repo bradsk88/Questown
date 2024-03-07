@@ -6,6 +6,8 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
+import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
@@ -39,6 +41,7 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
@@ -139,6 +142,14 @@ public class TownFlagBlock extends BaseEntityBlock {
             TownFlagBlockEntity entity
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
+        if (player.getItemInHand(hand).getItem().equals(Items.DIRT)) {
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> (ServerPlayer) player),
+                    new OpenVillagerAdvancementsMenuMessage()
+            );
+            return InteractionResult.sidedSuccess(false);
+        }
+
         if (itemInHand.getItem().equals(Items.APPLE)) {
             entity.addImmediateReward(new SpawnVisitorReward(entity));
             return InteractionResult.sidedSuccess(false);
