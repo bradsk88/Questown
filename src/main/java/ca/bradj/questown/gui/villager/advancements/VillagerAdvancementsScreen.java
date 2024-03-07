@@ -1,14 +1,18 @@
 package ca.bradj.questown.gui.villager.advancements;
 
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.mc.Util;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.advancements.FrameType;
 import net.minecraft.client.GameNarrator;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.advancements.AdvancementTab;
-import net.minecraft.client.multiplayer.ClientAdvancements;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 
 import javax.annotation.Nullable;
 
@@ -31,17 +35,24 @@ public class VillagerAdvancementsScreen extends Screen {
     private static final Component NO_ADVANCEMENTS_LABEL = Component.translatable("advancements.empty");
     private static final Component TITLE = Component.translatable("gui.advancements");
     @Nullable
-    private AdvancementTab selectedTab;
+    private VillagerAdvancementsComponent selectedTab;
     private boolean isScrolling;
     private static int tabPage;
     private static int maxPages;
 
     public VillagerAdvancementsScreen() {
         super(GameNarrator.NO_TITLE);
+        this.selectedTab = new VillagerAdvancementsComponent(Minecraft.getInstance(), this, Questown.ResourceLocation("test"), new DisplayInfo(
+                Items.CREEPER_HEAD.getDefaultInstance(),
+                Util.literal("test"),
+                Util.literal("test2"),
+                new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
+                FrameType.TASK,
+                false, false, false
+        ));
     }
 
     protected void init() {
-        this.selectedTab = null;
         // TODO: Listen for real-time updates
 //        this.advancements.setListener(this);
     }
@@ -77,7 +88,7 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     private void renderInside(PoseStack p_97374_, int p_97375_, int p_97376_, int p_97377_, int p_97378_) {
-        AdvancementTab advancementtab = this.selectedTab;
+        VillagerAdvancementsComponent advancementtab = this.selectedTab;
         if (advancementtab == null) {
             fill(p_97374_, p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
             int i = p_97377_ + 9 + 117;

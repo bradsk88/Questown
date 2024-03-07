@@ -94,7 +94,7 @@ public class Config {
         );
         LOG_QUEST_BATCH_GENERATION = BUILDER.comment(
                 "If set to True, quest pre-generation will be printed verbosely to the debug logs. This can be quite noisy."
-        ).define("LogQuestBatchGeneration", true);
+        ).define("LogQuestBatchGeneration", false);
         IDEAL_QUEST_THRESHOLD_TICKS = BUILDER.comment(
                 "When a new batch of quests is added, the mod makes several attempts to find a random" +
                         ", complex room quest to add to the batch. This setting determines how many ticks" +

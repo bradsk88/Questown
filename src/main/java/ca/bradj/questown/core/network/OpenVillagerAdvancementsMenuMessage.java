@@ -1,5 +1,6 @@
 package ca.bradj.questown.core.network;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancementsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,8 +23,13 @@ public record OpenVillagerAdvancementsMenuMessage() {
     ) {
         ctx.get().enqueueWork(() -> {
             Minecraft.getInstance().setScreen(new VillagerAdvancementsScreen());
-        });
+        }).exceptionally(OpenVillagerAdvancementsMenuMessage::logError);
         ctx.get().setPacketHandled(true);
 
+    }
+
+    private static Void logError(Throwable ex) {
+        QT.GUI_LOGGER.error("Failed to open villager advancements screen", ex);
+        return null;
     }
 }

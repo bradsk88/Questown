@@ -7,7 +7,6 @@ import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
@@ -21,14 +20,12 @@ import java.util.Map;
 
 public class VillagerAdvancementsComponent extends GuiComponent {
     private final Minecraft minecraft;
-    private final AdvancementsScreen screen;
-    private final int index;
-    private final Advancement advancement;
+    private final VillagerAdvancementsScreen screen;
     private final DisplayInfo display;
     private final ItemStack icon;
     private final Component title;
     private final VillagerAdvancementsWidget root;
-    private final Map<Advancement, VillagerAdvancementsWidget> widgets;
+    private final Map<ResourceLocation, VillagerAdvancementsWidget> widgets;
     private double scrollX;
     private double scrollY;
     private int minX;
@@ -37,40 +34,25 @@ public class VillagerAdvancementsComponent extends GuiComponent {
     private int maxY;
     private float fade;
     private boolean centered;
-    private int page;
 
-    public VillagerAdvancementsComponent(Minecraft p_97145_, AdvancementsScreen p_97146_, int p_97148_, Advancement p_97149_, DisplayInfo p_97150_) {
+    public VillagerAdvancementsComponent(
+            Minecraft minecraft,
+            VillagerAdvancementsScreen screen,
+            ResourceLocation advancement,
+            DisplayInfo p_97150_
+    ) {
         this.widgets = Maps.newLinkedHashMap();
         this.minX = Integer.MAX_VALUE;
         this.minY = Integer.MAX_VALUE;
         this.maxX = Integer.MIN_VALUE;
         this.maxY = Integer.MIN_VALUE;
-        this.minecraft = p_97145_;
-        this.screen = p_97146_;
-        this.index = p_97148_;
-        this.advancement = p_97149_;
+        this.minecraft = minecraft;
+        this.screen = screen;
         this.display = p_97150_;
         this.icon = p_97150_.getIcon();
         this.title = p_97150_.getTitle();
-        this.root = new VillagerAdvancementsWidget(this, p_97145_, p_97149_, p_97150_);
-        this.addWidget(this.root, p_97149_);
-    }
-
-    public VillagerAdvancementsComponent(Minecraft mc, AdvancementsScreen screen, int index, int page, Advancement adv, DisplayInfo info) {
-        this(mc, screen, index, adv, info);
-        this.page = page;
-    }
-
-    public int getPage() {
-        return this.page;
-    }
-
-    public int getIndex() {
-        return this.index;
-    }
-
-    public Advancement getAdvancement() {
-        return this.advancement;
+        this.root = new VillagerAdvancementsWidget(this, minecraft, p_97150_);
+        this.addWidget(this.root, advancement);
     }
 
     public Component getTitle() {
@@ -158,8 +140,8 @@ public class VillagerAdvancementsComponent extends GuiComponent {
 
     }
 
-    private void addWidget(VillagerAdvancementsWidget p_97176_, Advancement p_97177_) {
-        this.widgets.put(p_97177_, p_97176_);
+    private void addWidget(VillagerAdvancementsWidget p_97176_, ResourceLocation advancement) {
+        this.widgets.put(advancement, p_97176_);
         int i = p_97176_.getX();
         int j = i + 28;
         int k = p_97176_.getY();
@@ -182,8 +164,18 @@ public class VillagerAdvancementsComponent extends GuiComponent {
         return (VillagerAdvancementsWidget)this.widgets.get(p_97181_);
     }
 
-    public AdvancementsScreen getScreen() {
+    public VillagerAdvancementsScreen getScreen() {
         return this.screen;
     }
 
+    public void scroll(double p_97152_, double p_97153_) {
+        if (this.maxX - this.minX > 234) {
+            this.scrollX = Mth.clamp(this.scrollX + p_97152_, (double)(-(this.maxX - 234)), 0.0);
+        }
+
+        if (this.maxY - this.minY > 113) {
+            this.scrollY = Mth.clamp(this.scrollY + p_97153_, (double)(-(this.maxY - 113)), 0.0);
+        }
+
+    }
 }

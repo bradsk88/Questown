@@ -43,7 +43,6 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     private static final int OBTAINED = 0;
     private static final int UNOBTAINED = 0;
     private final VillagerAdvancementsComponent tab;
-    private final Advancement advancement;
     private final DisplayInfo display;
     private final FormattedCharSequence title;
     private final int width;
@@ -57,18 +56,14 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     private final int x;
     private final int y;
 
-    public VillagerAdvancementsWidget(VillagerAdvancementsComponent p_97255_, Minecraft p_97256_, Advancement p_97257_, DisplayInfo p_97258_) {
+    public VillagerAdvancementsWidget(VillagerAdvancementsComponent p_97255_, Minecraft p_97256_, DisplayInfo p_97258_) {
         this.tab = p_97255_;
-        this.advancement = p_97257_;
         this.display = p_97258_;
         this.minecraft = p_97256_;
         this.title = Language.getInstance().getVisualOrder(p_97256_.font.substrByWidth(p_97258_.getTitle(), 163));
         this.x = Mth.floor(p_97258_.getX() * 28.0F);
         this.y = Mth.floor(p_97258_.getY() * 27.0F);
-        int i = p_97257_.getMaxCriteraRequired();
-        int j = String.valueOf(i).length();
-        int k = i > 1 ? p_97256_.font.width("  ") + p_97256_.font.width("0") * j * 2 + p_97256_.font.width("/") : 0;
-        int l = 29 + p_97256_.font.width(this.title) + k;
+        int l = 29 + p_97256_.font.width(this.title);
         this.description = Language.getInstance().getVisualOrder(this.findOptimalLines(ComponentUtils.mergeStyles(p_97258_.getDescription().copy(), Style.EMPTY.withColor(p_97258_.getFrame().getChatColor())), l));
 
         FormattedCharSequence formattedcharsequence;
@@ -80,9 +75,9 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     private static float getMaxWidth(StringSplitter p_97304_, List<FormattedText> p_97305_) {
-        Stream var10000 = p_97305_.stream();
+        Stream<FormattedText> var10000 = p_97305_.stream();
         Objects.requireNonNull(p_97304_);
-        return (float)var10000.mapToDouble(v -> p_97304_.stringWidth((String) v)).max().orElse(0.0);
+        return (float)var10000.mapToDouble(p_97304_::stringWidth).max().orElse(0.0);
     }
 
     private List<FormattedText> findOptimalLines(Component p_97309_, int p_97310_) {
@@ -309,12 +304,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void attachToParent() {
-        if (this.parent == null && this.advancement.getParent() != null) {
-            this.parent = this.getFirstVisibleParent(this.advancement);
-            if (this.parent != null) {
-                this.parent.addChild(this);
-            }
-        }
+        // TODO: Add prerequisite relationships
+//        if (this.parent == null && this.advancement.getParent() != null) {
+//            this.parent = this.getFirstVisibleParent(this.advancement);
+//            if (this.parent != null) {
+//                this.parent.addChild(this);
+//            }
+//        }
 
     }
 
