@@ -62,6 +62,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
      */
     ImmutableSet<UUID> getVillagersWithQuests();
 
+    /**
+     * @deprecated Use getVillageHandle
+     */
     ImmutableSet<UUID> getVillagers();
 
     @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);

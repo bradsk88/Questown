@@ -24,6 +24,7 @@ public class Crafters {
 
     static Work asWork(
             JobID id,
+            ItemStack icon,
             Supplier<ItemStack> result,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -34,6 +35,7 @@ public class Crafters {
             int actionDuration
     ) {
         return productionWork(
+                icon,
                 id,
                 WorksBehaviour.standardDescription(result),
                 new WorkLocation(

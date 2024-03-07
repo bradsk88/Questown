@@ -34,6 +34,7 @@ public class CrafterPlanksWork {
     public static Work asWork() {
         return Crafters.asWork(
                 ID,
+                Items.OAK_PLANKS.getDefaultInstance(),
                 RESULT::copy,
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,

@@ -226,6 +226,7 @@
   "menu.quests": "Quests",
   "menu.quests.confirm_remove_top": "Decline this batch of %d quests?",
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
+  "menu.jobs": "Jobs",
   "menu.decline": "Decline",
   "menu.back": "Back",
   "menu.hunger": "Hunger",

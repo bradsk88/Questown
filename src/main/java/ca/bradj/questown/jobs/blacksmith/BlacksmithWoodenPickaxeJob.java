@@ -54,6 +54,7 @@ public class BlacksmithWoodenPickaxeJob {
 
     public static Work asWork() {
         return productionWork(
+                Items.WOODEN_PICKAXE.getDefaultInstance(),
                 ID,
                 new WorkDescription(
                         t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),

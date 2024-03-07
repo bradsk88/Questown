@@ -1,10 +1,9 @@
 package ca.bradj.questown.gui.villager.advancements;
 
+import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
@@ -27,36 +26,36 @@ import java.util.stream.Stream;
 
 public class VillagerAdvancementsWidget extends GuiComponent {
     private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation("textures/gui/advancements/widgets.png");
-    private static final int HEIGHT = 26;
-    private static final int BOX_X = 0;
-    private static final int BOX_WIDTH = 200;
-    private static final int FRAME_WIDTH = 26;
-    private static final int ICON_X = 8;
-    private static final int ICON_Y = 5;
-    private static final int ICON_WIDTH = 26;
-    private static final int TITLE_PADDING_LEFT = 3;
-    private static final int TITLE_PADDING_RIGHT = 5;
-    private static final int TITLE_X = 32;
-    private static final int TITLE_Y = 9;
-    private static final int TITLE_MAX_WIDTH = 163;
     private static final int[] TEST_SPLIT_OFFSETS = new int[]{0, 10, -10, 25, -25};
     private static final int OBTAINED = 0;
-    private static final int UNOBTAINED = 0;
-    private final VillagerAdvancementsComponent tab;
-    private final DisplayInfo display;
+    private static final int UNOBTAINED = 1;
+    private final VillagerAdvancementsContent tab;
+    final DisplayInfo display;
     private final FormattedCharSequence title;
     private final int width;
     private final List<FormattedCharSequence> description;
     private final Minecraft minecraft;
+    public final JobID id;
+    public final @Nullable JobID parentId;
     @Nullable
     private VillagerAdvancementsWidget parent;
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
-    @Nullable
-    private AdvancementProgress progress;
+    private final boolean active;
     private final int x;
     private final int y;
 
-    public VillagerAdvancementsWidget(VillagerAdvancementsComponent p_97255_, Minecraft p_97256_, DisplayInfo p_97258_) {
+    public VillagerAdvancementsWidget(
+            VillagerAdvancementsContent p_97255_,
+            Minecraft p_97256_,
+            DisplayInfo p_97258_,
+            JobID id,
+            boolean active,
+            @Nullable JobID parentId
+    ) {
+        this.id = id;
+        this.active = active;
+        this.parentId = parentId;
+
         this.tab = p_97255_;
         this.display = p_97258_;
         this.minecraft = p_97256_;
@@ -105,12 +104,8 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     @Nullable
-    private VillagerAdvancementsWidget getFirstVisibleParent(Advancement p_97312_) {
-        do {
-            p_97312_ = p_97312_.getParent();
-        } while(p_97312_ != null && p_97312_.getDisplay() == null);
-
-        return p_97312_ != null && p_97312_.getDisplay() != null ? this.tab.getWidget(p_97312_) : null;
+    private VillagerAdvancementsWidget getFirstVisibleParent(JobID p_97312_) {
+        return this.tab.getWidget(p_97312_);
     }
 
     public void drawConnectivity(PoseStack p_97299_, int p_97300_, int p_97301_, boolean p_97302_) {
@@ -147,14 +142,8 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void draw(PoseStack p_97267_, int p_97268_, int p_97269_) {
-        if (!this.display.isHidden() || this.progress != null && this.progress.isDone()) {
-            float f = this.progress == null ? 0.0F : this.progress.getPercent();
-            int advancementwidgettype;
-            if (f >= 1.0F) {
-                advancementwidgettype = OBTAINED;
-            } else {
-                advancementwidgettype = UNOBTAINED;
-            }
+        if (!this.display.isHidden()) {
+            int advancementwidgettype = active ? OBTAINED : UNOBTAINED;
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, WIDGETS_LOCATION);
@@ -171,50 +160,20 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
     }
 
-    public int getWidth() {
-        return this.width;
-    }
-
-    public void setProgress(AdvancementProgress p_97265_) {
-        this.progress = p_97265_;
-    }
-
     public void addChild(VillagerAdvancementsWidget p_97307_) {
         this.children.add(p_97307_);
     }
 
     public void drawHover(PoseStack p_97271_, int p_97272_, int p_97273_, float p_97274_, int p_97275_, int p_97276_) {
         boolean flag = p_97275_ + p_97272_ + this.x + this.width + 26 >= this.tab.getScreen().width;
-        String s = this.progress == null ? null : this.progress.getProgressText();
-        int i = s == null ? 0 : this.minecraft.font.width(s);
         boolean flag1 = 113 - p_97273_ - this.y - 26 <= 6 + this.description.size() * 9;
-        float f = this.progress == null ? 0.0F : this.progress.getPercent();
-        int j = Mth.floor(f * (float)this.width);
         int advancementwidgettype;
         int advancementwidgettype1;
         int advancementwidgettype2;
-        if (f >= 1.0F) {
-            j = this.width / 2;
-            advancementwidgettype = OBTAINED;
-            advancementwidgettype1 = OBTAINED;
-            advancementwidgettype2 = OBTAINED;
-        } else if (j < 2) {
-            j = this.width / 2;
-            advancementwidgettype = UNOBTAINED;
-            advancementwidgettype1 = UNOBTAINED;
-            advancementwidgettype2 = UNOBTAINED;
-        } else if (j > this.width - 2) {
-            j = this.width / 2;
-            advancementwidgettype = OBTAINED;
-            advancementwidgettype1 = OBTAINED;
-            advancementwidgettype2 = UNOBTAINED;
-        } else {
-            advancementwidgettype = OBTAINED;
-            advancementwidgettype1 = UNOBTAINED;
-            advancementwidgettype2 = UNOBTAINED;
-        }
+        advancementwidgettype = OBTAINED;
+        advancementwidgettype1 = UNOBTAINED;
+        advancementwidgettype2 = UNOBTAINED;
 
-        int k = this.width - j;
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WIDGETS_LOCATION);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -236,19 +195,11 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             }
         }
 
-        this.blit(p_97271_, i1, l, 0, advancementwidgettype * 26, j, 26);
-        this.blit(p_97271_, i1 + j, l, 200 - k, advancementwidgettype1 * 26, k, 26);
         this.blit(p_97271_, p_97272_ + this.x + 3, p_97273_ + this.y, this.display.getFrame().getTexture(), 128 + advancementwidgettype2 * 26, 26, 26);
         if (flag) {
             this.minecraft.font.drawShadow(p_97271_, this.title, (float)(i1 + 5), (float)(p_97273_ + this.y + 9), -1);
-            if (s != null) {
-                this.minecraft.font.drawShadow(p_97271_, s, (float)(p_97272_ + this.x - i), (float)(p_97273_ + this.y + 9), -1);
-            }
         } else {
             this.minecraft.font.drawShadow(p_97271_, this.title, (float)(p_97272_ + this.x + 32), (float)(p_97273_ + this.y + 9), -1);
-            if (s != null) {
-                this.minecraft.font.drawShadow(p_97271_, s, (float)(p_97272_ + this.x + this.width - i - 5), (float)(p_97273_ + this.y + 9), -1);
-            }
         }
 
         int k1;
@@ -292,7 +243,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public boolean isMouseOver(int p_97260_, int p_97261_, int p_97262_, int p_97263_) {
-        if (this.display.isHidden() && (this.progress == null || !this.progress.isDone())) {
+        if (this.display.isHidden()) {
             return false;
         } else {
             int i = p_97260_ + this.x;
@@ -304,13 +255,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void attachToParent() {
-        // TODO: Add prerequisite relationships
-//        if (this.parent == null && this.advancement.getParent() != null) {
-//            this.parent = this.getFirstVisibleParent(this.advancement);
-//            if (this.parent != null) {
-//                this.parent.addChild(this);
-//            }
-//        }
+        if (this.parent == null && this.parentId != null) {
+            // TODO: Can we link a child to multiple parents?
+            this.parent = this.getFirstVisibleParent(this.parentId);
+            if (this.parent != null) {
+                this.parent.addChild(this);
+            }
+        }
 
     }
 

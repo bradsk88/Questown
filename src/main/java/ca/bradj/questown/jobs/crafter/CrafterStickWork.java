@@ -36,6 +36,7 @@ public class CrafterStickWork {
     public static Work asWork() {
         return Crafters.asWork(
                 ID,
+                Items.STICK.getDefaultInstance(),
                 RESULT::copy,
                 MAX_STATE,
                 INGREDIENTS_REQUIRED_AT_STATES,

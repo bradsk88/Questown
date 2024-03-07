@@ -42,6 +42,7 @@ public class Works {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         // TODO: Replace with production job
         b.put(FarmerJob.ID, () -> new Work(
+                Items.WHEAT.getDefaultInstance(),
                 (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,

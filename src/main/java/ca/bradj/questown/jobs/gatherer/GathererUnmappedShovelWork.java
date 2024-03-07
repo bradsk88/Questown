@@ -58,6 +58,7 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                Items.STONE_SHOVEL.getDefaultInstance(),
                 GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
                 Items.COBBLESTONE.getDefaultInstance(),
                 MAX_STATE,

@@ -56,6 +56,7 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                Items.LEATHER_BOOTS.getDefaultInstance(),
                 GathererTools.NO_TOOL_TABLE_PREFIX,
                 Items.WHEAT_SEEDS.getDefaultInstance(),
                 MAX_STATE,

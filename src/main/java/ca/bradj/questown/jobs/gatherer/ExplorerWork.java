@@ -114,6 +114,7 @@ public class ExplorerWork {
 
     public static Work asWork() {
         return WorksBehaviour.productionWork(
+                ItemsInit.GATHERER_MAP.get().getDefaultInstance(),
                 ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(

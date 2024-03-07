@@ -58,6 +58,7 @@ public class GathererUnmappedPickaxeWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                Items.STONE_PICKAXE.getDefaultInstance(),
                 GathererTools.PICKAXE_LOOT_TABLE_PREFIX,
                 Items.COBBLESTONE.getDefaultInstance(),
                 MAX_STATE,

@@ -131,6 +131,7 @@ public class WorksBehaviour {
     }
 
     public static Work productionWork(
+            ItemStack icon,
             JobID jobId,
             WorkDescription description,
             WorkLocation location,
@@ -140,6 +141,7 @@ public class WorksBehaviour {
             @Nullable ResourceLocation workSound
     ) {
         return productionWork(
+                icon,
                 jobId,
                 description,
                 location,
@@ -152,6 +154,7 @@ public class WorksBehaviour {
     }
 
     public static Work productionWork(
+            ItemStack icon,
             JobID jobId,
             WorkDescription description,
             WorkLocation location,
@@ -162,6 +165,7 @@ public class WorksBehaviour {
             ExpirationRules expiration
             ) {
         return new Work(
+                icon,
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
                         jobId, location.baseRoom(), states.maxState(),

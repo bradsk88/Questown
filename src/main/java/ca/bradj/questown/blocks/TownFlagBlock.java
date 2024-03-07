@@ -8,11 +8,13 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import com.google.common.collect.ImmutableList;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
@@ -143,9 +145,15 @@ public class TownFlagBlock extends BaseEntityBlock {
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
         if (player.getItemInHand(hand).getItem().equals(Items.DIRT)) {
+            VisitorMobEntity livingEntity = (VisitorMobEntity) ImmutableList.copyOf(entity.getVillagerHandle().entities())
+                    .get(0); // TODO[ASAP]: Move this to a villager tab
             QuestownNetwork.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> (ServerPlayer) player),
-                    new OpenVillagerAdvancementsMenuMessage()
+                    new OpenVillagerAdvancementsMenuMessage(
+                            entity.getTownFlagBasePos(),
+                            livingEntity.getUUID(),
+                            livingEntity.getJobId()
+                    )
             );
             return InteractionResult.sidedSuccess(false);
         }

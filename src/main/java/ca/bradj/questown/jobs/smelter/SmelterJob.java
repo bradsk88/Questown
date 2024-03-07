@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.smelter;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.OreProcessingBlock;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableMap;
@@ -45,6 +46,7 @@ public class SmelterJob {
 
     public static Work asWork() {
         return WorksBehaviour.productionWork(
+                ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance(),
                 ID,
                 new WorkDescription(
                         t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),

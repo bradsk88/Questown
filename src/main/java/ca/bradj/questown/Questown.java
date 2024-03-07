@@ -66,6 +66,10 @@ public class Questown {
         return new ResourceLocation(Questown.MODID, id);
     }
 
+    public static ResourceLocation ResourceLocation(String id, Object... args) {
+        return new ResourceLocation(Questown.MODID, String.format(id, args));
+    }
+
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(QuestownNetwork::init);
     }

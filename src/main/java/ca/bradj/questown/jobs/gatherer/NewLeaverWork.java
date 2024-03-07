@@ -45,6 +45,7 @@ public class NewLeaverWork {
 
     protected static Work asWork(
             JobID id,
+            ItemStack icon,
             GathererTools.LootTablePrefix lootTablePrefix,
             ItemStack initialRequest,
             int maxState,
@@ -57,6 +58,7 @@ public class NewLeaverWork {
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         return productionWork(
+                icon,
                 id,
                 new WorkDescription(
                         t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),

@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public record Work(
+        ItemStack icon,
         WorksBehaviour.JobFunc jobFunc,
         WorksBehaviour.SnapshotFunc snapshotFunc,
         Predicate<Block> isJobBlock,

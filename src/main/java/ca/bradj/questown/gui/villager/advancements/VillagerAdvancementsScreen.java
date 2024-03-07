@@ -1,6 +1,8 @@
 package ca.bradj.questown.gui.villager.advancements;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Util;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -10,46 +12,42 @@ import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 
-import javax.annotation.Nullable;
+import java.util.UUID;
 
 public class VillagerAdvancementsScreen extends Screen {
     private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation("textures/gui/advancements/window.png");
-    private static final ResourceLocation TABS_LOCATION = new ResourceLocation("textures/gui/advancements/tabs.png");
-    public static final int WINDOW_WIDTH = 252;
-    public static final int WINDOW_HEIGHT = 140;
-    private static final int WINDOW_INSIDE_X = 9;
-    private static final int WINDOW_INSIDE_Y = 18;
-    public static final int WINDOW_INSIDE_WIDTH = 234;
-    public static final int WINDOW_INSIDE_HEIGHT = 113;
-    private static final int WINDOW_TITLE_X = 8;
-    private static final int WINDOW_TITLE_Y = 6;
-    public static final int BACKGROUND_TILE_WIDTH = 16;
-    public static final int BACKGROUND_TILE_HEIGHT = 16;
-    public static final int BACKGROUND_TILE_COUNT_X = 14;
-    public static final int BACKGROUND_TILE_COUNT_Y = 7;
     private static final Component VERY_SAD_LABEL = Component.translatable("advancements.sad_label");
     private static final Component NO_ADVANCEMENTS_LABEL = Component.translatable("advancements.empty");
-    private static final Component TITLE = Component.translatable("gui.advancements");
-    @Nullable
-    private VillagerAdvancementsComponent selectedTab;
+    private static final Component TITLE = Component.translatable("menu.jobs");
+    private final BlockPos flagPos;
+    private final UUID villagerUUID;
+    private final VillagerAdvancementsContent content;
     private boolean isScrolling;
-    private static int tabPage;
-    private static int maxPages;
 
-    public VillagerAdvancementsScreen() {
+    public VillagerAdvancementsScreen(
+            BlockPos flagPos,
+            UUID villagerUUID,
+            JobID currentJob
+    ) {
         super(GameNarrator.NO_TITLE);
-        this.selectedTab = new VillagerAdvancementsComponent(Minecraft.getInstance(), this, Questown.ResourceLocation("test"), new DisplayInfo(
+        DisplayInfo displayInfo = new DisplayInfo(
                 Items.CREEPER_HEAD.getDefaultInstance(),
                 Util.literal("test"),
                 Util.literal("test2"),
                 new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
                 FrameType.TASK,
                 false, false, false
-        ));
+        );
+        this.content = new VillagerAdvancementsContent(
+                Minecraft.getInstance(), this, displayInfo, currentJob, VillagerAdvancements.all()
+        );
+        this.flagPos = flagPos;
+        this.villagerUUID = villagerUUID;
     }
 
     protected void init() {
@@ -61,12 +59,6 @@ public class VillagerAdvancementsScreen extends Screen {
         int i = (this.width - 252) / 2;
         int j = (this.height - 140) / 2;
         this.renderBackground(p_97361_);
-        if (maxPages != 0) {
-            Component page = Component.literal(String.format("%d / %d", tabPage + 1, maxPages + 1));
-            int width = this.font.width(page);
-            this.font.drawShadow(p_97361_, page.getVisualOrderText(), (float)(i + 126 - width / 2), (float)(j - 44), -1);
-        }
-
         this.renderInside(p_97361_, p_97362_, p_97363_, i, j);
         this.renderWindow(p_97361_, i, j);
         this.renderTooltips(p_97361_, p_97362_, p_97363_, i, j);
@@ -79,8 +71,8 @@ public class VillagerAdvancementsScreen extends Screen {
         } else {
             if (!this.isScrolling) {
                 this.isScrolling = true;
-            } else if (this.selectedTab != null) {
-                this.selectedTab.scroll(p_97350_, p_97351_);
+            } else if (this.content != null) {
+                this.content.scroll(p_97350_, p_97351_);
             }
 
             return true;
@@ -88,7 +80,7 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     private void renderInside(PoseStack p_97374_, int p_97375_, int p_97376_, int p_97377_, int p_97378_) {
-        VillagerAdvancementsComponent advancementtab = this.selectedTab;
+        VillagerAdvancementsContent advancementtab = this.content;
         if (advancementtab == null) {
             fill(p_97374_, p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
             int i = p_97377_ + 9 + 117;
@@ -120,17 +112,34 @@ public class VillagerAdvancementsScreen extends Screen {
 
     private void renderTooltips(PoseStack p_97382_, int p_97383_, int p_97384_, int p_97385_, int p_97386_) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        if (this.selectedTab != null) {
+        if (this.content != null) {
             PoseStack posestack = RenderSystem.getModelViewStack();
             posestack.pushPose();
             posestack.translate((double)(p_97385_ + 9), (double)(p_97386_ + 18), 400.0);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
-            this.selectedTab.drawTooltips(p_97382_, p_97383_ - p_97385_ - 9, p_97384_ - p_97386_ - 18, p_97385_, p_97386_);
+            this.content.drawTooltips(p_97382_, p_97383_ - p_97385_ - 9, p_97384_ - p_97386_ - 18, p_97385_, p_97386_);
             RenderSystem.disableDepthTest();
             posestack.popPose();
             RenderSystem.applyModelViewMatrix();
         }
 
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseY, double mouseX, int p_94697_) {
+        JobID id = this.content.getClickJob(mouseX, mouseY);
+
+        if (id == null) {
+            return false;
+        }
+
+        QuestownNetwork.CHANNEL.sendToServer(
+                new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id)
+        );
+
+        this.minecraft.setScreen((Screen)null);
+
+        return super.mouseClicked(mouseY, mouseX, p_94697_);
     }
 }

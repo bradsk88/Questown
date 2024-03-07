@@ -47,6 +47,7 @@ public class BakerBreadWork {
 
     public static Work asWork() {
         return productionWork(
+                Items.BREAD.getDefaultInstance(),
                 ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(

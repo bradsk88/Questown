@@ -65,6 +65,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                Items.DIAMOND_AXE.getDefaultInstance(),
                 GathererTools.AXE_LOOT_TABLE_PREFIX,
                 Items.OAK_WOOD.getDefaultInstance(),
                 MAX_STATE,
