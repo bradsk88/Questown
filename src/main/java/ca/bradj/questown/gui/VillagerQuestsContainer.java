@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -11,22 +12,23 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import static ca.bradj.questown.gui.VillagerTabs.makeOpenFn;
+public class VillagerQuestsContainer extends AbstractQuestsContainer implements VillagerTabsEmbedding {
 
-public class VillagerQuestsContainer extends AbstractQuestsContainer {
-
-    private final Runnable openInvFn;
-    private final Runnable openStatsFn;
+    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
+            OpenVillagerMenuMessage.INVENTORY,
+            OpenVillagerMenuMessage.STATS,
+            OpenVillagerMenuMessage.SKILLS
+    );
+    private final UUID villagerUUID;
 
     public VillagerQuestsContainer(
             int windowId,
-            UUID uuid,
+            UUID villagerUUID,
             Collection<UIQuest> quests,
             BlockPos flagPos
     ) {
         super(MenuTypesInit.VILLAGER_QUESTS.get(), windowId, quests, flagPos);
-        this.openInvFn = makeOpenFn(flagPos, uuid, OpenVillagerMenuMessage.INVENTORY);
-        this.openStatsFn = makeOpenFn(flagPos, uuid, OpenVillagerMenuMessage.STATS);
+        this.villagerUUID = villagerUUID;
     }
 
     public static VillagerQuestsContainer ForClient(
@@ -52,11 +54,18 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer {
         writeFlagPos(data, pos);
     }
 
-    public void openInv() {
-        this.openInvFn.run();
+    @Override
+    public Collection<String> getEnabledTabs() {
+        return ENABLED_TABS;
     }
 
-    public void openStats() {
-        this.openStatsFn.run();
+    @Override
+    public BlockPos getFlagPos() {
+        return flagPos;
+    }
+
+    @Override
+    public UUID getVillagerUUID() {
+        return villagerUUID;
     }
 }

@@ -9,14 +9,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class VillagerTabs extends Tabs implements SubUI {
 
     public VillagerTabs(
             @Nullable Runnable invScreenFn,
             @Nullable Runnable qScreenFn,
-            @Nullable Runnable sScreenFn
+            @Nullable Runnable sScreenFn,
+            @Nullable Runnable skillScreenFn
     ) {
         super(ImmutableList.of(
                 new Tab(
@@ -25,6 +28,17 @@ public class VillagerTabs extends Tabs implements SubUI {
                         setScreen(invScreenFn),
                         "tooltips.inventory",
                         invScreenFn == null
+                ),
+                new Tab(
+                        (stack, x, y) -> {
+                            int txBefore = RenderSystem.getShaderTexture(0);
+                            RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/widgets.png"));
+                            GuiComponent.blit(stack, x + 13, y + 11, 0, 0, 15, 9, 9, 256, 256);
+                            RenderSystem.setShaderTexture(0, txBefore);
+                        }, // TODO: Render icon
+                        setScreen(skillScreenFn),
+                        "tooltips.skills",
+                        qScreenFn == null
                 ),
                 new Tab(
                         (stack, x, y) -> {
@@ -67,4 +81,20 @@ public class VillagerTabs extends Tabs implements SubUI {
         return fn;
     }
 
+    public static VillagerTabs forMenu(VillagerTabsEmbedding menu) {
+        Collection<String> enabledTabs = menu.getEnabledTabs();
+
+        Function<String, Runnable> factory = typ -> {
+            if (enabledTabs.contains(typ)) {
+                return makeOpenFn(menu.getFlagPos(), menu.getVillagerUUID(), typ);
+            }
+            return null;
+        };
+        return new VillagerTabs(
+                factory.apply(OpenVillagerMenuMessage.INVENTORY),
+                factory.apply(OpenVillagerMenuMessage.QUESTS),
+                factory.apply(OpenVillagerMenuMessage.STATS),
+                factory.apply(OpenVillagerMenuMessage.SKILLS)
+        );
+    }
 }

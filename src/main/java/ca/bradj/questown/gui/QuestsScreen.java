@@ -55,21 +55,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     private final SubUI tabs;
     private int currentPage = 0;
 
-    public QuestsScreen(
-            C container,
-            Inventory playerInv,
-            Component title,
-            Runnable inventoryAndStatusScreen,
-            Runnable statsScreen
-    ) {
-        this(
-                container, playerInv, title,
-                new VillagerTabs(
-                        inventoryAndStatusScreen, null, statsScreen
-                )
-        );
-    }
-
     public QuestsScreen(C container, Inventory playerInv, Component title, SubUI villagerTabs) {
         super(container, playerInv, title);
         super.imageWidth = 256;
@@ -481,7 +466,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     ) {
         return new QuestsScreen<>(
                 menu, inventory, component,
-                new VillagerTabs(menu::openInv, null, menu::openStats)
+                VillagerTabs.forMenu(menu)
         );
     }
 }

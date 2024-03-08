@@ -46,7 +46,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.slot = textures.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
-        this.tabs = new VillagerTabs(null, menu::openQuests, menu::openStats);
+        this.tabs = VillagerTabs.forMenu(menu);
     }
 
     @Override

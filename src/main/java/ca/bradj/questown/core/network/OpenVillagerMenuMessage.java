@@ -19,6 +19,7 @@ public record OpenVillagerMenuMessage(
     public static final String INVENTORY = "inventory";
     public static final String QUESTS = "quests";
     public static final String STATS = "stats";
+    public static final String SKILLS = "skills";
 
     public static void encode(OpenVillagerMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());
@@ -52,6 +53,9 @@ public record OpenVillagerMenuMessage(
                 return;
             }
             flag.get().getVillagerHandle().showUI(sender, type(), villagerUUID());
+        }).exceptionally((ex) -> {
+            QT.GUI_LOGGER.error("Failed to open villager menu", ex);
+            return null;
         });
         ctx.get().setPacketHandled(true);
 

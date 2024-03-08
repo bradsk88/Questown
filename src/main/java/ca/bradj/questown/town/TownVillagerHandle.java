@@ -2,7 +2,9 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
@@ -21,7 +23,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
@@ -119,18 +121,38 @@ public class TownVillagerHandle implements VillagerHolder {
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
 
-        ImmutableMap<String, TriFunction<Integer, Inventory, Player, AbstractContainerMenu>> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, (windowId, inv, p) -> new InventoryAndStatusMenu(
+        ImmutableMap<String, Runnable> showers = ImmutableMap.of(
+                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(sender, (windowId, inv, p) -> new InventoryAndStatusMenu(
                         windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, e.getJobId(), e.getFlagPos()
-                ),
-                OpenVillagerMenuMessage.QUESTS, (windowId, inv, p) -> new VillagerQuestsContainer(
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.QUESTS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
                         windowId, e.getUUID(), quests, e.getFlagPos()
-                ),
-                OpenVillagerMenuMessage.STATS, (windowId, inv, p) -> new VillagerStatsMenu(
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.STATS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerStatsMenu(
                         windowId, e, e.getFlagPos(), stats
-                )
+                ), quests, e, stats),
+                OpenVillagerMenuMessage.SKILLS, () -> {
+                    QuestownNetwork.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sender),
+                            new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
+                    );
+                }
         );
 
+        Runnable runnable = showers.get(type);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+        }
+        runnable.run();
+    }
+
+    private static void openMenu(
+            ServerPlayer sender,
+            TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
+            List<UIQuest> quests,
+            VisitorMobEntity e,
+            VillagerStatsData stats
+    ) {
         Util.openScreen(sender, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -143,7 +165,7 @@ public class TownVillagerHandle implements VillagerHolder {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                return showers.get(type).apply(windowId, inv, p);
+                return shower.apply(windowId, inv, p);
             }
         }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
     }
