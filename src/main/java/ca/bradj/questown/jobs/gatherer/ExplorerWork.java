@@ -10,6 +10,7 @@ import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -116,6 +117,7 @@ public class ExplorerWork {
         return WorksBehaviour.productionWork(
                 ItemsInit.GATHERER_MAP.get().getDefaultInstance(),
                 ID,
+                GathererUnmappedNoToolWork.ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
                         block -> block instanceof WelcomeMatBlock,
@@ -123,13 +125,13 @@ public class ExplorerWork {
                 ),
                 new WorkStates(
                         MAX_STATE,
-                        INGREDIENTS_REQUIRED_AT_STATES,
-                        INGREDIENT_QTY_REQUIRED_AT_STATES,
-                        TOOLS_REQUIRED_AT_STATES,
-                        WORK_REQUIRED_AT_STATES,
+                        Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                        Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                        Util.constant(TOOLS_REQUIRED_AT_STATES),
+                        Util.constant(WORK_REQUIRED_AT_STATES),
                         ImmutableMap.of(
                                 BLOCK_STATE_NEED_ROAM,
-                                Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                                Config.GATHERER_TIME_REQUIRED_BASELINE
                         )
                 ),
                 new WorkWorldInteractions(

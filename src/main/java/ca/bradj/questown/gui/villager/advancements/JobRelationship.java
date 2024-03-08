@@ -1,15 +1,27 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.function.TriFunction;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 
-public record JobRelationship(
-        @Nullable JobID prerequisite,
-        Collection<JobRelationship> jobs
-) {
+public class JobRelationship implements Iterable<JobRelationship> {
+
+    private final JobID prerequisite;
+    private final ArrayList<JobRelationship> jobs;
+
+    JobRelationship(@Nullable JobID prerequisite,
+                    Collection<JobRelationship> jobs
+    ) {
+        this.prerequisite = prerequisite;
+        this.jobs = new ArrayList<>(jobs);
+    }
+
     public <X> void forEach(X parentWidget, TriFunction<JobRelationship, ContextualPosition, X, X> fn) {
         int i = 0;
         int leafs = countLeafNodes(); // TODO:: This is probably quite inefficient
@@ -18,6 +30,22 @@ public record JobRelationship(
             j.forEach(newWidget, fn);
             i++;
         }
+    }
+
+    public JobID prerequisite() {
+        return prerequisite;
+    }
+
+    public void addChildLeaf(JobID id) {
+        jobs.add(new JobRelationship(
+                id, ImmutableList.of()
+        ));
+    }
+
+    @NotNull
+    @Override
+    public Iterator<JobRelationship> iterator() {
+        return jobs.iterator();
     }
 
     public record ContextualPosition(

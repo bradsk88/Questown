@@ -6,6 +6,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.sounds.SoundEvents;
@@ -48,6 +49,7 @@ public class SmelterJob {
         return WorksBehaviour.productionWork(
                 ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance(),
                 ID,
+                null,
                 new WorkDescription(
                         t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
                         RESULT
@@ -58,11 +60,11 @@ public class SmelterJob {
                 ),
                 new WorkStates(
                         MAX_STATE,
-                        INGREDIENTS,
-                        INGREDIENTS_QTY,
-                        TOOLS,
-                        WORK,
-                        TIME
+                        Util.constant(INGREDIENTS),
+                        Util.constant(INGREDIENTS_QTY),
+                        Util.constant(TOOLS),
+                        Util.constant(WORK),
+                        Util.constant(TIME)
                 ),
                 new WorkWorldInteractions(
                         100,

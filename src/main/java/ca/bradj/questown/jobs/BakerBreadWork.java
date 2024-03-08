@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -49,6 +50,7 @@ public class BakerBreadWork {
         return productionWork(
                 Items.BREAD.getDefaultInstance(),
                 ID,
+                null,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
                         WORK_BLOCK_CLASS::isInstance,
@@ -56,15 +58,15 @@ public class BakerBreadWork {
                 ),
                 new WorkStates(
                         MAX_STATE,
-                        INGREDIENTS_REQUIRED_AT_STATES,
-                        INGREDIENT_QTY_REQUIRED_AT_STATES,
-                        TOOLS_REQUIRED_AT_STATES,
-                        WORK_REQUIRED_AT_STATES,
+                        Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                        Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                        Util.constant(TOOLS_REQUIRED_AT_STATES),
+                        Util.constant(WORK_REQUIRED_AT_STATES),
                         ImmutableMap.of(
-                                BLOCK_STATE_NEED_WHEAT, 0,
-                                BLOCK_STATE_NEED_COAL, 0,
-                                BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE.get(),
-                                BLOCK_STATE_DONE, 0
+                                BLOCK_STATE_NEED_WHEAT, () -> 0,
+                                BLOCK_STATE_NEED_COAL, () -> 0,
+                                BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE::get,
+                                BLOCK_STATE_DONE, () -> 0
                         )
                 ),
                 WorksBehaviour.standardWorldInteractions(ACTION_DURATION, () -> RESULT),

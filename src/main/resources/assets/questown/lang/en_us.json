@@ -16,6 +16,7 @@
   "message.baker.bread_still_baking": "Bread will be ready in %d ticks",
   "message.baker.villagers_will_add_wheat": "Baker villagers can add wheat and coal to bake bread",
   "message.baker.villagers_will_add_coal": "Baker villagers can add coal to bake bread",
+  "messages.jobs.changed": "Job changed to %s for villager %s",
   "tooltips.quests": "Quests",
   "tooltips.stats": "Stats",
   "tooltips.villagers.job.inventory.locked": "This item was given by a player. Gatherer will not drop it.",

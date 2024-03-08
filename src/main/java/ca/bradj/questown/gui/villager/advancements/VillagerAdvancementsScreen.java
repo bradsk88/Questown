@@ -79,6 +79,12 @@ public class VillagerAdvancementsScreen extends Screen {
         }
     }
 
+    @Override
+    public boolean mouseScrolled(double p_94686_, double p_94687_, double p_94688_) {
+        this.content.scroll(0, p_94688_ * 3); // TODO: Provide a client-side config option
+        return super.mouseScrolled(p_94686_, p_94687_, p_94688_);
+    }
+
     private void renderInside(PoseStack p_97374_, int p_97375_, int p_97376_, int p_97377_, int p_97378_) {
         VillagerAdvancementsContent advancementtab = this.content;
         if (advancementtab == null) {
@@ -89,7 +95,7 @@ public class VillagerAdvancementsScreen extends Screen {
         } else {
             PoseStack posestack = RenderSystem.getModelViewStack();
             posestack.pushPose();
-            posestack.translate((double)(p_97377_ + 9), (double)(p_97378_ + 18), 0.0);
+            posestack.translate((double) (p_97377_ + 9), (double) (p_97378_ + 18), 0.0);
             RenderSystem.applyModelViewMatrix();
             advancementtab.drawContents(p_97374_);
             posestack.popPose();
@@ -107,7 +113,7 @@ public class VillagerAdvancementsScreen extends Screen {
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
         this.blit(p_97357_, p_97358_, p_97359_, 0, 0, 252, 140);
 
-        this.font.draw(p_97357_, TITLE, (float)(p_97358_ + 8), (float)(p_97359_ + 6), 4210752);
+        this.font.draw(p_97357_, TITLE, (float) (p_97358_ + 8), (float) (p_97359_ + 6), 4210752);
     }
 
     private void renderTooltips(PoseStack p_97382_, int p_97383_, int p_97384_, int p_97385_, int p_97386_) {
@@ -115,7 +121,7 @@ public class VillagerAdvancementsScreen extends Screen {
         if (this.content != null) {
             PoseStack posestack = RenderSystem.getModelViewStack();
             posestack.pushPose();
-            posestack.translate((double)(p_97385_ + 9), (double)(p_97386_ + 18), 400.0);
+            posestack.translate((double) (p_97385_ + 9), (double) (p_97386_ + 18), 400.0);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
             this.content.drawTooltips(p_97382_, p_97383_ - p_97385_ - 9, p_97384_ - p_97386_ - 18, p_97385_, p_97386_);
@@ -131,14 +137,14 @@ public class VillagerAdvancementsScreen extends Screen {
         JobID id = this.content.getClickJob(mouseX, mouseY);
 
         if (id == null) {
-            return false;
+            return super.mouseClicked(mouseY, mouseX, p_94697_);
         }
 
         QuestownNetwork.CHANNEL.sendToServer(
-                new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id)
+                new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id, true)
         );
 
-        this.minecraft.setScreen((Screen)null);
+        this.minecraft.setScreen((Screen) null);
 
         return super.mouseClicked(mouseY, mouseX, p_94697_);
     }

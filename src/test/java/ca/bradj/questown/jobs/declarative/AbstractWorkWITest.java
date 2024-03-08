@@ -27,12 +27,17 @@ class AbstractWorkWITest {
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates
         ) {
-            super(workRequiredAtStates, timeRequiredAtStates, toolsRequiredAtStates);
+            super(workRequiredAtStates, (x, s) -> timeRequiredAtStates.get(s), toolsRequiredAtStates);
         }
 
         @Override
         protected Void degradeTool(Void unused, @Nullable Void tuwn, Function<GathererJournalTest.TestItem, Boolean> testItemBooleanFunction) {
             return null;
+        }
+
+        @Override
+        protected int getWorkSpeedOf10(Void unused) {
+            return 10;
         }
 
         @Override
@@ -101,19 +106,19 @@ class AbstractWorkWITest {
         );
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(1, 0, 2),
+                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(2),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(1, 0, 1),
+                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(1),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(2, 0, 0),
+                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(0),
                 wi.state.get(new Position(0, 0))
         );
     }
@@ -130,19 +135,19 @@ class AbstractWorkWITest {
         );
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(1, 0, 0),
+                AbstractWorkStatusStore.State.freshAtState(1),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(2, 0, 0),
+                AbstractWorkStatusStore.State.freshAtState(2),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                new AbstractWorkStatusStore.State(3, 0, 0),
+                AbstractWorkStatusStore.State.freshAtState(3),
                 wi.state.get(new Position(0, 0))
         );
     }

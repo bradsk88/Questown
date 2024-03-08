@@ -41,4 +41,8 @@ public record JobID(
         String[] parts = resourceLocation.toString().split("/");
         return new JobID(parts[1], parts[2]);
     }
+
+    public String toNiceString() {
+        return String.format("%s:%s", rootId, jobId);
+    }
 }

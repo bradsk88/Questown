@@ -41,6 +41,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private final List<LivingEntity> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
+    private TownFlagBlockEntity town;
 
     public void initialize(
             Map<UUID, Integer> fullness,
@@ -86,6 +87,11 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public Collection<JobID> getJobs() {
         return entities.stream().map(v -> ((VisitorMobEntity) v).getJobId()).toList();
+    }
+
+    @Override
+    public void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce) {
+        this.town.changeJobForVisitor(villagerUUID, newJob, announce);
     }
 
     public Stream<LivingEntity> stream() {
@@ -256,5 +262,12 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public int getWorkSpeed(UUID uuid) {
         return (int) (moods.getMood(uuid) * 10);
+    }
+
+    /**
+     * @deprecated Eventually this handle should not require a reference to the flag entity
+     */
+    public void associate(TownFlagBlockEntity t) {
+        this.town = t;
     }
 }

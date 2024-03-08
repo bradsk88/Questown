@@ -1,7 +1,9 @@
 package ca.bradj.questown.mc;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -14,6 +16,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -97,5 +100,26 @@ public class Util {
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
         return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
+    }
+
+    public static void enqueueOrLog(FMLCommonSetupEvent event, Runnable staticInitialize) {
+        event.enqueueWork(staticInitialize).exceptionally(
+                ex -> {
+                    QT.INIT_LOGGER.error("Enqueued work failed", ex);
+                    return null;
+                }
+        );
+    }
+
+    public static <X> ImmutableMap<Integer, Supplier<X>> constant(ImmutableMap<Integer, X> constant) {
+        ImmutableMap.Builder<Integer, Supplier<X>> b = ImmutableMap.builder();
+        constant.forEach((k, v) -> b.put(k, () -> v));
+        return b.build();
+    }
+
+    public static <X> ImmutableMap<Integer, X> realize(ImmutableMap<Integer, Supplier<X>> theoretical) {
+        ImmutableMap.Builder<Integer, X> b = ImmutableMap.builder();
+        theoretical.forEach((k, v) -> b.put(k, v.get()));
+        return b.build();
     }
 }

@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -14,12 +15,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 public record ChangeVillagerJobMessage(
-        int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob
+        int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce
 ) {
-
-    public static final String INVENTORY = "inventory";
-    public static final String QUESTS = "quests";
-    public static final String STATS = "stats";
 
     public static void encode(ChangeVillagerJobMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());
@@ -27,6 +24,7 @@ public record ChangeVillagerJobMessage(
         buffer.writeInt(msg.flagZ());
         buffer.writeUUID(msg.villagerUUID());
         buffer.writeResourceLocation(msg.newJob().id());
+        buffer.writeBoolean(msg.announce());
     }
 
     public static ChangeVillagerJobMessage decode(FriendlyByteBuf buffer) {
@@ -34,7 +32,9 @@ public record ChangeVillagerJobMessage(
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
         UUID id = buffer.readUUID();
-        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, JobID.fromRL(buffer.readResourceLocation()));
+        ResourceLocation resourceLocation = buffer.readResourceLocation();
+        boolean announce1 = buffer.readBoolean();
+        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, JobID.fromRL(resourceLocation), announce1);
     }
 
 
@@ -51,7 +51,7 @@ public record ChangeVillagerJobMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().changeJobForVisitor(villagerUUID, newJob);
+            flag.get().getVillagerHandle().changeJobForVisitor(villagerUUID, newJob, announce);
         });
         ctx.get().setPacketHandled(true);
 

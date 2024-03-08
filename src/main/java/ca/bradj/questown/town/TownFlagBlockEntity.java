@@ -384,6 +384,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 CompoundTag data = QTNBT.getCompound(tag, NBT_VILLAGERS);
                 long currentTick = Util.getTick(t.getServerLevel());
                 TownVillagerHandle.SERIALIZER.deserialize(data, t.villagerHandle, currentTick);
+                t.villagerHandle.associate(t);
             }
             t.villagerHandle.addHungryListener(e -> {
                 if (t.getVillagerHandle().isDining(e.getUUID())) {
@@ -801,6 +802,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             UUID visitorUUID,
             JobID jobID
     ) {
+        this.changeJobForVisitor(visitorUUID, jobID, false);
+    }
+
+    public void changeJobForVisitor(
+            UUID visitorUUID,
+            JobID jobID,
+            boolean announce
+    ) {
         Optional<VisitorMobEntity> f = villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
@@ -811,6 +820,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         } else {
             doSetJob(visitorUUID, jobID, f.get());
             setChanged();
+            if (announce) {
+                broadcastMessage("messages.jobs.changed", jobID.toNiceString(), visitorUUID);
+            }
         }
     }
 

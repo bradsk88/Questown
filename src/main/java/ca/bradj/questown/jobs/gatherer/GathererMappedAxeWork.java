@@ -9,6 +9,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -65,16 +66,17 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                GathererUnmappedAxeWork.ID,
                 Items.DIAMOND_AXE.getDefaultInstance(),
                 GathererTools.AXE_LOOT_TABLE_PREFIX,
                 Items.OAK_WOOD.getDefaultInstance(),
                 MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
+                Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                Util.constant(TOOLS_REQUIRED_AT_STATES),
+                Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
                 ),
                 SPECIAL_RULES,
                 GathererMappedAxeWork::getFromLootTables

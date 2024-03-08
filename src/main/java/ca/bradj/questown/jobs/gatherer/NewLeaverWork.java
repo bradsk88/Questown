@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
@@ -45,21 +46,23 @@ public class NewLeaverWork {
 
     protected static Work asWork(
             JobID id,
+            JobID parentId,
             ItemStack icon,
             GathererTools.LootTablePrefix lootTablePrefix,
             ItemStack initialRequest,
             int maxState,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            ImmutableMap<Integer, Supplier<Ingredient>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Supplier<Integer>> ingredientQtyRequiredAtStates,
+            ImmutableMap<Integer, Supplier<Ingredient>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Supplier<Integer>> workRequiredAtStates,
+            ImmutableMap<Integer, Supplier<Integer>> timeRequiredAtStates,
             ImmutableMap<ProductionStatus, String> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         return productionWork(
                 icon,
                 id,
+                parentId,
                 new WorkDescription(
                         t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
                         initialRequest

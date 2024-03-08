@@ -40,4 +40,6 @@ public interface VillagerHolder {
     VillagerStatsData getStats(UUID uuid);
 
     Collection<JobID> getJobs();
+
+    void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce);
 }

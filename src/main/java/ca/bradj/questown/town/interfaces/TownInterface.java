@@ -88,6 +88,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void addRandomJobQuestForVisitor(UUID visitorUUID);
 
+    /**
+     * @deprecated Use getVillagerHandle
+     */
     void changeJobForVisitor(
             UUID visitorUUID,
             JobID jobID

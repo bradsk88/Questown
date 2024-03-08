@@ -180,6 +180,16 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
+        protected int getWorkSpeedOf10(Void unused) {
+            return 10;
+        }
+
+        @Override
+        protected int getAffectedTime(Void unused, Integer nextStepTime) {
+            return nextStepTime;
+        }
+
+        @Override
         protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
             inventory.set(itemIndex, item);
             return true;

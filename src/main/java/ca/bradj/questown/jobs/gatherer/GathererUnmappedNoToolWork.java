@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
@@ -56,16 +57,17 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
+                null,
                 Items.LEATHER_BOOTS.getDefaultInstance(),
                 GathererTools.NO_TOOL_TABLE_PREFIX,
                 Items.WHEAT_SEEDS.getDefaultInstance(),
                 MAX_STATE,
-                INGREDIENTS_REQUIRED_AT_STATES,
-                INGREDIENT_QTY_REQUIRED_AT_STATES,
-                TOOLS_REQUIRED_AT_STATES,
-                WORK_REQUIRED_AT_STATES,
+                Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
+                Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
+                Util.constant(TOOLS_REQUIRED_AT_STATES),
+                Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE.get()
+                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
                 ),
                 SPECIAL_RULES,
                 GathererUnmappedNoToolWork::getFromLootTables
