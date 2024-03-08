@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.ExpirationRules;
@@ -74,7 +75,10 @@ public class WorkSeekerJob extends DeclarativeJob {
     }
 
     public static JobID getIDForRoot(JobID j) {
-        return newIDForRoot(j.rootId());
+        if (Config.JOB_BOARD_ENABLED.get()) {
+            return newIDForRoot(j.rootId());
+        }
+        return j;
     }
 
     public static JobID newIDForRoot(String jobName) {
@@ -109,7 +113,7 @@ public class WorkSeekerJob extends DeclarativeJob {
         ) {
 
             @Override
-            protected Boolean tryExtractOre(
+            protected Boolean tryExtractProduct(
                     MCExtra extra,
                     BlockPos position
             ) {

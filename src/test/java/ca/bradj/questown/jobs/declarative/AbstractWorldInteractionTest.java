@@ -98,7 +98,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Boolean tryExtractOre(
+        protected Boolean tryExtractProduct(
                 Void unused,
                 Position position
         ) {

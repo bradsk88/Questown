@@ -9,24 +9,25 @@ import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedAxeWork extends NewLeaverWork {
+public class GathererUnmappedRodQuarterDayWork extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
-            GathererTools.AXE_LOOT_TABLE_PREFIX,
-            GathererTools.AXE_LOOT_TABLE_DEFAULT
+            GathererTools.FISHING_LOOT_TABLE_PREFIX,
+            GathererTools.FISHING_LOOT_TABLE_DEFAULT
     );
 
     static {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "axe");
+    public static final JobID ID = new JobID("gatherer", "rod_quarter_day");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_TOOL = 1;
@@ -42,7 +43,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
+            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.FISHING_RODS)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -52,7 +53,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedAxeWork() {
+    public GathererUnmappedRodQuarterDayWork() {
         super(PARAMS);
     }
 
@@ -60,9 +61,9 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
         return NewLeaverWork.asWork(
                 ID,
                 GathererUnmappedNoToolWork.ID, // Parent
-                Items.STONE_AXE.getDefaultInstance(),
-                GathererTools.AXE_LOOT_TABLE_PREFIX,
-                Items.OAK_WOOD.getDefaultInstance(),
+                Items.FISHING_ROD.getDefaultInstance(),
+                GathererTools.FISHING_LOOT_TABLE_PREFIX,
+                Items.COD.getDefaultInstance(),
                 MAX_STATE,
                 Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
                 Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
@@ -72,7 +73,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
                         BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedAxeWork::getFromLootTables
+                GathererUnmappedRodQuarterDayWork::getFromLootTables
         );
     }
 
@@ -84,13 +85,6 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
-        return Loots.getFromLootTables(
-                level,
-                items,
-                1,
-                new GathererTools.LootTableParameters(
-                        GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
-                )
-        );
+        return Loots.getFromKnownTable(level, 1, 1, PARAMS, Loots.fallbackBiome, new ResourceLocation("gameplay/fishing"));
     }
 }

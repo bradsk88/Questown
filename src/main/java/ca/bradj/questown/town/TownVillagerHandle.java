@@ -244,6 +244,15 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
+    public boolean canDine(UUID uuid) {
+        return entities.stream()
+                .filter(v -> uuid.equals(v.getUUID()))
+                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
+                .findFirst()
+                .orElse(false);
+    }
+
+    @Override
     public void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {
         // TODO: Generalize
         if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
@@ -255,7 +264,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public int getAffectedTime(UUID uuid, Integer timeToAugment) {
-        float offset = (Config.NEUTRAL_MOOD.get() - moods.getMood(uuid));
+        float offset = ((Config.NEUTRAL_MOOD.get() / 100f) - moods.getMood(uuid));
         return (int) ((1f + offset) * timeToAugment);
     }
 

@@ -193,7 +193,7 @@ public abstract class AbstractWorldInteraction<
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(tryExtractOre(extra, workSpot.position()), workSpot);
+                return new WorkOutput<>(tryExtractProduct(extra, workSpot.position()), workSpot);
             }
         }
 
@@ -246,7 +246,7 @@ public abstract class AbstractWorldInteraction<
         return ingredientsRequiredAtStates;
     }
 
-    protected TOWN tryExtractOre(
+    protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position
     ) {

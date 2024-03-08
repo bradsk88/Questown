@@ -204,7 +204,6 @@ public class JobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID);
     }
 
-
     private record Jerb(
             ImmutableList<JobID> preferredWork,
             ImmutableList<JobID> defaultWork

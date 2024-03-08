@@ -40,6 +40,16 @@ public class Loots {
     @NotNull
     static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
+            Collection<MCHeldItem> items,
+            int maxAmount,
+            GathererTools.LootTableParameters lt
+    ) {
+        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, finalizeBiome(items));
+    }
+
+    @NotNull
+    static List<MCHeldItem> getFromLootTables(
+            ServerLevel level,
             int maxAmount,
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
@@ -69,6 +79,25 @@ public class Loots {
                     )
             );
         }
+        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
+    }
+
+    @NotNull
+    public static List<MCHeldItem> getFromKnownTable(
+            ServerLevel level, int minAmount, int maxAmount,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome, ResourceLocation rl
+    ) {
+        LootTables tables = level.getServer().getLootTables();
+        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
+    }
+
+    @NotNull
+    private static List<MCHeldItem> getFromKnownTable(
+            ServerLevel level, int minAmount, int maxAmount,
+            GathererTools.LootTableParameters lt,
+            ResourceLocation biome, LootTables tables, ResourceLocation rl
+    ) {
         LootTable lootTable = tables.get(rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
         return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();

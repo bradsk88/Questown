@@ -390,6 +390,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
                 if (t.getVillagerHandle().isDining(e.getUUID())) {
                     return;
                 }
+                if (!t.getVillagerHandle().canDine(e.getUUID())) {
+                    return;
+                }
                 t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(e.getJobId().rootId()));
             });
             t.villagerHandle.addStatsListener(s -> t.setChanged());

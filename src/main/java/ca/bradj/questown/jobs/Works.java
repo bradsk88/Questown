@@ -69,9 +69,12 @@ public class Works {
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
         b.put(GathererUnmappedAxeWork.ID, GathererUnmappedAxeWork::asWork);
+        b.put(GathererUnmappedHalfDayAxeWork.ID, GathererUnmappedHalfDayAxeWork::asWork);
+        b.put(GathererUnmappedFullDayAxeWork.ID, GathererUnmappedFullDayAxeWork::asWork);
         b.put(GathererUnmappedPickaxeWork.ID, GathererUnmappedPickaxeWork::asWork);
         b.put(GathererUnmappedNoToolWork.ID, GathererUnmappedNoToolWork::asWork);
         b.put(GathererUnmappedShovelWork.ID, GathererUnmappedShovelWork::asWork);
+        b.put(GathererUnmappedRodQuarterDayWork.ID, GathererUnmappedRodQuarterDayWork::asWork);
         works = b.build();
 
         works.forEach((id, work) -> {

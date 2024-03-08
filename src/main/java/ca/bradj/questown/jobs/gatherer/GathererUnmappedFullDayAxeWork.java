@@ -15,7 +15,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedAxeWork extends NewLeaverWork {
+public class GathererUnmappedFullDayAxeWork extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
             GathererTools.AXE_LOOT_TABLE_PREFIX,
@@ -26,7 +26,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "axe");
+    public static final JobID ID = new JobID("gatherer", "axe_full_day");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_TOOL = 1;
@@ -39,7 +39,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 1
+            BLOCK_STATE_NEED_FOOD, 3
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
@@ -52,15 +52,15 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedAxeWork() {
+    public GathererUnmappedFullDayAxeWork() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedNoToolWork.ID, // Parent
-                Items.STONE_AXE.getDefaultInstance(),
+                GathererUnmappedHalfDayAxeWork.ID, // Parent
+                Items.GOLDEN_AXE.getDefaultInstance(),
                 GathererTools.AXE_LOOT_TABLE_PREFIX,
                 Items.OAK_WOOD.getDefaultInstance(),
                 MAX_STATE,
@@ -69,10 +69,10 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
                 Util.constant(TOOLS_REQUIRED_AT_STATES),
                 Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
+                        BLOCK_STATE_NEED_ROAM, () -> Config.GATHERER_TIME_REQUIRED_BASELINE.get() * 3
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedAxeWork::getFromLootTables
+                GathererUnmappedFullDayAxeWork::getFromLootTables
         );
     }
 
@@ -87,7 +87,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
         return Loots.getFromLootTables(
                 level,
                 items,
-                1,
+                6,
                 new GathererTools.LootTableParameters(
                         GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
                 )

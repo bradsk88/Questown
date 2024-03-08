@@ -365,7 +365,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         }
 
         if (wrappingUp && !hasAnyLootToDrop()) {
-            town.changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId));
+            town.getVillagerHandle().changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
             return;
         }
 

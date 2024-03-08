@@ -52,6 +52,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> META_ROOM_DIAMETER;
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
@@ -139,7 +140,10 @@ public class Config {
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
         GATHERER_TIME_REQUIRED_BASELINE = BUILDER.comment(
                 "The number of ticks the gatherer/explorer will spend outside of town collecting items. All villagers will start with this baseline, but it might get altered by villager or town modifiers."
-        ).defineInRange("GathererTimeRequiredBaseline", 2000, 1, 24000);
+        ).defineInRange("GathererTimeRequiredBaseline", 200, 1, 24000);
+        JOB_BOARD_ENABLED = BUILDER.comment(
+                "Experimental: Villagers will choose work based on the items the player has selected at a \"job board\" registered in the town."
+        ).define("JobBoardEnabled", true);
         BUILDER.pop();
 
         // Villagers Config
