@@ -65,7 +65,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
-
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_ROOM_SCANNING;
 
     static {
         // Scanning Config
@@ -86,6 +86,9 @@ public class Config {
         BIOME_SCAN_RADIUS = BUILDER.comment(
                 "The radius of chunks that will be scanned outward (in a plus shape) from the flag for the purpose of populating gatherer loot"
         ).defineInRange("BiomeScanRadius", 20, 0, 100);
+        LOG_ROOM_SCANNING = BUILDER.comment(
+                "Log the scanning of rooms in town. Useful for debugging, but causes lots of log bloat"
+        ).define("LogRoomScanning", false);
         BUILDER.pop();
 
         // Quests Config

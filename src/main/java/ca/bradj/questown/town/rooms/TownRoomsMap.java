@@ -30,6 +30,7 @@ import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,6 +42,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private int scanBuffer = 0;
     private TownRoomsHandle changeListener;
     private final ArrayList<Integer> times = new ArrayList<>();
+    private final LinkedBlockingQueue<PendingTownRooms> pendingRooms = new LinkedBlockingQueue<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -188,6 +190,18 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 });
 
         long start = System.currentTimeMillis();
+
+
+        if (!this.pendingRooms.isEmpty()) {
+            PendingTownRooms next = this.pendingRooms.remove();
+            boolean finished = next.proceed();
+            if (!finished) {
+                this.pendingRooms.add(next);
+            }
+            profileTick(start);
+            return;
+        }
+
 //        scanBuffer = (scanBuffer + 1) % 2;
 //        if (scanBuffer == 0) {
         // TODO: Use a FIFO queue and only run one iteration (y level) per tick
@@ -198,7 +212,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 .filter(v -> v.scanLevel == 0)
                 .map(p -> new Position(p.x, p.z))
                 .collect(Collectors.toSet());
-        updateActiveRooms(level, scanAroundPos, 0, blockPos.getY(), doorsAtZero);
+
+        this.pendingRooms.add(new PendingTownRooms(
+                level, scanAroundPos,
+                () -> getOrCreateRooms(0),
+                () -> activeRecipes.get(0),
+                blockPos.getY(), doorsAtZero));
 
         if (scanLevel != 0) {
             Set<Position> doorsAtLevel = registeredDoors.stream()
@@ -206,7 +225,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     .map(p -> new Position(p.x, p.z))
                     .collect(Collectors.toSet());
             int y = blockPos.offset(0, scanLevel, 0).getY();
-            updateActiveRooms(level, scanAroundPos, scanLevel, y, doorsAtLevel);
+            this.pendingRooms.add(new PendingTownRooms(
+                    level, scanAroundPos,
+                    () -> getOrCreateRooms(scanLevel),
+                    () -> activeRecipes.get(scanLevel),
+                    y, doorsAtLevel
+            ));
         }
 
         for (int scanLev : registeredDoors.stream().map(v -> v.scanLevel).distinct().toList()) {
@@ -218,7 +242,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     .map(p -> new Position(p.x, p.z))
                     .collect(Collectors.toSet());
             int y1 = blockPos.offset(0, scanLev, 0).getY();
-            updateActiveRooms(level, null, scanLev, y1, doorsAtLevel);
+            this.pendingRooms.add(new PendingTownRooms(
+                    level, null,
+                    () -> getOrCreateRooms(scanLev),
+                    () -> activeRecipes.get(scanLev),
+                    y1, doorsAtLevel
+            ));
         }
 
         for (int scanLev : registeredFenceGates.stream().map(v -> v.scanLevel).distinct().toList()) {
@@ -227,6 +256,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     .map(p -> new Position(p.x, p.z))
                     .collect(Collectors.toSet());
             int y1 = blockPos.offset(0, scanLev, 0).getY();
+            // FIXME: Do the farms too
             updateActiveFarms(level, scanLev, y1, doorsAtLevel);
         }
         profileTick(start);

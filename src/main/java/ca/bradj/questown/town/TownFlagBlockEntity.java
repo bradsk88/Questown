@@ -196,17 +196,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
         e.workHandle.tick(sl);
         e.quests.tick(e);
 
-        long gameTime = level.getGameTime();
-        long l = gameTime % 10;
-        if (l != 0) {
-            return;
-        }
-
         if (e.nearbyBiomes.isEmpty()) {
             computeNearbyBiomes(level, blockPos, e);
         }
 
         e.roomsHandle.tick(sl, blockPos);
+
+        long gameTime = level.getGameTime();
+        long l = gameTime % 10;
+        if (l != 0) {
+            return;
+        }
 
         Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMeta();
         e.jobHandle.tick(sl, allRooms);
