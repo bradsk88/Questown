@@ -129,7 +129,7 @@ dependencies {
 
     implementation fg.deobf("mezz.jei:jei-1.19.2-forge:11.5.0.297")
 
-    implementation 'ca.bradj:RoomRecipes:1.19.2-0.0.4-alpha.2'
+    implementation 'ca.bradj:RoomRecipes:1.19.2-0.0.5-alpha.1'
 
     compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77:api")
     runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77")

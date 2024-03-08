@@ -16,6 +16,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
@@ -121,5 +122,9 @@ public class Util {
         ImmutableMap.Builder<Integer, X> b = ImmutableMap.builder();
         theoretical.forEach((k, v) -> b.put(k, v.get()));
         return b.build();
+    }
+
+    public static <X> Supplier<X> configGet(ForgeConfigSpec.ConfigValue<X> cfg) {
+        return cfg::get;
     }
 }

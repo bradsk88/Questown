@@ -90,7 +90,7 @@ public class DinerWork {
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
                         jobId -> jobId,
-                        Config.MAX_TICKS_WITHOUT_DINING_TABLE,
+                        Util.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )
         );

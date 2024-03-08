@@ -154,7 +154,9 @@ public class TownFlagState {
 
         long after = System.currentTimeMillis();
 
-        QT.FLAG_LOGGER.debug("State after warp of {}: {}", ticksPassed, liveState);
+        if (Config.LOG_WARP_RESULT.get()) {
+            QT.FLAG_LOGGER.info("State after warp of {}: {}", ticksPassed, liveState);
+        }
         QT.FLAG_LOGGER.debug("Warp took {} milliseconds", after - before);
 
         return new MCTownState(

@@ -85,9 +85,9 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
     @Override
     public String toString() {
-        Collection<MCTownItem> items = new ArrayList<>();
+        Collection<String> items = new ArrayList<>();
         for (int i = 0; i < container.getContainerSize(); i++) {
-            items.add(getItem(i));
+            items.add(getItem(i).getShortName());
         }
         return "MCContainer{" +
                 "container.items=" + items +

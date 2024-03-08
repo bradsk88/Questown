@@ -114,6 +114,9 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         if (registryName != null) {
             name = registryName.toString();
         }
+        if (quantity > 1) {
+            name = String.format("%sx%s", quantity, name);
+        }
         return name;
     }
 
