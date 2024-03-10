@@ -55,6 +55,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
@@ -66,6 +67,9 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_ROOM_SCANNING;
+    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
+    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> ENABLE_DEBUG_ART;
 
     static {
         // Scanning Config
@@ -89,6 +93,15 @@ public class Config {
         LOG_ROOM_SCANNING = BUILDER.comment(
                 "Log the scanning of rooms in town. Useful for debugging, but causes lots of log bloat"
         ).define("LogRoomScanning", false);
+        MAX_ROOM_DIMENSION = BUILDER.comment(
+                "The maximum length or width of a room that can be detected"
+        ).defineInRange("MaxRoomDimension", 20, 2, 100);
+        MAX_ROOM_SCAN_ITERATIONS = BUILDER.comment(
+                "The maximum number of ticks that will be spent searching for town rooms"
+        ).defineInRange("MaxRoomScanIterations", 1000, 1, 24000);
+        ENABLE_DEBUG_ART = BUILDER.comment(
+                "Spends some extra CPU power generating \"art\" as the town scanner runs. This can be used for debugging room scanner or filing bug reports."
+        ).define("EnableDebugArt", true); // TODO[ASAP]: Default to "false"
         BUILDER.pop();
 
         // Quests Config
@@ -215,6 +228,9 @@ public class Config {
                 "The radius of \"Meta-Rooms\" that exist around points of interest in the town. E.g." +
                 "There is a meta room around the town flag itself, and one around each welcome mat"
         ).defineInRange("MetaRoomDiameter", 2, 1, 100);
+        BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
+                "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
+        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(
@@ -226,9 +242,9 @@ public class Config {
         TIME_WARP_MAX_TICKS = BUILDER.comment(
                 "Since the player can be gone for a very long time, we enforce a maximum warp to prevent the warp taking too long to compute."
         ).defineInRange("MaxTicks", 200000, 1, Integer.MAX_VALUE);
-        BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
-                "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
-        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
+        LOG_WARP_RESULT = BUILDER.comment(
+                "Set true to enable logging of the town state after a time warp. This produces a large log message and may cause lag."
+        ).define("LogWarpResult", false);
         BUILDER.pop(); // Yep, really thrice. Getting out of nested config
         BUILDER.pop();
         BUILDER.pop();

@@ -262,7 +262,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             if (e.times.size() > Config.TICK_SAMPLING_RATE.get()) {
                 QT.PROFILE_LOGGER.debug(
                         "Average tick length: {}",
-                        e.times.stream().mapToInt(Integer::intValue).average()
+                        e.times.stream().mapToInt(Integer::intValue).average().getAsDouble()
                 );
                 e.times.clear();
             }

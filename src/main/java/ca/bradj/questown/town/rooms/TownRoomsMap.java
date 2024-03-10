@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.rooms;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
@@ -198,7 +199,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             if (!finished) {
                 this.pendingRooms.add(next);
             }
-            profileTick(start);
+            profileTick("PTR.proceed", start);
             return;
         }
 
@@ -215,7 +216,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
         this.pendingRooms.add(new PendingTownRooms(
                 level, scanAroundPos,
-                () -> getOrCreateRooms(0),
+                getOrCreateRooms(0),
                 () -> activeRecipes.get(0),
                 blockPos.getY(), doorsAtZero));
 
@@ -227,7 +228,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             int y = blockPos.offset(0, scanLevel, 0).getY();
             this.pendingRooms.add(new PendingTownRooms(
                     level, scanAroundPos,
-                    () -> getOrCreateRooms(scanLevel),
+                    getOrCreateRooms(scanLevel),
                     () -> activeRecipes.get(scanLevel),
                     y, doorsAtLevel
             ));
@@ -244,7 +245,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             int y1 = blockPos.offset(0, scanLev, 0).getY();
             this.pendingRooms.add(new PendingTownRooms(
                     level, null,
-                    () -> getOrCreateRooms(scanLev),
+                    getOrCreateRooms(scanLev),
                     () -> activeRecipes.get(scanLev),
                     y1, doorsAtLevel
             ));
@@ -259,10 +260,10 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             // FIXME: Do the farms too
             updateActiveFarms(level, scanLev, y1, doorsAtLevel);
         }
-        profileTick(start);
+        profileTick("queue+farm", start);
     }
 
-    private void profileTick(long start) {
+    private void profileTick(String prefix, long start) {
         if (Config.TICK_SAMPLING_RATE.get() == 0) {
             return;
         }
@@ -270,10 +271,15 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         times.add((int) (end - start));
 
         if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
-            Questown.LOGGER.debug(
-                    "[TownRoomsMap] Average tick length: {}",
-                    times.stream().mapToInt(Integer::intValue).average()
-            );
+            String msg = "[TownRoomsMap:{}] Average tick length: {}";
+            OptionalDouble val = times.stream().mapToInt(Integer::intValue).average();
+            if (val.isPresent() && val.getAsDouble() > 10) {
+                QT.PROFILE_LOGGER.error(msg, prefix, val);
+            } else if (val.isPresent() && val.getAsDouble() > 1) {
+                QT.PROFILE_LOGGER.warn(msg, prefix, val);
+            } else{
+                QT.PROFILE_LOGGER.debug(msg, prefix, val);
+            }
             times.clear();
         }
     }
