@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
+import java.util.function.Supplier;
 
 public interface RoomsHolder {
     Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation roomRecipeId);
@@ -19,4 +20,6 @@ public interface RoomsHolder {
     void registerFenceGate(BlockPos above);
 
     void registerDoor(BlockPos above);
+
+    Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos);
 }

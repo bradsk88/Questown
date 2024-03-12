@@ -16,5 +16,6 @@ public class CommandEvents {
         FreezeCommand.register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
         FlagCommand.register(event.getDispatcher());
+        DebugDoorsCommand.register(event.getDispatcher());
     }
 }

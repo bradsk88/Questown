@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -8,6 +9,9 @@ import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.LevelRoomDetector;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -26,10 +30,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, Supplier<TownFlagBlockEntity> {
+public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>,
+        Supplier<TownFlagBlockEntity> {
 
     private final TownRoomsMap roomsMap = new TownRoomsMap(this);
     @Nullable
@@ -83,24 +90,37 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         return t.getWelcomeMats()
                 .stream()
                 .map(p -> Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get()))
-                .map(v -> new RoomRecipeMatch<>(v, SpecialQuests.TOWN_GATE, fn.apply(v).entrySet()))
+                .map(v -> new RoomRecipeMatch<>(
+                        v, SpecialQuests.TOWN_GATE, fn.apply(v)
+                                                      .entrySet()))
                 .toList();
     }
 
     @Override
-    public void roomRecipeCreated(MCRoom mcRoom, RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch) {
+    public void roomRecipeCreated(
+            MCRoom mcRoom,
+            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
+    ) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         t.roomRecipeCreated(mcRoom, mcRoomRoomRecipeMatch);
     }
 
     @Override
-    public void roomRecipeChanged(MCRoom mcRoom, RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch, MCRoom room1, RoomRecipeMatch<MCRoom> key1) {
+    public void roomRecipeChanged(
+            MCRoom mcRoom,
+            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch,
+            MCRoom room1,
+            RoomRecipeMatch<MCRoom> key1
+    ) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         t.roomRecipeChanged(mcRoom, mcRoomRoomRecipeMatch, room1, key1);
     }
 
     @Override
-    public void roomRecipeDestroyed(MCRoom mcRoom, RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch) {
+    public void roomRecipeDestroyed(
+            MCRoom mcRoom,
+            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
+    ) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         t.roomRecipeDestroyed(mcRoom, mcRoomRoomRecipeMatch);
     }
@@ -114,7 +134,10 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         return roomsMap;
     }
 
-    void tick(ServerLevel sl, BlockPos blockPos) {
+    void tick(
+            ServerLevel sl,
+            BlockPos blockPos
+    ) {
         roomsMap.tick(sl, blockPos);
     }
 
@@ -136,7 +159,8 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     public Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (RoomRecipeMatch<MCRoom> i : roomsMap.getAllMatches()) {
-            for (Map.Entry<BlockPos, Block> j : i.getContainedBlocks().entrySet()) {
+            for (Map.Entry<BlockPos, Block> j : i.getContainedBlocks()
+                                                 .entrySet()) {
                 if (mr.doesMatch(j.getValue())) {
                     b.add(j.getKey());
                 }
@@ -147,10 +171,14 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
 
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
-        long beds = roomsMap.getAllMatches().stream()
-                .flatMap(v -> v.getContainedBlocks().values().stream())
-                .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem())))
-                .count();
+        long beds = roomsMap.getAllMatches()
+                            .stream()
+                            .flatMap(v -> v.getContainedBlocks()
+                                           .values()
+                                           .stream())
+                            .filter(v -> Ingredient.of(ItemTags.BEDS)
+                                                   .test(new ItemStack(v.asItem())))
+                            .count();
         if (beds == 0 && numVillagers == 0) {
             return false;
         }
@@ -166,6 +194,31 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
         t.setChanged();
+    }
+
+    @Override
+    public Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        LinkedBlockingQueue<String> flightRecorder = new LinkedBlockingQueue<>();
+        final LevelRoomDetector d = new LevelRoomDetector(
+                ImmutableList.of(Positions.FromBlockPos(clickedPos)),
+                Config.MAX_ROOM_DIMENSION.get(),
+                Config.MAX_ROOM_SCAN_ITERATIONS.get(),
+                p -> WallDetection.IsWall(t.getServerLevel(), p, clickedPos.getY()),
+                true,
+                flightRecorder
+        );
+        return () -> {
+            @Nullable ImmutableMap<Position, Optional<Room>> done = d.proceed();
+            if (done == null) {
+                return false;
+            }
+            flightRecorder.forEach(QT.FLAG_LOGGER::debug);
+            d.getDebugArt(true).forEach(
+                    (k, v) -> QT.FLAG_LOGGER.debug("Art for {}\n{}", k.getUIString(), v)
+            );
+            return true;
+        };
     }
 
     public void registerFenceGate(BlockPos clickedPos) {

@@ -70,6 +70,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> ENABLE_DEBUG_ART;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> DEBUG_MODE;
 
     static {
         // Scanning Config
@@ -209,6 +210,9 @@ public class Config {
 
         // Advanced Config
         BUILDER.push("Advanced");
+        DEBUG_MODE = BUILDER.comment(
+                "For developers only: Debug mode prevents the flag entity from ticking - essentially nullifying this mod."
+        ).define("DebugMode", false);
         BASE_MAX_LOOP = BUILDER.comment(
                 "The maximum number of attempts this mod will allow for ANY algorithm. This helps prevent bugs from causing the game to freeze."
         ).defineInRange("BaseMaxLoop", 1000, 1, Integer.MAX_VALUE);

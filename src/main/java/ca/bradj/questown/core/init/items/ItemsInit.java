@@ -79,6 +79,11 @@ public class ItemsInit {
             TownDoorItem::new
     );
 
+    public static final RegistryObject<Item> TOWN_DOOR_TESTER = ITEMS.register(
+            TownDoorTestItem.ITEM_ID,
+            TownDoorTestItem::new
+    );
+
     public static final RegistryObject<Item> FALSE_DOOR = ITEMS.register(
             FalseDoorItem.ITEM_ID,
             FalseDoorItem::new

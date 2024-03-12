@@ -48,7 +48,8 @@ public class PendingTownRooms {
                 Config.MAX_ROOM_DIMENSION.get(),
                 Config.MAX_ROOM_SCAN_ITERATIONS.get(),
                 rooms::IsWall,
-                Config.ENABLE_DEBUG_ART.get()
+                Config.ENABLE_DEBUG_ART.get(),
+                null
         );
     }
 

@@ -78,6 +78,7 @@ import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
@@ -127,6 +128,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
     private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
 
     private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
+    private @Nullable Supplier<Boolean> debugTask;
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -173,6 +175,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             Function<TownFlagBlockEntity, Boolean> initr = e.initializers.remove();
             if (!initr.apply(e)) {
                 e.initializers.add(initr);
+            }
+            return;
+        }
+
+        if (Config.DEBUG_MODE.get()) {
+            if (e.debugTask != null) {
+                boolean done = e.debugTask.get();
+                if (done) {
+                    e.debugTask = null;
+                }
             }
             return;
         }
@@ -1192,5 +1204,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public int getY() {
         return getTownFlagBasePos().getY();
+    }
+
+    public void startDebugTask(Supplier<Boolean> debugTask) {
+        this.debugTask = debugTask;
     }
 }
