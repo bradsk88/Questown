@@ -45,7 +45,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -129,6 +128,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
     private @Nullable Supplier<Boolean> debugTask;
+    private boolean debugMode;
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -179,7 +179,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
             return;
         }
 
-        if (Config.DEBUG_MODE.get()) {
+        if (e.debugMode) {
             if (e.debugTask != null) {
                 boolean done = e.debugTask.get();
                 if (done) {
@@ -1208,5 +1208,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface, A
 
     public void startDebugTask(Supplier<Boolean> debugTask) {
         this.debugTask = debugTask;
+    }
+
+    public void toggleDebugMode() {
+        this.debugMode = !this.debugMode;
+        broadcastMessage("message.debug_mode", this.debugMode ? "enabled" : "disabled");
     }
 }
