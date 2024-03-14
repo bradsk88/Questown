@@ -200,8 +200,9 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     public Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         LinkedBlockingQueue<String> flightRecorder = new LinkedBlockingQueue<>();
+        Position clickedRRPOs = Positions.FromBlockPos(clickedPos);
         final LevelRoomDetector d = new LevelRoomDetector(
-                ImmutableList.of(Positions.FromBlockPos(clickedPos)),
+                ImmutableList.of(clickedRRPOs),
                 Config.MAX_ROOM_DIMENSION.get(),
                 Config.MAX_ROOM_SCAN_ITERATIONS.get(),
                 p -> WallDetection.IsWall(t.getServerLevel(), p, clickedPos.getY()),
@@ -217,8 +218,33 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
             d.getDebugArt(true).forEach(
                     (k, v) -> QT.FLAG_LOGGER.debug("Art for {}\n{}", k.getUIString(), v)
             );
+            Optional<Room> room = done.get(clickedRRPOs);
+            QT.FLAG_LOGGER.debug("Room is {}", room);
+            room.ifPresent(r -> {
+                Optional<RoomRecipeMatch<MCRoom>> recipe = t.getRoomHandle()
+                                                                           .computeRecipe(new MCRoom(r.getDoorPos(),
+                                                                                   r.getSpaces(), clickedPos.getY()
+                                                                           ));
+                QT.FLAG_LOGGER.debug("Recipe is {}", recipe);
+            });
+            if (!t.getRoomHandle().isDoorRegistered(clickedPos)) {
+                QT.FLAG_LOGGER.warn("{} is not registered as a door", clickedPos);
+            }
             return true;
         };
+    }
+
+    @Override
+    public boolean isDoorRegistered(BlockPos clickedPos) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        return roomsMap.isDoorRegistered(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
+    }
+
+    public Optional<RoomRecipeMatch<MCRoom>> computeRecipe(
+            MCRoom r
+    ) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        return roomsMap.computeRecipe(t.getServerLevel(), r, r.yCoord - t.getY());
     }
 
     public void registerFenceGate(BlockPos clickedPos) {
