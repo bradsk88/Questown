@@ -1,14 +1,18 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancementsScreen;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 public record OpenVillagerAdvancementsMenuMessage(
@@ -34,10 +38,14 @@ public record OpenVillagerAdvancementsMenuMessage(
     public void handle(
             Supplier<NetworkEvent.Context> ctx
     ) {
+        final AtomicBoolean success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-            Minecraft.getInstance().setScreen(new VillagerAdvancementsScreen(
-                flagPos, villagerUUID, currentJob
-            ));
+            DistExecutor.unsafeRunWhenOn(
+                    Dist.CLIENT,
+                    () -> () -> success.set(
+                            ClientAccess.openVillagerAdvancements(flagPos, villagerUUID, currentJob)
+                    )
+            );
         }).exceptionally(OpenVillagerAdvancementsMenuMessage::logError);
         ctx.get().setPacketHandled(true);
 
