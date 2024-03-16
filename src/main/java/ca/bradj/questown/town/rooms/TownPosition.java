@@ -1,5 +1,8 @@
 package ca.bradj.questown.town.rooms;
 
+import ca.bradj.roomrecipes.core.space.Position;
+import net.minecraft.core.BlockPos;
+
 import java.util.Objects;
 
 public class TownPosition {
@@ -33,5 +36,13 @@ public class TownPosition {
                 ", z=" + z +
                 ", scanLevel=" + scanLevel +
                 '}';
+    }
+
+    public Position toPosition() {
+        return new Position(x, z);
+    }
+
+    public int getY(int flagY) {
+        return flagY + scanLevel;
     }
 }

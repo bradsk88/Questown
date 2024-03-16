@@ -129,6 +129,8 @@
   "room.bakery": "Bakery",
   "room.smithy": "Smithy",
   "room.job_board": "Job Board",
+  "room.dining_room": "Dining Room",
+  "room.smeltery": "Smeltery",
   "special_quest.campfire": "Build a campfire",
   "special_quest.farm": "Farm",
   "special_quest.broken": "Quest failed to load",

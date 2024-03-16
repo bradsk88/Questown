@@ -4,10 +4,9 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
-import ca.bradj.questown.town.TownRoomsHandle;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -19,6 +18,7 @@ import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -28,10 +28,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.Tags;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,11 +39,10 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, TownRooms> activeRooms = new HashMap<>();
     private final Map<Integer, TownRooms> activeFarms = new HashMap<>();
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
-    private int scanLevel = 0;
-    private int scanBuffer = 0;
-    private TownRoomsHandle changeListener;
     private final ArrayList<Integer> times = new ArrayList<>();
-    private final LinkedBlockingQueue<PendingTownRooms> pendingRooms = new LinkedBlockingQueue<>();
+    private @Nullable MultiLevelRoomDetector pendingRooms;
+    private List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
+    private @Nullable TownFlagBlockEntity town;
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -56,53 +55,6 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Set<TownPosition> registeredDoors = new HashSet<>();
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
-
-    public TownRoomsMap(TownRoomsHandle entity) {
-        changeListener = entity;
-//        getOrCreateRooms(0);
-    }
-
-    private void updateActiveRooms(
-            ServerLevel level,
-            @Nullable Position scanAroundPos,
-            int scanLevel,
-            int scanY,
-            Set<Position> registeredDoors
-    ) {
-        TownRooms ars = getOrCreateRooms(scanLevel);
-
-        ImmutableMap<Position, Optional<Room>> rooms = TownCycle.findRooms(
-                scanAroundPos, ars, registeredDoors
-        );
-
-        if (rooms.isEmpty()) {
-            return;
-        }
-
-        List<AbstractMap.SimpleEntry<Position, Optional<MCRoom>>> array = rooms.entrySet()
-                                                                               .stream()
-                                                                               .map(v -> new AbstractMap.SimpleEntry<>(
-                                                                                       v.getKey(), v.getValue()
-                                                                                                    .map(z -> new MCRoom(
-                                                                                                            z.getDoorPos(),
-                                                                                                            z.getSpaces(),
-                                                                                                            scanY
-                                                                                                    ))))
-                                                                               .toList();
-        ImmutableMap<Position, Optional<MCRoom>> mcRooms = ImmutableMap.copyOf(array);
-        ars.update(mcRooms);
-
-        ars.getAll()
-           .forEach(room -> {
-               Optional<RoomRecipeMatch<MCRoom>> recipe = RecipeDetection.getActiveRecipe(
-                       level,
-                       room,
-                       ars
-               );
-               ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> rs = activeRecipes.get(scanLevel);
-               rs.update(room, room, recipe.orElse(null));
-           });
-    }
 
     private void updateActiveFarms(
             ServerLevel level,
@@ -146,13 +98,40 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         if (!activeRecipes.containsKey(scanLevel)) {
             ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> v = new ActiveRecipes<>();
             activeRecipes.put(scanLevel, v);
-            v.addChangeListener(changeListener);
+            TownRoomsMap self = this;
+            v.addChangeListener(new ActiveRecipes.ChangeListener<>() {
+                @Override
+                public void roomRecipeCreated(
+                        MCRoom room,
+                        RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
+                ) {
+                    self.recipeListeners.forEach(v -> v.roomRecipeCreated(room, mcRoomRoomRecipeMatch));
+                }
+
+                @Override
+                public void roomRecipeChanged(
+                        MCRoom room,
+                        RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch,
+                        MCRoom room1,
+                        RoomRecipeMatch<MCRoom> key1
+                ) {
+                    self.recipeListeners.forEach(v -> v.roomRecipeChanged(room, mcRoomRoomRecipeMatch, room1, key1));
+                }
+
+                @Override
+                public void roomRecipeDestroyed(
+                        MCRoom room,
+                        RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
+                ) {
+                    self.recipeListeners.forEach(v -> v.roomRecipeDestroyed(room, mcRoomRoomRecipeMatch));
+                }
+            });
         }
 
         if (!activeRooms.containsKey(scanLevel)) {
             TownRooms v = new TownRooms(
                     scanLevel,
-                    changeListener
+                    this::unsafeGetTown
             ); // TODO: Consider using listener instead of passing entity
             activeRooms.put(scanLevel, v);
             v.addRecipeRoomChangeListener(this);
@@ -165,7 +144,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         if (!activeFarms.containsKey(scanLevel)) {
             TownRooms v = new TownRooms(
                     scanLevel,
-                    changeListener // TODO: Consider using listener instead of passing entity
+                    this::unsafeGetTown
             ) {
                 @Override
                 protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(
@@ -187,99 +166,60 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void tick(
             ServerLevel level,
-            BlockPos blockPos
+            BlockPos flagPos
     ) {
+        if (pendingRooms != null) {
+            long start = System.currentTimeMillis();
+            boolean finished = pendingRooms.proceed();
+            if (finished) {
+                this.pendingRooms = null;
+            }
+            profileTick("PTR.proceed", start);
+            return;
+        }
+
         registeredDoors.stream()
                        .filter(tp -> {
-                           BlockPos bp = new BlockPos(tp.x, blockPos.getY() + tp.scanLevel, tp.z);
+                           BlockPos bp = new BlockPos(tp.x, flagPos.getY() + tp.scanLevel, tp.z);
                            BlockState bs = level.getBlockState(bp);
                            return !(bs.getBlock() instanceof DoorBlock || bs.getBlock() instanceof FalseDoorBlock);
                        })
                        .toList()
                        .forEach(tp -> {
                            registeredDoors.remove(tp);
-                           Questown.LOGGER.debug("Door was de-registered due to not existing anymore");
+                           QT.FLAG_LOGGER.debug("Door was de-registered due to not existing anymore");
                        });
 
+        Map<Integer, Collection<Position>> doorsAtLevel = new HashMap<>();
+
+        registeredDoors.forEach(dp ->
+                doorsAtLevel.computeIfAbsent(dp.scanLevel, k -> new ArrayList<>()).add(dp.toPosition())
+        );
+
+        pendingRooms = new MultiLevelRoomDetector(
+                level, flagPos.getY(),
+                p -> WallDetection.IsWall(level, p.toPosition(), flagPos.getY() + p.scanLevel),
+                p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
+                (scanLevel, rooms) -> getOrCreateRooms(scanLevel).update(rooms),
+                activeRecipes::get,
+                ImmutableMap.copyOf(doorsAtLevel),
+                false
+        );
+
         long start = System.currentTimeMillis();
-
-
-        if (!this.pendingRooms.isEmpty()) {
-            PendingTownRooms next = this.pendingRooms.remove();
-            boolean finished = next.proceed();
-            if (!finished) {
-                this.pendingRooms.add(next);
-            }
-            profileTick("PTR.proceed", start);
-            return;
-        }
-
-//        scanBuffer = (scanBuffer + 1) % 2;
-//        if (scanBuffer == 0) {
-        // TODO: Use a FIFO queue and only run one iteration (y level) per tick
-        scanLevel = (scanLevel + 1) % 5;
-//        }
-        Position scanAroundPos = Positions.FromBlockPos(blockPos);
-        Set<Position> doorsAtZero = registeredDoors.stream()
-                                                   .filter(v -> v.scanLevel == 0)
-                                                   .map(p -> new Position(p.x, p.z))
-                                                   .collect(Collectors.toSet());
-
-        this.pendingRooms.add(new PendingTownRooms(
-                level, scanAroundPos,
-                getOrCreateRooms(0),
-                () -> activeRecipes.get(0),
-                blockPos.getY(), doorsAtZero
-        ));
-
-        if (scanLevel != 0) {
-            Set<Position> doorsAtLevel = registeredDoors.stream()
-                                                        .filter(v -> v.scanLevel == scanLevel)
-                                                        .map(p -> new Position(p.x, p.z))
-                                                        .collect(Collectors.toSet());
-            int y = blockPos.offset(0, scanLevel, 0)
-                            .getY();
-            this.pendingRooms.add(new PendingTownRooms(
-                    level, scanAroundPos,
-                    getOrCreateRooms(scanLevel),
-                    () -> activeRecipes.get(scanLevel),
-                    y, doorsAtLevel
-            ));
-        }
-
-        for (int scanLev : registeredDoors.stream()
-                                          .map(v -> v.scanLevel)
-                                          .distinct()
-                                          .toList()) {
-            if (scanLev == scanLevel || scanLev == 0) {
-                continue;
-            }
-            Set<Position> doorsAtLevel = registeredDoors.stream()
-                                                        .filter(v -> v.scanLevel == scanLev)
-                                                        .map(p -> new Position(p.x, p.z))
-                                                        .collect(Collectors.toSet());
-            int y1 = blockPos.offset(0, scanLev, 0)
-                             .getY();
-            this.pendingRooms.add(new PendingTownRooms(
-                    level, null,
-                    getOrCreateRooms(scanLev),
-                    () -> activeRecipes.get(scanLev),
-                    y1, doorsAtLevel
-            ));
-        }
 
         for (int scanLev : registeredFenceGates.stream()
                                                .map(v -> v.scanLevel)
                                                .distinct()
                                                .toList()) {
-            Set<Position> doorsAtLevel = registeredFenceGates.stream()
+            Set<Position> gatesAtLevel = registeredFenceGates.stream()
                                                              .filter(v -> v.scanLevel == scanLev)
                                                              .map(p -> new Position(p.x, p.z))
                                                              .collect(Collectors.toSet());
-            int y1 = blockPos.offset(0, scanLev, 0)
-                             .getY();
+            int y1 = flagPos.offset(0, scanLev, 0)
+                            .getY();
             // FIXME: Do the farms too
-            updateActiveFarms(level, scanLev, y1, doorsAtLevel);
+            updateActiveFarms(level, scanLev, y1, gatesAtLevel);
         }
         profileTick("queue+farm", start);
     }
@@ -325,6 +265,17 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
         this.registeredDoors.addAll(registeredDoors);
         this.registeredFenceGates.addAll(registeredFenceGates);
+        this.town = owner;
+    }
+
+    /**
+     * Only safe to call after initialize
+     */
+    private @NotNull TownFlagBlockEntity unsafeGetTown() {
+        if (town == null) {
+            throw new IllegalStateException("Town has not been initialized on quest handle yet");
+        }
+        return town;
     }
 
     public Collection<MCRoom> getAllRooms() {
@@ -426,5 +377,15 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             int scanLevel
     ) {
         return RecipeDetection.getActiveRecipe(serverLevel, r, getOrCreateRooms(scanLevel));
+    }
+
+    public ImmutableSet<TownPosition> getAllRegisteredDoors() {
+        return ImmutableSet.copyOf(registeredDoors);
+    }
+
+    public void addRecipeListener(
+            ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>> l
+    ) {
+        this.recipeListeners.add(l);
     }
 }
