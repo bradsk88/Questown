@@ -15,7 +15,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedAxeWork extends NewLeaverWork {
+public class GathererUnmappedAxeWorkQtrDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
             GathererTools.AXE_LOOT_TABLE_PREFIX,
@@ -52,14 +52,14 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedAxeWork() {
+    public GathererUnmappedAxeWorkQtrDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedNoToolWork.ID, // Parent
+                GathererUnmappedNoToolWorkQtrDay.ID, // Parent
                 Items.STONE_AXE.getDefaultInstance(),
                 GathererTools.AXE_LOOT_TABLE_PREFIX,
                 Items.OAK_WOOD.getDefaultInstance(),
@@ -72,7 +72,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
                         BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedAxeWork::getFromLootTables
+                GathererUnmappedAxeWorkQtrDay::getFromLootTables
         );
     }
 
@@ -87,7 +87,7 @@ public class GathererUnmappedAxeWork extends NewLeaverWork {
         return Loots.getFromLootTables(
                 level,
                 items,
-                1,
+                Config.GATHERER_QUARTER_DAY_LOOT_AMOUNT.get(),
                 new GathererTools.LootTableParameters(
                         GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
                 )

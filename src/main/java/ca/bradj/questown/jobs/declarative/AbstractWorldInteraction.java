@@ -12,9 +12,7 @@ import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -28,6 +26,8 @@ public abstract class AbstractWorldInteraction<
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
+
+    private final List<Runnable> jobCompletedListeners = new ArrayList<>();
 
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -130,6 +130,58 @@ public abstract class AbstractWorldInteraction<
             }
         };
         this.claimSpots = claimSpots;
+    }
+
+    protected TOWN tryGiveItems(
+            EXTRA inputs,
+            Iterable<HELD_ITEM> newItemsSource,
+            POS sourcePos
+    ) {
+        Stack<HELD_ITEM> stack = new Stack<>();
+        newItemsSource.forEach(stack::push); // TODO: This is potentially infinite
+
+        TOWN ts = getTown(inputs);
+        if (stack.isEmpty()) {
+            QT.JOB_LOGGER.error(
+                    "No results during extraction phase. That's probably a bug. Town State: {}",
+                    ts
+            );
+            return null;
+        }
+
+        boolean gotAll = false;
+        int i = -1;
+        for (HELD_ITEM item : getHeldItems(inputs, villagerIndex)) {
+            i++;
+            if (!item.isEmpty()) {
+                continue;
+            }
+            HELD_ITEM newItem = stack.pop();
+            if (isMulti(newItem.get())) {
+                stack.push(newItem.shrink());
+            }
+            if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
+                ts = withKnowledge(inputs, ts, newItem);
+            } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
+                ts = withEffectApplied(inputs, ts, newItem);
+            } else {
+                HELD_ITEM unit = newItem.unit();
+                ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
+                QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
+            }
+
+            if (stack.isEmpty()) {
+                gotAll = true;
+                break;
+            }
+        }
+        if (!gotAll) {
+            // TODO: Gracefully handle when the villager doesn't have enough room to take all items
+            QT.VILLAGER_LOGGER.debug("Villager ran out of room before extracting all possible items");
+        }
+        ts = setJobBlockState(inputs, ts, sourcePos, AbstractWorkStatusStore.State.fresh());
+        getWorkStatuses(inputs).clearClaim(sourcePos);
+        return ts;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -250,48 +302,17 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             POS position
     ) {
-        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
+            AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
             Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
-            Stack<HELD_ITEM> stack = new Stack<>();
-            generatedResult.forEach(stack::push);
-
-            TOWN ts = getTown(inputs);
-            if (stack.isEmpty()) {
-                QT.JOB_LOGGER.error(
-                        "No results during extraction phase. That's probably a bug. Town State: {}",
-                        ts
-                );
-                return ts;
+            TOWN town = tryGiveItems(inputs, generatedResult, position);
+            if (town != null) {
+                jobCompletedListeners.forEach(Runnable::run);
             }
-
-            int i = -1;
-            for (HELD_ITEM item : items) {
-                i++;
-                if (!item.isEmpty()) {
-                    continue;
-                }
-                HELD_ITEM newItem = stack.pop();
-                if (isMulti(newItem.get())) {
-                    stack.push(newItem.shrink());
-                }
-                if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
-                    ts = withKnowledge(inputs, ts, newItem);
-                } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
-                    ts = withEffectApplied(inputs, ts, newItem);
-                } else {
-                    ts = setHeldItem(inputs, ts, villagerIndex, i, newItem.unit());
-                }
-                ts = setJobBlockState(inputs, ts, position, AbstractWorkStatusStore.State.fresh());
-                getWorkStatuses(inputs).clearClaim(position);
-
-                if (stack.isEmpty()) {
-                    return ts;
-                }
-            }
+            return town;
             // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
         }
         return null;
@@ -344,7 +365,17 @@ public abstract class AbstractWorldInteraction<
         return itemWI.getWorkStatuses(extra).getJobBlockState(bp);
     }
 
-    protected void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
+    public void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.addItemInsertionListener(listener);
+    };
+    public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
+        this.itemWI.removeItemInsertionListener(listener);
+    };
+
+    public void addJobCompletionListener(Runnable listener) {
+        this.jobCompletedListeners.add(listener);
+    };
+    public void removeJobCompletionListener(Runnable listener) {
+        this.jobCompletedListeners.remove(listener);
     };
 }

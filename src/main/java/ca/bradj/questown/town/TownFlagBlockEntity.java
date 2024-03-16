@@ -16,6 +16,7 @@ import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.Loots;
@@ -151,7 +152,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        Player nearestPlayer = level.getNearestPlayer(blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
+        Player nearestPlayer = level.getNearestPlayer(
+                blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
         if (nearestPlayer == null) {
             QT.FLAG_LOGGER.error("No players detected in world");
             return;
@@ -220,14 +222,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.roomsHandle.tick(sl, blockEntityPos);
 
         long gameTime = level.getGameTime();
-        long l = gameTime % 10;
+        long l = gameTime % Config.FLAG_TICK_INTERVAL.get();
         if (l != 0) {
             return;
         }
 
         Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMeta();
-        e.jobHandle.tick(sl, allRooms);
-        e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms));
+        e.jobHandle.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get());
+        e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get()));
 
         e.asapRewards.tick();
 
@@ -419,9 +421,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                       .canDine(e.getUUID())) {
                     return;
                 }
-                t.changeJobForVisitor(
-                        e.getUUID(), DinerWork.getIdForRoot(e.getJobId()
-                                                             .rootId()));
+                String rid = e.getJobId()
+                              .rootId();
+                ResourceLocation diningRoom = DinerWork.asWork(rid)
+                                                       .baseRoom();
+                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
+                if (diningRooms.isEmpty()) {
+                    t.changeJobForVisitor(
+                            e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
+                } else {
+                    t.changeJobForVisitor(
+                            e.getUUID(), DinerWork.getIdForRoot(rid));
+                }
             });
             t.villagerHandle.addStatsListener(s -> t.setChanged());
             return true;
@@ -832,6 +843,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         //  job option.
 
         for (JobID p : preference) {
+            if (!JobsRegistry.canFit(this, uuid, p, Util.getTick(getServerLevel()))) {
+                QT.FLAG_LOGGER.debug("Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
+                continue;
+            }
+
             List<Ingredient> i = requestedResults.stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();

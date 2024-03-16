@@ -5,7 +5,7 @@ import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -18,7 +18,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -71,7 +70,7 @@ public class SpawnVisitorReward extends MCReward {
         }
         Vec3 vjp = entity.getVisitorJoinPos();
         ImmutableSnapshot<MCHeldItem, ?> initJournal = JobsRegistry.getNewJournal(
-                GathererUnmappedNoToolWork.ID,
+                GathererUnmappedNoToolWorkQtrDay.ID,
                 ProductionStatus.IDLE.name(),
                 ImmutableList.copyOf(
                         Collections.nCopies(6, MCHeldItem.Air())

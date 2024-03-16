@@ -11,6 +11,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,16 +41,17 @@ import java.util.stream.Collectors;
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
 
 /**
- * @deprecated Use DeclarativeJob
  * @param <STATUS>
  * @param <SNAPSHOT>
  * @param <JOURNAL>
+ * @deprecated Use DeclarativeJob
  */
 public abstract class ProductionJob<
         STATUS extends IProductionStatus<STATUS>,
         SNAPSHOT extends Snapshot<MCHeldItem>,
         JOURNAL extends Journal<STATUS, MCHeldItem, SNAPSHOT>
-        > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
+        > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener,
+        JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
 
     private final Marker marker;
 
@@ -71,6 +73,22 @@ public abstract class ProductionJob<
 
     public final ImmutableMap<STATUS, String> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
+
+    public BlockPos getJobSite(
+            TownInterface town
+    ) {
+        if (this.jobSite == null) {
+            ServerLevel sl = town.getServerLevel();
+            this.jobSite = findJobSite(
+                    town.getRoomHandle(),
+                    getWorkStatusHandle(town)::getJobBlockState,
+                    sl::isEmptyBlock,
+                    sl.getRandom()
+            );
+        }
+        return jobSite;
+    }
+
     private BlockPos jobSite;
 
     @Override
@@ -137,7 +155,8 @@ public abstract class ProductionJob<
 
     @Override
     public String getStatusToSyncToClient() {
-        return this.journal.getStatus().name();
+        return this.journal.getStatus()
+                           .name();
     }
 
     @Override
@@ -181,7 +200,8 @@ public abstract class ProductionJob<
         if (!isCloseTo(entityPos, successTarget.getBlockPos())) {
             return;
         }
-        if (!journal.getStatus().isDroppingLoot()) {
+        if (!journal.getStatus()
+                    .isDroppingLoot()) {
             return;
         }
         if (this.dropping) {
@@ -196,10 +216,11 @@ public abstract class ProductionJob<
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<Integer> first = statusMap.entrySet()
-                .stream()
-                .filter(v -> !v.getValue().isEmpty())
-                .map(Map.Entry::getKey)
-                .findFirst();
+                                           .stream()
+                                           .filter(v -> !v.getValue()
+                                                          .isEmpty())
+                                           .map(Map.Entry::getKey)
+                                           .findFirst();
 
         if (first.isEmpty()) {
             return ImmutableList.of();
@@ -221,15 +242,7 @@ public abstract class ProductionJob<
 
         STATUS status = journal.getStatus();
         if (status.isGoingToJobsite()) {
-            if (this.jobSite == null) {
-                this.jobSite = findJobSite(
-                        town.getRoomHandle(),
-                        getWorkStatusHandle(town)::getJobBlockState,
-                        sl::isEmptyBlock,
-                        sl.getRandom()
-                );
-            }
-            return jobSite;
+            return getJobSite(town);
         }
 
         if (status.isWorkingOnProduction()) {
@@ -239,14 +252,15 @@ public abstract class ProductionJob<
         if (status.isDroppingLoot()) {
             successTarget = Jobs.setupForDropLoot(town, this.successTarget);
             if (successTarget != null) {
-                return successTarget.getBlockPos();
+                return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
             }
         }
 
-        if (journal.getStatus().isCollectingSupplies()) {
+        if (journal.getStatus()
+                   .isCollectingSupplies()) {
             setupForGetSupplies(town);
             if (suppliesTarget != null) {
-                return suppliesTarget.getBlockPos();
+                return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
             }
         }
 
@@ -320,17 +334,11 @@ public abstract class ProductionJob<
                 journal.getItems(), item
         );
         if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(
-                    checkFn
-            )) {
-                this.suppliesTarget = town.findMatchingContainer(
-                        checkFn
-                );
+            if (!this.suppliesTarget.hasItem(checkFn)) {
+                this.suppliesTarget = town.findMatchingContainer(checkFn);
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(
-                    checkFn
-            );
+            this.suppliesTarget = town.findMatchingContainer(checkFn);
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
@@ -422,7 +430,8 @@ public abstract class ProductionJob<
         for (int i = 0; i < p_18983_.getContainerSize(); i++) {
             ItemStack item = p_18983_.getItem(i);
             MCHeldItem mcHeldItem = MCHeldItem.fromMCItemStack(item);
-            if (locks.get(i).get() == 1) {
+            if (locks.get(i)
+                     .get() == 1) {
                 mcHeldItem = mcHeldItem.locked();
             }
             b.add(mcHeldItem);
@@ -440,11 +449,19 @@ public abstract class ProductionJob<
             @Override
             public boolean hasNonSupplyItems() {
 
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet().stream().filter(
-                        v -> !v.getValue().isEmpty()
-                ).map(Map.Entry::getKey).collect(Collectors.toSet());
+                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet()
+                                                                          .stream()
+                                                                          .filter(
+                                                                                  v -> !v.getValue()
+                                                                                         .isEmpty()
+                                                                          )
+                                                                          .map(Map.Entry::getKey)
+                                                                          .collect(Collectors.toSet());
                 ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
-                        statesToFeed.stream().flatMap(v -> recipe.getRecipe(v).stream()).toList()
+                        statesToFeed.stream()
+                                    .flatMap(v -> recipe.getRecipe(v)
+                                                        .stream())
+                                    .toList()
                 );
                 return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
             }
@@ -454,6 +471,18 @@ public abstract class ProductionJob<
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };
+    }
+
+    @Override
+    public boolean canStopWorkingAtAnyTime() {
+        STATUS status = getStatus();
+        ImmutableList<Supplier<Boolean>> importantStauses = ImmutableList.of(
+                status::isExtractingProduct,
+                status::isWaitingForTimers
+        );
+        boolean mustKeepWorking = importantStauses.stream()
+                                                  .anyMatch(Supplier::get);
+        return !mustKeepWorking;
     }
 
     public interface TestFn<S, I> {

@@ -15,7 +15,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedShovelWork extends NewLeaverWork {
+public class GathererUnmappedShovelWorkFullDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
             GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
@@ -26,7 +26,7 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "shovel");
+    public static final JobID ID = new JobID("gatherer", "shovel_full_day");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_TOOL = 1;
@@ -52,15 +52,15 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedShovelWork() {
+    public GathererUnmappedShovelWorkFullDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedNoToolWork.ID,
-                Items.STONE_SHOVEL.getDefaultInstance(),
+                GathererUnmappedShovelWorkHalfDay.ID,
+                Items.GOLDEN_SHOVEL.getDefaultInstance(),
                 GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
                 Items.COBBLESTONE.getDefaultInstance(),
                 MAX_STATE,
@@ -69,10 +69,10 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
                 Util.constant(TOOLS_REQUIRED_AT_STATES),
                 Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE
+                        BLOCK_STATE_NEED_ROAM, () -> Config.GATHERER_TIME_REQUIRED_BASELINE.get() * 3
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedShovelWork::getFromLootTables
+                GathererUnmappedShovelWorkFullDay::getFromLootTables
         );
     }
 
@@ -84,8 +84,14 @@ public class GathererUnmappedShovelWork extends NewLeaverWork {
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
-        return Loots.getFromLootTables(level, items, new GathererTools.LootTableParameters(
-                GathererTools.SHOVEL_LOOT_TABLE_PREFIX, GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
-        ));
+
+        return Loots.getFromLootTables(
+                level,
+                items,
+                Config.GATHERER_FULL_DAY_LOOT_AMOUNT.get(),
+                new GathererTools.LootTableParameters(
+                        GathererTools.SHOVEL_LOOT_TABLE_PREFIX, GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
+                )
+        );
     }
 }

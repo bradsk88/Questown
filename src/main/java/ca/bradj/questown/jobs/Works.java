@@ -68,17 +68,26 @@ public class Works {
         b.put(CrafterPlanksWork.ID, CrafterPlanksWork::asWork);
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedAxeWork.ID, GathererUnmappedAxeWork::asWork);
-        b.put(GathererUnmappedHalfDayAxeWork.ID, GathererUnmappedHalfDayAxeWork::asWork);
-        b.put(GathererUnmappedFullDayAxeWork.ID, GathererUnmappedFullDayAxeWork::asWork);
-        b.put(GathererUnmappedPickaxeWork.ID, GathererUnmappedPickaxeWork::asWork);
-        b.put(GathererUnmappedNoToolWork.ID, GathererUnmappedNoToolWork::asWork);
-        b.put(GathererUnmappedShovelWork.ID, GathererUnmappedShovelWork::asWork);
-        b.put(GathererUnmappedRodQuarterDayWork.ID, GathererUnmappedRodQuarterDayWork::asWork);
+        b.put(GathererUnmappedAxeWorkQtrDay.ID, GathererUnmappedAxeWorkQtrDay::asWork);
+        b.put(GathererUnmappedAxeWorkHalfDay.ID, GathererUnmappedAxeWorkHalfDay::asWork);
+        b.put(GathererUnmappedAxeWorkFullDay.ID, GathererUnmappedAxeWorkFullDay::asWork);
+        b.put(GathererUnmappedPickaxeWorkQtrDay.ID, GathererUnmappedPickaxeWorkQtrDay::asWork);
+        b.put(GathererUnmappedPickaxeWorkHalfDay.ID, GathererUnmappedPickaxeWorkHalfDay::asWork);
+        b.put(GathererUnmappedPickaxeWorkFullDay.ID, GathererUnmappedPickaxeWorkFullDay::asWork);
+        b.put(GathererUnmappedNoToolWorkQtrDay.ID, GathererUnmappedNoToolWorkQtrDay::asWork);
+        b.put(GathererUnmappedNoToolWorkHalfDay.ID, GathererUnmappedNoToolWorkHalfDay::asWork);
+        b.put(GathererUnmappedNoToolWorkFullDay.ID, GathererUnmappedNoToolWorkFullDay::asWork);
+        b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
+        b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
+        b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);
+        b.put(GathererUnmappedRodWorkQtrDay.ID, GathererUnmappedRodWorkQtrDay::asWork);
+        b.put(GathererUnmappedRodWorkHalfDay.ID, GathererUnmappedRodWorkHalfDay::asWork);
+        b.put(GathererUnmappedRodWorkFullDay.ID, GathererUnmappedRodWorkFullDay::asWork);
         works = b.build();
 
         works.forEach((id, work) -> {
-            VillagerAdvancements.register(id, work.get().parentID());
+            VillagerAdvancements.register(id, work.get()
+                                                  .parentID());
         });
 
         initialized = true;
