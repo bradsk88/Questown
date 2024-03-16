@@ -60,7 +60,7 @@ Questown is a new mod that intends to add a quest-based component to village bui
     modId="roomrecipes"
     mandatory=true
     ordering="BEFORE"
-    versionRange="[1.19.2-0.0.5-alpha.1]"
+    versionRange="[1.19.2-0.0.5-alpha.2]"
     side="BOTH"
 [[dependencies.questown]]
     modId="jei"

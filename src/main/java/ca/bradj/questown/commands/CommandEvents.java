@@ -18,5 +18,6 @@ public class CommandEvents {
         FlagCommand.register(event.getDispatcher());
         DebugCommand.register(event.getDispatcher());
         DebugDoorsCommand.register(event.getDispatcher());
+        DebugAllDoorsCommand.register(event.getDispatcher());
     }
 }

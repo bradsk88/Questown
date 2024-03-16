@@ -6,7 +6,7 @@ import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
-import ca.bradj.questown.town.TownRoomsHandle;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -40,7 +40,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, TownRooms> activeFarms = new HashMap<>();
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
-    private @Nullable PendingTownRooms pendingRooms;
+    private @Nullable MultiLevelRoomDetector pendingRooms;
     private List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
 
@@ -190,27 +190,20 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                            QT.FLAG_LOGGER.debug("Door was de-registered due to not existing anymore");
                        });
 
-        ImmutableSet.Builder<Integer> scanLevels = ImmutableSet.builder();
         Map<Integer, Collection<Position>> doorsAtLevel = new HashMap<>();
 
-        registeredDoors.forEach(
-                dp -> {
-                    scanLevels.add(dp.scanLevel);
-                    Collection<Position> soFar = doorsAtLevel.get(dp.scanLevel);
-                    if (soFar == null) {
-                        soFar = new ArrayList<>();
-                    }
-                    soFar.add(dp.toPosition());
-                    doorsAtLevel.put(dp.scanLevel, soFar);
-                }
+        registeredDoors.forEach(dp ->
+                doorsAtLevel.computeIfAbsent(dp.scanLevel, k -> new ArrayList<>()).add(dp.toPosition())
         );
 
-        pendingRooms = new PendingTownRooms(
+        pendingRooms = new MultiLevelRoomDetector(
                 level, flagPos.getY(),
-                this::getOrCreateRooms,
-                scanLevels.build(),
+                p -> WallDetection.IsWall(level, p.toPosition(), flagPos.getY() + p.scanLevel),
+                p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
+                (scanLevel, rooms) -> getOrCreateRooms(scanLevel).update(rooms),
                 activeRecipes::get,
-                ImmutableMap.copyOf(doorsAtLevel)
+                ImmutableMap.copyOf(doorsAtLevel),
+                false
         );
 
         long start = System.currentTimeMillis();

@@ -1,8 +1,9 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
@@ -30,4 +31,6 @@ public interface RoomsHolder {
     boolean isDoorRegistered(BlockPos clickedPos);
 
     Optional<RoomRecipeMatch<MCRoom>> computeRecipe(MCRoom r);
+
+    ImmutableSet<TownPosition> getAllRegisteredDoors();
 }
