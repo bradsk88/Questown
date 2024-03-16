@@ -2,9 +2,7 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.ClientAccess;
-import ca.bradj.questown.gui.villager.advancements.VillagerAdvancementsScreen;
 import ca.bradj.questown.jobs.JobID;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;

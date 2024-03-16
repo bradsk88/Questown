@@ -1023,8 +1023,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean canStopWorkingAtAnyTime() {
-        // TODO: Is it really this simple?
-        return this.entityData.get(visible);
+        return job.canStopWorkingAtAnyTime();
     }
 
     public interface ChangeListener {

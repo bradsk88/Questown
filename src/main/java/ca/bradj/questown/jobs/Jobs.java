@@ -361,7 +361,7 @@ public class Jobs {
             }
             // TODO: Unit tests of this logic!
             if (mct.isLocked()) {
-                QT.JOB_LOGGER.trace("Villager is not putting away {} because it is locked", mct);
+                QT.JOB_LOGGER.trace("Villager is not putting away {} because it is locked", mct.toShortString());
                 continue;
             }
 
@@ -374,7 +374,7 @@ public class Jobs {
                 continue;
             }
 
-            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct, target.getBlockPos());
+            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct.toShortString(), target.getBlockPos());
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {
@@ -388,7 +388,7 @@ public class Jobs {
                 }
             }
             if (!added) {
-                QT.JOB_LOGGER.debug("Nope. No space for {}", mct);
+                QT.JOB_LOGGER.debug("Nope. No space for {}", mct.toShortString());
             }
         }
         return true;

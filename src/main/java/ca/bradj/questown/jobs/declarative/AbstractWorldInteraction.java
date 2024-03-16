@@ -250,7 +250,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             POS position
     ) {
-        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
+            AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);

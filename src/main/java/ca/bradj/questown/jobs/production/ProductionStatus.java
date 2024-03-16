@@ -117,7 +117,10 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return new ProductionStatus("state:" + s, s);
     }
 
-    private ProductionStatus(String name, int i) {
+    private ProductionStatus(
+            String name,
+            int i
+    ) {
         this.value = i;
         this.name = name;
     }
@@ -148,6 +151,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     }
 
     @Override
+    public boolean isWaitingForTimers() {
+        return WAITING_FOR_TIMED_STATE.equals(this);
+    }
+
+    @Override
     public boolean isDroppingLoot() {
         return DROPPING_LOOT.equals(this);
     }
@@ -174,12 +182,13 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
             return false;
         }
         return !ImmutableList.of(
-                GOING_TO_JOB,
-                DROPPING_LOOT,
-                COLLECTING_SUPPLIES,
-                EXTRACTING_PRODUCT,
-                WAITING_FOR_TIMED_STATE
-        ).contains(this);
+                                     GOING_TO_JOB,
+                                     DROPPING_LOOT,
+                                     COLLECTING_SUPPLIES,
+                                     EXTRACTING_PRODUCT,
+                                     WAITING_FOR_TIMED_STATE
+                             )
+                             .contains(this);
     }
 
     @Override

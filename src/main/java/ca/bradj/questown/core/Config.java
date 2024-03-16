@@ -68,6 +68,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
+    public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
 
     static {
         // Scanning Config
@@ -148,7 +149,7 @@ public class Config {
         ).defineInRange("SmelterWorkRequired", 10, 1, 10);
         GATHERER_TIME_REQUIRED_BASELINE = BUILDER.comment(
                 "The number of ticks the gatherer/explorer will spend outside of town collecting items. All villagers will start with this baseline, but it might get altered by villager or town modifiers."
-        ).defineInRange("GathererTimeRequiredBaseline", 200, 1, 24000);
+        ).defineInRange("GathererTimeRequiredBaselineV2", 2000, 1, 24000);
         JOB_BOARD_ENABLED = BUILDER.comment(
                 "Experimental: Villagers will choose work based on the items the player has selected at a \"job board\" registered in the town."
         ).define("JobBoardEnabled", true);
@@ -223,6 +224,9 @@ public class Config {
         BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
                 "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
         ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
+        FLAG_TICK_INTERVAL = BUILDER.comment(
+                "The number of game ticks that pass for every tick that the town flag does"
+        ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(

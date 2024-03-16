@@ -122,7 +122,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final HashSet<ROOM> rooms = new HashSet<>();
 
     private final HashMap<POS, State> jobStatuses = new HashMap<>();
-    private final HashMap<POS, Integer> timeJobStatuses = new HashMap<>();
+    private final HashMap<POS, Long> timeJobStatuses = new HashMap<>();
     private final HashMap<POS, Claim> claims = new HashMap<>();
 
     int curIdx = 0;
@@ -171,13 +171,13 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             int ticksToNextState
     ) {
         setJobBlockState(bp, bs);
-        Integer cur = this.timeJobStatuses.get(bp);
+        Long cur = this.timeJobStatuses.get(bp);
         if (cur != null && cur > 0) {
             QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
         }
 
         QT.BLOCK_LOGGER.debug("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
-        this.timeJobStatuses.put(bp, ticksToNextState);
+        this.timeJobStatuses.put(bp, (long) ticksToNextState);
         return true;
     }
 
@@ -190,7 +190,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     @Override
     public @Nullable Integer getTimeToNextState(POS bp) {
-        return timeJobStatuses.get(bp);
+        Long value = timeJobStatuses.get(bp);
+        return value == null ? null : Math.toIntExact(value);
     }
 
     public interface InsertionRules<ITEM> {
@@ -212,7 +213,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     public void tick(
             TICK_SOURCE tickSource,
-            Collection<ROOM> allRooms
+            Collection<ROOM> allRooms,
+            long ticksSinceLast
     ) {
         rooms.addAll(allRooms);
 
@@ -222,14 +224,15 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
         curIdx = (curIdx + 1) % rooms.size();
 
-        this.doTick(tickSource, (ROOM) rooms.toArray()[curIdx]);
+        this.doTick(tickSource, (ROOM) rooms.toArray()[curIdx], ticksSinceLast);
     }
 
     private void doTick(
             TICK_SOURCE tickSource,
-            ROOM o
+            ROOM o,
+            long ticksSinceLast
     ) {
-        timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(k, (kk, vv) -> vv == null ? null : vv - 1));
+        timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(k, (kk, vv) -> vv == null ? null : vv - ticksSinceLast));
         claims.forEach((k, v) -> claims.compute(k, (kk, vv) -> {
             if (vv == null) {
                 return null;
@@ -239,7 +242,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         ImmutableMap.copyOf(timeJobStatuses)
                 .entrySet()
                 .stream()
-                .filter((e) -> Integer.valueOf(0).equals(e.getValue()))
+                .filter((e) -> e.getValue() <= 0)
                 .forEach(
                         e -> {
                             QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());

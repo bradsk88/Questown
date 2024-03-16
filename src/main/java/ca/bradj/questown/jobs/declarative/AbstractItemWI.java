@@ -72,7 +72,7 @@ public abstract class AbstractItemWI<
 
         int i = -1;
         Collection<ITEM> heldItems = getHeldItems(extra, villagerIndex);
-        String invBefore = heldItems.toString();
+        String invBefore = String.format("[%s]", String.join(", ", heldItems.stream().map(v -> v.toShortString()).toList()));
         for (ITEM item : heldItems) {
             i++;
             if (item.isEmpty()) {
