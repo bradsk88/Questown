@@ -14,83 +14,98 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class PendingTownRooms {
     private final ServerLevel level;
-    private final Position scanAroundPos;
-    private final int y;
     private final Map<Position, Optional<MCRoom>> foundRooms = new HashMap<>();
-    private final LinkedBlockingQueue<MCRoom> roomsToScan = new LinkedBlockingQueue<>();
-    private final LevelRoomDetector roomDetector;
-    private final Supplier<ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> recipes;
-    private final TownRooms rooms;
+    private final LinkedBlockingQueue<RoomWithlevel> roomsToScan = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<DetectorWithLevel> roomDetectors = new LinkedBlockingQueue<>();
+    private final Function<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> recipes;
+    private final Function<Integer, TownRooms> rooms;
+    private final int flagY;
     private @Nullable Long trueStart;
 
+    private record DetectorWithLevel(
+            LevelRoomDetector detector,
+            Integer scanLevel
+    ) {
+    }
+
+    private record RoomWithlevel(
+            MCRoom room,
+            Integer scanLevel
+    ) {
+    }
+
     public PendingTownRooms(
-            ServerLevel level,
-            Position scanAroundPos,
-            TownRooms rooms,
-            Supplier<ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> getRecipes,
-            int y,
-            Set<Position> doorsAtLevel
+            ServerLevel level, int flagY,
+            Function<Integer, TownRooms> rooms,
+            Collection<Integer> scanLevels,
+            Function<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> getRecipes,
+            Map<Integer, Collection<Position>> doorsAtLevel
     ) {
         this.level = level;
-        this.scanAroundPos = scanAroundPos;
+        this.flagY = flagY;
         this.recipes = getRecipes;
-        this.y = y;
         this.rooms = rooms;
-        this.roomDetector = new LevelRoomDetector(
-                doorsAtLevel,
-                Config.MAX_ROOM_DIMENSION.get(),
-                Config.MAX_ROOM_SCAN_ITERATIONS.get(),
-                rooms::IsWall,
-                false,
-                null
-        );
+        scanLevels.forEach(yOffset -> this.roomDetectors.add(new DetectorWithLevel(
+                new LevelRoomDetector(
+                        doorsAtLevel.get(yOffset),
+                        Config.MAX_ROOM_DIMENSION.get(),
+                        Config.MAX_ROOM_SCAN_ITERATIONS.get(),
+                        p -> rooms.apply(yOffset)
+                                  .IsWall(p),
+                        false,
+                        null
+                ), yOffset)));
     }
 
     public boolean proceed() {
         if (this.trueStart == null) {
             this.trueStart = System.currentTimeMillis();
         }
-        if (roomDetector.isDone() && roomsToScan.isEmpty() && foundRooms.isEmpty()) {
+        if (roomDetectors.isEmpty() && roomsToScan.isEmpty() && foundRooms.isEmpty()) {
             return true;
         }
 
+        if (!roomDetectors.isEmpty()) {
+            DetectorWithLevel nextDetector = roomDetectors.remove();
+            @Nullable ImmutableMap<Position, Optional<Room>> result = nextDetector.detector.proceed();
+            if (result != null) {
+                ImmutableMap<Position, Optional<MCRoom>> build = handleNewRooms(result, nextDetector.scanLevel);
+                rooms.apply(nextDetector.scanLevel)
+                     .update(build);
+            } else {
+                roomDetectors.add(nextDetector);
+            }
+        }
+
         if (!roomsToScan.isEmpty()) {
-            long start = System.currentTimeMillis();
-            MCRoom room = roomsToScan.remove();
+            RoomWithlevel room = roomsToScan.remove();
             Optional<RoomRecipeMatch<MCRoom>> recipe = RecipeDetection.getActiveRecipe(
                     level,
-                    room,
-                    rooms
+                    room.room,
+                    rooms.apply(room.scanLevel)
             );
-            ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> rs = recipes.get();
+            ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> rs = recipes.apply(room.scanLevel);
             rs.update(
-                    room,
-                    room,
+                    room.room,
+                    room.room,
                     recipe.orElse(null)
             );
             return false;
         }
 
-        @Nullable ImmutableMap<Position, Optional<Room>> result = roomDetector.proceed();
-        if (result != null) {
-            ImmutableMap<Position, Optional<MCRoom>> build = handleNewRooms(result);
-            rooms.update(build);
-        }
         return false;
     }
 
     @NotNull
     private ImmutableMap<Position, Optional<MCRoom>> handleNewRooms(
-            @NotNull ImmutableMap<Position, Optional<Room>> result
+            @NotNull ImmutableMap<Position, Optional<Room>> result, int scanLevel
     ) {
         ImmutableMap.Builder<Position, Optional<MCRoom>> b = ImmutableMap.builder();
         result.forEach((k, v) -> {
@@ -98,7 +113,7 @@ public class PendingTownRooms {
                 MCRoom mcRoom = new MCRoom(
                         z.getDoorPos(),
                         z.getSpaces(),
-                        y
+                        flagY + scanLevel
                 );
                 return mcRoom;
             });
@@ -106,7 +121,7 @@ public class PendingTownRooms {
                     k,
                     value
             );
-            value.ifPresent(roomsToScan::add);
+            value.ifPresent(r -> roomsToScan.add(new RoomWithlevel(r, scanLevel)));
         });
         ImmutableMap<Position, Optional<MCRoom>> build = b.build();
         return build;

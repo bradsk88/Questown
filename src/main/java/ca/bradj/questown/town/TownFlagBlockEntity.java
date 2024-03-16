@@ -143,7 +143,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public static void tick(
             Level level,
-            BlockPos blockPos,
+            BlockPos blockEntityPos,
             BlockState state,
             TownFlagBlockEntity e
     ) {
@@ -151,7 +151,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        Player nearestPlayer = level.getNearestPlayer(blockPos.getX(), blockPos.getY(), blockPos.getZ(), -1, null);
+        Player nearestPlayer = level.getNearestPlayer(blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
         if (nearestPlayer == null) {
             QT.FLAG_LOGGER.error("No players detected in world");
             return;
@@ -162,7 +162,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             if (!stopped) {
                 QT.FLAG_LOGGER.info(
                         "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
-                        blockPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
+                        blockEntityPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
                 );
             }
             stopped = true;
@@ -207,17 +207,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             e.state.putStateOnTile(tag, e.uuid);
             e.writeTownData(tag);
             e.changed = false;
-            setChanged(level, blockPos, state);
+            setChanged(level, blockEntityPos, state);
         }
 
         e.workHandle.tick(sl);
         e.quests.tick(e);
 
         if (e.nearbyBiomes.isEmpty()) {
-            computeNearbyBiomes(level, blockPos, e);
+            computeNearbyBiomes(level, blockEntityPos, e);
         }
 
-        e.roomsHandle.tick(sl, blockPos);
+        e.roomsHandle.tick(sl, blockEntityPos);
 
         long gameTime = level.getGameTime();
         long l = gameTime % 10;
@@ -231,7 +231,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.asapRewards.tick();
 
-        e.pois.tick(sl, blockPos);
+        e.pois.tick(sl, blockEntityPos);
 
         e.villagerHandle.tick(Util.getTick(sl));
 
@@ -341,7 +341,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     private static void loadNextTick(Queue<Function<TownFlagBlockEntity, Boolean>> initializers) {
-        // TODO: Store active rooms? (Cost to re-compute is low, I think)
+        // TODO: Store active rooms. Otherwise they get re-announced on each startup.
         initializers.add(t -> {
             CompoundTag tag = Util.getBlockStoredTagData(t);
             if (tag.contains(NBT_ROOMS)) {
@@ -1259,6 +1259,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void startDebugTask(Supplier<Boolean> debugTask) {
+        if (!this.debugMode) {
+            broadcastMessage("First you must enabled debug mode on the flag via the /qtdebug <POS> command");
+            return;
+        }
         this.debugTask = debugTask;
     }
 

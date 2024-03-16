@@ -25,6 +25,8 @@ public interface RoomsHolder {
 
     Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos);
 
+    Supplier<Boolean> getDebugTaskForAllDoors();
+
     boolean isDoorRegistered(BlockPos clickedPos);
 
     Optional<RoomRecipeMatch<MCRoom>> computeRecipe(MCRoom r);
