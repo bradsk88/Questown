@@ -15,22 +15,23 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedNoToolWork extends NewLeaverWork {
+public class GathererUnmappedShovelWorkFullDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
-            GathererTools.NO_TOOL_TABLE_PREFIX,
-            GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
+            GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
+            GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
     );
 
     static {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "gather");
+    public static final JobID ID = new JobID("gatherer", "shovel_full_day");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_ROAM = 1;
-    public static final int BLOCK_STATE_DONE = 2;
+    public static final int BLOCK_STATE_NEED_TOOL = 1;
+    public static final int BLOCK_STATE_NEED_ROAM = 2;
+    public static final int BLOCK_STATE_DONE = 3;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -41,6 +42,7 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.SHOVELS)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -50,40 +52,46 @@ public class GathererUnmappedNoToolWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedNoToolWork() {
+    public GathererUnmappedShovelWorkFullDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                null,
-                Items.LEATHER_BOOTS.getDefaultInstance(),
-                GathererTools.NO_TOOL_TABLE_PREFIX,
-                Items.WHEAT_SEEDS.getDefaultInstance(),
+                GathererUnmappedShovelWorkHalfDay.ID,
+                Items.GOLDEN_SHOVEL.getDefaultInstance(),
+                GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
+                Items.COBBLESTONE.getDefaultInstance(),
                 MAX_STATE,
                 Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
                 Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
                 Util.constant(TOOLS_REQUIRED_AT_STATES),
                 Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE::get
+                        BLOCK_STATE_NEED_ROAM, () -> Config.GATHERER_TIME_REQUIRED_BASELINE.get() * 3
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedNoToolWork::getFromLootTables
+                GathererUnmappedShovelWorkFullDay::getFromLootTables
         );
     }
 
     // Note: this is still declarative. In a file, we would just specify something like:
     // - Strategy: "loot_tables"
-    // - Prefix: "jobs/notool"
-    // - Default "jobs/notool/default"
+    // - Prefix: "jobs/shovel"
+    // - Default "jobs/shovel/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
-        return Loots.getFromLootTables(level, items, new GathererTools.LootTableParameters(
-                GathererTools.NO_TOOL_TABLE_PREFIX, GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
-        ));
+
+        return Loots.getFromLootTables(
+                level,
+                items,
+                Config.GATHERER_FULL_DAY_LOOT_AMOUNT.get(),
+                new GathererTools.LootTableParameters(
+                        GathererTools.SHOVEL_LOOT_TABLE_PREFIX, GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
+                )
+        );
     }
 }

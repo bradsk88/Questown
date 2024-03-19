@@ -109,7 +109,7 @@ public class JobsRegistry {
         }
         if (parts.length == 1) {
             return switch (parts[0]) {
-                case "gatherer" -> GathererUnmappedNoToolWork.ID;
+                case "gatherer" -> GathererUnmappedNoToolWorkQtrDay.ID;
                 case "baker" -> BakerBreadWork.ID;
                 case "smelter" -> SmelterJob.ID;
                 default -> throw new IllegalArgumentException("Unknown single-part job ID: " + parts[0]);
@@ -235,16 +235,16 @@ public class JobsRegistry {
                     ImmutableList.of(SmelterJob.ID),
                     ImmutableList.of(SmelterJob.ID)
             ),
-            GathererUnmappedNoToolWork.ID.rootId(), new Jerb(
+            GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
                     ImmutableList.of(
                             ExplorerWork.ID,
-                            GathererUnmappedNoToolWork.ID,
-                            GathererUnmappedPickaxeWork.ID,
-                            GathererUnmappedShovelWork.ID,
-                            GathererUnmappedAxeWork.ID,
+                            GathererUnmappedNoToolWorkQtrDay.ID,
+                            GathererUnmappedPickaxeWorkQtrDay.ID,
+                            GathererUnmappedShovelWorkQtrDay.ID,
+                            GathererUnmappedAxeWorkQtrDay.ID,
                             GathererMappedAxeWork.ID
                     ),
-                    ImmutableList.of(GathererUnmappedNoToolWork.ID)
+                    ImmutableList.of(GathererUnmappedNoToolWorkQtrDay.ID)
             ),
             BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
                     ImmutableList.of(BlacksmithWoodenPickaxeJob.ID),
@@ -296,7 +296,7 @@ public class JobsRegistry {
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-            j = Works.get(GathererUnmappedNoToolWork.ID).get().jobFunc().apply(town, ownerUUID);
+            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(town, ownerUUID);
         } else {
             Work work = fn.get();
             j = work.jobFunc().apply(town, ownerUUID);
@@ -349,7 +349,7 @@ public class JobsRegistry {
         Supplier<Work> f = Works.get(job);
         if (f == null) {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);
-            f = Works.get(GathererUnmappedNoToolWork.ID);
+            f = Works.get(GathererUnmappedNoToolWorkQtrDay.ID);
         }
         return f.get().snapshotFunc().apply(job, status, heldItems);
     }

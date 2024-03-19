@@ -9,25 +9,24 @@ import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedRodQuarterDayWork extends NewLeaverWork {
+public class GathererUnmappedShovelWorkQtrDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
-            GathererTools.FISHING_LOOT_TABLE_PREFIX,
-            GathererTools.FISHING_LOOT_TABLE_DEFAULT
+            GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
+            GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
     );
 
     static {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "rod_quarter_day");
+    public static final JobID ID = new JobID("gatherer", "shovel");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_TOOL = 1;
@@ -43,7 +42,7 @@ public class GathererUnmappedRodQuarterDayWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.FISHING_RODS)
+            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.SHOVELS)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -53,17 +52,17 @@ public class GathererUnmappedRodQuarterDayWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedRodQuarterDayWork() {
+    public GathererUnmappedShovelWorkQtrDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedNoToolWork.ID, // Parent
-                Items.FISHING_ROD.getDefaultInstance(),
-                GathererTools.FISHING_LOOT_TABLE_PREFIX,
-                Items.COD.getDefaultInstance(),
+                GathererUnmappedNoToolWorkQtrDay.ID,
+                Items.STONE_SHOVEL.getDefaultInstance(),
+                GathererTools.SHOVEL_LOOT_TABLE_PREFIX,
+                Items.COBBLESTONE.getDefaultInstance(),
                 MAX_STATE,
                 Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
                 Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
@@ -73,18 +72,26 @@ public class GathererUnmappedRodQuarterDayWork extends NewLeaverWork {
                         BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE::get
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedRodQuarterDayWork::getFromLootTables
+                GathererUnmappedShovelWorkQtrDay::getFromLootTables
         );
     }
 
     // Note: this is still declarative. In a file, we would just specify something like:
     // - Strategy: "loot_tables"
-    // - Prefix: "jobs/axe"
-    // - Default "jobs/axe/default"
+    // - Prefix: "jobs/shovel"
+    // - Default "jobs/shovel/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
-        return Loots.getFromKnownTable(level, 1, 1, PARAMS, Loots.fallbackBiome, new ResourceLocation("gameplay/fishing"));
+
+        return Loots.getFromLootTables(
+                level,
+                items,
+                Config.GATHERER_QUARTER_DAY_LOOT_AMOUNT.get(),
+                new GathererTools.LootTableParameters(
+                        GathererTools.SHOVEL_LOOT_TABLE_PREFIX, GathererTools.SHOVEL_LOOT_TABLE_DEFAULT
+                )
+        );
     }
 }

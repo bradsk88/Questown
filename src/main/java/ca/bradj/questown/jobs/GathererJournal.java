@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -263,7 +263,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
 
     // TODO: Create read-only class
     public Snapshot<H> getSnapshot(EmptyFactory<H> ef) {
-        return new Snapshot<>(GathererUnmappedNoToolWork.ID, status, ImmutableList.copyOf(inventory));
+        return new Snapshot<>(GathererUnmappedNoToolWorkQtrDay.ID, status, ImmutableList.copyOf(inventory));
     }
 
     public void initialize(Snapshot<H> journal) {
@@ -513,7 +513,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
                 Status newStatus,
                 ImmutableList<H> outImItems
         ) {
-            this(GathererUnmappedNoToolWork.ID, newStatus, outImItems);
+            this(GathererUnmappedNoToolWorkQtrDay.ID, newStatus, outImItems);
         }
 
         public Snapshot<H> eatFoodFromInventory(

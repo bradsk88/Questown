@@ -15,23 +15,22 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 
-public class GathererUnmappedHalfDayAxeWork extends NewLeaverWork {
+public class GathererUnmappedNoToolWorkQtrDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
-            GathererTools.AXE_LOOT_TABLE_PREFIX,
-            GathererTools.AXE_LOOT_TABLE_DEFAULT
+            GathererTools.NO_TOOL_TABLE_PREFIX,
+            GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
     );
 
     static {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "axe_half_day");
+    public static final JobID ID = new JobID("gatherer", "gather");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_TOOL = 1;
-    public static final int BLOCK_STATE_NEED_ROAM = 2;
-    public static final int BLOCK_STATE_DONE = 3;
+    public static final int BLOCK_STATE_NEED_ROAM = 1;
+    public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -39,10 +38,9 @@ public class GathererUnmappedHalfDayAxeWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_FOOD, 2
+            BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -52,44 +50,45 @@ public class GathererUnmappedHalfDayAxeWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererUnmappedHalfDayAxeWork() {
+    public GathererUnmappedNoToolWorkQtrDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedAxeWork.ID, // Parent
-                Items.IRON_AXE.getDefaultInstance(),
-                GathererTools.AXE_LOOT_TABLE_PREFIX,
-                Items.OAK_WOOD.getDefaultInstance(),
+                null,
+                Items.LEATHER_BOOTS.getDefaultInstance(),
+                GathererTools.NO_TOOL_TABLE_PREFIX,
+                Items.WHEAT_SEEDS.getDefaultInstance(),
                 MAX_STATE,
                 Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
                 Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
                 Util.constant(TOOLS_REQUIRED_AT_STATES),
                 Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, () -> Config.GATHERER_TIME_REQUIRED_BASELINE.get() * 2
+                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE::get
                 ),
                 SPECIAL_RULES,
-                GathererUnmappedHalfDayAxeWork::getFromLootTables
+                GathererUnmappedNoToolWorkQtrDay::getFromLootTables
         );
     }
 
     // Note: this is still declarative. In a file, we would just specify something like:
     // - Strategy: "loot_tables"
-    // - Prefix: "jobs/axe"
-    // - Default "jobs/axe/default"
+    // - Prefix: "jobs/notool"
+    // - Default "jobs/notool/default"
     private static Iterable<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
+
         return Loots.getFromLootTables(
                 level,
                 items,
-                3,
+                Config.GATHERER_QUARTER_DAY_LOOT_AMOUNT.get(),
                 new GathererTools.LootTableParameters(
-                        GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
+                        GathererTools.NO_TOOL_TABLE_PREFIX, GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
                 )
         );
     }

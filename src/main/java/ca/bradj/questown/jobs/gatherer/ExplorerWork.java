@@ -117,7 +117,7 @@ public class ExplorerWork {
         return WorksBehaviour.productionWork(
                 ItemsInit.GATHERER_MAP.get().getDefaultInstance(),
                 ID,
-                GathererUnmappedNoToolWork.ID,
+                GathererUnmappedNoToolWorkQtrDay.ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
                         block -> block instanceof WelcomeMatBlock,

@@ -12,7 +12,7 @@ import ca.bradj.questown.gui.VillagerStatsMenu;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWork;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -287,7 +287,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // TODO: Make this abstract or injectable
     @NotNull
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
-        return Works.get(GathererUnmappedNoToolWork.ID).get().jobFunc().apply(town, uuid);
+        return Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(town, uuid);
     }
 
     /**
@@ -928,7 +928,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean canAcceptJob() {
-        return GathererUnmappedNoToolWork.ID.rootId().equals(job.getId().rootId());
+        return GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(job.getId().rootId());
     }
 
     public void addChangeListener(ChangeListener cl) {

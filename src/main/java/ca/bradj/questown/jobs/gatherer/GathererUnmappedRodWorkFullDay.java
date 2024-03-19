@@ -2,9 +2,7 @@ package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.Work;
@@ -15,28 +13,26 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
-public class GathererMappedAxeWork extends NewLeaverWork {
+public class GathererUnmappedRodWorkFullDay extends NewLeaverWork {
 
     private static final GathererTools.LootTableParameters PARAMS = new GathererTools.LootTableParameters(
-            GathererTools.AXE_LOOT_TABLE_PREFIX,
-            GathererTools.AXE_LOOT_TABLE_DEFAULT
+            GathererTools.FISHING_LOOT_TABLE_PREFIX,
+            GathererTools.FISHING_LOOT_TABLE_DEFAULT
     );
 
     static {
         allParameters.add(PARAMS);
     }
 
-    public static final JobID ID = new JobID("gatherer", "axe_mapped");
+    public static final JobID ID = new JobID("gatherer", "rod_full_day");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_MAP = 1;
-    public static final int BLOCK_STATE_NEED_TOOL = 2;
-    public static final int BLOCK_STATE_NEED_ROAM = 3;
-    public static final int BLOCK_STATE_DONE = 4;
+    public static final int BLOCK_STATE_NEED_TOOL = 1;
+    public static final int BLOCK_STATE_NEED_ROAM = 2;
+    public static final int BLOCK_STATE_DONE = 3;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -47,8 +43,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
             BLOCK_STATE_NEED_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_MAP, Ingredient.of(ItemsInit.GATHERER_MAP.get()),
-            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.AXES)
+            BLOCK_STATE_NEED_TOOL, Ingredient.of(TagsInit.Items.FISHING_RODS)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -58,28 +53,27 @@ public class GathererMappedAxeWork extends NewLeaverWork {
             ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
     );
 
-    public GathererMappedAxeWork(
-    ) {
+    public GathererUnmappedRodWorkFullDay() {
         super(PARAMS);
     }
 
     public static Work asWork() {
         return NewLeaverWork.asWork(
                 ID,
-                GathererUnmappedAxeWorkFullDay.ID,
-                Items.DIAMOND_AXE.getDefaultInstance(),
-                GathererTools.AXE_LOOT_TABLE_PREFIX,
-                Items.OAK_WOOD.getDefaultInstance(),
+                GathererUnmappedRodWorkHalfDay.ID, // Parent
+                Items.SALMON.getDefaultInstance(),
+                GathererTools.FISHING_LOOT_TABLE_PREFIX,
+                Items.COD.getDefaultInstance(),
                 MAX_STATE,
                 Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
                 Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
                 Util.constant(TOOLS_REQUIRED_AT_STATES),
                 Util.constant(WORK_REQUIRED_AT_STATES),
                 ImmutableMap.of(
-                        BLOCK_STATE_NEED_ROAM, Config.GATHERER_TIME_REQUIRED_BASELINE::get
+                        BLOCK_STATE_NEED_ROAM, () -> Config.GATHERER_TIME_REQUIRED_BASELINE.get() * 3
                 ),
                 SPECIAL_RULES,
-                GathererMappedAxeWork::getFromLootTables
+                GathererUnmappedRodWorkFullDay::getFromLootTables
         );
     }
 
@@ -91,14 +85,7 @@ public class GathererMappedAxeWork extends NewLeaverWork {
             ServerLevel level,
             Collection<MCHeldItem> items
     ) {
-        @Nullable ResourceLocation biome = GathererMap.computeBiome(items);
-        if (biome == null) {
-            return Loots.getFromLootTables(level, items, new GathererTools.LootTableParameters(
-                    GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
-            ));
-        }
-        return Loots.getFromLootTables(level, items.size(), new GathererTools.LootTableParameters(
-                GathererTools.AXE_LOOT_TABLE_PREFIX, GathererTools.AXE_LOOT_TABLE_DEFAULT
-        ), biome);
+        int amount = Config.GATHERER_FULL_DAY_LOOT_AMOUNT.get();
+        return Loots.getFromKnownTable(level, amount, amount, PARAMS, Loots.fallbackBiome, new ResourceLocation("gameplay/fishing"));
     }
 }
