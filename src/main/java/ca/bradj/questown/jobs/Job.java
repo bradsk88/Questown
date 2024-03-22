@@ -80,4 +80,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener);
     Function<Void, Void> addJobCompletionListener(Runnable listener);
+
+    long getTotalDuration();
 }

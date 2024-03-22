@@ -204,6 +204,22 @@ public class JobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID);
     }
 
+    public static boolean canFit(
+            TownInterface town,
+            UUID villagerID,
+            JobID p,
+            long currentTick
+    ) {
+        Work w = Works.get(p).get();
+        long finalTick = currentTick + w.jobFunc().apply(town, villagerID).getTotalDuration();
+        return ImmutableList.of(
+                Signals.MORNING,
+                Signals.NOON
+        ).contains(
+                Signals.fromGameTime(finalTick)
+        );
+    }
+
     private record Jerb(
             ImmutableList<JobID> preferredWork,
             ImmutableList<JobID> defaultWork

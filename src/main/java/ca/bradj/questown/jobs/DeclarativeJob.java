@@ -119,6 +119,7 @@ public class DeclarativeJob extends
     private final @NotNull Integer maxState;
     private final JobID jobId;
     private final ExpirationRules expiration;
+    private final long totalDuration;
     private Signals signal;
     private @Nullable WorkSpot<Integer, BlockPos> workSpot;
 
@@ -192,6 +193,7 @@ public class DeclarativeJob extends
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.expiration = expiration;
+        this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
     }
 
     @NotNull
@@ -802,5 +804,10 @@ public class DeclarativeJob extends
             this.world.removeJobCompletionListener(listener);
             return null;
         };
+    }
+
+    @Override
+    public long getTotalDuration() {
+        return totalDuration;
     }
 }

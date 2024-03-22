@@ -147,6 +147,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public long getTotalDuration() {
+        return 0;
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }

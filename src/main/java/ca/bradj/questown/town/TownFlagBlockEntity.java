@@ -843,6 +843,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         //  job option.
 
         for (JobID p : preference) {
+            if (!JobsRegistry.canFit(this, uuid, p, Util.getTick(getServerLevel()))) {
+                QT.FLAG_LOGGER.debug("Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
+                continue;
+            }
+
             List<Ingredient> i = requestedResults.stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();
