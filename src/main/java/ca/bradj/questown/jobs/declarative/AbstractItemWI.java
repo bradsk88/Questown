@@ -6,7 +6,6 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -29,7 +28,6 @@ public abstract class AbstractItemWI<
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
-    private final List<ITEM> insertedItems = new ArrayList<>();
 
     public AbstractItemWI(
             int villagerIndex,
@@ -60,7 +58,8 @@ public abstract class AbstractItemWI<
             if (initWork == null) {
                 initWork = 0;
             }
-            state = AbstractWorkStatusStore.State.fresh().setWorkLeft(initWork);
+            state = AbstractWorkStatusStore.State.fresh()
+                                                 .setWorkLeft(initWork);
         }
 
         if (state.processingState() != curState) {
@@ -74,7 +73,10 @@ public abstract class AbstractItemWI<
 
         int i = -1;
         Collection<ITEM> heldItems = getHeldItems(extra, villagerIndex);
-        String invBefore = String.format("[%s]", String.join(", ", heldItems.stream().map(v -> v.toShortString()).toList()));
+        String invBefore = String.format(
+                "[%s]", String.join(", ", heldItems.stream()
+                                                   .map(v -> v.toShortString())
+                                                   .toList()));
         for (ITEM item : heldItems) {
             i++;
             if (item.isEmpty()) {
@@ -114,9 +116,18 @@ public abstract class AbstractItemWI<
         return null;
     }
 
-    protected abstract TOWN setHeldItem(EXTRA uxtra, TOWN tuwn, int villagerIndex, int itemIndex, ITEM item);
+    protected abstract TOWN setHeldItem(
+            EXTRA uxtra,
+            TOWN tuwn,
+            int villagerIndex,
+            int itemIndex,
+            ITEM item
+    );
 
-    protected abstract Collection<ITEM> getHeldItems(EXTRA extra, int villagerIndex);
+    protected abstract Collection<ITEM> getHeldItems(
+            EXTRA extra,
+            int villagerIndex
+    );
 
     private @Nullable TOWN tryInsertItem(
             EXTRA extra,
@@ -131,11 +142,13 @@ public abstract class AbstractItemWI<
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
         boolean canDo = false;
-        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);
+        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates()
+                                                  .get(curValue);
         if (ingredient != null) {
             canDo = ingredient.apply(item);
         }
-        Integer qtyRequired = rules.ingredientQuantityRequiredAtStates().getOrDefault(curValue, 0);
+        Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
+                                   .getOrDefault(curValue, 0);
         if (qtyRequired == null) {
             qtyRequired = 0;
         }
@@ -151,17 +164,26 @@ public abstract class AbstractItemWI<
         int count = curCount + 1;
         boolean shrink = canDo && count <= qtyRequired;
 
-        TOWN updatedTown = maybeUpdateBlockState(oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
+        TOWN updatedTown = maybeUpdateBlockState(
+                oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
 
         if (shrink) {
-            this.insertedItems.add(item);
             return shrinkItem.apply(extra, updatedTown);
         }
         return updatedTown;
     }
 
     @Nullable
-    private static <POS, TOWN> TOWN maybeUpdateBlockState(AbstractWorkStatusStore.State oldState, POS bp, Integer workInNextStep, Integer timeInNextStep, boolean canDo, int count, Integer qtyRequired, ImmutableWorkStateContainer<POS, TOWN> ws) {
+    private static <POS, TOWN> TOWN maybeUpdateBlockState(
+            AbstractWorkStatusStore.State oldState,
+            POS bp,
+            Integer workInNextStep,
+            Integer timeInNextStep,
+            boolean canDo,
+            int count,
+            Integer qtyRequired,
+            ImmutableWorkStateContainer<POS, TOWN> ws
+    ) {
         if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
             AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             return ws.setJobBlockState(bp, blockState);
@@ -170,7 +192,9 @@ public abstract class AbstractItemWI<
         if (canDo && count <= qtyRequired) {
             AbstractWorkStatusStore.State blockState = oldState.setCount(count);
             if (count == qtyRequired) {
-                blockState = blockState.setWorkLeft(workInNextStep).setCount(0).setProcessing(oldState.processingState() + 1);
+                blockState = blockState.setWorkLeft(workInNextStep)
+                                       .setCount(0)
+                                       .setProcessing(oldState.processingState() + 1);
             }
             if (count == qtyRequired && timeInNextStep > 0) {
                 return ws.setJobBlockStateWithTimer(bp, blockState, timeInNextStep);
@@ -182,7 +206,7 @@ public abstract class AbstractItemWI<
     }
 
 
-    protected abstract ImmutableWorkStateContainer<POS,TOWN> getWorkStatuses(EXTRA extra);
+    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
 
     protected abstract boolean canInsertItem(
             EXTRA extra,
@@ -204,16 +228,7 @@ public abstract class AbstractItemWI<
         this.itemInsertedListener.add(listener);
     }
 
-    public TOWN tryGrabbingInsertedSupplies(
-            EXTRA mcExtra,
-            POS workBlockPos
-    ) {
-        return tryGiveItems(mcExtra, this.insertedItems, workBlockPos);
+    public void removeItemInsertionListener(TriConsumer<EXTRA, POS, ITEM> listener) {
+        this.itemInsertedListener.remove(listener);
     }
-
-    protected abstract TOWN tryGiveItems(
-            EXTRA mcExtra,
-            Iterable<ITEM> itemsGivenSource,
-            POS itemsSourcePos
-    );
 }

@@ -71,6 +71,22 @@ public abstract class ProductionJob<
 
     public final ImmutableMap<STATUS, String> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
+
+    public BlockPos getJobSite(
+            TownInterface town
+    ) {
+        if (this.jobSite == null) {
+            ServerLevel sl = town.getServerLevel();
+            this.jobSite = findJobSite(
+                    town.getRoomHandle(),
+                    getWorkStatusHandle(town)::getJobBlockState,
+                    sl::isEmptyBlock,
+                    sl.getRandom()
+            );
+        }
+        return jobSite;
+    }
+
     private BlockPos jobSite;
 
     @Override
@@ -224,15 +240,7 @@ public abstract class ProductionJob<
 
         STATUS status = journal.getStatus();
         if (status.isGoingToJobsite()) {
-            if (this.jobSite == null) {
-                this.jobSite = findJobSite(
-                        town.getRoomHandle(),
-                        getWorkStatusHandle(town)::getJobBlockState,
-                        sl::isEmptyBlock,
-                        sl.getRandom()
-                );
-            }
-            return jobSite;
+            return getJobSite(town);
         }
 
         if (status.isWorkingOnProduction()) {

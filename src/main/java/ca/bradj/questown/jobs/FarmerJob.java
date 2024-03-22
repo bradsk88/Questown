@@ -48,6 +48,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -133,6 +134,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @Override
     public boolean canStopWorkingAtAnyTime() {
         return true;
+    }
+
+    @Override
+    public Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener) {
+        return (x) -> null;
+    }
+
+    @Override
+    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+        return (x) -> null;
     }
 
     @Override

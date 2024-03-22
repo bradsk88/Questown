@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
@@ -76,4 +77,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     boolean shouldStandStill();
 
     boolean canStopWorkingAtAnyTime();
+
+    Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener);
+    Function<Void, Void> addJobCompletionListener(Runnable listener);
 }

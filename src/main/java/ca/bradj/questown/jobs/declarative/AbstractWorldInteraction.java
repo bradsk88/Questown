@@ -12,9 +12,7 @@ import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -28,6 +26,8 @@ public abstract class AbstractWorldInteraction<
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
+
+    private final List<Runnable> jobCompletedListeners = new ArrayList<>();
 
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -100,15 +100,6 @@ public abstract class AbstractWorldInteraction<
                     POS bp
             ) {
                 return self.canInsertItem(extra, item, bp);
-            }
-
-            @Override
-            protected TOWN tryGiveItems(
-                    EXTRA mcExtra,
-                    Iterable<HELD_ITEM> itemsGivenSource,
-                    POS itemsSourcePos
-            ) {
-                return self.tryGiveItems(mcExtra, itemsGivenSource, itemsSourcePos);
             }
         };
 
@@ -317,7 +308,11 @@ public abstract class AbstractWorldInteraction<
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
             Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
-            return tryGiveItems(inputs, generatedResult, position);
+            TOWN town = tryGiveItems(inputs, generatedResult, position);
+            if (town != null) {
+                jobCompletedListeners.forEach(Runnable::run);
+            }
+            return town;
             // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
         }
         return null;
@@ -370,11 +365,17 @@ public abstract class AbstractWorldInteraction<
         return itemWI.getWorkStatuses(extra).getJobBlockState(bp);
     }
 
-    protected void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
+    public void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.addItemInsertionListener(listener);
     };
+    public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
+        this.itemWI.removeItemInsertionListener(listener);
+    };
 
-    protected TOWN tryGrabbingInsertedSupplies(EXTRA mcExtra, POS workBlockPos) {
-        return this.itemWI.tryGrabbingInsertedSupplies(mcExtra, workBlockPos);
-    }
+    public void addJobCompletionListener(Runnable listener) {
+        this.jobCompletedListeners.add(listener);
+    };
+    public void removeJobCompletionListener(Runnable listener) {
+        this.jobCompletedListeners.remove(listener);
+    };
 }

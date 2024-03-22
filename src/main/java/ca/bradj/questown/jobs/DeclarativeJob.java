@@ -40,14 +40,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends
@@ -274,7 +272,7 @@ public class DeclarativeJob extends
     ) {
         VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
         if (this.grabbingInsertedSupplies) {
-            if (world.tryGrabbingInsertedSupplies(town, work, vmEntity, workSpot)) {
+            if (world.tryGrabbingInsertedSupplies(town, work, vmEntity)) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
             }
@@ -282,11 +280,7 @@ public class DeclarativeJob extends
         }
 
         if (this.grabbedInsertedSupplies) {
-            if (!hasAnyLootToDrop()) {
-                town.getVillagerHandle()
-                    .changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
-                return;
-            }
+            seekFallbackWork(town);
             return;
         }
 
@@ -383,7 +377,7 @@ public class DeclarativeJob extends
         }
 
         if (noSuppliesTicks > expiration.maxTicksWithoutSupplies()) {
-            seekFallbackWork(town);
+            this.grabbingInsertedSupplies = true;
             return;
         }
 
@@ -790,5 +784,23 @@ public class DeclarativeJob extends
     @Override
     public JobName getJobName() {
         return new JobName("jobs." + jobId);
+    }
+
+    @Override
+    public Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener) {
+        final TriConsumer<MCExtra, BlockPos, MCHeldItem> l = (extra, bp, item) -> listener.accept(bp, item);
+        this.world.addItemInsertionListener(l);
+        return (nul) -> {
+            this.world.removeItemInsertionListener(l);
+            return null;
+        };
+    }
+    @Override
+    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+        this.world.addJobCompletionListener(listener);
+        return (nul) -> {
+            this.world.removeJobCompletionListener(listener);
+            return null;
+        };
     }
 }
