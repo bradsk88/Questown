@@ -11,6 +11,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -250,7 +251,7 @@ public abstract class ProductionJob<
         if (status.isDroppingLoot()) {
             successTarget = Jobs.setupForDropLoot(town, this.successTarget);
             if (successTarget != null) {
-                return successTarget.getBlockPos();
+                return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
             }
         }
 
@@ -258,7 +259,7 @@ public abstract class ProductionJob<
                    .isCollectingSupplies()) {
             setupForGetSupplies(town);
             if (suppliesTarget != null) {
-                return suppliesTarget.getBlockPos();
+                return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
             }
         }
 
@@ -332,17 +333,11 @@ public abstract class ProductionJob<
                 journal.getItems(), item
         );
         if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(
-                    checkFn
-            )) {
-                this.suppliesTarget = town.findMatchingContainer(
-                        checkFn
-                );
+            if (!this.suppliesTarget.hasItem(checkFn)) {
+                this.suppliesTarget = town.findMatchingContainer(checkFn);
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(
-                    checkFn
-            );
+            this.suppliesTarget = town.findMatchingContainer(checkFn);
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
