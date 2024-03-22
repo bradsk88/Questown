@@ -50,7 +50,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
-public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
+public class DeclarativeJob extends
+        DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
@@ -127,6 +128,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     private boolean wrappingUp;
     private int noSuppliesTicks;
     private int ticksSinceStart;
+    private boolean grabbingInsertedSupplies;
+    private boolean grabbedInsertedSupplies;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -269,27 +272,47 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
+        if (this.grabbingInsertedSupplies) {
+            if (world.tryGrabbingInsertedSupplies(town, work, vmEntity, workSpot)) {
+                this.grabbingInsertedSupplies = false;
+                this.grabbedInsertedSupplies = true;
+            }
+            return;
+        }
+
+        if (this.grabbedInsertedSupplies) {
+            if (!hasAnyLootToDrop()) {
+                town.getVillagerHandle()
+                    .changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
+                return;
+            }
+            return;
+        }
+
         this.ticksSinceStart++;
         if (workSpot == null && this.ticksSinceStart > this.expiration.maxTicks()) {
-            JobID apply = expiration.maxTicksFallbackFn().apply(jobId);
+            JobID apply = expiration.maxTicksFallbackFn()
+                                    .apply(jobId);
             QT.JOB_LOGGER.debug("Reached max ticks for {}. Falling back to {}.", jobId, apply);
             town.changeJobForVisitor(ownerUUID, apply);
             return;
         }
         this.workSpot = null;
-        this.signal = Signals.fromGameTime(town.getServerLevel().getDayTime());
+        this.signal = Signals.fromGameTime(town.getServerLevel()
+                                               .getDayTime());
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
 
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
                 return Jobs.roomsWithState(
-                                town, workRoomId,
-                                (sl, bp) -> maxState.equals(JobBlock.getState(getJobBlockState, bp))
-                        )
-                        .stream()
-                        .map(v -> v.room)
-                        .toList();
+                                   town, workRoomId,
+                                   (sl, bp) -> maxState.equals(JobBlock.getState(getJobBlockState, bp))
+                           )
+                           .stream()
+                           .map(v -> v.room)
+                           .toList();
             }
 
             @Override
@@ -309,10 +332,11 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> town.getRoomHandle()
-                                .getRoomsMatching(workRoomId)
-                                .stream()
-                                .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet())
-                                .toList(),
+                                  .getRoomsMatching(workRoomId)
+                                  .stream()
+                                  .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
+                                                                                    .keySet())
+                                  .toList(),
                         getJobBlockState,
                         (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
@@ -364,12 +388,13 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         }
 
         if (wrappingUp && !hasAnyLootToDrop()) {
-            town.getVillagerHandle().changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
+            town.getVillagerHandle()
+                .changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
             return;
         }
 
         if (entityCurrentJobSite != null) {
-            tryWorking(town, work, (VisitorMobEntity) entity, entityCurrentJobSite);
+            tryWorking(town, work, vmEntity, entityCurrentJobSite);
         }
         tryDropLoot(entityBlockPos);
         if (!wrappingUp) {
@@ -378,7 +403,9 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
     }
 
     private void seekFallbackWork(TownInterface town) {
-        town.changeJobForVisitor(ownerUUID, expiration.noSuppliesFallbackFn().apply(jobId));
+        town.changeJobForVisitor(
+                ownerUUID, expiration.noSuppliesFallbackFn()
+                                     .apply(jobId));
     }
 
     private void tryGetSupplies(
@@ -409,7 +436,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
                     int i,
                     int quantity
             ) {
-                suppliesTarget.getContainer().removeItem(i, quantity);
+                suppliesTarget.getContainer()
+                              .removeItem(i, quantity);
             }
         };
         getter.tryGetSupplies(
@@ -457,6 +485,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             return;
         }
 
+        // TODO: Pass in the previous workspot and keep working it, if it's sill workable
         WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = this.world.tryWorking(
                 town, work, entity, allSpots
         );
@@ -464,12 +493,12 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         if (worked.town() != null && worked.town()) {
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
             boolean finishedWork = worked.spot()
-                    .action()
-                    .equals(maxState); // TODO: Check all workspots before seeking workRequired
+                                         .action()
+                                         .equals(maxState); // TODO: Check all workspots before seeking workRequired
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     town.getKnowledgeHandle()
-                            .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
                 }
                 wrappingUp = true;
             }
@@ -489,15 +518,17 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
 
         Map<Integer, List<WorkSpot<Integer, BlockPos>>> b = new HashMap<>();
-        jobSite.getSpaces().stream()
-                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
-                .forEach(v -> {
-                    tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord), b, is);
-                    // TODO: Depend on job and/or villager?
-                    //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
-                    //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
-                    tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord + 1), b, is);
-                });
+        jobSite.getSpaces()
+               .stream()
+               .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
+                                                .stream())
+               .forEach(v -> {
+                   tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord), b, is);
+                   // TODO: Depend on job and/or villager?
+                   //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
+                   //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
+                   tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord + 1), b, is);
+               });
         return ImmutableMap.copyOf(b);
     }
 
@@ -565,7 +596,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
 
     private Direction getDoorDirectionFromCenter(Room jobSite) {
         Optional<XWall> backXWall = jobSite.getBackXWall();
-        if (backXWall.isPresent() && backXWall.get().getZ() > jobSite.doorPos.z) {
+        if (backXWall.isPresent() && backXWall.get()
+                                              .getZ() > jobSite.doorPos.z) {
             return Direction.NORTH;
         }
         if (backXWall.isPresent()) {
@@ -574,7 +606,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
 
 
         Optional<ZWall> backZWall = jobSite.getBackZWall();
-        if (backZWall.isPresent() && backZWall.get().getX() > jobSite.doorPos.x) {
+        if (backZWall.isPresent() && backZWall.get()
+                                              .getX() > jobSite.doorPos.x) {
             return Direction.WEST;
         }
         if (backZWall.isPresent()) {
@@ -608,7 +641,8 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
 
     @Override
     public String getStatusToSyncToClient() {
-        return journal.getStatus().name();
+        return journal.getStatus()
+                      .name();
     }
 
     @Override
@@ -646,18 +680,20 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         Collections.shuffle(rooms);
 
         for (RoomRecipeMatch<MCRoom> match : rooms) {
-            for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks().entrySet()) {
-                @Nullable Integer blockState = JobBlock.getState(work, blocks.getKey());
+            for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks()
+                                                          .entrySet()) {
+                BlockPos blockPos = blocks.getKey();
+                @Nullable Integer blockState = JobBlock.getState(work, blockPos);
                 if (blockState == null) {
                     continue;
                 }
                 if (maxState.equals(blockState)) {
-                    return blocks.getKey();
+                    return blockPos;
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
                     return findInteractionSpot(
-                            blocks.getKey(), match.room, isEmpty,
+                            blockPos, match.room, isEmpty,
                             () -> Direction.getRandom(rand)
                     );
                 }
@@ -684,25 +720,32 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
                     town, workRoomId,
                     (sl, bp) -> state.equals(JobBlock.getState(work, bp))
             );
-            List<MCRoom> roomz = matches.stream().filter(room -> {
-                for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
-                    AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
-                    if (jobBlockState == null) {
-                        continue;
-                    }
-                    if (!canClaim.test(e.getKey())) {
-                        continue;
-                    }
-                    if (jobBlockState.ingredientCount() < ingredientQtyRequiredAtStates.get(state)) {
-                        return true;
-                    }
-                }
-                return false;
-            }).map(v -> v.room).toList();
+            List<MCRoom> roomz = matches.stream()
+                                        .filter(room -> {
+                                            for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
+                                                                                    .entrySet()) {
+                                                AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
+                                                if (jobBlockState == null) {
+                                                    continue;
+                                                }
+                                                if (!canClaim.test(e.getKey())) {
+                                                    continue;
+                                                }
+                                                if (jobBlockState.ingredientCount() < ingredientQtyRequiredAtStates.get(
+                                                        state)) {
+                                                    return true;
+                                                }
+                                            }
+                                            return false;
+                                        })
+                                        .map(v -> v.room)
+                                        .toList();
             b.put(state, Lists.newArrayList(roomz));
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
-        if (toolsRequiredAtStates.values().stream().anyMatch(v -> !v.isEmpty())) {
+        if (toolsRequiredAtStates.values()
+                                 .stream()
+                                 .anyMatch(v -> !v.isEmpty())) {
             for (int i = 0; i < maxState; i++) {
                 stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
             }
@@ -714,10 +757,14 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
             // Hold on to tools that are required at this state and any previous states
             for (int i = 0; i <= state; i++) {
                 final Integer ii = i;
-                b.get(state).addAll((Jobs.roomsWithState(
-                        town, workRoomId,
-                        (sl, bp) -> ii.equals(JobBlock.getState(work, bp))
-                ).stream().map(v -> v.room).toList()));
+                b.get(state)
+                 .addAll((Jobs.roomsWithState(
+                                      town, workRoomId,
+                                      (sl, bp) -> ii.equals(JobBlock.getState(work, bp))
+                              )
+                              .stream()
+                              .map(v -> v.room)
+                              .toList()));
             }
         });
         return ImmutableMap.copyOf(b);

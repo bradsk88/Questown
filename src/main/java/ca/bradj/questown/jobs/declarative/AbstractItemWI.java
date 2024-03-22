@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +29,7 @@ public abstract class AbstractItemWI<
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
+    private final List<ITEM> insertedItems = new ArrayList<>();
 
     public AbstractItemWI(
             int villagerIndex,
@@ -152,6 +154,7 @@ public abstract class AbstractItemWI<
         TOWN updatedTown = maybeUpdateBlockState(oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
 
         if (shrink) {
+            this.insertedItems.add(item);
             return shrinkItem.apply(extra, updatedTown);
         }
         return updatedTown;
@@ -200,4 +203,17 @@ public abstract class AbstractItemWI<
     public void addItemInsertionListener(TriConsumer<EXTRA, POS, ITEM> listener) {
         this.itemInsertedListener.add(listener);
     }
+
+    public TOWN tryGrabbingInsertedSupplies(
+            EXTRA mcExtra,
+            POS workBlockPos
+    ) {
+        return tryGiveItems(mcExtra, this.insertedItems, workBlockPos);
+    }
+
+    protected abstract TOWN tryGiveItems(
+            EXTRA mcExtra,
+            Iterable<ITEM> itemsGivenSource,
+            POS itemsSourcePos
+    );
 }

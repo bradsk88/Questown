@@ -273,4 +273,13 @@ public class RealtimeWorldInteraction
     protected boolean isReady(MCExtra extra) {
         return extra.town() != null && extra.town().getServerLevel() != null;
     }
+
+    public boolean tryGrabbingInsertedSupplies(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
+            VisitorMobEntity vmEntity,
+            WorkSpot<Integer, BlockPos> workSpot
+    ) {
+        return super.tryGrabbingInsertedSupplies(new MCExtra(town, work, vmEntity), workSpot.position());
+    }
 }
