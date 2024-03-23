@@ -3,12 +3,11 @@ package ca.bradj.questown.gui.villager.advancements;
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.advancements.FrameType;
-import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -21,9 +20,9 @@ import java.util.UUID;
 
 public class VillagerAdvancementsScreen extends Screen {
     private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation("textures/gui/advancements/window.png");
-    private static final Component VERY_SAD_LABEL = Component.translatable("advancements.sad_label");
-    private static final Component NO_ADVANCEMENTS_LABEL = Component.translatable("advancements.empty");
-    private static final Component TITLE = Component.translatable("menu.jobs");
+    private static final Component VERY_SAD_LABEL = Compat.translatable("advancements.sad_label");
+    private static final Component NO_ADVANCEMENTS_LABEL = Compat.translatable("advancements.empty");
+    private static final Component TITLE = Compat.translatable("menu.jobs");
     private final BlockPos flagPos;
     private final UUID villagerUUID;
     private final VillagerAdvancementsContent content;
@@ -34,11 +33,11 @@ public class VillagerAdvancementsScreen extends Screen {
             UUID villagerUUID,
             JobID currentJob
     ) {
-        super(GameNarrator.NO_TITLE);
+        super(Compat.literal(""));
         DisplayInfo displayInfo = new DisplayInfo(
                 Items.CREEPER_HEAD.getDefaultInstance(),
-                Util.literal("test"),
-                Util.literal("test2"),
+                Compat.literal("test"),
+                Compat.literal("test2"),
                 new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
                 FrameType.TASK,
                 false, false, false

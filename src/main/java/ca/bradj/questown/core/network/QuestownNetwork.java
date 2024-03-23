@@ -1,7 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
@@ -21,49 +21,49 @@ public class QuestownNetwork {
     );
 
     public static void init() {
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(AddWorkFromUIMessage::encode).
                 decoder(AddWorkFromUIMessage::decode),
                 AddWorkFromUIMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveWorkFromUIMessage::encode).
                 decoder(RemoveWorkFromUIMessage::decode),
                 RemoveWorkFromUIMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(OpenQuestsMenuMessage::encode).
                 decoder(OpenQuestsMenuMessage::decode),
                 OpenQuestsMenuMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(RemoveQuestFromUIMessage::encode).
                 decoder(RemoveQuestFromUIMessage::decode),
                 RemoveQuestFromUIMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(OpenVillagerMenuMessage::encode).
                 decoder(OpenVillagerMenuMessage::decode),
                 OpenVillagerMenuMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(ChangeVillagerJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(ChangeVillagerJobMessage::encode).
                 decoder(ChangeVillagerJobMessage::decode),
                 ChangeVillagerJobMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
                 encoder(SyncBlockItemMessage::encode).
                 decoder(SyncBlockItemMessage::decode),
                 SyncBlockItemMessage::handle
         ).add();
-        Util.withConsumer(
+        Compat.withConsumer(
                 registerMessage(OpenVillagerAdvancementsMenuMessage.class, NetworkDirection.PLAY_TO_CLIENT).
                 encoder(OpenVillagerAdvancementsMenuMessage::encode).
                 decoder(OpenVillagerAdvancementsMenuMessage::decode),

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Warper;
@@ -170,7 +171,7 @@ public class DeclarativeJobs {
                 wi.injectTicks((int) ticksPassed);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-                        status, Signals.fromGameTime(currentTick),
+                        status, Signals.fromDayTime(Util.getDayTime(level)),
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,

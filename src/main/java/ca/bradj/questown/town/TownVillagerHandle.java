@@ -9,7 +9,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
@@ -159,10 +159,10 @@ public class TownVillagerHandle implements VillagerHolder {
             VisitorMobEntity e,
             VillagerStatsData stats
     ) {
-        Util.openScreen(sender, new MenuProvider() {
+        Compat.openScreen(sender, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
-                return Util.literal("");
+                return Compat.literal("");
             }
 
             @Override

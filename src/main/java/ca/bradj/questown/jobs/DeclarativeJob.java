@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -296,8 +297,7 @@ public class DeclarativeJob extends
             return;
         }
         this.workSpot = null;
-        this.signal = Signals.fromGameTime(town.getServerLevel()
-                                               .getDayTime());
+        this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
             private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
 

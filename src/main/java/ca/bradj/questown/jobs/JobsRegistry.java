@@ -20,7 +20,7 @@ import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
@@ -77,7 +77,7 @@ public class JobsRegistry {
                 .stream()
                 .filter(v -> v.getKey().rootId().equals(rootId))
                 .toList();
-        return x.get(Util.nextInt(rand, x.size())).getValue().get().baseRoom();
+        return x.get(Compat.nextInt(rand, x.size())).getValue().get().baseRoom();
     }
 
     public static ImmutableList<JobID> getPreferredWorkIds(JobID jobId) {
@@ -208,16 +208,22 @@ public class JobsRegistry {
             TownInterface town,
             UUID villagerID,
             JobID p,
-            long currentTick
+            Signals.DayTime currentTick
     ) {
         Work w = Works.get(p).get();
-        long finalTick = currentTick + w.jobFunc().apply(town, villagerID).getTotalDuration();
+        long jobDuration = w.jobFunc()
+                              .apply(town, villagerID)
+                              .getTotalDuration();
+        long finalTick = currentTick.dayTime() + jobDuration;
+        Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
+        Signals currentSegment = Signals.fromDayTime(currentTick);
+        if (nextSegment.compareTo(currentSegment) < 0) {
+            return false;
+        }
         return ImmutableList.of(
                 Signals.MORNING,
                 Signals.NOON
-        ).contains(
-                Signals.fromGameTime(finalTick)
-        );
+        ).contains(nextSegment);
     }
 
     private record Jerb(

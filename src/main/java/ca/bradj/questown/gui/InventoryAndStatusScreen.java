@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -185,7 +185,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Util.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
         }

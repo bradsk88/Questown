@@ -76,9 +76,7 @@ public class GathererTimeWarper<I extends Item<I>, H extends HeldItem<H, I> & It
         long max = currentTick + ticksPassed;
 
         for (long i = start; i <= max; i = getNextDaySegment(i, max)) {
-            Signals signal = Signals.fromGameTime(
-                    i
-            );
+            Signals signal = Signals.fromDayTime(new Signals.DayTime(i));
             GathererJournal.Status newStatus = GathererStatuses.getNewStatusFromSignal(
                     output.status(), signal, stateGetter, town
             );

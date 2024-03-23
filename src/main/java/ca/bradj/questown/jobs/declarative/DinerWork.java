@@ -7,13 +7,13 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
@@ -90,7 +90,7 @@ public class DinerWork {
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
                         jobId -> jobId,
-                        Util.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )
         );
