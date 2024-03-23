@@ -212,6 +212,11 @@ public class StatusesProductionRoutineTest {
         public boolean isExtractingProduct() {
             return this == COLLECTING_PRODUCT;
         }
+
+        @Override
+        public boolean isWaitingForTimers() {
+            return this == WAITING;
+        }
     }
 
     private static class NoOpProductionJob implements IProductionJob<PTestStatus> {

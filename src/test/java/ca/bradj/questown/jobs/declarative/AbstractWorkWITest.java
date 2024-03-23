@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -27,7 +28,7 @@ class AbstractWorkWITest {
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates
         ) {
-            super(workRequiredAtStates, (x, s) -> timeRequiredAtStates.get(s), toolsRequiredAtStates);
+            super(workRequiredAtStates, (x, s) -> Util.getOrDefault(timeRequiredAtStates, s, 0), toolsRequiredAtStates);
         }
 
         @Override
@@ -118,7 +119,7 @@ class AbstractWorkWITest {
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(0),
+                AbstractWorkStatusStore.State.freshAtState(2).setWorkLeft(0),
                 wi.state.get(new Position(0, 0))
         );
     }

@@ -117,6 +117,19 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         public int ingredientCount() {
             return ingredientCount;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            State state = (State) o;
+            return processingState == state.processingState && ingredientCount == state.ingredientCount && workLeft == state.workLeft;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(processingState, ingredientCount, workLeft);
+        }
     }
 
     private final HashSet<ROOM> rooms = new HashSet<>();

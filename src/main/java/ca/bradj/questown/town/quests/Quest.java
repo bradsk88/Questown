@@ -10,13 +10,15 @@ import java.util.UUID;
 
 public class Quest<KEY, ROOM extends Room> {
 
-    private final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
-    @Nullable protected UUID ownerUUID;
+    final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
+    @Nullable
+    protected UUID ownerUUID;
     protected UUID batchUUID;
     protected KEY recipeId;
     protected QuestStatus status;
     protected @Nullable ROOM completedOn;
-    private @Nullable KEY fromRecipeID;
+    @Nullable
+    KEY fromRecipeID;
 
     Quest() {
         this(null, null, null, null);
@@ -42,7 +44,12 @@ public class Quest<KEY, ROOM extends Room> {
         return String.format("Quest{id=%s, owner=%s, on=%s, from=%s", recipeId, ownerUUID, doorPos, fromRecipeID);
     }
 
-    protected Quest(UUID batchUUID, @Nullable UUID ownerId, KEY recipe, @Nullable KEY oldRecipe) {
+    protected Quest(
+            UUID batchUUID,
+            @Nullable UUID ownerId,
+            KEY recipe,
+            @Nullable KEY oldRecipe
+    ) {
         this.batchUUID = batchUUID;
         this.ownerUUID = ownerId;
         this.recipeId = recipe;
@@ -106,8 +113,7 @@ public class Quest<KEY, ROOM extends Room> {
                 case "active" -> ACTIVE;
                 case "completed" -> COMPLETED;
                 case "lost" -> LOST;
-                default ->
-                    throw new IllegalStateException("Unexpected status: " + status);
+                default -> throw new IllegalStateException("Unexpected status: " + status);
             };
         }
 
@@ -118,11 +124,16 @@ public class Quest<KEY, ROOM extends Room> {
 
     interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
         QUEST newQuest(
-                @Nullable UUID ownerId, KEY recipeId
+                @Nullable UUID ownerId,
+                KEY recipeId
         );
+
         QUEST newUpgradeQuest(
-                @Nullable UUID ownerId, KEY oldRecipeId, KEY newRecipeId
+                @Nullable UUID ownerId,
+                KEY oldRecipeId,
+                KEY newRecipeId
         );
+
         QUEST completed(
                 ROOM room,
                 QUEST input
@@ -136,20 +147,43 @@ public class Quest<KEY, ROOM extends Room> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Quest<?, ?> quest = (Quest<?, ?>) o;
-        return Objects.equals(selfUUID, quest.selfUUID) && Objects.equals(
-                ownerUUID,
-                quest.ownerUUID
-        ) && Objects.equals(batchUUID, quest.batchUUID) && Objects.equals(
-                recipeId,
-                quest.recipeId
-        ) && status == quest.status && Objects.equals(completedOn, quest.completedOn) && Objects.equals(
-                fromRecipeID,
-                quest.fromRecipeID
+        return equals(false, this, quest);
+    }
+
+    public static <Q extends Quest<?, ?>> boolean equals(
+            boolean ignoreSelfUUID,
+            Q one,
+            Q another
+    ) {
+        boolean eqUUID = Objects.equals(one.selfUUID, another.selfUUID);
+        if (!eqUUID && !ignoreSelfUUID) {
+            return false;
+        }
+        return Objects.equals(
+                one.ownerUUID,
+                another.ownerUUID
+        ) && Objects.equals(one.batchUUID, another.batchUUID) && Objects.equals(
+                one.recipeId,
+                another.recipeId
+        ) && one.status == another.status && Objects.equals(one.completedOn, another.completedOn) && Objects.equals(
+                one.fromRecipeID,
+                another.fromRecipeID
         );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(selfUUID, ownerUUID, batchUUID, recipeId, status, completedOn, fromRecipeID);
+        return Quest.hashCode(false, this);
+    }
+
+    public static int hashCode(
+            boolean ignoreOwnUUID,
+            Quest<?, ?> q
+    ) {
+        @Nullable UUID sUU = q.selfUUID;
+        if (ignoreOwnUUID) {
+            sUU = null;
+        }
+        return Objects.hash(sUU, q.ownerUUID, q.batchUUID, q.recipeId, q.status, q.completedOn, q.fromRecipeID);
     }
 }
