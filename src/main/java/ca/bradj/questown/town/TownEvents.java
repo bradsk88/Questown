@@ -2,7 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.Works;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -12,7 +12,7 @@ public final class TownEvents {
 
     @SubscribeEvent()
     public static void register(FMLCommonSetupEvent event) {
-        Util.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
-        Util.enqueueOrLog(event, Works::staticInitialize);
+        Compat.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
+        Compat.enqueueOrLog(event, Works::staticInitialize);
     }
 }

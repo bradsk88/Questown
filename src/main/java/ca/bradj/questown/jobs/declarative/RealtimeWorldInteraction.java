@@ -7,6 +7,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkOutput;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -46,7 +47,7 @@ public class RealtimeWorldInteraction
             Collection<WorkSpot<Integer, BlockPos>> workSpots
     ) {
         ArrayList<WorkSpot<Integer, BlockPos>> shuffled = new ArrayList<>(workSpots);
-        Util.shuffle(shuffled, town.getServerLevel());
+        Compat.shuffle(shuffled, town.getServerLevel());
         for (WorkSpot<Integer, BlockPos> workSpot : shuffled) {
             WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
             if (v != null) {
@@ -311,8 +312,8 @@ public class RealtimeWorldInteraction
             this.soundTicksLeft = 5;
         }
         if (Math.max(this.soundTicksLeft--, 0) > 0) {
-            Util.playNeutralSound(mcExtra.town()
-                                         .getServerLevel(), pos, s);
+            Compat.playNeutralSound(mcExtra.town()
+                                           .getServerLevel(), pos, s);
         }
     }
 

@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -62,7 +62,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Util.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -84,13 +84,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     private void renderMood(PoseStack stack) {
-        Component title = Util.translatable("menu.mood");
+        Component title = Compat.translatable("menu.mood");
         renderBar(stack, 0, title, menu.getMoodPercent());
     }
 
     private void renderHunger(PoseStack stack) {
         int fullnessPercent = menu.getFullnessPercent();
-        Component title = Util.translatable("menu.hunger");
+        Component title = Compat.translatable("menu.hunger");
         renderBar(stack, 1, title, fullnessPercent);
     }
 

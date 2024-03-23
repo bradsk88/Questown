@@ -1,8 +1,8 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -120,7 +120,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Util.translatable(key), mouseX, mouseY)
+                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
@@ -166,12 +166,12 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             Component recipeName = recipe.getName();
             if (recipe.fromRecipe != null) {
                 Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = Util.translatable("quests.upgrade", fromName, recipeName);
+                recipeName = Compat.translatable("quests.upgrade", fromName, recipeName);
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = Util.translatable("quests.completed_suffix", recipeName);
+                recipeName = Compat.translatable("quests.completed_suffix", recipeName);
             }
             if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
@@ -189,7 +189,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = Util.translatable("quests.job_owner", vID);
+            Component tooltip = Compat.translatable("quests.job_owner", vID);
 
             if (recipe.getBatchUUID() != null) {
                 renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
@@ -201,7 +201,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
 
             boolean hasJob = jobName.isEmpty();
             if (!hasJob) {
-                tooltip = Util.translatable("quests.job_change", vID, jobName);
+                tooltip = Compat.translatable("quests.job_change", vID, jobName);
             }
 
             boolean showHead = !hasJob;
@@ -240,7 +240,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
         this.font.drawShadow(
                 poseStack,
-                Util.literal("x"),
+                Compat.literal("x"),
                 removeX + borderPadding - 1,
                 idY + borderPadding - 1,
                 0xFFFFFF
@@ -251,7 +251,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
                 mouseY,
                 removeX,
                 idY,
-                Util.translatable("job_board.remove_work")
+                Compat.translatable("job_board.remove_work")
         );
         this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
     }

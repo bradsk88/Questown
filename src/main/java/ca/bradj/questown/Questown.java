@@ -8,10 +8,9 @@ import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
-import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.commands.synchronization.ArgumentTypes;
@@ -79,8 +78,8 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
-        Util.setCutoutRenderType(BlocksInit.FALSE_DOOR_BLOCK.get());
-        Util.setCutoutRenderType(BlocksInit.FALSE_WALL_BLOCK.get());
+        Compat.setCutoutRenderType(BlocksInit.FALSE_DOOR_BLOCK.get());
+        Compat.setCutoutRenderType(BlocksInit.FALSE_WALL_BLOCK.get());
         MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
         MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);

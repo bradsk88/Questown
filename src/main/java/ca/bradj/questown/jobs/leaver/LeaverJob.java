@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import net.minecraft.core.BlockPos;
@@ -197,7 +198,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
          * Evening: 11500
          */
 
-        e.signal = Signals.fromGameTime(level.getDayTime());
+        e.signal = Signals.fromDayTime(Util.getDayTime(level));
         e.journal.tick((tools) -> {
             e.lootRegistered = false;
             return loot.getLoot(tools);
