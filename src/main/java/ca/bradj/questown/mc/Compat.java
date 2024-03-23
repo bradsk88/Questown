@@ -3,15 +3,11 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -52,27 +48,43 @@ public class Compat {
         );
     }
 
-    public static Component translatable(String key) {
-        return new TranslatableComponent(key);
+    public static long getTick(ServerLevel level) {
+        return level.getGameTime();
     }
 
-    public static Component translatable(String key, Object... args) {
-        return new TranslatableComponent(key, args);
+    public static Component translatable(String key) {
+        return Component.translatable(key);
+    }
+
+    public static Component translatable(
+            String key,
+            Object... args
+    ) {
+        return Component.translatable(key, args);
     }
 
     public static Component literal(String x) {
-        return new TextComponent(x);
+        return Component.literal(x);
     }
 
-    public static void shuffle(ArrayList<WorkSpot<Integer, BlockPos>> list, ServerLevel serverLevel) {
+    public static void shuffle(
+            ArrayList<WorkSpot<Integer, BlockPos>> list,
+            ServerLevel serverLevel
+    ) {
         int size = list.size();
         for (int i = size; i > 1; --i) {
-            Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
+            Collections.swap(
+                    list, i - 1, serverLevel.getRandom()
+                                            .nextInt(i));
         }
     }
 
-    public static int nextInt(@Nullable ServerLevel server, int i) {
-        return server.getRandom().nextInt(i);
+    public static int nextInt(
+            @Nullable ServerLevel server,
+            int i
+    ) {
+        return server.getRandom()
+                     .nextInt(i);
     }
 
     public static Direction getRandomHorizontal(ServerLevel serverLevel) {
@@ -80,35 +92,43 @@ public class Compat {
     }
 
     public static void setCutoutRenderType(Block block) {
-        ItemBlockRenderTypes.setRenderLayer(block, RenderType.cutout());
+        // Render layer is set via model JSON files
     }
 
     public static <MSG> SimpleChannel.MessageBuilder<MSG> withConsumer(
             SimpleChannel.MessageBuilder<MSG> decoder,
             BiConsumer<MSG, Supplier<NetworkEvent.Context>> consumer
     ) {
-        return decoder.consumer(consumer);
+        return decoder.consumerNetworkThread(consumer);
     }
 
     public static CompoundTag getBlockStoredTagData(TownFlagBlockEntity e) {
-        return e.getTileData();
+        return e.getPersistentData();
     }
 
-    public static void openScreen(ServerPlayer sender, MenuProvider menuProvider, Consumer<FriendlyByteBuf> consumer) {
-        NetworkHooks.openGui(sender, menuProvider, consumer);
+    public static void openScreen(
+            ServerPlayer sender,
+            MenuProvider menuProvider,
+            Consumer<FriendlyByteBuf> consumer
+    ) {
+        NetworkHooks.openScreen(sender, menuProvider, consumer);
     }
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
-        return DeferredRegister.create(ForgeRegistries.CONTAINERS, modid);
+        return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
     }
 
-    public static void enqueueOrLog(FMLCommonSetupEvent event, Runnable staticInitialize) {
-        event.enqueueWork(staticInitialize).exceptionally(
-                ex -> {
-                    QT.INIT_LOGGER.error("Enqueued work failed", ex);
-                    return null;
-                }
-        );
+    public static void enqueueOrLog(
+            FMLCommonSetupEvent event,
+            Runnable staticInitialize
+    ) {
+        event.enqueueWork(staticInitialize)
+             .exceptionally(
+                     ex -> {
+                         QT.INIT_LOGGER.error("Enqueued work failed", ex);
+                         return null;
+                     }
+             );
     }
 
     public static <X> Supplier<X> configGet(ForgeConfigSpec.ConfigValue<X> cfg) {
