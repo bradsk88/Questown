@@ -18,7 +18,7 @@ class WorkStatusStoreTest {
 
     private static void tick(TestWorkStatusStore s) {
         // Arguments don't matter for timing logic, rooms just can't be empty due to optimizations
-        s.tick(null, ImmutableList.of(arbitaryRoom));
+        s.tick(null, ImmutableList.of(arbitaryRoom), 1);
     }
 
     private static class TestWorkStatusStore extends AbstractWorkStatusStore<Position, TestItem, Room, Void> {

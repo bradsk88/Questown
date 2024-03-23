@@ -29,4 +29,15 @@ public class Util {
         return b.build();
     }
 
+    public static Integer getOrDefault(
+            ImmutableMap<Integer, Integer> map,
+            Integer key,
+            int fallback
+    ) {
+        Integer x = map.get(key);
+        if (x == null) {
+            return fallback;
+        }
+        return x;
+    }
 }

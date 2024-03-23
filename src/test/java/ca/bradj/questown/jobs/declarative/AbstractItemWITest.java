@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -115,7 +116,7 @@ class AbstractItemWITest {
                     ingredientsRequiredAtStates,
                     ingredientQtyRequiredAtStates,
                     workRequiredAtStates,
-                    (x, i) -> timeRequiredAtStates.get(i),
+                    (x, i) -> Util.getOrDefault(timeRequiredAtStates, i, 0),
                     (v) -> new Claim(UUID.randomUUID(), 100)
             );
             this.inventory = inventory;

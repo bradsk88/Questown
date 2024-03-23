@@ -2,7 +2,6 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.Marker;
@@ -76,13 +75,34 @@ public class QuestBatches<
         }
     }
 
+    private record IdIgnoring<Q extends Quest<?, ?>>(
+            Q wrapped
+    ) {
+        @Override
+        public int hashCode() {
+            int i = Quest.hashCode(true, wrapped);
+            return i;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            IdIgnoring<?> that = (IdIgnoring<?>) o;
+            boolean equals = Quest.equals(true, wrapped, that.wrapped);
+            return equals;
+        }
+    }
+
     private ImmutableList<BATCH> filterOutDuplicateCompletion(
             VillagerProvider villagers,
             ImmutableList<BATCH> bs) {
-        Set<QUEST> completedQuests = bs.stream()
+        Set<IdIgnoring<QUEST>> completedQuests = bs.stream()
                 .flatMap(v -> v.getAll().stream())
                 .filter(Quest::isComplete)
                 .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
+                .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
+                .map(IdIgnoring::new)
                 .collect(Collectors.toSet());
 
         ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
@@ -92,9 +112,10 @@ public class QuestBatches<
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 e.addNewQuest(owner, q.getWantedId());
-                if (completedQuests.contains(q)) {
+                IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
+                if (completedQuests.contains(iq)) {
                     e.markRecipeAsComplete(q.completedOn, q.getWantedId());
-                    completedQuests.remove(q);
+                    completedQuests.remove(iq);
                 }
                 eqb.add(q);
             });
@@ -160,7 +181,6 @@ public class QuestBatches<
         for (BATCH b : batches) {
             if (b.getAll().stream()
                     .filter(Quest::isComplete)
-                    .filter(v -> !SpecialQuests.CAMPFIRE.equals(v.getWantedId()))
                     .filter(v -> recipeId.equals(v.getWantedId()))
                     .anyMatch(v -> room.equals(v.completedOn))
             ) {

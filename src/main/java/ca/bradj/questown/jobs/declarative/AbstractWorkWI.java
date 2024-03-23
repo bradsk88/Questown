@@ -57,9 +57,9 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
     private @Nullable TOWN applyWork(
             EXTRA extra,
             POS bp,
-            Integer curState,
-            Integer nextStepWork,
-            Integer nextStepTime
+            int curState,
+            int nextStepWork,
+            int nextStepTime
     ) {
         ImmutableWorkStateContainer<POS, TOWN> sl = getWorkStatuses(extra);
         AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
