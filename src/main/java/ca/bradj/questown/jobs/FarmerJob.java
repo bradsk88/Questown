@@ -153,6 +153,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public BlockPos getLook() {
+        return null;
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }
@@ -234,7 +239,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         BlockPos entityBlockPos = entity.blockPosition();
         if (selectedFarm != null) {
-            isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm, entityBlockPos));
+            isInFarm = entityBlockPos.equals(getGateInteractionSpot(town, selectedFarm, entityBlockPos, true));
             if (!isInFarm) {
                 isInFarm = areAllPartsOfEntityInFarm(entity.position());
             }
@@ -348,9 +353,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                 successTarget.getYPosition()
         ) : null;
 
-        BlockPos out = switch (getStatus()) {
-            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm, entityBlockPos);
-            case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).position();
+        GathererJournal.Status status = getStatus();
+        BlockPos out = switch (status) {
+            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm, entityBlockPos, status == LEAVING_FARM);
+            case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).interactionSpot();
             case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position();
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position();
             case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position();
@@ -360,12 +366,20 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             case COLLECTING_SUPPLIES -> supplies;
             case DROPPING_LOOT -> blockPos;
             case RELAXING, IDLE, NO_SUPPLIES, NO_SPACE -> null;
-            default -> throw new IllegalStateException(String.format("Unexpected status %s", getStatus()));
+            default -> throw new IllegalStateException(String.format("Unexpected status %s", status));
         };
+        // This status is probably not necessary since "through-gate" pathfinding was fixed
+        if (status == LEAVING_FARM) {
+            QT.VILLAGER_LOGGER.debug("Leaving farm via position: {}", out);
+        }
+        if (status == GOING_TO_JOBSITE) {
+            QT.VILLAGER_LOGGER.debug("Entering farm via position: {}", out);
+        }
+
         if (out == null && !ImmutableList.of(
                 RELAXING, IDLE, NO_SUPPLIES, NO_SPACE
-        ).contains(getStatus())) {
-            QT.JOB_LOGGER.warn(marker, "Unexpectedly null target for status: {}", getStatus());
+        ).contains(status)) {
+            QT.JOB_LOGGER.warn(marker, "Unexpectedly null target for status: {}", status);
         }
         return out;
     }
@@ -473,7 +487,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                             }
                             FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock, blockWithWeeds);
                             int score = score(groundBlock, cropBlock);
-                            return new WorkSpot<>(gp, blockAction, score, gp.relative(Direction.getRandom(level.random)));
+                            return new WorkSpot<>(gp, blockAction, score, bp.relative(Direction.getRandom(level.random)));
                         }))
                 .sorted(Comparator.comparingInt(WorkSpot::score))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
@@ -639,9 +653,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     private static BlockPos getGateInteractionSpot(
             TownInterface town,
             @Nullable MCRoom foundRoom,
-            BlockPos entityBlockPos
+            BlockPos entityBlockPos,
+            boolean chooseInnerSideOfGate
     ) {
         if (foundRoom == null) {
+            QT.VILLAGER_LOGGER.warn("Trying to leave null farm. This will cause soft-lock.");
             return null;
         }
 
@@ -650,22 +666,25 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
             return entityBlockPos.relative(Compat.getRandomHorizontal(town.getServerLevel()));
         }
 
-        BlockPos fencePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
+        int flipper = chooseInnerSideOfGate ? 1 : -1;
+
+        BlockPos gatePos = Positions.ToBlock(foundRoom.getDoorPos(), foundRoom.yCoord);
         Optional<XWall> backXWall = foundRoom.getBackXWall();
         if (backXWall.isPresent()) {
-            if (backXWall.get().getZ() > fencePos.getZ()) {
-                return fencePos.offset(0, 0, -1);
+            if (backXWall.get().getZ() > gatePos.getZ()) {
+                return gatePos.offset(0, 0, -1 * flipper);
             }
-            return fencePos.offset(0, 0, 1);
+            return gatePos.offset(0, 0, flipper);
         }
         Optional<ZWall> backZWall = foundRoom.getBackZWall();
         if (backZWall.isPresent()) {
-            if (backZWall.get().getX() > fencePos.getX()) {
-                return fencePos.offset(-1, 0, 0);
+            if (backZWall.get().getX() > gatePos.getX()) {
+                return gatePos.offset(-1 * flipper, 0, 0);
             }
-            return fencePos.offset(1, 0, 0);
+            return gatePos.offset(flipper, 0, 0);
         }
-        return fencePos.relative(Compat.getRandomHorizontal(town.getServerLevel()));
+        QT.VILLAGER_LOGGER.warn("Could not determine location near gate");
+        return gatePos.relative(Compat.getRandomHorizontal(town.getServerLevel()));
     }
 
     @Override

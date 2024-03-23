@@ -488,6 +488,7 @@ public class DeclarativeJob extends
         );
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
+            this.setLookTarget(worked.spot().position());
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
             boolean finishedWork = worked.spot()
                                          .action()
@@ -652,11 +653,8 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected BlockPos findProductionSpot(ServerLevel sl) {
-        if (workSpot != null) {
-            return workSpot.interactionSpot();
-        }
-        return null;
+    protected @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel sl) {
+        return workSpot;
     }
 
     @Override

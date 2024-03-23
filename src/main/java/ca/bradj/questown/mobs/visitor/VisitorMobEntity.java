@@ -234,6 +234,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
 //        b.add(Pair.of(2, new DoNothing(30, 60)));
+        b.add(Pair.of(3, new LookAtWalkTarget()));
         b.add(Pair.of(3, new TownWalk(walkSpeed)));
         b.add(Pair.of(10, new TownWalk(runSpeed)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
@@ -298,6 +299,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     .get()
                     .jobFunc()
                     .apply(town, uuid);
+    }
+
+    public BlockPos getLookTarget() {
+        return job.getLook();
     }
 
     public record WorkToUndo(
@@ -422,10 +427,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
 
-        this.openNearbyGates();
+        this.useNearbyGates();
     }
 
-    private void openNearbyGates() {
+    private void useNearbyGates() {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
                       .isPresent()) {
             BlockPos on = blockPosition();
@@ -643,6 +648,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                             }
                         }
 
+                        if (getr.getBlockState(pos).getBlock() instanceof FenceGateBlock) {
+                            return BlockPathTypes.DOOR_WOOD_CLOSED;
+                        }
+
                         return super.getBlockPathType(getr, x, y, z);
                     }
 
@@ -816,6 +825,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (target != null) {
             this.setWanderTarget(target);
         } else {
+
             this.setWanderTarget(town.getRandomWanderTarget(blockPosition()));
         }
         return this.getWanderTarget();

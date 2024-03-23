@@ -7,7 +7,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.server.command.ConfigCommand;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID)
-public class CommandEvents {
+public class CommandInit {
 
     @SubscribeEvent
     public static void on(RegisterCommandsEvent event) {
@@ -19,5 +19,6 @@ public class CommandEvents {
         DebugCommand.register(event.getDispatcher());
         DebugDoorsCommand.register(event.getDispatcher());
         DebugAllDoorsCommand.register(event.getDispatcher());
+        SpawnVillagerCommand.register(event.getDispatcher());
     }
 }

@@ -96,7 +96,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
             JobID jobID
     );
 
-    void changeJobForVisitorFromBoard(UUID ownerUUID);
+    boolean changeJobForVisitorFromBoard(UUID ownerUUID);
 
     Collection<String> getAvailableRootJobs();
 

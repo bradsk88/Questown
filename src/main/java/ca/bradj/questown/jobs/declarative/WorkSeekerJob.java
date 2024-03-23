@@ -112,12 +112,20 @@ public class WorkSeekerJob extends DeclarativeJob {
                 sound
         ) {
 
+            private long getWorkCooldown = 0;
+
             @Override
             protected Boolean tryExtractProduct(
                     MCExtra extra,
                     BlockPos position
             ) {
-                extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID);
+                getWorkCooldown--;
+                if (getWorkCooldown > 0) {
+                    return false;
+                }
+                if (!extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID)) {
+                    this.getWorkCooldown = Config.WORK_SEEKER_COOLDOWN.get();
+                }
                 return true;
             }
         };

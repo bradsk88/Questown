@@ -73,6 +73,7 @@ public abstract class ProductionJob<
 
     public final ImmutableMap<STATUS, String> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
+    protected @Nullable BlockPos lookTarget;
 
     public BlockPos getJobSite(
             TownInterface town
@@ -230,6 +231,11 @@ public abstract class ProductionJob<
     }
 
     @Override
+    public BlockPos getLook() {
+        return lookTarget;
+    }
+
+    @Override
     public @Nullable BlockPos getTarget(
             BlockPos entityBlockPos,
             Vec3 entityPos,
@@ -242,16 +248,21 @@ public abstract class ProductionJob<
 
         STATUS status = journal.getStatus();
         if (status.isGoingToJobsite()) {
-            return getJobSite(town);
+            BlockPos jobSite1 = getJobSite(town);
+            this.setLookTarget(jobSite1);
+            return jobSite1;
         }
 
         if (status.isWorkingOnProduction()) {
-            return findProductionSpot(sl);
+            WorkSpot<?, BlockPos> productionSpot = findProductionSpot(sl);
+            this.setLookTarget(productionSpot.position());
+            return productionSpot.interactionSpot();
         }
 
         if (status.isDroppingLoot()) {
             successTarget = Jobs.setupForDropLoot(town, this.successTarget);
             if (successTarget != null) {
+                this.setLookTarget(successTarget.getBlockPos());
                 return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
             }
         }
@@ -260,6 +271,7 @@ public abstract class ProductionJob<
                    .isCollectingSupplies()) {
             setupForGetSupplies(town);
             if (suppliesTarget != null) {
+                this.setLookTarget(suppliesTarget.getBlockPos());
                 return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
             }
         }
@@ -271,13 +283,17 @@ public abstract class ProductionJob<
         return findNonWorkTarget(entityBlockPos, entityPos, town);
     }
 
+    protected void setLookTarget(BlockPos jobSite1) {
+        this.lookTarget = jobSite1;
+    }
+
     protected abstract BlockPos findNonWorkTarget(
             BlockPos entityBlockPos,
             Vec3 entityPos,
             TownInterface town
     );
 
-    protected abstract BlockPos findProductionSpot(ServerLevel level);
+    protected abstract @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract BlockPos findJobSite(
             RoomsHolder town,
