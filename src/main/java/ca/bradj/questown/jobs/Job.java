@@ -82,4 +82,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     Function<Void, Void> addJobCompletionListener(Runnable listener);
 
     long getTotalDuration();
+
+    BlockPos getLook();
 }

@@ -797,11 +797,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public void changeJobForVisitorFromBoard(UUID ownerUUID) {
+    public boolean changeJobForVisitorFromBoard(UUID ownerUUID) {
         JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
+            return true;
         }
+        return false;
     }
 
     private JobID getVillagerPreferredWork(

@@ -153,6 +153,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public BlockPos getLook() {
+        return null;
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }

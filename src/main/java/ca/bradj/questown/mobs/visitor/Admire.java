@@ -90,7 +90,7 @@ public class Admire extends Behavior<VisitorMobEntity> {
         if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
             e.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
         }
-        e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
+//        e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
         this.admireTicks++;
     }
 }

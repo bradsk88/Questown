@@ -56,6 +56,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_HALF_DAY_LOOT_AMOUNT;
     public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_FULL_DAY_LOOT_AMOUNT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<Long> WORK_SEEKER_COOLDOWN;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
@@ -165,6 +166,9 @@ public class Config {
         JOB_BOARD_ENABLED = BUILDER.comment(
                 "Experimental: Villagers will choose work based on the items the player has selected at a \"job board\" registered in the town."
         ).define("JobBoardEnabled", true);
+        WORK_SEEKER_COOLDOWN = BUILDER.comment(
+                "The number of ticks a WorkSeeker will pause for after finding zero available jobs. Helps avoid wasted CPU and excessive sound effects."
+        ).defineInRange("WorkSeekerCooldown", 200L, 1L, 24000L);
         BUILDER.pop();
 
         // Villagers Config

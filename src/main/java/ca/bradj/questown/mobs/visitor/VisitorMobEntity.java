@@ -233,6 +233,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
 //        b.add(Pair.of(2, new DoNothing(30, 60)));
+        b.add(Pair.of(3, new LookAtWalkTarget()));
         b.add(Pair.of(3, new TownWalk(walkSpeed)));
         b.add(Pair.of(10, new TownWalk(runSpeed)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
@@ -297,6 +298,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     .get()
                     .jobFunc()
                     .apply(town, uuid);
+    }
+
+    public BlockPos getLookTarget() {
+        return job.getLook();
     }
 
     public record WorkToUndo(

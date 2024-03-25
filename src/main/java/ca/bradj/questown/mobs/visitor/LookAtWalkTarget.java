@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.QT;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -16,9 +17,7 @@ public class LookAtWalkTarget extends Behavior<VisitorMobEntity> {
 
     public LookAtWalkTarget(
     ) {
-        super(ImmutableMap.of(
-                MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_PRESENT
-        ));
+        super(ImmutableMap.of());
     }
 
     @Override
@@ -27,30 +26,11 @@ public class LookAtWalkTarget extends Behavior<VisitorMobEntity> {
             VisitorMobEntity e,
             long p_23884_
     ) {
-        Optional<WalkTarget> target = e.getBrain()
-                .getMemory(MemoryModuleType.WALK_TARGET);
-        if (target.isEmpty()) {
-            return;
+        this.look = e.getLookTarget();
+        if (look != null) {
+            QT.VILLAGER_LOGGER.debug("looking at {}", look);
+            e.getLookControl()
+             .setLookAt(look.getX(), look.getY(), look.getZ());
         }
-        this.look = target.get().getTarget().currentBlockPosition();
-    }
-
-    @Override
-    protected boolean canStillUse(
-            ServerLevel p_22545_,
-            VisitorMobEntity p_22546_,
-            long p_22547_
-    ) {
-        return p_22546_.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isEmpty();
-    }
-
-    @Override
-    protected void tick(
-            ServerLevel p_22551_,
-            VisitorMobEntity e,
-            long p_22553_
-    ) {
-        super.tick(p_22551_, e, p_22553_);
-        e.getLookControl().setLookAt(look.getX(), look.getY(), look.getZ());
     }
 }
