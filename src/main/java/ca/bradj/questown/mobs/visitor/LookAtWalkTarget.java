@@ -28,7 +28,6 @@ public class LookAtWalkTarget extends Behavior<VisitorMobEntity> {
     ) {
         this.look = e.getLookTarget();
         if (look != null) {
-            QT.VILLAGER_LOGGER.debug("looking at {}", look);
             e.getLookControl()
              .setLookAt(look.getX(), look.getY(), look.getZ());
         }
