@@ -212,7 +212,7 @@ public abstract class ProductionJob<
 
     @NotNull
     protected ImmutableList<JobsClean.TestFn<MCTownItem>> convertToCleanFns(
-            Map<Integer, ? extends Collection<MCRoom>> statusMap
+            Map<Integer, ? extends Collection<?>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<Integer> first = statusMap.entrySet()

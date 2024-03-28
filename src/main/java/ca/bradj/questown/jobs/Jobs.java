@@ -311,22 +311,19 @@ public class Jobs {
         );
     }
 
+    /**
+     * @deprecated Use JobsClean.roomsWithState
+     */
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town,
             ResourceLocation roomType,
             StateCheck check
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
-        return rooms.stream()
-                .filter(v -> {
-                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                        if (check.Check(town.getServerLevel(), e.getKey())) {
-                            return true;
-                        }
-                    }
-                    return false;
-                })
-                .toList();
+        return JobsClean.roomsWithState(
+                () -> town.getRoomHandle().getRoomsMatching(roomType),
+                match -> match.getContainedBlocks().entrySet(),
+                pos -> check.Check(town.getServerLevel(), pos.getKey())
+        );
     }
 
     public interface LootDropper<I> {
