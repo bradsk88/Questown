@@ -20,10 +20,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
-import ca.bradj.roomrecipes.rooms.XWall;
-import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -194,7 +191,10 @@ public class DeclarativeJob extends
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.expiration = expiration;
-        this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
+        this.totalDuration = timeRequiredAtStates.values()
+                                                 .stream()
+                                                 .reduce(Integer::sum)
+                                                 .orElse(0);
     }
 
     @NotNull
@@ -454,7 +454,7 @@ public class DeclarativeJob extends
         Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpots = listAllWorkSpots(
                 work::getJobBlockState, entityCurrentJobSite.room,
                 sl::isEmptyBlock,
-                () -> Direction.getRandom(sl.random)
+                sl.random
         );
 
         ProductionStatus status = getStatus();
@@ -487,7 +487,8 @@ public class DeclarativeJob extends
         );
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
-            this.setLookTarget(worked.spot().position());
+            this.setLookTarget(worked.spot()
+                                     .position());
             boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
             boolean finishedWork = worked.spot()
                                          .action()
@@ -506,13 +507,14 @@ public class DeclarativeJob extends
             Function<BlockPos, AbstractWorkStatusStore.State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
-            Supplier<Direction> randomDirection
+            Random rand
     ) {
         if (jobSite == null) {
             return ImmutableMap.of();
         }
 
-        Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
+        Function<BlockPos, BlockPos> is = bp -> JobSites.findInteractionSpot(
+                bp, jobSite, specialGlobalRules, new MCPosKit(rand, isEmpty));
 
         Map<Integer, List<WorkSpot<Integer, BlockPos>>> b = new HashMap<>();
         jobSite.getSpaces()
@@ -544,73 +546,6 @@ public class DeclarativeJob extends
             curSpots.add(new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
             b.put(blockAction, curSpots);
         }
-    }
-
-    private BlockPos findInteractionSpot(
-            BlockPos bp,
-            Room jobSite,
-            Predicate<BlockPos> isEmpty,
-            Supplier<Direction> random
-    ) {
-        @Nullable BlockPos spot;
-
-        if (specialGlobalRules.contains(SpecialRules.PREFER_INTERACTION_BELOW)) {
-            spot = doFindInteractionSpot(bp.below(), jobSite, isEmpty);
-            if (spot != null) {
-                return spot;
-            }
-        }
-
-        spot = doFindInteractionSpot(bp, jobSite, isEmpty);
-        if (spot != null) {
-            return spot;
-        }
-
-        return bp.relative(random.get());
-    }
-
-    @Nullable
-    private BlockPos doFindInteractionSpot(
-            BlockPos bp,
-            Room jobSite,
-            Predicate<BlockPos> isEmpty
-    ) {
-        Direction d = getDoorDirectionFromCenter(jobSite);
-        if (isEmpty.test(bp.relative(d))) {
-            return bp.relative(d);
-        }
-        for (Direction dd : Direction.Plane.HORIZONTAL) {
-            if (isEmpty.test(bp.relative(dd))) {
-                return bp.relative(dd);
-            }
-        }
-        if (InclusiveSpaces.calculateArea(jobSite.getSpaces()) == 9) {
-            // 1x1 room (plus walls)
-            return Positions.ToBlock(jobSite.getDoorPos(), bp.getY());
-        }
-        return null;
-    }
-
-    private Direction getDoorDirectionFromCenter(Room jobSite) {
-        Optional<XWall> backXWall = jobSite.getBackXWall();
-        if (backXWall.isPresent() && backXWall.get()
-                                              .getZ() > jobSite.doorPos.z) {
-            return Direction.NORTH;
-        }
-        if (backXWall.isPresent()) {
-            return Direction.SOUTH;
-        }
-
-
-        Optional<ZWall> backZWall = jobSite.getBackZWall();
-        if (backZWall.isPresent() && backZWall.get()
-                                              .getX() > jobSite.doorPos.x) {
-            return Direction.WEST;
-        }
-        if (backZWall.isPresent()) {
-            return Direction.EAST;
-        }
-        return Direction.NORTH;
     }
 
     @Override
@@ -663,38 +598,17 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
-        // TODO: Use tags to support more tiers of work rooms
-        List<RoomRecipeMatch<MCRoom>> rooms = new ArrayList<>(town.getRoomsMatching(workRoomId));
-
-        Map<Integer, Boolean> statusItems = getSupplyItemStatus();
-
-        // TODO: Sort by distance and choose the closest (maybe also coordinate
-        //  with other workers who need the same type of job site)
-        // For now, we use randomization
-        Collections.shuffle(rooms);
-
-        for (RoomRecipeMatch<MCRoom> match : rooms) {
-            for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks()
-                                                          .entrySet()) {
-                BlockPos blockPos = blocks.getKey();
-                @Nullable Integer blockState = JobBlock.getState(work, blockPos);
-                if (blockState == null) {
-                    continue;
-                }
-                if (maxState.equals(blockState)) {
-                    return blockPos;
-                }
-                boolean shouldGo = statusItems.getOrDefault(blockState, false);
-                if (shouldGo) {
-                    return findInteractionSpot(
-                            blockPos, match.room, isEmpty,
-                            () -> Direction.getRandom(rand)
-                    );
-                }
-            }
-        }
-
-        return null;
+        return JobSites.find(
+                () -> town.getRoomsMatching(workRoomId),
+                match -> match.getContainedBlocks()
+                              .entrySet(),
+                match -> match.room,
+                work,
+                getSupplyItemStatus(),
+                maxState,
+                specialGlobalRules,
+                new MCPosKit(rand, isEmpty)
+        );
     }
 
     @Override
@@ -795,6 +709,7 @@ public class DeclarativeJob extends
             return null;
         };
     }
+
     @Override
     public Function<Void, Void> addJobCompletionListener(Runnable listener) {
         this.world.addJobCompletionListener(listener);
