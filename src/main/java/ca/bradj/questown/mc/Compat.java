@@ -26,10 +26,12 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -76,7 +78,13 @@ public class Compat {
     }
 
     public static Direction getRandomHorizontal(ServerLevel serverLevel) {
-        return Direction.Plane.HORIZONTAL.getRandomDirection(serverLevel.getRandom());
+        Random r = serverLevel.getRandom();
+        return getRandomHorizontal(r);
+    }
+
+    @NotNull
+    public static Direction getRandomHorizontal(Random r) {
+        return Direction.Plane.HORIZONTAL.getRandomDirection(r);
     }
 
     public static void setCutoutRenderType(Block block) {

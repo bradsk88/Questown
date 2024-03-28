@@ -11,9 +11,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-public interface RoomsHolder {
-    Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation roomRecipeId);
-
+public interface RoomsHolder extends RoomMatchFinder<MCRoom> {
     Collection<MCRoom> getFarms();
 
     Collection<RoomRecipeMatch<MCRoom>> getMatches();
