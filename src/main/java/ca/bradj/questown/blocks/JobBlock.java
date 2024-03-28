@@ -8,7 +8,7 @@ import java.util.function.Function;
 public class JobBlock {
 
     public static <P> @Nullable Integer getState(
-            Function<P, AbstractWorkStatusStore.State> sl,
+            Function<P, AbstractWorkStatusStore.@Nullable State> sl,
             P bp
     ) {
         AbstractWorkStatusStore.State oldState = sl.apply(bp);

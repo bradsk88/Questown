@@ -18,7 +18,7 @@ public class TestPosKit implements PosKit<Position> {
 
     @Override
     public boolean isEmpty(Position d) {
-        return false;
+        return true;
     }
 
     @Override
