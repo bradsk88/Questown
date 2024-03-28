@@ -19,7 +19,7 @@ public class JobSites {
             Supplier<Collection<MATCH>> matches,
             Function<MATCH, Collection<? extends Map.Entry<POS, ?>>> containedBlocks,
             Function<MATCH, ROOM> room,
-            Function<POS, AbstractWorkStatusStore.State> getState,
+            Function<POS, AbstractWorkStatusStore. @Nullable State> getState,
             Map<Integer, Boolean> statusItems,
             int maxState,
             ImmutableList<String> specialGlobalRules,
@@ -86,7 +86,7 @@ public class JobSites {
             Room jobSite,
             PosKit<P> poskit
     ) {
-        P d = getDoorDirectionFromCenter(jobSite, poskit, bp);
+        P d = getDoorSideAdjacentPosition(jobSite, poskit, bp);
         if (poskit.isEmpty(d)) {
             return d;
         }
@@ -102,9 +102,9 @@ public class JobSites {
         return null;
     }
 
-    private static <P> P getDoorDirectionFromCenter(
+    public static <P> P getDoorSideAdjacentPosition(
             Room jobSite,
-            PosKit<P> shifter,
+            Shifter<P> shifter,
             P ref
     ) {
         Optional<XWall> backXWall = jobSite.getBackXWall();

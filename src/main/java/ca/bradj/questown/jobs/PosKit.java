@@ -4,7 +4,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 
 import java.util.Collection;
 
-public interface PosKit<POS> {
+public interface PosKit<POS> extends Shifter<POS> {
     POS below(POS bp);
 
     POS randomAdjacent(POS bp);
@@ -18,11 +18,4 @@ public interface PosKit<POS> {
             POS ref
     );
 
-    POS north(POS ref);
-
-    POS south(POS ref);
-
-    POS east(POS ref);
-
-    POS west(POS ref);
 }
