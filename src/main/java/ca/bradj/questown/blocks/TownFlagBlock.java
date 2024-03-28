@@ -158,11 +158,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(false);
         }
 
-        if (itemInHand.getItem().equals(Items.APPLE)) {
-            entity.addImmediateReward(new SpawnVisitorReward(entity));
-            return InteractionResult.sidedSuccess(false);
-        }
-
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
             for (UUID uuid : entity.getVillagersWithQuests()) {
                 entity.addImmediateReward(

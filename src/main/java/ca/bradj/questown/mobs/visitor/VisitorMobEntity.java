@@ -426,10 +426,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
 
-        this.openNearbyGates();
+        this.useNearbyGates();
     }
 
-    private void openNearbyGates() {
+    private void useNearbyGates() {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
                       .isPresent()) {
             BlockPos on = blockPosition();
@@ -647,6 +647,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                             }
                         }
 
+                        if (getr.getBlockState(pos).getBlock() instanceof FenceGateBlock) {
+                            return BlockPathTypes.DOOR_WOOD_CLOSED;
+                        }
+
                         return super.getBlockPathType(getr, x, y, z);
                     }
 
@@ -820,6 +824,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (target != null) {
             this.setWanderTarget(target);
         } else {
+
             this.setWanderTarget(town.getRandomWanderTarget(blockPosition()));
         }
         return this.getWanderTarget();
