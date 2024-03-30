@@ -1,12 +1,9 @@
 package ca.bradj.questown.gui;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
-
 import java.util.function.Consumer;
 
 public interface SubUI {
-    void draw(PoseStack poseStack, int bgX, int bgY);
+    void draw(RenderContext rc, int bgX, int bgY);
 
     void mouseClicked(int bgX, int bgY, double x, double y);
 
@@ -15,7 +12,7 @@ public interface SubUI {
     class Empty implements SubUI {
 
         @Override
-        public void draw(PoseStack poseStack, int bgX, int bgY) {
+        public void draw(RenderContext rc, int bgX, int bgY) {
         }
 
         @Override
