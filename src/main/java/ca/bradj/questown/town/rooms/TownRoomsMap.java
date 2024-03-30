@@ -168,6 +168,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             ServerLevel level,
             BlockPos flagPos
     ) {
+        if (town == null) {
+            throw new IllegalStateException("TownRoomsMap was never initialized");
+        }
         if (pendingRooms != null) {
             long start = System.currentTimeMillis();
             boolean finished = pendingRooms.proceed();
@@ -193,7 +196,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         Map<Integer, Collection<Position>> doorsAtLevel = new HashMap<>();
 
         registeredDoors.forEach(dp ->
-                doorsAtLevel.computeIfAbsent(dp.scanLevel, k -> new ArrayList<>()).add(dp.toPosition())
+                doorsAtLevel.computeIfAbsent(dp.scanLevel, k -> new ArrayList<>())
+                            .add(dp.toPosition())
         );
 
         pendingRooms = new MultiLevelRoomDetector(
@@ -248,6 +252,17 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
             times.clear();
         }
+    }
+
+    public void initializeNew(
+            TownFlagBlockEntity owner
+    ) {
+        this.initialize(
+                owner,
+                ImmutableMap.of(),
+                ImmutableList.of(),
+                ImmutableList.of()
+        );
     }
 
     public void initialize(

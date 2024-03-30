@@ -1,3 +1,16 @@
+# Questown
+https://modrinth.com/mod/questown/
+
+### Release Preparation
+Before a new version can be considered beta-ready, you must test
+- Starting from a brand new save
+- Adding one of each villager
+- Sleeping through the night
+- Completing a quest batch
+- Sleeping through the night again
+- Closing and reopening the save
+
+# Forge Docs
 
 Source installation information for modders
 -------------------------------------------

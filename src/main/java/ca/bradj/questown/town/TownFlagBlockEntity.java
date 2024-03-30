@@ -77,9 +77,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
@@ -88,6 +86,120 @@ import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>,
         TownPois.Listener {
+
+    private record InitPair(
+            BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag,
+            Consumer<TownFlagBlockEntity> onFlagPlace
+    ) {
+    }
+
+    private static Map<String, InitPair> initPairs;
+
+    public static void staticInitialize() {
+        ImmutableMap.Builder<String, InitPair> b = ImmutableMap.builder();
+        b.put(
+                NBT_ROOMS, new InitPair(
+                        (CompoundTag tag, TownFlagBlockEntity t) -> {
+                            TownRoomsMapSerializer.INSTANCE.deserialize(
+                                    tag, t, t.roomsHandle.getRegisteredRooms());
+                            return true;
+                        },
+                        t -> t.roomsHandle.initializeNew(t)
+                )
+        );
+        b.put(
+                NBT_QUEST_BATCHES, new InitPair(
+                        (tag, t) -> {
+                            CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
+                            MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
+                            t.isInitializedQuests = true;
+                            return true;
+                        },
+                        t -> t.questsHandle.initialize(t)
+                )
+        );
+        b.put(
+                NBT_MORNING_REWARDS, new InitPair(
+                        (tag, t) -> {
+                            CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
+                            t.morningRewards.deserializeNbt(t, data);
+                            return true;
+                        },
+                        t -> {}
+                )
+        );
+        b.put(
+                NBT_WELCOME_MATS, new InitPair(
+                        (tag, t) -> {
+                            ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
+                            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
+                            l.forEach(t.pois::registerWelcomeMat);
+                            return true;
+                        },
+                        t -> {}
+                )
+        );
+        b.put(
+                NBT_JOBS, new InitPair(
+                        (tag, t) -> {
+                            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), t.workHandle);
+                            return true;
+                        },
+                        t -> {}
+                )
+        );
+        b.put(
+                NBT_KNOWLEDGE, new InitPair(
+                        (tag, t) -> {
+                            if (!t.knowledgeHandle.isInitialized()) {
+                                return false;
+                            }
+                            TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(
+                                    QTNBT.getCompound(tag, NBT_KNOWLEDGE),
+                                    t.knowledgeHandle
+                            );
+                            return true;
+                        },
+                        t -> t.knowledgeHandle.initialize(t)
+                )
+        );
+        b.put(
+                NBT_VILLAGERS, new InitPair(
+                        (tag, t) -> {
+                            long currentTick = Util.getTick(t.getServerLevel());
+                            TownVillagerHandle.SERIALIZER.deserialize(tag, t.villagerHandle, currentTick);
+                            return true;
+                        },
+                        t -> {
+                            t.villagerHandle.associate(t);
+                            t.villagerHandle.addHungryListener(e -> {
+                                if (t.getVillagerHandle()
+                                     .isDining(e.getUUID())) {
+                                    return;
+                                }
+                                if (!t.getVillagerHandle()
+                                      .canDine(e.getUUID())) {
+                                    return;
+                                }
+                                String rid = e.getJobId()
+                                              .rootId();
+                                ResourceLocation diningRoom = DinerWork.asWork(rid)
+                                                                       .baseRoom();
+                                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
+                                if (diningRooms.isEmpty()) {
+                                    t.changeJobForVisitor(
+                                            e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
+                                } else {
+                                    t.changeJobForVisitor(
+                                            e.getUUID(), DinerWork.getIdForRoot(rid));
+                                }
+                            });
+                            t.villagerHandle.addStatsListener(s -> t.setChanged());
+                        }
+                )
+        );
+        initPairs = b.build();
+    }
 
     public static final String ID = "flag_base_block_entity";
     // TODO: Extract serialization
@@ -345,99 +457,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private static void loadNextTick(Queue<Function<TownFlagBlockEntity, Boolean>> initializers) {
         // TODO: Store active rooms. Otherwise they get re-announced on each startup.
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (tag.contains(NBT_ROOMS)) {
-                TownRoomsMapSerializer.INSTANCE.deserialize(
-                        tag.getCompound(NBT_ROOMS), t, t.roomsHandle.getRegisteredRooms());
-            }
-            return true;
-        });
 
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (tag.contains(NBT_QUEST_BATCHES)) {
-                CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-                MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
-                t.isInitializedQuests = true;
-            }
-            return true;
-        });
-
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (tag.contains(NBT_MORNING_REWARDS)) {
-                CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
-                t.morningRewards.deserializeNbt(t, data);
-            }
-            return true;
-        });
-
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (tag.contains(NBT_WELCOME_MATS)) {
-                ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
-                Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
-                l.forEach(t.pois::registerWelcomeMat);
-            }
-            return true;
-        });
-
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (tag.contains(NBT_JOBS)) {
-                TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), t.workHandle);
-            }
-            return true;
-        });
-
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (!t.knowledgeHandle.isInitialized()) {
-                return false;
-            }
-            if (QTNBT.contains(tag, NBT_KNOWLEDGE)) {
-                TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(
-                        QTNBT.getCompound(tag, NBT_KNOWLEDGE),
-                        t.knowledgeHandle
-                );
-            }
-            return true;
-        });
-
-        initializers.add(t -> {
-            CompoundTag tag = Compat.getBlockStoredTagData(t);
-            if (QTNBT.contains(tag, NBT_VILLAGERS)) {
-                CompoundTag data = QTNBT.getCompound(tag, NBT_VILLAGERS);
-                long currentTick = Util.getTick(t.getServerLevel());
-                TownVillagerHandle.SERIALIZER.deserialize(data, t.villagerHandle, currentTick);
-                t.villagerHandle.associate(t);
-            }
-            t.villagerHandle.addHungryListener(e -> {
-                if (t.getVillagerHandle()
-                     .isDining(e.getUUID())) {
-                    return;
+        initPairs.forEach(
+                (key, pair) -> {
+                    initializers.add(t -> {
+                        CompoundTag tag = Compat.getBlockStoredTagData(t);
+                        if (tag.contains(key)) {
+                            return pair.fromTag.apply(tag.getCompound(key), t);
+                        }
+                        QT.FLAG_LOGGER.info("No data for {}. Skipping deserialization.", key);
+                        return true;
+                    });
                 }
-                if (!t.getVillagerHandle()
-                      .canDine(e.getUUID())) {
-                    return;
-                }
-                String rid = e.getJobId()
-                              .rootId();
-                ResourceLocation diningRoom = DinerWork.asWork(rid)
-                                                       .baseRoom();
-                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
-                if (diningRooms.isEmpty()) {
-                    t.changeJobForVisitor(
-                            e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
-                } else {
-                    t.changeJobForVisitor(
-                            e.getUUID(), DinerWork.getIdForRoot(rid));
-                }
-            });
-            t.villagerHandle.addStatsListener(s -> t.setChanged());
-            return true;
-        });
+        );
     }
 
     public void writeTownData(CompoundTag tag) {
@@ -489,6 +521,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         grantAdvancementOnApproach();
 
+        initPairs.forEach((k, v) -> {
+            initializers.add(t -> {
+                v.onFlagPlace.accept(t);
+                return true;
+            });
+        });
         initializers.add(t -> {
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
@@ -499,9 +537,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 updateWorkersAfterRequestChange();
                 setChanged();
             });
-            t.questsHandle.initialize(t);
-            t.roomsHandle.initialize(t);
-            t.knowledgeHandle.initialize(t);
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
             if (!level.isClientSide()) {
                 TownFlags.register(uuid, t);
@@ -847,7 +882,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         for (JobID p : preference) {
             if (!JobsRegistry.canFit(this, uuid, p, Util.getDayTime(getServerLevel()))) {
-                QT.FLAG_LOGGER.debug("Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
+                QT.FLAG_LOGGER.debug(
+                        "Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
                 continue;
             }
 

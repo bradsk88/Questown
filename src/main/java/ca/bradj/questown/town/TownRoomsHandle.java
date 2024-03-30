@@ -44,9 +44,10 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     @Nullable
     private MCRoom flagMetaRoom;
 
-    public void initialize(TownFlagBlockEntity t) {
+    public void initializeNew(TownFlagBlockEntity t) {
         this.town = t;
         this.flagMetaRoom = Spaces.metaRoomAround(t.getBlockPos(), 2);
+        roomsMap.initializeNew(t);
         roomsMap.addRecipeListener(this);
     }
 

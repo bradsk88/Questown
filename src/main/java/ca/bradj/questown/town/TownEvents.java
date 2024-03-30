@@ -12,6 +12,7 @@ public final class TownEvents {
 
     @SubscribeEvent()
     public static void register(FMLCommonSetupEvent event) {
+        Compat.enqueueOrLog(event, TownFlagBlockEntity::staticInitialize);
         Compat.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
         Compat.enqueueOrLog(event, Works::staticInitialize);
     }

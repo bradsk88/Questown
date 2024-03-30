@@ -226,7 +226,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
 
-        this.tabs.draw(poseStack, bgX, bgY);
+        this.tabs.draw(new RenderContext(itemRenderer, poseStack), bgX, bgY);
     }
 
     private void renderRemovalButton(

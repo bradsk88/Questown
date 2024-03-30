@@ -99,7 +99,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(stack, bgX, bgY);
+        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
         renderInventory(stack);
     }
 
