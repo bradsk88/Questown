@@ -124,7 +124,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
-        this.tabs.draw(stack, x, y);
+        this.tabs.draw(new RenderContext(itemRenderer, stack), x, y);
     }
 
     @Override
