@@ -4,6 +4,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.WorkHandle;
@@ -138,6 +139,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     VillagerHolder getVillagerHandle();
 
     void removeEntity(VisitorMobEntity visitorMobEntity);
+
+    WorksBehaviour.TownData getTownData(); // TODO: IMPlement
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

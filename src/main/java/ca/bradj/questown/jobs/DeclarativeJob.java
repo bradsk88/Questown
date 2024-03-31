@@ -405,6 +405,7 @@ public class DeclarativeJob extends
     }
 
     private void tryGetSupplies(
+            TownInterface town,
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos
     ) {
@@ -440,7 +441,9 @@ public class DeclarativeJob extends
                 journal.getStatus(), journal.getCapacity(),
                 roomsNeedingIngredientsOrTools,
                 st, recipe::getRecipe, journal.getItems(),
-                (item) -> this.journal.addItem(MCHeldItem.fromTown(item))
+                (item) -> this.journal.addItem(MCHeldItem.fromTown(item)),
+                specialRules.get(journal.getStatus()),
+                i -> Works.isWorkResult(town.getTownData(), i)
         );
     }
 

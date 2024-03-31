@@ -113,4 +113,15 @@ public class Works {
         }
         return works.get(jobID);
     }
+
+    public static boolean isWorkResult(WorksBehaviour.TownData td, MCTownItem mcTownItem) {
+        for (Map.Entry<JobID, Supplier<Work>> wFn : works.entrySet()) {
+            Work work = wFn.getValue()
+                           .get();
+            if (work.results().apply(td).contains(mcTownItem)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

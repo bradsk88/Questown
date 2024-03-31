@@ -1,8 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
