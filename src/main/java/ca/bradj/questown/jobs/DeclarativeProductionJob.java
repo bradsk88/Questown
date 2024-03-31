@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.Marker;
 
+import java.util.Collection;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -27,7 +28,7 @@ abstract class DeclarativeProductionJob<
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, String> specialRules,
+            ImmutableMap<STATUS, ? extends Collection<String>> specialRules,
             ImmutableList<String> specialGlobalRules,
             Supplier<Claim> claimSupplier
     ) {

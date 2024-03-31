@@ -50,12 +50,10 @@ public class ExplorerWork {
             // No work required
     );
     public static final ItemStack RESULT = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
-    private static final boolean TIMER_SHARING = false;
-    public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
-            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
-            ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
+    public static final ImmutableMap<ProductionStatus, Collection<String>> SPECIAL_RULES = ImmutableMap.of(
+            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
+            ProductionStatus.FACTORY.waitingForTimedState(), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
     );
-
 
     public static final ResourceLocation JOB_SITE = SpecialQuests.TOWN_GATE;
 

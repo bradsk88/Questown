@@ -70,7 +70,7 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
     private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
 
-    public final ImmutableMap<STATUS, String> specialRules;
+    public final ImmutableMap<STATUS, ? extends Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
 
@@ -106,7 +106,7 @@ public abstract class ProductionJob<
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, String> specialRules,
+            ImmutableMap<STATUS, ? extends Collection<String>> specialRules,
             ImmutableList<String> specialGlobalRules,
             Supplier<Claim> claimSupplier
     ) {
@@ -369,11 +369,13 @@ public abstract class ProductionJob<
             TownInterface town,
             Vec3 entityPosition
     ) {
-        String rule = specialRules.get(getStatus());
-        if (rule == null) {
+        Collection<String> rules = specialRules.get(getStatus());
+        if (rules == null) {
             return false;
         }
-        return SpecialRules.REMOVE_FROM_WORLD.equals(rule);
+        return rules.contains(
+                SpecialRules.REMOVE_FROM_WORLD
+        );
     }
 
     @Override

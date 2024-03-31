@@ -10,6 +10,7 @@ import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
+import ca.bradj.questown.jobs.organizer.OrganizerStackTwoWork;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -83,6 +84,7 @@ public class Works {
         b.put(GathererUnmappedRodWorkQtrDay.ID, GathererUnmappedRodWorkQtrDay::asWork);
         b.put(GathererUnmappedRodWorkHalfDay.ID, GathererUnmappedRodWorkHalfDay::asWork);
         b.put(GathererUnmappedRodWorkFullDay.ID, GathererUnmappedRodWorkFullDay::asWork);
+        b.put(OrganizerStackTwoWork.ID, OrganizerStackTwoWork::asWork);
         works = b.build();
 
         works.forEach((id, work) -> {

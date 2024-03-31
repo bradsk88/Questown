@@ -59,12 +59,16 @@ public class NewLeaverWork {
             ImmutableMap<ProductionStatus, String> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
+        ImmutableMap.Builder<ProductionStatus, ImmutableList<String>> rules = ImmutableMap.builder();
+        specialRules.forEach((k, v)  -> rules.put(k, ImmutableList.of(v)));
         return productionWork(
                 icon,
                 id,
                 parentId,
                 new WorkDescription(
-                        t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
+                        new WorksBehaviour.CurrentlyPossibleResults(
+                                t -> t.allKnownGatherItemsFn().apply(lootTablePrefix)
+                        ),
                         initialRequest
                 ),
                 new WorkLocation(
@@ -84,7 +88,7 @@ public class NewLeaverWork {
                         resultGenerator
                 ),
                 new WorkSpecialRules(
-                        specialRules,
+                        rules.build(),
                         standardRules()
                 ),
                 SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()

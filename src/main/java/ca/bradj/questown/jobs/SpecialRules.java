@@ -43,4 +43,23 @@ public class SpecialRules {
     // it is time for them to go to bed. If this rule is disabled, villagers will become
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
+
+    // If this rule is enabled, the villager will attempt to find a chest containing any
+    // one of the work results defined in the "Works" array. (See class: Works)
+    // They will ignore whatever was specified as the "ingredient" for the corresponding
+    // work state.
+    // FIXME: IMplemnet
+    public static final String INGREDIENT_ANY_VALID_WORK_OUTPUT = "ingredient_any_valid_work_output";
+
+    // If this rule is enabled, the villager will double the quantity of all the items
+    // they are currently holding (as a stack) that are not tools. This was intended to
+    // be used by "organizer"-type villagers - because normal villagers are not supposed
+    // to be able to stack items.
+    // FIXME: Implement
+    public static final String DOUBLE_NON_TOOL_ITEM_STACK_SIZE = "double_non_tool_item_stack_size";
+
+    // If this rule is enabled, the villager will only take items from storage if they
+    // have a quantity of 1.
+    // FIXME: Implement
+    public static final String TAKE_NON_STACKED_INGREDIENTS_ONLY = "take_non_stacked_ingredients_only";
 }

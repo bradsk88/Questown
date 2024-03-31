@@ -59,7 +59,7 @@ public class BlacksmithWoodenPickaxeJob {
                 ID,
                 null,
                 new WorkDescription(
-                        t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
+                        WorksBehaviour.CurrentlyPossibleResults.constant(RESULT),
                         RESULT
                 ),
                 new WorkLocation(

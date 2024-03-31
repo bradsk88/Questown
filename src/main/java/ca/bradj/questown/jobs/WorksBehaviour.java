@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -76,10 +77,12 @@ public class WorksBehaviour {
         );
     }
 
-    public static Function<TownData, ImmutableSet<MCTownItem>> standardProductionResult(
+    public static CurrentlyPossibleResults standardProductionResult(
             Supplier<ItemStack> result
     ) {
-        return (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()));
+        return new CurrentlyPossibleResults(
+                (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()))
+        );
     }
 
     public static WorkDescription standardDescription(Supplier<ItemStack> result) {
@@ -91,7 +94,7 @@ public class WorksBehaviour {
 
     public static WorkDescription noResultDescription() {
         return new WorkDescription(
-                (td) -> ImmutableSet.of(MCTownItem.Air()),
+                CurrentlyPossibleResults.constant(Items.AIR.getDefaultInstance()),
                 Items.AIR.getDefaultInstance()
         );
     }
@@ -101,17 +104,23 @@ public class WorksBehaviour {
             Supplier<ItemStack> result
     ) {
         return new WorkWorldInteractions(
-            pauseForAction,
-            singleItemOutput(result.get()::copy)
+                pauseForAction,
+                singleItemOutput(result.get()::copy)
         );
     }
 
+    public static ImmutableList<String> standardGlobalRules() {
+        return standardProductionRules().specialGlobalRules();
+    }
 
-    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
+
+    public interface JobFunc extends
+            BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
-    public interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
+    public interface SnapshotFunc extends
+            TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
 
     }
 
@@ -130,6 +139,74 @@ public class WorksBehaviour {
     ) {
     }
 
+    public static class Icon {
+        public final ItemStack stack;
+
+        private Icon(ItemStack stack) {
+            this.stack = stack;
+        }
+
+        public static Icon forItem(Supplier<Item> item) {
+            return new Icon(item.get()
+                                .getDefaultInstance());
+        }
+    }
+
+    public record ParentID(JobID id) {
+        public static ParentID none() {
+            return new ParentID(null);
+        }
+    }
+
+    public static class CurrentlyPossibleResults implements Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> {
+
+        private final Function<TownData, ImmutableSet<MCTownItem>> factory;
+
+        public CurrentlyPossibleResults(
+                Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> factory
+        ) {
+            this.factory = factory;
+        }
+
+        public static CurrentlyPossibleResults constant(ItemStack result) {
+            return new CurrentlyPossibleResults(
+                    t -> ImmutableSet.of(MCTownItem.fromMCItemStack(result))
+            );
+        }
+
+        @Override
+        public ImmutableSet<MCTownItem> apply(TownData townData) {
+            return factory.apply(townData);
+        }
+    }
+
+    public static Work productionWork(
+            Icon icon,
+            JobID jobId,
+            ParentID parentId,
+            WorkDescription description,
+            WorkLocation location,
+            WorkStates state,
+            WorkWorldInteractions world,
+            WorkSpecialRules special,
+            @Nullable ResourceLocation workSound
+    ) {
+        return productionWork(
+                icon.stack,
+                jobId,
+                parentId.id,
+                description,
+                location,
+                state,
+                world,
+                special,
+                workSound
+        );
+    }
+
+    /**
+     * Deprecated use the other forms
+     */
     public static Work productionWork(
             ItemStack icon,
             JobID jobId,
@@ -166,7 +243,7 @@ public class WorksBehaviour {
             WorkSpecialRules special,
             @Nullable ResourceLocation workSound,
             ExpirationRules expiration
-            ) {
+    ) {
         return new Work(
                 parentID,
                 icon,
@@ -235,8 +312,10 @@ public class WorksBehaviour {
     ) {
         // TODO: Is it okay that we ignore status here?
         ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
-        ing.values().forEach(b::add);
-        tools.values().forEach(b::add);
+        ing.values()
+           .forEach(b::add);
+        tools.values()
+             .forEach(b::add);
         return b.build();
     }
 }

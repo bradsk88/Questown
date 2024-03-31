@@ -140,7 +140,7 @@ public class DeclarativeJob extends
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<ProductionStatus, String> specialStatusRules,
+            ImmutableMap<ProductionStatus, ? extends Collection<String>> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,

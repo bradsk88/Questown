@@ -63,7 +63,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
                 ImmutableMap.of(),
-                WorksBehaviour.standardProductionRules().specialGlobalRules(),
+                WorksBehaviour.standardGlobalRules(),
                 ExpirationRules.never(),
                 WorksBehaviour.noOutput(),
                 SoundEvents.BOOK_PAGE_TURN.getLocation()
