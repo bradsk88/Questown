@@ -1,6 +1,6 @@
 {
   "itemGroup.questown": "Questown",
-  "messages.building.room_created": "A new room was constructed at location %s",
+  "messages.building.room_created": "%s was constructed at location %s",
   "messages.building.recipe_created": "%s created at location %s",
   "messages.building.room_destroyed": "%s destroyed at location %s",
   "messages.building.room_changed": "%s became %s at location %s",
