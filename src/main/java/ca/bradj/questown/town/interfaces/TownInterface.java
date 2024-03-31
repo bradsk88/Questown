@@ -140,7 +140,7 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void removeEntity(VisitorMobEntity visitorMobEntity);
 
-    WorksBehaviour.TownData getTownData(); // TODO: IMPlement
+    WorksBehaviour.TownData getTownData();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.core.Room;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraftforge.registries.tags.ITag;
 
@@ -26,7 +27,6 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             Collection<String> statusRules,
             Predicate<TOWN_ITEM> isAnyWorkResult
     ) {
-        // TODO: Introduce this status for farmer
         if (!status.isCollectingSupplies()) {
             return;
         }
@@ -47,7 +47,9 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
         );
 
         if (statusRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-
+            shouldTake = item -> JobsClean.shouldTakeItem(
+                    upToAmount, ImmutableList.of(isAnyWorkResult::test), currentHeldItems, item
+            );
         }
 
         JobsClean.tryTakeContainerItems(taker, suppliesTarget, shouldTake::test);

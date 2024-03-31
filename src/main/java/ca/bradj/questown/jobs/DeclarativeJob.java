@@ -394,7 +394,7 @@ public class DeclarativeJob extends
         }
         tryDropLoot(entityBlockPos);
         if (!wrappingUp) {
-            tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
+            tryGetSupplies(town, roomsNeedingIngredientsOrTools, entityBlockPos);
         }
     }
 

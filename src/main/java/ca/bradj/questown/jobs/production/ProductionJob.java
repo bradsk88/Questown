@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -31,10 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
@@ -347,11 +345,17 @@ public abstract class ProductionJob<
     private void setupForGetSupplies(
             TownInterface town
     ) {
-        QT.JOB_LOGGER.debug(marker, "Searching for supplies");
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
                 journal.getItems(), item
         );
+        if (Util.mapListContains(specialRules, getStatus(), SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+            Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
+            checkFn = item -> JobsClean.shouldTakeItem(
+                    journal.getCapacity(), ImmutableList.of(isAnyWorkResult::test), journal.getItems(), item
+            );
+        }
+
         if (this.suppliesTarget != null) {
             if (!this.suppliesTarget.hasItem(checkFn)) {
                 this.suppliesTarget = town.findMatchingContainer(checkFn);

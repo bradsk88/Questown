@@ -568,10 +568,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     //  being done, and assign the rest to people who are idle or
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
-        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                getKnownBiomes(),
-                prefix
-        ));
+        WorksBehaviour.TownData td = getTownData();
         villagerHandle.stream()
                       .filter(v -> v instanceof VisitorMobEntity)
                       .map(v -> (VisitorMobEntity) v)
@@ -874,10 +871,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
 
-        Collection<ResourceLocation> mapBiomes = getKnownBiomes();
-        WorksBehaviour.TownData data = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                mapBiomes, prefix
-        ));
+        WorksBehaviour.TownData data = getTownData();
 
         List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(v.getJobId()));
 
@@ -1036,6 +1030,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void removeEntity(VisitorMobEntity visitorMobEntity) {
         villagerHandle.remove(visitorMobEntity);
         setChanged();
+    }
+
+    @Override
+    public WorksBehaviour.TownData getTownData() {
+        return new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
+                getKnownBiomes(),
+                prefix
+        ));
     }
 
     @Override
