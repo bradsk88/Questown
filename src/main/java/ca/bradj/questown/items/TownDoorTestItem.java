@@ -45,7 +45,7 @@ public class TownDoorTestItem extends Item {
                 clickedPos = clickedPos.above();
             }
         }
-        parent.startDebugTask(parent.getRoomHandle()
+        parent.getDebugHandle().startDebugTask(parent.getRoomHandle()
                                     .getDebugTaskForDoor(clickedPos));
         return InteractionResult.CONSUME;
     }

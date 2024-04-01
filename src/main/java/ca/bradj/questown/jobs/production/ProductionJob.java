@@ -14,6 +14,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -66,9 +67,9 @@ public abstract class ProductionJob<
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     protected final UUID ownerUUID;
-    private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
+    private Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
 
-    public final ImmutableMap<STATUS, ? extends Collection<String>> specialRules;
+    public final Function<STATUS, ? extends @NotNull Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
 
@@ -132,7 +133,7 @@ public abstract class ProductionJob<
 
         this.statusFactory = sFac;
 
-        this.specialRules = specialRules;
+        this.specialRules = k -> Util.getOrDefaultCollection(specialRules, k, ImmutableList.of());
         this.claimSupplier = claimSupplier;
     }
 
@@ -316,9 +317,10 @@ public abstract class ProductionJob<
             Direction facingPos
     ) {
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
-        this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(
+
+        this.roomsNeedingIngredientsOrTools = town.getDebugHandle().doOrUseCache(() -> roomsNeedingIngredientsOrTools(
                 town, work::getJobBlockState, (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
-        );
+        ));
 
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
@@ -338,7 +340,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
@@ -346,10 +348,10 @@ public abstract class ProductionJob<
             TownInterface town
     ) {
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
+                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools.get()),
                 journal.getItems(), item
         );
-        if (Util.mapListContains(specialRules, getStatus(), SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+        if (specialRules.apply(getStatus()).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
             Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
             checkFn = item -> JobsClean.shouldTakeItem(
                     journal.getCapacity(), ImmutableList.of(isAnyWorkResult::test), journal.getItems(), item
@@ -373,7 +375,7 @@ public abstract class ProductionJob<
             TownInterface town,
             Vec3 entityPosition
     ) {
-        Collection<String> rules = specialRules.get(getStatus());
+        Collection<String> rules = specialRules.apply(getStatus());
         if (rules == null) {
             return false;
         }
@@ -474,7 +476,7 @@ public abstract class ProductionJob<
             @Override
             public boolean hasNonSupplyItems() {
 
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet()
+                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.get().entrySet()
                                                                           .stream()
                                                                           .filter(
                                                                                   v -> !v.getValue()

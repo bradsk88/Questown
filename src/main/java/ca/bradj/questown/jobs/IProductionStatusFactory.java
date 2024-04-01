@@ -8,4 +8,6 @@ public interface IProductionStatusFactory<
     STATUS fromJobBlockState(int s);
 
     STATUS waitingForTimedState();
+
+    STATUS noJobSite();
 }

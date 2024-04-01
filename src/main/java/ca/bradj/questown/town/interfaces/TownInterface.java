@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Nullable ServerLevel getServerLevel();
@@ -141,6 +142,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     void removeEntity(VisitorMobEntity visitorMobEntity);
 
     WorksBehaviour.TownData getTownData();
+
+    DebugHandle getDebugHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

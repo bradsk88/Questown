@@ -87,6 +87,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>,
         TownPois.Listener {
 
+    private final TownDebugHandle debugHandle = new TownDebugHandle();
+
     private record InitPair(
             BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag,
             Consumer<TownFlagBlockEntity> onFlagPlace
@@ -263,8 +265,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
 
     private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
-    private @Nullable Supplier<Boolean> debugTask;
-    private boolean debugMode;
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -321,13 +321,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // because non-ticked sub-blocks will self-destruct.
         e.subBlocks.parentTick(sl);
 
-        if (e.debugMode) {
-            if (e.debugTask != null) {
-                boolean done = e.debugTask.get();
-                if (done) {
-                    e.debugTask = null;
-                }
-            }
+        if (e.debugHandle.runDebugTask()) {
             return;
         }
 
@@ -557,6 +551,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             if (!level.isClientSide()) {
                 TownFlags.register(uuid, t);
             }
+            this.debugHandle.initialize((msg, data) -> {
+                broadcastMessage(msg, data);
+                return null;
+            });
             return true;
         });
     }
@@ -1041,6 +1039,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public DebugHandle getDebugHandle() {
+        return debugHandle;
+    }
+
+    @Override
     public ImmutableSet<UUID> getVillagersWithQuests() {
         return TownQuests.getVillagers(quests);
     }
@@ -1329,18 +1332,5 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public int getY() {
         return getTownFlagBasePos().getY();
-    }
-
-    public void startDebugTask(Supplier<Boolean> debugTask) {
-        if (!this.debugMode) {
-            broadcastMessage("First you must enabled debug mode on the flag via the /qtdebug <POS> command");
-            return;
-        }
-        this.debugTask = debugTask;
-    }
-
-    public void toggleDebugMode() {
-        this.debugMode = !this.debugMode;
-        broadcastMessage("message.debug_mode", this.debugMode ? "enabled" : "disabled");
     }
 }

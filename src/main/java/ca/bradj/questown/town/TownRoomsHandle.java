@@ -2,7 +2,12 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.roomrecipes.Spaces;
+import ca.bradj.questown.town.containers.ContainerTargetV2;
+import ca.bradj.questown.town.containers.RoomAssociated;
+import ca.bradj.questown.town.containers.TownContainersV2;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.MultiLevelRoomDetector;
@@ -33,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>,
@@ -304,6 +310,16 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         };
     }
 
+    @Override
+    public List<MCRoom> getRoomsWithContainersOfItem(Predicate<MCTownItem> isWorkResult) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        Collection<? extends RoomAssociated<MCRoom>> containers = TownContainersV2.findMatching(t, isWorkResult);
+        return containers
+                .stream()
+                .map(RoomAssociated::getRoom)
+                .toList();
+    }
+
     private record Result(
             String debugArt,
             String room,
@@ -388,6 +404,11 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     @Override
     public ImmutableSet<TownPosition> getAllRegisteredDoors() {
         return roomsMap.getAllRegisteredDoors();
+    }
+
+    @Override
+    public ImmutableList<MCRoom> getAllRooms() {
+        return ImmutableList.copyOf(roomsMap.getAllRooms());
     }
 
     public void registerFenceGate(BlockPos clickedPos) {

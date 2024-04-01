@@ -282,15 +282,12 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         changeStatus(Status.IDLE);
     }
 
-    // TODO: Add state for LEAVING and add signal for "left town"
-    //  This will allow us to detect that food was removed by a player while leaving town and switch back to "NO_FOOD"
     public enum Status implements IStatus<Status> {
-        UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
-        RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
+        UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT,
+        RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE, NO_JOBSITE,
         GOING_TO_JOBSITE,
         // TODO: Move to farmer-specific status
         FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
-        // TODO: Move to baker-specific status
         COLLECTING_SUPPLIES, NO_SUPPLIES, BAKING, COLLECTING_BREAD, LEAVING_FARM, BAKING_FUELING, FARMING_WEEDING;
 
         static {
@@ -343,6 +340,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             @Override
             public Status waitingForTimedState() {
                 throw new UnsupportedOperationException("Gatherers do not generate products");
+            }
+
+            @Override
+            public Status noJobSite() {
+                return NO_JOBSITE;
             }
         };
 

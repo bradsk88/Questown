@@ -63,6 +63,7 @@ public class DeclarativeJobs {
     ) {
     }
 
+    // FIXME: Use staticInitialize() and confirm all production statuses are defined
     static {
         ImmutableMap.Builder<ProductionStatus, Function<
                 HandlerInputs,
@@ -123,6 +124,10 @@ public class DeclarativeJobs {
         );
         b.put(
                 ProductionStatus.IDLE,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.NO_JOBSITE,
                 i -> null
         );
         handler = b.build();

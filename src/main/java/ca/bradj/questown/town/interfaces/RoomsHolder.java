@@ -1,17 +1,21 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public interface RoomsHolder extends RoomMatchFinder<MCRoom> {
+public interface RoomsHolder extends RoomMatchFinder<MCRoom>, ContainerRoomFinder<MCRoom, MCTownItem> {
     Collection<MCRoom> getFarms();
 
     Collection<RoomRecipeMatch<MCRoom>> getMatches();
@@ -31,4 +35,6 @@ public interface RoomsHolder extends RoomMatchFinder<MCRoom> {
     Optional<RoomRecipeMatch<MCRoom>> computeRecipe(MCRoom r);
 
     ImmutableSet<TownPosition> getAllRegisteredDoors();
+
+    ImmutableList<MCRoom> getAllRooms();
 }

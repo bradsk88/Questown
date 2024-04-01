@@ -34,7 +34,7 @@ public class DebugAllDoorsCommand {
             return -1;
         }
 
-        tfbe.startDebugTask(tfbe.getRoomHandle()
+        tfbe.getDebugHandle().startDebugTask(tfbe.getRoomHandle()
                                 .getDebugTaskForAllDoors());
         return 0;
     }

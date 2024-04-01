@@ -8,9 +8,9 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-public class DebugCommand {
+public class DisableCachingCommand {
     public static void register(CommandDispatcher<CommandSourceStack> p_137808_) {
-        p_137808_.register(Commands.literal("qtdebug")
+        p_137808_.register(Commands.literal("qtcachetoggle")
                 .requires((p_137812_) -> {
                     return p_137812_.hasPermission(2);
                 })
@@ -30,7 +30,7 @@ public class DebugCommand {
             return -1;
         }
 
-        tfbe.getDebugHandle().toggleDebugMode();
+        tfbe.getDebugHandle().toggleCache();
         return 0;
     }
 }

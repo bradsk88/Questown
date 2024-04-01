@@ -15,13 +15,12 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.interfaces.RoomsHolder;
-import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -42,6 +41,7 @@ import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.*;
 
@@ -58,6 +58,11 @@ public class DeclarativeJob extends
         @Override
         public ProductionStatus waitingForTimedState() {
             return ProductionStatus.FACTORY.waitingForTimedState();
+        }
+
+        @Override
+        public ProductionStatus noJobSite() {
+            return ProductionStatus.FACTORY.noJobSite();
         }
 
         @Override
@@ -270,7 +275,7 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
@@ -313,7 +318,7 @@ public class DeclarativeJob extends
 
             @Override
             public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
-                return roomsNeedingIngredientsOrTools;
+                return roomsNeedingIngredientsOrTools.get();
             }
 
             @Override
@@ -394,7 +399,7 @@ public class DeclarativeJob extends
         }
         tryDropLoot(entityBlockPos);
         if (!wrappingUp) {
-            tryGetSupplies(town, roomsNeedingIngredientsOrTools, entityBlockPos);
+            tryGetSupplies(town, roomsNeedingIngredientsOrTools.get(), entityBlockPos);
         }
     }
 
@@ -442,7 +447,7 @@ public class DeclarativeJob extends
                 roomsNeedingIngredientsOrTools,
                 st, recipe::getRecipe, journal.getItems(),
                 (item) -> this.journal.addItem(MCHeldItem.fromTown(item)),
-                specialRules.get(journal.getStatus()),
+                specialRules.apply(journal.getStatus()),
                 i -> Works.isWorkResult(town.getTownData(), i)
         );
     }
@@ -620,8 +625,14 @@ public class DeclarativeJob extends
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> canClaim
     ) {
-        // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
-        HashMap<Integer, List<MCRoom>> b = new HashMap<>();
+        // TODO: Fully cover with tests, then try delegating to MCTownStateWorldInteraction.hasSupplies
+        HashMap<Integer, ArrayList<MCRoom>> b = new HashMap<>();
+
+        b.putAll(getRoomsWhereSpecialRulesApply(
+                town.getRoomHandle(), town.getDebugHandle(), town.getTownData())
+        );
+
+        // TODO: Move to JobRequirements and test
         ingredientsRequiredAtStates.forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {
                 b.put(state, new ArrayList<>());
@@ -653,6 +664,8 @@ public class DeclarativeJob extends
                                         .toList();
             b.put(state, Lists.newArrayList(roomz));
         });
+
+        // TODO: Move to JobRequirements and test
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values()
                                  .stream()
@@ -679,6 +692,21 @@ public class DeclarativeJob extends
             }
         });
         return ImmutableMap.copyOf(b);
+    }
+
+    @NotNull
+    private Map<Integer,ArrayList<MCRoom>> getRoomsWhereSpecialRulesApply(
+            ContainerRoomFinder<MCRoom, MCTownItem> rooms,
+            CacheFilter filter,
+            WorksBehaviour.TownData townData
+    ) {
+        Supplier<List<MCRoom>> resultRooms = filter.doOrUseCache(
+                () -> rooms.getRoomsWithContainersOfItem(i -> Works.isWorkResult(townData, i))
+        );
+        Function<Integer, ? extends Collection<String>> rules = k -> specialRules.apply(ProductionStatus.fromJobBlockStatus(k));
+        return Util.makeMutable(
+                JobRequirements.roomsWhereSpecialRulesApply(maxState, rules, resultRooms)
+        );
     }
 
     @Override

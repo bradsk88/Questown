@@ -20,7 +20,8 @@ public enum GathererStatuses implements StringRepresentable {
     RETURNED_FAILURE("returned_failure"),
     DROPPING_LOOT("dropping_loot"),
     CAPTURED("captured"),
-    RELAXING("relaxing");
+    RELAXING("relaxing"),
+    NO_JOBSITE("no_jobsite");
 
     private final String name;
 
@@ -60,6 +61,9 @@ public enum GathererStatuses implements StringRepresentable {
             case ("relaxing") -> {
                 return RELAXING;
             }
+            case ("no_jobsite") -> {
+                return NO_JOBSITE;
+            }
         }
         return INVALID;
     }
@@ -89,6 +93,7 @@ public enum GathererStatuses implements StringRepresentable {
             case RETURNED_FAILURE -> RETURNED_FAILURE;
             case CAPTURED -> CAPTURED;
             case RELAXING -> RELAXING;
+            case NO_JOBSITE -> NO_JOBSITE;
             case GOING_TO_JOBSITE, FARMING_HARVESTING, FARMING_RANDOM_TEND, LEAVING_FARM,
                     FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING, FARMING_WEEDING,
                     COLLECTING_SUPPLIES, NO_SUPPLIES,
@@ -118,6 +123,7 @@ public enum GathererStatuses implements StringRepresentable {
             case DROPPING_LOOT -> GathererJournal.Status.DROPPING_LOOT;
             case CAPTURED -> GathererJournal.Status.CAPTURED;
             case RELAXING -> GathererJournal.Status.RELAXING;
+            case NO_JOBSITE -> GathererJournal.Status.NO_JOBSITE;
         };
     }
 }

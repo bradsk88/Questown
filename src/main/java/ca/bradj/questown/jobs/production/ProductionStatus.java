@@ -3,11 +3,15 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
@@ -61,6 +65,9 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus WAITING_FOR_TIMED_STATE = register(
             new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
     );
+    public static final ProductionStatus NO_JOBSITE = register(
+            new ProductionStatus("NO_JOBSITE", nextIndex++)
+    );
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -106,6 +113,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         @Override
         public ProductionStatus waitingForTimedState() {
             return WAITING_FOR_TIMED_STATE;
+        }
+
+        @Override
+        public ProductionStatus noJobSite() {
+            return NO_JOBSITE;
         }
     };
     private final String name;

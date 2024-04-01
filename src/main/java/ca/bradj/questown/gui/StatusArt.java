@@ -28,6 +28,7 @@ public class StatusArt {
                 case NO_SPACE -> new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
                 case NO_FOOD -> new ResourceLocation("questown", "textures/menu/gatherer/no_food.png");
                 case NO_GATE -> new ResourceLocation("questown", "textures/menu/gatherer/no_gate.png");
+                case NO_JOBSITE -> new ResourceLocation("questown", "textures/menu/gatherer/no_jobsite.png");
                 case STAYING ->
                     // TODO: Icon for this
                         new ResourceLocation("questown", "textures/menu/gatherer/idle.png");

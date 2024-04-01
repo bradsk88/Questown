@@ -18,6 +18,7 @@
   "message.baker.villagers_will_add_coal": "Baker villagers can add coal to bake bread",
   "messages.jobs.changed": "Job changed to %s for villager %s",
   "message.debug_mode": "Debug Mode: %s",
+  "message.cache_mode": "Caching: %s",
   "tooltips.quests": "Quests",
   "tooltips.stats": "Stats",
   "tooltips.inventory": "Inventory",
