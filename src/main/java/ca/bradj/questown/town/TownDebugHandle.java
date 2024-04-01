@@ -58,11 +58,9 @@ public class TownDebugHandle implements DebugHandle {
         broadcaster.apply("message.debug_mode", this.debugMode ? "enabled" : "disabled");
     }
 
+
     @Override
-    public <X> Supplier<X> doOrUseCache(Supplier<X> supplier) {
-        if (cacheOff) {
-            return supplier;
-        }
-        return Suppliers.memoize(supplier::get);
+    public boolean isCacheDisabled() {
+        return cacheOff;
     }
 }

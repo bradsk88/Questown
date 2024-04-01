@@ -13,8 +13,8 @@ import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -67,7 +67,6 @@ public abstract class ProductionJob<
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
     protected final UUID ownerUUID;
-    private Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
 
     public final Function<STATUS, ? extends @NotNull Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
@@ -80,6 +79,7 @@ public abstract class ProductionJob<
             ServerLevel sl = town.getServerLevel();
             this.jobSite = findJobSite(
                     town.getRoomHandle(),
+
                     getWorkStatusHandle(town)::getJobBlockState,
                     sl::isEmptyBlock,
                     sl.getRandom()
@@ -299,10 +299,13 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findJobSite(
             RoomsHolder town,
+            Supplier<Collection<RoomRecipeMatch<MCRoom>>> roomsWhereSpecialRulesApply,
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     );
+
+    private ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
 
     protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,

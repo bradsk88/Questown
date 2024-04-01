@@ -20,7 +20,6 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -41,7 +40,6 @@ import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.*;
 
@@ -602,12 +600,13 @@ public class DeclarativeJob extends
     @Override
     protected BlockPos findJobSite(
             RoomsHolder town,
+            Supplier<Collection<RoomRecipeMatch<MCRoom>>> roomsWhereSpecialRulesApply,
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
         return JobSites.find(
-                () -> town.getRoomsMatching(workRoomId),
+                jobRooms(town, roomsWhereSpecialRulesApply),
                 match -> match.getContainedBlocks()
                               .entrySet(),
                 match -> match.room,
@@ -617,6 +616,19 @@ public class DeclarativeJob extends
                 specialGlobalRules,
                 new MCPosKit(rand, isEmpty)
         );
+    }
+
+    private Supplier<Collection<RoomRecipeMatch<MCRoom>>> jobRooms(
+            RoomsHolder town,
+            Supplier<Collection<RoomRecipeMatch<MCRoom>>> roomsWhereSpecialRulesApply
+    ) {
+        return () -> {
+            Collection<RoomRecipeMatch<MCRoom>> sr = roomsWhereSpecialRulesApply.get();
+            if (sr.isEmpty()) {
+                return town.getRoomsMatching(workRoomId);
+            }
+            return sr;
+        };
     }
 
     @Override
@@ -695,7 +707,7 @@ public class DeclarativeJob extends
     }
 
     @NotNull
-    private Map<Integer,ArrayList<MCRoom>> getRoomsWhereSpecialRulesApply(
+    private Map<Integer, ArrayList<MCRoom>> getRoomsWhereSpecialRulesApply(
             ContainerRoomFinder<MCRoom, MCTownItem> rooms,
             CacheFilter filter,
             WorksBehaviour.TownData townData
@@ -703,7 +715,8 @@ public class DeclarativeJob extends
         Supplier<List<MCRoom>> resultRooms = filter.doOrUseCache(
                 () -> rooms.getRoomsWithContainersOfItem(i -> Works.isWorkResult(townData, i))
         );
-        Function<Integer, ? extends Collection<String>> rules = k -> specialRules.apply(ProductionStatus.fromJobBlockStatus(k));
+        Function<Integer, ? extends Collection<String>> rules = k -> specialRules.apply(
+                ProductionStatus.fromJobBlockStatus(k));
         return Util.makeMutable(
                 JobRequirements.roomsWhereSpecialRulesApply(maxState, rules, resultRooms)
         );
