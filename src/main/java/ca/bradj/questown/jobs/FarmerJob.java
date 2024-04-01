@@ -56,7 +56,8 @@ import java.util.stream.Collectors;
 import static ca.bradj.questown.jobs.GathererJournal.Status.*;
 import static ca.bradj.questown.jobs.farmer.FarmerWorldInteraction.getTilledState;
 
-public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>, LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
+public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldItem>, GathererJournal.Status>,
+        LockSlotHaver, ContainerListener, JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem> {
 
     public static final JobID ID = new JobID("farmer", "farm_field");
     private final Marker marker = MarkerManager.getMarker("Farmer");
@@ -306,30 +307,37 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         if (journal.getStatus() != COLLECTING_SUPPLIES) {
             return;
         }
-        JobsClean.<BlockPos, MCTownItem>tryTakeContainerItems(i -> journal.addItem(MCHeldItem.fromTown(i)), new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
-            @Override
-            public boolean isCloseTo() {
-                if (suppliesTarget == null) {
-                    return false;
-                }
-                return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
-            }
+        JobsClean.<BlockPos, MCTownItem>tryTakeContainerItems(
+                i -> journal.addItem(MCHeldItem.fromTown(i)),
+                new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+                    @Override
+                    public boolean isCloseTo() {
+                        if (suppliesTarget == null) {
+                            return false;
+                        }
+                        return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+                    }
 
-            @Override
-            public String toShortString() {
-                return suppliesTarget.toShortString();
-            }
+                    @Override
+                    public String toShortString() {
+                        return suppliesTarget.toShortString();
+                    }
 
-            @Override
-            public List<MCTownItem> getItems() {
-                return suppliesTarget.getItems();
-            }
+                    @Override
+                    public List<MCTownItem> getItems() {
+                        return suppliesTarget.getItems();
+                    }
 
-            @Override
-            public void removeItem(int i, int quantity) {
-                suppliesTarget.getContainer().removeItem(i, quantity);
-            }
-        }, (MCTownItem item) -> holdItems.contains(item.get()));
+                    @Override
+                    public void removeItem(
+                            int i,
+                            int quantity
+                    ) {
+                        suppliesTarget.getContainer().removeItem(i, quantity);
+                    }
+                },
+                (MCTownItem item) -> holdItems.contains(item.get())
+        );
     }
 
     @Override
@@ -355,13 +363,14 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
 
         GathererJournal.Status status = getStatus();
         BlockPos out = switch (status) {
-            case GOING_TO_JOBSITE, LEAVING_FARM -> getGateInteractionSpot(town, selectedFarm, entityBlockPos, status == LEAVING_FARM);
+            case GOING_TO_JOBSITE, LEAVING_FARM ->
+                    getGateInteractionSpot(town, selectedFarm, entityBlockPos, status == LEAVING_FARM);
             case FARMING_HARVESTING -> workSpots.get(FarmerAction.HARVEST).interactionSpot();
             case FARMING_PLANTING -> workSpots.get(FarmerAction.PLANT).position();
             case FARMING_TILLING -> workSpots.get(FarmerAction.TILL).position();
             case FARMING_COMPOSTING -> workSpots.get(FarmerAction.COMPOST).position();
             case FARMING_BONING -> workSpots.get(FarmerAction.BONE).position();
-            case FARMING_WEEDING-> workSpots.get(FarmerAction.WEED).position();
+            case FARMING_WEEDING -> workSpots.get(FarmerAction.WEED).position();
             case FARMING_RANDOM_TEND -> getRandomFarmSpot(sl);
             case COLLECTING_SUPPLIES -> supplies;
             case DROPPING_LOOT -> blockPos;
@@ -387,7 +396,10 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     @NotNull
     private BlockPos getRandomFarmSpot(@NotNull ServerLevel sl) {
         return Positions.ToBlock(
-                InclusiveSpaces.getRandomEnclosedPosition(selectedFarm.getSpace(), (bound) -> sl.getRandom().nextInt(bound)),
+                InclusiveSpaces.getRandomEnclosedPosition(
+                        selectedFarm.getSpace(),
+                        (bound) -> sl.getRandom().nextInt(bound)
+                ),
                 selectedFarm.yCoord
         );
     }
@@ -476,26 +488,38 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
 
         return farm.getSpaces().stream()
-                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream()
-                        .map(position -> {
-                            BlockPos bp = Positions.ToBlock(position, farm.yCoord);
-                            BlockState cropBlock = level.getBlockState(bp);
-                            BlockPos gp = bp.below();
-                            BlockState groundBlock = level.getBlockState(gp);
-                            if (level.getRandom().nextInt(Config.FARMER_WEEDS_RARITY.get()) == 0) {
-                                blockWithWeeds.add(gp);
-                            }
-                            FarmerAction blockAction = fromBlocks(level, gp, groundBlock, cropBlock, blockWithWeeds);
-                            int score = score(groundBlock, cropBlock);
-                            return new WorkSpot<>(gp, blockAction, score, bp.relative(Direction.getRandom(level.random)));
-                        }))
-                .sorted(Comparator.comparingInt(WorkSpot::score))
-                .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
-                    if (!this.reverse) {
-                        Collections.reverse(list);
-                    }
-                    return list;
-                }));
+                   .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream()
+                                                    .map(position -> {
+                                                        BlockPos bp = Positions.ToBlock(position, farm.yCoord);
+                                                        BlockState cropBlock = level.getBlockState(bp);
+                                                        BlockPos gp = bp.below();
+                                                        BlockState groundBlock = level.getBlockState(gp);
+                                                        if (level.getRandom()
+                                                                 .nextInt(Config.FARMER_WEEDS_RARITY.get()) == 0) {
+                                                            blockWithWeeds.add(gp);
+                                                        }
+                                                        FarmerAction blockAction = fromBlocks(
+                                                                level,
+                                                                gp,
+                                                                groundBlock,
+                                                                cropBlock,
+                                                                blockWithWeeds
+                                                        );
+                                                        int score = score(groundBlock, cropBlock);
+                                                        return new WorkSpot<>(
+                                                                gp,
+                                                                blockAction,
+                                                                score,
+                                                                bp.relative(Direction.getRandom(level.random))
+                                                        );
+                                                    }))
+                   .sorted(Comparator.comparingInt(WorkSpot::score))
+                   .collect(Collectors.collectingAndThen(Collectors.toList(), list -> {
+                       if (!this.reverse) {
+                           Collections.reverse(list);
+                       }
+                       return list;
+                   }));
     }
 
     private int score(
@@ -556,6 +580,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     public boolean hasSpace() {
                         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
                     }
+
+                    @Override
+                    public boolean isCachingAllowed() {
+                        return town.getDebugHandle().isCacheEnabled();
+                    }
                 },
                 new FarmerStatuses.FarmStateProvider() {
                     @Override
@@ -570,16 +599,18 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     }
 
                     @Override
-                    public boolean hasNonSupplyItems() {
+                    public boolean hasNonSupplyItems(boolean allowCaching) {
                         return journal.hasAnyLootToDrop();
                     }
 
                     @Override
                     public Map<GathererJournal.Status, Boolean> getSupplyItemStatus() {
-                        boolean hasSeeds = journal.getItems().stream().anyMatch(v -> Items.WHEAT_SEEDS.equals(v.get().get()));
+                        boolean hasSeeds = journal.getItems().stream()
+                                                  .anyMatch(v -> Items.WHEAT_SEEDS.equals(v.get().get()));
                         boolean hasCompostable = journal.getItems().stream().anyMatch(
                                 v -> Ingredient.of(TagsInit.Items.COMPOSTABLE).test(v.get().toItemStack()));
-                        boolean hasBoneMeal = journal.getItems().stream().anyMatch(v -> Items.BONE_MEAL.equals(v.get().get()));
+                        boolean hasBoneMeal = journal.getItems().stream()
+                                                     .anyMatch(v -> Items.BONE_MEAL.equals(v.get().get()));
                         return ImmutableMap.of(
                                 GathererJournal.Status.FARMING_TILLING, hasSeeds,
                                 GathererJournal.Status.FARMING_PLANTING, hasSeeds,

@@ -86,6 +86,11 @@ public class FarmerStatuses {
                     }
 
                     @Override
+                    public boolean isCachingAllowed() {
+                        return town.isCachingAllowed();
+                    }
+
+                    @Override
                     public boolean canUseMoreSupplies() {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
                     }

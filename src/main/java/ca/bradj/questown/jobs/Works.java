@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
@@ -114,11 +115,15 @@ public class Works {
         return works.get(jobID);
     }
 
-    public static boolean isWorkResult(WorksBehaviour.TownData td, MCTownItem mcTownItem) {
+    public static boolean isWorkResult(
+            WorksBehaviour.TownData td,
+            MCTownItem mcTownItem
+    ) {
         for (Map.Entry<JobID, Supplier<Work>> wFn : works.entrySet()) {
             Work work = wFn.getValue()
                            .get();
-            if (work.results().apply(td).contains(mcTownItem)) {
+            ImmutableSet<MCTownItem> possibleResults = work.results().apply(td);
+            if (possibleResults.contains(mcTownItem)) {
                 return true;
             }
         }

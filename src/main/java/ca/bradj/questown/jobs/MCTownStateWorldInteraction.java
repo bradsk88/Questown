@@ -29,7 +29,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
+public class MCTownStateWorldInteraction extends
+        AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
     public record Inputs(
             MCTownState town,
@@ -67,7 +68,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected int getAffectedTime(Inputs inputs, Integer nextStepTime) {
+    protected int getAffectedTime(
+            Inputs inputs,
+            Integer nextStepTime
+    ) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
     }
 
@@ -144,12 +148,21 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState setJobBlockState(@NotNull Inputs inputs, MCTownState ts, BlockPos position, AbstractWorkStatusStore.State fresh) {
+    protected MCTownState setJobBlockState(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            BlockPos position,
+            AbstractWorkStatusStore.State fresh
+    ) {
         return ts.setJobBlockState(position, fresh);
     }
 
     @Override
-    protected MCTownState withEffectApplied(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+    protected MCTownState withEffectApplied(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            MCHeldItem newItem
+    ) {
         ItemStack s = newItem.get().toItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(s);
         return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(
@@ -158,12 +171,19 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState withKnowledge(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+    protected MCTownState withKnowledge(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            MCHeldItem newItem
+    ) {
         return ts.withKnowledge(newItem);
     }
 
     @Override
-    protected boolean isInstanze(MCTownItem mcTownItem, Class<?> clazz) {
+    protected boolean isInstanze(
+            MCTownItem mcTownItem,
+            Class<?> clazz
+    ) {
         return clazz.isInstance(mcTownItem.get().asItem());
     }
 
@@ -178,7 +198,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected Iterable<MCHeldItem> getResults(Inputs inputs, Collection<MCHeldItem> mcHeldItems) {
+    protected Iterable<MCHeldItem> getResults(
+            Inputs inputs,
+            Collection<MCHeldItem> mcHeldItems
+    ) {
         return resultGenerator.apply(inputs.level, mcHeldItems);
     }
 
@@ -291,9 +314,12 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             public boolean hasSpace() {
                 return containers.stream().anyMatch(v -> !v.isFull());
             }
-        }
 
-                ;
+            @Override
+            public boolean isCachingAllowed() {
+                return true;
+            }
+        };
     }
 
     public EntityInvStateProvider<Integer> asInventory(
@@ -308,7 +334,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             }
 
             @Override
-            public boolean hasNonSupplyItems() {
+            public boolean hasNonSupplyItems(boolean allowCaching) {
                 return JobsClean.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),

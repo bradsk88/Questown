@@ -4,4 +4,6 @@ public interface TownProvider {
     boolean hasSupplies();
 
     boolean hasSpace();
+
+    boolean isCachingAllowed();
 }

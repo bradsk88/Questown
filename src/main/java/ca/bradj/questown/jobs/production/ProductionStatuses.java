@@ -21,7 +21,7 @@ public class ProductionStatuses {
                 return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction);
             }
             case NIGHT, EVENING -> {
-                return getEveningStatus(currentStatus, inventory, town, factory);
+                return getEveningStatus(currentStatus, inventory, town, factory, town.isCachingAllowed());
             }
             default -> throw new IllegalArgumentException(String.format("Unrecognized signal %s", signal));
         }
@@ -48,9 +48,10 @@ public class ProductionStatuses {
             ProductionStatus currentStatus,
             EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
-            IStatusFactory<ProductionStatus> factory
+            IStatusFactory<ProductionStatus> factory,
+            boolean allowCaching
     ) {
-        if (JobStatuses.hasItems(inventory)) {
+        if (JobStatuses.hasItems(allowCaching, inventory)) {
             return nullIfUnchanged(currentStatus, factory.droppingLoot());
         }
 

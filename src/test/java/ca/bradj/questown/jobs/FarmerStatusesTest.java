@@ -20,8 +20,15 @@ class FarmerStatusesTest {
 
     private record ConstTown(
             boolean hasSupplies,
-            boolean hasSpace
+            boolean hasSpace,
+            boolean isCachingAllowed
     ) implements TownProvider {
+        public ConstTown(
+                boolean hasSupplies,
+                boolean hasSpace
+        ) {
+            this(hasSupplies, hasSpace, false);
+        }
     }
 
 
@@ -40,6 +47,10 @@ class FarmerStatusesTest {
             boolean hasItems,
             Map<GathererJournal.Status, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<GathererJournal.Status> {
+        @Override
+        public boolean hasNonSupplyItems(boolean allowCaching) {
+            return hasNonSupplyItems;
+        }
     }
 
     @Test

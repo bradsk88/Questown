@@ -8,4 +8,6 @@ public interface TownStateProvider {
     boolean canUseMoreSupplies();
 
     boolean isTimerActive();
+
+    boolean isCachingAllowed();
 }

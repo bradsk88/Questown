@@ -60,7 +60,7 @@ public class TownDebugHandle implements DebugHandle {
 
 
     @Override
-    public boolean isCacheDisabled() {
-        return cacheOff;
+    public boolean isCacheEnabled() {
+        return !cacheOff;
     }
 }

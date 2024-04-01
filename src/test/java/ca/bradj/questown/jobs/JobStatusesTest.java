@@ -165,6 +165,10 @@ class JobStatusesTest {
             Map<TestStatus, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<TestStatus> {
 
+        @Override
+        public boolean hasNonSupplyItems(boolean allowCaching) {
+            return hasNonSupplyItems;
+        }
     }
 
     record ConstTown(
@@ -173,6 +177,10 @@ class JobStatusesTest {
             boolean canUseMoreSupplies,
             boolean isTimerActive
     ) implements TownStateProvider {
+        @Override
+        public boolean isCachingAllowed() {
+            return false;
+        }
     }
 
     static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
@@ -406,7 +414,7 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_Idle_WhenInvHasNoItems_AndTownHasNoSupplies_AndCannotDoWork() {
+    void StatusShouldBe_NoJobSite_WhenInvHasNoItems_AndTownHasNoSupplies_AndCannotDoWork() {
         boolean canDoWork = false;
         boolean hasSupplies = false;
         boolean suppliesInInventory = false;
@@ -422,7 +430,7 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.IDLE, s);
+        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
     @Test
     void StatusShouldBe_NoSpace_WhenInvHasSomeItemsButNotFull_AndTownHasNoSpace_AndCannotDoWork() {

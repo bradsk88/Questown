@@ -15,8 +15,11 @@ import java.util.Map;
 
 public class JobStatuses {
 
-    public static boolean hasItems(EntityInvStateProvider<?> inventory) {
-        if (inventory.hasNonSupplyItems()) {
+    public static boolean hasItems(
+            boolean allowCaching,
+            EntityInvStateProvider<?> inventory
+    ) {
+        if (inventory.hasNonSupplyItems(allowCaching)) {
             return true;
         }
         return inventory.getSupplyItemStatus()
@@ -42,7 +45,7 @@ public class JobStatuses {
         STATUS s = null;
         Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
         boolean hasWorkItems = supplyItemStatus.containsValue(true);
-        boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems();
+        boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems(town.isCachingAllowed());
         if (hasWorkItems) {
             STATUS useStatus = job.tryUsingSupplies(supplyItemStatus);
             if (useStatus != null) {
@@ -76,7 +79,7 @@ public class JobStatuses {
 
         if (s2 != null) {
             return nullIfUnchanged(currentStatus, s2);
-        } else if (inventory.hasNonSupplyItems()) {
+        } else if (inventory.hasNonSupplyItems(town.isCachingAllowed())) {
             if (town.hasSpace()) {
                 s2 = factory.droppingLoot();
             } else {
@@ -88,7 +91,7 @@ public class JobStatuses {
             } else if (hasItems) {
                 s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
             } else {
-                s2 = factory.idle();
+                s2 = factory.noJobSite();
             }
         } else {
             if (hasItems && !hasWorkItems) {
@@ -152,6 +155,11 @@ public class JobStatuses {
                     @Override
                     public boolean isTimerActive() {
                         return town.isUnfinishedTimeWorkPresent();
+                    }
+
+                    @Override
+                    public boolean isCachingAllowed() {
+                        return town.isCachingAllowed();
                     }
 
                     @Override

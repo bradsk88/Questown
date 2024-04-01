@@ -37,6 +37,10 @@ public class StatusesProductionRoutineTest {
             boolean hasNonSupplyItems,
             Map<Integer, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<Integer> {
+        @Override
+        public boolean hasNonSupplyItems(boolean allowCaching) {
+            return hasNonSupplyItems;
+        }
     }
 
     /**
@@ -46,8 +50,18 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState
+            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
+            boolean isCachingAllowed
     ) implements JobTownProvider<Room> {
+        public TestJobTown(
+                boolean hasSupplies,
+                boolean hasSpace,
+                Collection<Room> roomsWithCompletedProduct,
+                Map<Integer, Collection<Room>> roomsNeedingIngredientsByState
+        ) {
+            this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, false);
+        }
+
         @Override
         public boolean isUnfinishedTimeWorkPresent() {
             return false;
@@ -692,8 +706,19 @@ public class StatusesProductionRoutineTest {
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
             Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
-            boolean isUnfinishedTimeWorkPresent
+            boolean isUnfinishedTimeWorkPresent,
+            boolean isCachingAllowed
     ) implements JobTownProvider<Room> {
+        private TestJobTownWithTime(
+                boolean hasSupplies,
+                boolean hasSpace,
+                Collection<Room> roomsWithCompletedProduct,
+                Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
+                boolean isUnfinishedTimeWorkPresent
+        ) {
+            this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, isUnfinishedTimeWorkPresent, false);
+        }
+
         @Override
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
             return ImmutableList.of();

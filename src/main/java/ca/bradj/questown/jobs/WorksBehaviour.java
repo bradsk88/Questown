@@ -31,6 +31,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class WorksBehaviour {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
@@ -176,7 +177,9 @@ public class WorksBehaviour {
 
         @Override
         public ImmutableSet<MCTownItem> apply(TownData townData) {
-            return factory.apply(townData);
+            ImmutableSet.Builder<MCTownItem> b = ImmutableSet.builder();
+            factory.apply(townData).stream().filter(v -> !v.isEmpty()).forEach(b::add);
+            return b.build();
         }
     }
 

@@ -5,7 +5,7 @@ import java.util.Map;
 public interface EntityInvStateProvider<SUP_CAT> {
     boolean inventoryFull();
 
-    boolean hasNonSupplyItems();
+    boolean hasNonSupplyItems(boolean allowCaching);
 
     Map<SUP_CAT, Boolean> getSupplyItemStatus();
 }
