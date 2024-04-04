@@ -411,7 +411,7 @@ public class DeclarativeJob extends
         };
         getter.tryGetSupplies(journal.getStatus(), journal.getCapacity(), roomsNeedingIngredientsOrTools, st,
                 recipe::getRecipe, journal.getItems(), (item) -> this.journal.addItem(MCHeldItem.fromTown(item)),
-                specialRules.apply(journal.getStatus()), i -> Works.isWorkResult(town.getTownData(), i)
+                specialRules.apply(ProductionStatus.fromJobBlockStatus(0)), i -> Works.isWorkResult(town.getTownData(), i)
         );
     }
 
@@ -535,7 +535,7 @@ public class DeclarativeJob extends
 
     @Override
     public String getStatusToSyncToClient() {
-        return journal.getStatus().name();
+        return journal.getStatus().nameV2();
     }
 
     @Override

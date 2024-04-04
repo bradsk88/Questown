@@ -471,6 +471,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
         }
 
         @Override
+        public String nameV2() {
+            return name();
+        }
+
+        @Override
         public boolean isUnset() {
             return this == UNSET;
         }

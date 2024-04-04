@@ -118,7 +118,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, ? extends Collection<String>> specialRules,
+            ImmutableMap<STATUS, ? extends Collection<String>> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             Supplier<Claim> claimSupplier
     ) {
@@ -146,7 +146,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
         this.statusFactory = sFac;
 
-        this.specialRules = k -> Util.getOrDefaultCollection(specialRules, k, ImmutableList.of());
+        this.specialRules = k -> Util.getOrDefaultCollection(specialStatusRules, k, ImmutableList.of());
         this.claimSupplier = claimSupplier;
     }
 
@@ -167,7 +167,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     @Override
     public String getStatusToSyncToClient() {
-        return this.journal.getStatus().name();
+        return this.journal.getStatus().nameV2();
     }
 
     @Override

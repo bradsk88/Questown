@@ -179,6 +179,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     @Override
     public String name() {
+        return Integer.toString(value);
+    }
+
+    @Override
+    public String nameV2() {
         if (value < firstNonCustomIndex) {
             return Integer.toString(value);
         }

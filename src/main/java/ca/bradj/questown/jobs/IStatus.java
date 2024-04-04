@@ -12,6 +12,7 @@ public interface IStatus<S extends IStatus<S>> {
     boolean isCollectingSupplies();
 
     String name();
+    String nameV2();
 
     boolean isUnset();
 

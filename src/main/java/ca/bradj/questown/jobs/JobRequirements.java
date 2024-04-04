@@ -18,7 +18,8 @@ public class JobRequirements {
         ImmutableMap.Builder<Integer, ImmutableList<ROOM>> b = ImmutableMap.builder();
 
         for (int i = 0; i < maxState; i++) {
-            Collection<String> rules = specialRules.apply(i);if (rules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+            Collection<String> rules = specialRules.apply(i);
+            if (rules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
                 List<ROOM> rooms = roomsWithWorkResultsInStorage.get();
                 if (rooms != null && !rooms.isEmpty()) {
                     b.put(i, ImmutableList.copyOf(rooms));

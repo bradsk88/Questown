@@ -207,11 +207,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                     cat = jobId;
                 }
                 TranslatableComponent component = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.name()),
+                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
                         jobName
                 );
                 TranslatableComponent component2 = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.name()),
+                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
                         jobName
                 );
                 super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
