@@ -34,7 +34,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
@@ -479,7 +482,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
+    protected EntityInvStateProvider<Integer> defaultEntityInvProvider(WorksBehaviour.TownData townData) {
         return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
@@ -493,13 +496,18 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                                                           .filter(v -> !v.getValue().isEmpty())
                                                                           .map(Map.Entry::getKey)
                                                                           .collect(Collectors.toSet());
-                ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(statesToFeed.stream()
-                                                                                                                  .flatMap(
-                                                                                                                          v -> recipe.getRecipe(
-                                                                                                                                             v)
-                                                                                                                                     .stream())
-                                                                                                                  .toList());
-                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
+                ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> b = ImmutableList.builder();
+                statesToFeed.stream()
+                            .flatMap(
+                                    v -> recipe.getRecipe(
+                                                       v)
+                                               .stream())
+                            .forEach(b::add);
+                Collection<String> stateRules = specialRules.apply(statusFactory.fromJobBlockState(0));
+                if (stateRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+                    b.add(i -> Works.isWorkResult(townData, i));
+                }
+                return Jobs.hasNonSupplyItems(journal, b.build());
             }
 
             @Override

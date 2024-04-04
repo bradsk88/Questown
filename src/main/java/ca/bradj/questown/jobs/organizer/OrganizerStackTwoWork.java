@@ -68,7 +68,9 @@ public class OrganizerStackTwoWork {
                                         SpecialRules.DOUBLE_NON_TOOL_ITEM_STACK_SIZE
                                 )
                         ),
-                        WorksBehaviour.standardGlobalRules()
+                        ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION
+                        )
                 ),
                 SoundEvents.CHEST_OPEN.getLocation()
         );

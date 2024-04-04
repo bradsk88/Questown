@@ -135,6 +135,7 @@ public class DeclarativeJob extends
     private int ticksSinceStart;
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
+    private ImmutableMap<Integer, Predicate<MCHeldItem>> statesWhereSpecialRulesApply = ImmutableMap.of();
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -251,6 +252,12 @@ public class DeclarativeJob extends
             ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
+        for (int i = 0; i < maxState; i++) {
+            b.put(i, item -> Works.isWorkResult(town.getTownData(), item));
+        }
+        this.statesWhereSpecialRulesApply = b.build();
+
         VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
         if (this.grabbingInsertedSupplies) {
             if (world.tryGrabbingInsertedSupplies(town, work, vmEntity)) {
@@ -342,7 +349,7 @@ public class DeclarativeJob extends
         this.journal.tick(
                 jtp,
                 elp,
-                super.defaultEntityInvProvider(),
+                super.defaultEntityInvProvider(town.getTownData()),
                 statusFactory,
                 prioritizeExtraction
         );
@@ -540,7 +547,14 @@ public class DeclarativeJob extends
 
     @Override
     protected Map<Integer, Boolean> getSupplyItemStatus() {
-        return JobsClean.getSupplyItemStatuses(journal::getItems, Jobs.unMCHeld2(ingredientsRequiredAtStates),
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        ImmutableMap<Integer, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
+        statesWhereSpecialRulesApply.forEach((k, v) -> // FIXME: Test this
+                b.put(k, item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
+
+        return JobsClean.getSupplyItemStatuses(
+                journal::getItems,
+                b.build(),
                 Jobs.unMCHeld2(toolsRequiredAtStates)
         );
     }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,8 +31,8 @@ public class JobsClean {
             ImmutableList<TestFn<TOWN_ITEM>> recipe
     ) {
         return journal.getItems().stream()
-                .filter(Predicates.not(Item::isEmpty))
-                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .filter(Predicates.not(Item::isEmpty))
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     @NotNull
@@ -150,7 +151,10 @@ public class JobsClean {
 
         List<TOWN_ITEM> getItems();
 
-        void removeItem(int i, int quantity);
+        void removeItem(
+                int i,
+                int quantity
+        );
     }
 
     public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
