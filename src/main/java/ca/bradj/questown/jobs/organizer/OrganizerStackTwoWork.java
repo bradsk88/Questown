@@ -4,7 +4,6 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.WorksBehaviour.CurrentlyPossibleResults;
-import ca.bradj.questown.jobs.WorksBehaviour.Icon;
 import ca.bradj.questown.jobs.WorksBehaviour.ParentID;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
@@ -20,10 +19,10 @@ import net.minecraft.world.level.block.ChestBlock;
 public class OrganizerStackTwoWork {
     public static final JobID ID = new JobID("organizer", "stack_two_work");
     public static final ItemStack RESULT = Items.AIR.getDefaultInstance();
-    public static final int MAX_STATE = 2;
+    public static final int MAX_STATE = 1;
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of();
     private static final ImmutableMap<Integer, Integer> INGREDIENTS_QTY = ImmutableMap.of(
-            0, 1
+            0, 2
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS = ImmutableMap.of(
             0, Ingredient.of(TagsInit.Items.SHOVELS) // TODO: Change to "trays" (a new item)
@@ -35,16 +34,16 @@ public class OrganizerStackTwoWork {
 
     public static Work asWork() {
         return WorksBehaviour.productionWork(
-                Icon.forItem(() -> Items.CHEST),
+                ParentID.none().id(),
+                Items.CHEST.getDefaultInstance(),
                 ID,
-                ParentID.none(),
                 new WorkDescription(
                         CurrentlyPossibleResults.constant(RESULT),
                         RESULT
                 ),
                 new WorkLocation(
                         (Block block) -> block instanceof ChestBlock,
-                        Questown.ResourceLocation("storeroom") // TODO: Support for any room with a chest in it
+                        Questown.ResourceLocation("store_room") // TODO: Support for any room with a chest in it
                 ),
                 new WorkStates(
                         MAX_STATE,
@@ -62,17 +61,25 @@ public class OrganizerStackTwoWork {
                         ImmutableMap.of(
                                 ProductionStatus.fromJobBlockStatus(0), ImmutableList.of(
                                         SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
-                                        SpecialRules.TAKE_NON_STACKED_INGREDIENTS_ONLY
+                                        SpecialRules.INGREDIENTS_MUST_BE_SAME,
+                                        SpecialRules.TAKE_ONLY_LESS_THAN_QUANTITY
                                 ),
                                 ProductionStatus.fromJobBlockStatus(MAX_STATE), ImmutableList.of(
-                                        SpecialRules.DOUBLE_NON_TOOL_ITEM_STACK_SIZE
+                                        SpecialRules.FORCE_DROP_LOOT,
+                                        SpecialRules.DROP_LOOT_AS_STACK
                                 )
                         ),
                         ImmutableList.of(
                                 SpecialRules.PRIORITIZE_EXTRACTION
                         )
                 ),
-                SoundEvents.CHEST_OPEN.getLocation()
+                SoundEvents.CHEST_OPEN.getLocation(),
+                new ExpirationRules(
+                        () -> Long.MAX_VALUE,
+                        jobId -> jobId,
+                        () -> Long.MAX_VALUE,
+                        jobId -> jobId
+                )
         );
     }
 }

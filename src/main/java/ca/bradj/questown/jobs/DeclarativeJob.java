@@ -213,7 +213,7 @@ public class DeclarativeJob extends
             int interval,
             @Nullable ResourceLocation sound
     ) {
-        return new RealtimeWorldInteraction(journal, maxState, ingredientsRequiredAtStates,
+        return new RealtimeWorldInteraction(jobId, asItemsHolder(), maxState, ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates, workRequiredAtStates, timeRequiredAtStates, toolsRequiredAtStates,
                 resultGenerator, claimSpots, interval, sound
         );
@@ -252,9 +252,9 @@ public class DeclarativeJob extends
             ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         for (int i = 0; i < maxState; i++) {
-            b.put(i, item -> Works.isWorkResult(town.getTownData(), item));
+            b.put(i, item -> Works.isWorkResult(town.getTownData(), item.toItem()));
         }
         this.statesWhereSpecialRulesApply = b.build();
 
@@ -292,7 +292,7 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
+            public Map<Integer, Collection<MCRoom>> roomsToGetSuppliesForByState() {
                 return roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled());
             }
 
@@ -320,8 +320,8 @@ public class DeclarativeJob extends
 
             @Override
             public boolean hasSupplies() {
-                Map<Integer, ? extends Collection<MCRoom>> needs = roomsNeedingIngredientsByState();
-                return Jobs.townHasSupplies(town, journal, convertToCleanFns(needs));
+                Map<Integer, ? extends Collection<MCRoom>> needs = roomsToGetSuppliesForByState();
+                return Jobs.townHasSupplies(town, asItemsHolder(), convertToCleanFns(needs));
             }
 
             @Override
@@ -354,7 +354,10 @@ public class DeclarativeJob extends
                 prioritizeExtraction
         );
 
-        if (ProductionStatus.NO_SUPPLIES.equals(this.journal.getStatus())) {
+        if (ProductionStatus.NO_SUPPLIES.equals(computeStatus())) {
+            if (noSuppliesTicks == 0) {
+                QT.JOB_LOGGER.debug("No supplies. Villager will give up work in {} ticks", expiration.maxTicksWithoutSupplies());
+            }
             noSuppliesTicks++;
         } else {
             noSuppliesTicks = 0;
@@ -416,8 +419,8 @@ public class DeclarativeJob extends
                 suppliesTarget.getContainer().removeItem(i, quantity);
             }
         };
-        getter.tryGetSupplies(journal.getStatus(), journal.getCapacity(), roomsNeedingIngredientsOrTools, st,
-                recipe::getRecipe, journal.getItems(), (item) -> this.journal.addItem(MCHeldItem.fromTown(item)),
+        getter.tryGetSupplies(computeStatus(), asItemsHolder().getCapacity(), roomsNeedingIngredientsOrTools, st,
+                recipe::getRecipe, asItemsHolder().getItems(), (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
                 specialRules.apply(ProductionStatus.fromJobBlockStatus(0)), i -> Works.isWorkResult(town.getTownData(), i)
         );
     }
@@ -468,7 +471,7 @@ public class DeclarativeJob extends
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     town.getKnowledgeHandle()
-                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
+                        .registerFoundLoots(asItemsHolder().getItems()); // TODO: Is this okay for every job to do?
                 }
                 wrappingUp = true;
             }
@@ -542,7 +545,7 @@ public class DeclarativeJob extends
 
     @Override
     public String getStatusToSyncToClient() {
-        return journal.getStatus().nameV2();
+        return computeStatus().nameV2();
     }
 
     @Override
@@ -553,7 +556,7 @@ public class DeclarativeJob extends
                 b.put(k, item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
 
         return JobsClean.getSupplyItemStatuses(
-                journal::getItems,
+                asItemsHolder()::getItems,
                 b.build(),
                 Jobs.unMCHeld2(toolsRequiredAtStates)
         );
@@ -657,13 +660,7 @@ public class DeclarativeJob extends
             WorksBehaviour.TownData townData
     ) {
         Supplier<List<MCRoom>> resultRooms = () -> rooms.getRoomsWithContainersOfItem(
-                i -> {
-                    if (Works.isWorkResult(townData, i)) {
-                        QT.VILLAGER_LOGGER.debug("Found work result {}", i);
-                        return true;
-                    }
-                    return false;
-                });
+                i -> Works.isWorkResult(townData, i));
         Function<Integer, ? extends Collection<String>> rules = k -> specialRules.apply(
                 ProductionStatus.fromJobBlockStatus(k));
         return JobRequirements.roomsWhereSpecialRulesApply(
@@ -715,5 +712,12 @@ public class DeclarativeJob extends
     @Override
     public long getTotalDuration() {
         return totalDuration;
+    }
+
+    @Override
+    public ImmutableList<String> getSpecialRules(int state) {
+        return ImmutableList.copyOf(
+                specialRules.apply(ProductionStatus.fromJobBlockStatus(state))
+        );
     }
 }

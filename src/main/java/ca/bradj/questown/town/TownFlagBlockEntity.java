@@ -895,6 +895,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 continue;
             }
 
+            if (JobsRegistry.canAlwaysWork(p, uuid)) {
+                return p;
+            }
+
             List<Ingredient> i = requestedResults.stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();

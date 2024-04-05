@@ -99,6 +99,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             @Nullable ResourceLocation sound
             ) {
         return new RealtimeWorldInteraction(
+                getId(),
                 journal,
                 maxState,
                 ingredientsRequiredAtStates,

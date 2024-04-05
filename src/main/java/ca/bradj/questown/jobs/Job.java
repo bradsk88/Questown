@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -84,4 +85,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     long getTotalDuration();
 
     BlockPos getLook();
+
+    ImmutableList<String> getSpecialRules(int state);
 }

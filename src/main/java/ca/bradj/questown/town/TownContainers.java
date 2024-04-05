@@ -45,8 +45,8 @@ public class TownContainers {
         if (level == null) {
             return Stream.empty();
         }
-        Stream<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainersStream(townFlagBlockEntity, level);
-        return allContainers.filter(v -> v.hasItem(c));
+        List<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainers(townFlagBlockEntity, level);
+        return allContainers.stream().filter(v -> v.hasItem(c));
     }
 
     public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {

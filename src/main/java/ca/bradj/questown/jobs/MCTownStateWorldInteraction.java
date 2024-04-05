@@ -243,7 +243,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
+            public Map<Integer, Collection<MCRoom>> roomsToGetSuppliesForByState() {
                 int curState = workStates.processingState();
                 Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {

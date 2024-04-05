@@ -31,7 +31,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class WorksBehaviour {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
@@ -116,7 +115,7 @@ public class WorksBehaviour {
 
 
     public interface JobFunc extends
-            BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
+            Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
@@ -159,7 +158,8 @@ public class WorksBehaviour {
         }
     }
 
-    public static class CurrentlyPossibleResults implements Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> {
+    public static class CurrentlyPossibleResults implements
+            Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> {
 
         private final Function<TownData, ImmutableSet<MCTownItem>> factory;
 
@@ -250,7 +250,7 @@ public class WorksBehaviour {
         return new Work(
                 parentID,
                 icon,
-                (TownInterface job, UUID uuid) -> new DeclarativeJob(
+                (UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
                         jobId, location.baseRoom(), states.maxState(),
                         world.actionDuration(),

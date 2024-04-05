@@ -172,6 +172,7 @@ public class ProductionJournal<
         return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
     }
 
+    @Override
     public void setItem(
             int idx,
             H mcHeldItem

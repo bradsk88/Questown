@@ -17,6 +17,7 @@ import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.*;
+import ca.bradj.questown.jobs.organizer.OrganizerStackTwoWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
@@ -83,7 +84,7 @@ public class JobsRegistry {
     public static ImmutableList<JobID> getPreferredWorkIds(JobID jobId) {
         Jerb f = jobs.get(jobId.rootId());
         if (f == null) {
-            QT.JOB_LOGGER.error("Unrecognized job {}", jobId);
+            QT.JOB_LOGGER.error("Unrecognized job {} (from {})", jobId.rootId(), jobId);
             return ImmutableList.of();
         }
         return f.preferredWork;
@@ -212,7 +213,7 @@ public class JobsRegistry {
     ) {
         Work w = Works.get(p).get();
         long jobDuration = w.jobFunc()
-                              .apply(town, villagerID)
+                              .apply(villagerID)
                               .getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
@@ -224,6 +225,13 @@ public class JobsRegistry {
                 Signals.MORNING,
                 Signals.NOON
         ).contains(nextSegment);
+    }
+
+    public static boolean canAlwaysWork(JobID p, UUID owner) {
+        Supplier<Work> workSupplier = Works.get(p);
+        Work work = workSupplier.get();
+        Job<?, ?, ?> job = work.jobFunc().apply(owner);
+        return job.getSpecialRules(0).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT);
     }
 
     private record Jerb(
@@ -275,6 +283,10 @@ public class JobsRegistry {
             CrafterStickWork.ID.rootId(), new Jerb(
                     CRAFTER_PREFS,
                     CRAFTER_DEFAULT_WORK
+            ),
+            OrganizerStackTwoWork.ID.rootId(), new Jerb(
+                    ImmutableList.of(OrganizerStackTwoWork.ID),
+                    ImmutableList.of(OrganizerStackTwoWork.ID)
             )
     );
 
@@ -310,18 +322,18 @@ public class JobsRegistry {
             journal = newWorkSeekerJournal(jobName, journal, heldItems);
         } else if (DinerWork.isDining(jobName)) {
             Work dw = DinerWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(town, ownerUUID);
+            j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (DinerNoTableWork.isDining(jobName)) {
             Work dw = DinerNoTableWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(town, ownerUUID);
+            j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(town, ownerUUID);
+            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);
         } else {
             Work work = fn.get();
-            j = work.jobFunc().apply(town, ownerUUID);
+            j = work.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, work);
         }
         if (journal != null) {

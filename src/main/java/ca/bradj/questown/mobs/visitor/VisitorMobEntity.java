@@ -297,7 +297,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return Works.get(GathererUnmappedNoToolWorkQtrDay.ID)
                     .get()
                     .jobFunc()
-                    .apply(town, uuid);
+                    .apply(uuid);
     }
 
     public BlockPos getLookTarget() {

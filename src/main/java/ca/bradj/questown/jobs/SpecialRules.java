@@ -48,18 +48,31 @@ public class SpecialRules {
     // one of the work results defined in the "Works" array. (See class: Works)
     // They will ignore whatever was specified as the "ingredient" for the corresponding
     // work state.
-    // FIXME: IMplemnet
     public static final String INGREDIENT_ANY_VALID_WORK_OUTPUT = "ingredient_any_valid_work_output";
 
-    // If this rule is enabled, the villager will double the quantity of all the items
-    // they are currently holding (as a stack) that are not tools. This was intended to
-    // be used by "organizer"-type villagers - because normal villagers are not supposed
-    // to be able to stack items.
+    // If this rule is enabled, the villager will take N items from the town to satisfy the
+    // "quantity" rule of their job for the current state, but only if there are N items of
+    // the same type. This rule is only relevant when tags or special rules are being used
+    // for the job ingredients.
+    // If specific items are defined on the job, this will have no effect.
+    // FIXME: IMplemnet (TDD is probably wise here)
+    public static final String INGREDIENTS_MUST_BE_SAME = "ingredients_must_be_same";
+
+    // If this rule is enabled, the villager will drop their loot as a stack.
+    // For example, if they are carrying [axe, apple, apple], they will deposit
+    // [axe, 2 x apple] in the chest. Questown villagers are not supposed to be
+    // able to stack items. This was added to support the special "organizer"
+    // villager type - who has this unique capability.
     // FIXME: Implement
-    public static final String DOUBLE_NON_TOOL_ITEM_STACK_SIZE = "double_non_tool_item_stack_size";
+    public static final String DROP_LOOT_AS_STACK = "drop_loot_as_stack";
 
     // If this rule is enabled, the villager will only take items from storage if they
-    // have a quantity of 1.
+    // have a quantity lower than the quantity specified on the job's "ingredient quantity
+    // parameter.
     // FIXME: Implement
-    public static final String TAKE_NON_STACKED_INGREDIENTS_ONLY = "take_non_stacked_ingredients_only";
+    public static final String TAKE_ONLY_LESS_THAN_QUANTITY = "take_only_less_than_quantity";
+
+    // If this rule is enabled, the villager will assume the "dropping_loot"
+    // status at the corresponding production state.
+    public static final String FORCE_DROP_LOOT = "force_drop_loot";
 }

@@ -48,7 +48,7 @@ public class Works {
         b.put(FarmerJob.ID, () -> new Work(
                 null,
                 Items.WHEAT.getDefaultInstance(),
-                (town, uuid) -> new FarmerJob(uuid, 6),
+                (uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
                 SpecialQuests.FARM,

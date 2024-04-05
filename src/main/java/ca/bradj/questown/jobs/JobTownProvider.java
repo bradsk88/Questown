@@ -8,7 +8,7 @@ import java.util.Map;
 public interface JobTownProvider<ROOM extends Room> extends TownProvider {
     Collection<ROOM> roomsWithCompletedProduct();
 
-    Map<Integer, Collection<ROOM>> roomsNeedingIngredientsByState();
+    Map<Integer, Collection<ROOM>> roomsToGetSuppliesForByState();
 
     boolean isUnfinishedTimeWorkPresent();
 

@@ -22,4 +22,9 @@ public interface ItemsHolder<I> {
     boolean addItemIfSlotAvailable(I mcHeldItem);
 
     void setItemsNoUpdateNoCheck(ImmutableList<I> build);
+
+    void setItem(
+            int idx,
+            I mcHeldItem
+    );
 }

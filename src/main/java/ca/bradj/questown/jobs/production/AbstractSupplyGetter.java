@@ -42,14 +42,15 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             return;
         }
 
-        Predicate<TOWN_ITEM> shouldTake = item -> JobsClean.shouldTakeItem(
+        Predicate<TOWN_ITEM> originalTest = item -> JobsClean.shouldTakeItem(
                 upToAmount, recipe.apply(first.get()), currentHeldItems, item
         );
+        Predicate<TOWN_ITEM> shouldTake = originalTest;
 
         if (statusRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
             shouldTake = item -> JobsClean.shouldTakeItem(
                     upToAmount, ImmutableList.of(isAnyWorkResult::test), currentHeldItems, item
-            );
+            ) || originalTest.test(item);
         }
 
         JobsClean.tryTakeContainerItems(taker, suppliesTarget, shouldTake::test);

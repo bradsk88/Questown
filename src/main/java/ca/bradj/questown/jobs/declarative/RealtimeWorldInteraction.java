@@ -4,9 +4,7 @@ import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.jobs.WorkOutput;
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -59,13 +57,14 @@ public class RealtimeWorldInteraction
                                    .get(0));
     }
 
-    private final ProductionJournal<MCTownItem, MCHeldItem> journal;
+    private final ItemsHolder<MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
     private final @Nullable ResourceLocation sound;
 
     public RealtimeWorldInteraction(
-            ProductionJournal<MCTownItem, MCHeldItem> journal,
+            JobID jobId,
+            ItemsHolder<MCHeldItem> journal,
             int maxState,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
@@ -78,7 +77,7 @@ public class RealtimeWorldInteraction
             @Nullable ResourceLocation sound
     ) {
         super(
-                journal.getJobId(),
+                jobId,
                 -1, // Not used by this implementation
                 interval,
                 maxState,

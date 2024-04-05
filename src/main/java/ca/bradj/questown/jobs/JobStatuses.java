@@ -164,7 +164,7 @@ public class JobStatuses {
 
                     @Override
                     public boolean canUseMoreSupplies() {
-                        return !town.roomsNeedingIngredientsByState()
+                        return !town.roomsToGetSuppliesForByState()
                                     .entrySet()
                                     .stream()
                                     .allMatch(v -> v.getValue()
@@ -200,7 +200,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
+                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
 

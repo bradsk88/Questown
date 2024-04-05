@@ -153,6 +153,10 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         this.claimSupplier = claimSupplier;
     }
 
+    protected ItemsHolder<MCHeldItem> asItemsHolder() {
+        return journal;
+    }
+
     @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
@@ -165,12 +169,12 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     @Override
     public STATUS getStatus() {
-        return journal.getStatus();
+        return computeStatus();
     }
 
     @Override
     public String getStatusToSyncToClient() {
-        return this.journal.getStatus().nameV2();
+        return this.computeStatus().nameV2();
     }
 
     @Override
@@ -214,7 +218,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         if (!isCloseTo(entityPos, successTarget.getBlockPos())) {
             return;
         }
-        if (!journal.getStatus().isDroppingLoot()) {
+        if (!computeStatus().isDroppingLoot()) {
             return;
         }
         if (this.dropping) {
@@ -254,7 +258,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             return null;
         }
 
-        STATUS status = journal.getStatus();
+        STATUS status = computeStatus();
         if (status.isGoingToJobsite()) {
             BlockPos jobSite1 = getJobSite(town);
             this.setLookTarget(jobSite1);
@@ -262,13 +266,11 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         }
 
         if (status.isWorkingOnProduction()) {
-            WorkSpot<?, BlockPos> productionSpot = findProductionSpot(sl);
+            @Nullable WorkSpot<?, BlockPos> productionSpot = findProductionSpot(sl);
             if (productionSpot != null) {
                 this.setLookTarget(productionSpot.position());
                 return productionSpot.interactionSpot();
             }
-            QT.JOB_LOGGER.error("Production spot was null somehow");
-            return null;
         }
 
         if (status.isDroppingLoot()) {
@@ -279,7 +281,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             }
         }
 
-        if (journal.getStatus().isCollectingSupplies()) {
+        if (computeStatus().isCollectingSupplies()) {
             setupForGetSupplies(town);
             if (suppliesTarget != null) {
                 this.setLookTarget(suppliesTarget.getBlockPos());
@@ -292,6 +294,14 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         }
 
         return findNonWorkTarget(entityBlockPos, entityPos, town);
+    }
+
+    protected STATUS computeStatus() {
+        STATUS statusFromTown = journal.getStatus();
+        if (specialRules.apply(statusFromTown).contains(SpecialRules.FORCE_DROP_LOOT)) {
+            return statusFactory.droppingLoot();
+        }
+        return statusFromTown;
     }
 
     protected void setLookTarget(BlockPos jobSite1) {
