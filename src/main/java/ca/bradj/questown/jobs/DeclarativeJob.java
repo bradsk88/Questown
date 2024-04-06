@@ -12,6 +12,7 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.TownContainerChecks;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -136,6 +137,7 @@ public class DeclarativeJob extends
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
     private ImmutableMap<Integer, Predicate<MCHeldItem>> statesWhereSpecialRulesApply = ImmutableMap.of();
+    private final ImmutableList<Integer> statesPriority;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -149,6 +151,7 @@ public class DeclarativeJob extends
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            ImmutableList<Integer> statesPriority,
             ImmutableMap<ProductionStatus, ? extends Collection<String>> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
@@ -181,6 +184,7 @@ public class DeclarativeJob extends
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
+        this.statesPriority = statesPriority;
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
     }
@@ -320,8 +324,42 @@ public class DeclarativeJob extends
 
             @Override
             public boolean hasSupplies() {
-                Map<Integer, ? extends Collection<MCRoom>> needs = roomsToGetSuppliesForByState();
-                return Jobs.townHasSupplies(town, asItemsHolder(), convertToCleanFns(needs));
+                Set<Integer> statesWithRooms = roomsToGetSuppliesForByState().keySet();
+                ImmutableMap.Builder<Integer, Integer> oneTool = ImmutableMap.builder();
+                toolsRequiredAtStates.forEach(
+                        (k, v) -> {
+                            if (!v.isEmpty()) {
+                                oneTool.put(k, 1);
+                            }
+                        }
+                );
+                boolean townHasTools = TownContainerChecks.townHasSupplies(
+                        statesWithRooms,
+                        Jobs.unMC2(toolsRequiredAtStates),
+                        oneTool.build(),
+                        town::getItemMatches,
+                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
+                        (lvl, item) -> false
+                );
+                if (!townHasTools) {
+                    return false;
+                }
+
+                return TownContainerChecks.townHasSupplies(
+                        statesWithRooms,
+                        Jobs.unMC2(ingredientsRequiredAtStates),
+                        ingredientQtyRequiredAtStates,
+                        town::getItemMatches,
+                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
+                        (lvl, item) -> {
+                            ProductionStatus s = ProductionStatus.fromJobBlockStatus(lvl);
+                            Collection<String> sr = specialRules.apply(s);
+                            if (sr.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+                                return Works.isWorkResult(town.getTownData(), item);
+                            }
+                            return false;
+                        }
+                );
             }
 
             @Override
@@ -351,12 +389,16 @@ public class DeclarativeJob extends
                 elp,
                 super.defaultEntityInvProvider(town.getTownData()),
                 statusFactory,
-                prioritizeExtraction
+                prioritizeExtraction,
+                statesPriority
         );
 
         if (ProductionStatus.NO_SUPPLIES.equals(computeStatus())) {
             if (noSuppliesTicks == 0) {
-                QT.JOB_LOGGER.debug("No supplies. Villager will give up work in {} ticks", expiration.maxTicksWithoutSupplies());
+                QT.JOB_LOGGER.debug(
+                        "No supplies. Villager will give up work in {} ticks",
+                        expiration.maxTicksWithoutSupplies()
+                );
             }
             noSuppliesTicks++;
         } else {
@@ -383,6 +425,17 @@ public class DeclarativeJob extends
         }
     }
 
+    @Override
+    protected ImmutableList<Integer> sortByPriority(Collection<Integer> states) {
+        ImmutableList.Builder<Integer> b = ImmutableList.builder();
+        statesPriority.forEach(v -> {
+            if (states.contains(v)) {
+                b.add(v);
+            }
+        });
+        return b.build();
+    }
+
     private void seekFallbackWork(TownInterface town) {
         town.changeJobForVisitor(ownerUUID, expiration.noSuppliesFallbackFn().apply(jobId));
     }
@@ -395,10 +448,13 @@ public class DeclarativeJob extends
         if (suppliesTarget == null) {
             return;
         }
-        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
-                return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
+                return Jobs.isCloseTo(
+                        entityBlockPos,
+                        Positions.ToBlock(suppliesTarget.getPosition(), suppliesTarget.getYPosition())
+                );
             }
 
             @Override
@@ -419,9 +475,16 @@ public class DeclarativeJob extends
                 suppliesTarget.getContainer().removeItem(i, quantity);
             }
         };
-        getter.tryGetSupplies(computeStatus(), asItemsHolder().getCapacity(), roomsNeedingIngredientsOrTools, st,
-                recipe::getRecipe, asItemsHolder().getItems(), (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                specialRules.apply(ProductionStatus.fromJobBlockStatus(0)), i -> Works.isWorkResult(town.getTownData(), i)
+        getter.tryGetSupplies(
+                computeStatus(),
+                asItemsHolder().getCapacity(),
+                roomsNeedingIngredientsOrTools,
+                st,
+                recipe::getRecipe,
+                asItemsHolder().getItems(),
+                (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
+                specialRules.apply(ProductionStatus.fromJobBlockStatus(0)),
+                i -> Works.isWorkResult(town.getTownData(), i)
         );
     }
 

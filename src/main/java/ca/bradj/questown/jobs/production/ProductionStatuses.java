@@ -14,11 +14,12 @@ public class ProductionStatuses {
             JobTownProvider<ROOM> town,
             EntityLocStateProvider<ROOM> entity,
             IProductionStatusFactory<ProductionStatus> factory,
-            boolean prioritizeExtraction
+            boolean prioritizeExtraction,
+            ImmutableList<Integer> statePriority
     ) {
         switch (signal) {
             case MORNING, NOON -> {
-                return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction);
+                return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction, statePriority);
             }
             case NIGHT, EVENING -> {
                 return getEveningStatus(currentStatus, inventory, town, factory, town.isCachingAllowed());
@@ -33,12 +34,13 @@ public class ProductionStatuses {
             JobTownProvider<ROOM> town,
             EntityLocStateProvider<ROOM> entity,
             IProductionStatusFactory<ProductionStatus> factory,
-            boolean prioritizeExtraction
+            boolean prioritizeExtraction,
+            ImmutableList<Integer> statePriority
     ) {
         ProductionStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, prioritizeExtraction, inventory, entity, town,
                 // TODO: Allow preferences to be provided/serialized
-                new TypicalProductionJob<>(ImmutableList.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
+                new TypicalProductionJob<>(statePriority),
                 factory
         );
         return nullIfUnchanged(currentStatus, newStatus);

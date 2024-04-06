@@ -163,16 +163,6 @@ public class Jobs {
         }
     }
 
-    public static boolean townHasSupplies(
-            TownInterface town,
-            ItemsHolder<MCHeldItem> journal,
-            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
-    ) {
-        return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), recipe, journal.getItems(), item
-        )) != null;
-    }
-
     public static boolean townHasSpace(TownInterface town) {
         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
     }
@@ -184,17 +174,17 @@ public class Jobs {
     ) {
         // TODO: Support multiple tiers of job site (i.e. more than one resource location)
         return town.getRoomHandle().getRoomsMatching(id).stream()
-                .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
-                .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                .filter(v -> InclusiveSpaces.contains(
-                        v.room.getSpaces(),
-                        Positions.FromBlockPos(entityBlockPos)
-                ) || (
-                        InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
-                                v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                ))
-                .findFirst()
-                .orElse(null);
+                   .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
+                   .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
+                   .filter(v -> InclusiveSpaces.contains(
+                           v.room.getSpaces(),
+                           Positions.FromBlockPos(entityBlockPos)
+                   ) || (
+                           InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
+                                   v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
+                   ))
+                   .findFirst()
+                   .orElse(null);
     }
 
     public static boolean hasNonSupplyItems(
@@ -202,8 +192,8 @@ public class Jobs {
             ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
     ) {
         return journal.getItems().stream()
-                .filter(Predicates.not(Item::isEmpty))
-                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .filter(Predicates.not(Item::isEmpty))
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     public static boolean isUnfinishedTimeWorkPresent(
@@ -213,15 +203,15 @@ public class Jobs {
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
         return rooms.stream()
-                .anyMatch(v -> {
-                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                        @Nullable Integer apply = ticksSource.apply(e.getKey());
-                        if (apply != null && apply > 0) {
-                            return true;
+                    .anyMatch(v -> {
+                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                            @Nullable Integer apply = ticksSource.apply(e.getKey());
+                            if (apply != null && apply > 0) {
+                                return true;
+                            }
                         }
-                    }
-                    return false;
-                });
+                        return false;
+                    });
     }
 
     public static Collection<Integer> getStatesWithUnfinishedWork(
@@ -252,6 +242,16 @@ public class Jobs {
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
         ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
+        );
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, Predicate<MCTownItem>> unMC2(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
         );
@@ -318,15 +318,15 @@ public class Jobs {
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
         return rooms.stream()
-                .filter(v -> {
-                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                        if (check.Check(town.getServerLevel(), e.getKey())) {
-                            return true;
+                    .filter(v -> {
+                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                            if (check.Check(town.getServerLevel(), e.getKey())) {
+                                return true;
+                            }
                         }
-                    }
-                    return false;
-                })
-                .toList();
+                        return false;
+                    })
+                    .toList();
     }
 
     public interface LootDropper<I> {
@@ -353,7 +353,8 @@ public class Jobs {
         }
 
 
-        boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
+        BlockPos targetPos = Positions.ToBlock(target.getPosition(), target.getYPosition());
+        boolean farFromChest = !isCloseTo(entityPos, targetPos);
         List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
@@ -374,7 +375,12 @@ public class Jobs {
                 continue;
             }
 
-            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct.toShortString(), target.getBlockPos());
+            QT.JOB_LOGGER.debug(
+                    "Gatherer {} is putting {} in {}",
+                    ownerUUID,
+                    mct.toShortString(),
+                    targetPos
+            );
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {

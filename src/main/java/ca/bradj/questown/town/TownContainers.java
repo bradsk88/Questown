@@ -100,7 +100,7 @@ public class TownContainers {
         if (blockState.isAir()) {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
-                    new MCContainer(ContainerTarget.REMOVED), () -> false
+                    new MCContainer(MCContainer.REMOVED), () -> false
             );
         }
 
@@ -110,7 +110,7 @@ public class TownContainers {
             );
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
-                    new MCContainer(ContainerTarget.REMOVED), () -> false
+                    new MCContainer(MCContainer.REMOVED), () -> false
             );
         }
 

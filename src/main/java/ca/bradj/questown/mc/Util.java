@@ -35,6 +35,11 @@ public class Util {
         theoretical.forEach((k, v) -> b.put(k, v.get()));
         return b.build();
     }
+    public static <X> ImmutableList<X> realize(ImmutableList<Supplier<X>> theoretical) {
+        ImmutableList.Builder<X> b = ImmutableList.builder();
+        theoretical.forEach((v) -> b.add(v.get()));
+        return b.build();
+    }
 
     public static <X> ImmutableList<X> realize(ImmutableList<Supplier<X>> theoretical) {
         ImmutableList.Builder<X> b = ImmutableList.builder();

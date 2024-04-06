@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.mc.Util;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -14,6 +15,7 @@ public class WorkStates {
     private final ImmutableMap<Integer, Supplier<Ingredient>> toolsRequired;
     private final ImmutableMap<Integer, Supplier<Integer>> workRequired;
     private final ImmutableMap<Integer, Supplier<Integer>> timeRequired;
+    public final ImmutableList<Integer> statePriority;
     private ImmutableMap<Integer, Ingredient> realizedTools;
     private ImmutableMap<Integer, Ingredient> realizedIngredients;
     private ImmutableMap<Integer, Integer> realizedQty;
@@ -26,7 +28,8 @@ public class WorkStates {
             ImmutableMap<Integer, Supplier<Integer>> ingredientQtyRequired,
             ImmutableMap<Integer, Supplier<Ingredient>> toolsRequired,
             ImmutableMap<Integer, Supplier<Integer>> workRequired,
-            ImmutableMap<Integer, Supplier<Integer>> timeRequired
+            ImmutableMap<Integer, Supplier<Integer>> timeRequired,
+            ImmutableList<Integer> statePriority
     ) {
         this.maxState = maxState;
         this.ingredientsRequired = ingredientsRequired;
@@ -34,6 +37,7 @@ public class WorkStates {
         this.toolsRequired = toolsRequired;
         this.workRequired = workRequired;
         this.timeRequired = timeRequired;
+        this.statePriority = statePriority;
     }
 
     public int maxState() {

@@ -51,7 +51,8 @@ public class Crafters {
                         Util.constant(ingredientQtyRequiredAtStates),
                         Util.constant(toolsRequiredAtStates),
                         Util.constant(workRequiredAtStates),
-                        Util.constant(timeRequiredAtStates)
+                        Util.constant(timeRequiredAtStates),
+                        WorksBehaviour.standardPriority()
                 ),
                 new WorkWorldInteractions(
                         actionDuration,

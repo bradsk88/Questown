@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BreadOvenBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Util;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -67,7 +68,8 @@ public class BakerBreadWork {
                                 BLOCK_STATE_NEED_COAL, () -> 0,
                                 BLOCK_STATE_NEED_TIME, Config.BAKING_TIME_REQUIRED_BASELINE::get,
                                 BLOCK_STATE_DONE, () -> 0
-                        )
+                        ),
+                        ImmutableList.of(3, 1, 0, 2)
                 ),
                 WorksBehaviour.standardWorldInteractions(ACTION_DURATION, () -> RESULT),
                 WorksBehaviour.standardProductionRules(),

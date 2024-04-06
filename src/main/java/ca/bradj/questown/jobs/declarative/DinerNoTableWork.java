@@ -74,7 +74,8 @@ public class DinerNoTableWork {
                         Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
                         Util.constant(TOOLS_REQUIRED_AT_STATES),
                         Util.constant(WORK_REQUIRED_AT_STATES),
-                        Util.constant(TIME_REQUIRED_AT_STATES)
+                        Util.constant(TIME_REQUIRED_AT_STATES),
+                        WorksBehaviour.standardPriority()
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,

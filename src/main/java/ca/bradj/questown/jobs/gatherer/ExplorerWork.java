@@ -130,7 +130,8 @@ public class ExplorerWork {
                         ImmutableMap.of(
                                 BLOCK_STATE_NEED_ROAM,
                                 Config.GATHERER_TIME_REQUIRED_BASELINE::get
-                        )
+                        ),
+                        WorksBehaviour.standardPriority()
                 ),
                 new WorkWorldInteractions(
                         0, ExplorerWork::getFromLootTables

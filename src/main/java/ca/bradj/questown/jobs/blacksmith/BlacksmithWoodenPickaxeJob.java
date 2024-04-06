@@ -72,7 +72,8 @@ public class BlacksmithWoodenPickaxeJob {
                         Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
                         Util.constant(TOOLS_REQUIRED_AT_STATES),
                         Util.constant(WORK_REQUIRED_AT_STATES),
-                        Util.constant(TIME_REQUIRED_AT_STATES)
+                        Util.constant(TIME_REQUIRED_AT_STATES),
+                        WorksBehaviour.standardPriority() // TODO: Consider reversing for better efficiency when multiple job blocks exist (i.e. finish started projects before starting new ones)
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,

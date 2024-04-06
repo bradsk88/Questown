@@ -12,7 +12,6 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.QuestBatches;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -144,6 +143,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     WorksBehaviour.TownData getTownData();
 
     DebugHandle getDebugHandle();
+
+    Collection<MCTownItem> getItemMatches(Predicate<MCTownItem> mcTownItemPredicate);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

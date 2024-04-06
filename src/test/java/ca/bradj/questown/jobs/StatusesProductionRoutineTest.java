@@ -50,7 +50,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
+            Map<Integer, Collection<Room>> roomsToGetSuppliesForByState,
             boolean isCachingAllowed
     ) implements JobTownProvider<Room> {
         public TestJobTown(
@@ -183,6 +183,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public String name() {
             return inner;
+        }
+
+        @Override
+        public String nameV2() {
+            return name();
         }
 
         @Override
@@ -705,7 +710,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
+            Map<Integer, Collection<Room>> roomsToGetSuppliesForByState,
             boolean isUnfinishedTimeWorkPresent,
             boolean isCachingAllowed
     ) implements JobTownProvider<Room> {

@@ -136,7 +136,8 @@ public class DeclarativeJobs {
     public static Warper<ServerLevel, MCTownState> warper(
             MCTownStateWorldInteraction wi,
             int maxState,
-            boolean prioritizeExtraction
+            boolean prioritizeExtraction,
+            ImmutableList<Integer> statePriority
     ) {
         ImmutableSet<ProductionStatus> c = handler.keySet();
         ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();
@@ -185,7 +186,8 @@ public class DeclarativeJobs {
                                 outState.containers
                         ),
                         DeclarativeJobs.alwaysInRoom(fakeRoom),
-                        DeclarativeJob.STATUS_FACTORY, prioritizeExtraction
+                        DeclarativeJob.STATUS_FACTORY, prioritizeExtraction,
+                        statePriority
                 );
                 if (nuStatus != null) {
                     status = nuStatus;

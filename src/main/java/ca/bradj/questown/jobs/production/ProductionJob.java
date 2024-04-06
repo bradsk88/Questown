@@ -63,7 +63,6 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
-    // TODO: Support more recipes
     protected final RecipeProvider recipe;
     private final ImmutableList<MCTownItem> allowedToPickUp;
 
@@ -215,7 +214,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         if (successTarget == null) {
             return;
         }
-        if (!isCloseTo(entityPos, successTarget.getBlockPos())) {
+        if (!isCloseTo(entityPos, Positions.ToBlock(successTarget.getPosition(), successTarget.getYPosition()))) {
             return;
         }
         if (!computeStatus().isDroppingLoot()) {
@@ -228,7 +227,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     }
 
     @NotNull
-    protected ImmutableList<JobsClean.TestFn<MCTownItem>> convertToCleanFns(
+    protected ImmutableList<Predicate<MCTownItem>> convertToCleanFns(
             Map<Integer, ? extends Collection<MCRoom>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
@@ -239,7 +238,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             return ImmutableList.of();
         }
 
-        return recipe.getRecipe(first.get());
+        return ImmutableList.copyOf(recipe.getRecipe(first.get()).stream().map(v -> (Predicate<MCTownItem>) v::test)
+                                          .toList());
     }
 
     @Override
@@ -276,7 +276,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         if (status.isDroppingLoot()) {
             successTarget = Jobs.setupForDropLoot(town, this.successTarget);
             if (successTarget != null) {
-                this.setLookTarget(successTarget.getBlockPos());
+                this.setLookTarget(Positions.ToBlock(successTarget.getPosition(), successTarget.getYPosition()));
                 return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
             }
         }
@@ -284,7 +284,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         if (computeStatus().isCollectingSupplies()) {
             setupForGetSupplies(town);
             if (suppliesTarget != null) {
-                this.setLookTarget(suppliesTarget.getBlockPos());
+                this.setLookTarget(Positions.ToBlock(suppliesTarget.getPosition(), suppliesTarget.getYPosition()));
                 return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
             }
         }
@@ -368,23 +368,29 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             IProductionStatusFactory<STATUS> statusFactory
     );
 
+    protected abstract ImmutableList<Integer> sortByPriority(Collection<Integer> states);
+
     private void setupForGetSupplies(
             TownInterface town
     ) {
-        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
+        ContainerTarget.CheckFn<MCTownItem> originalCheck = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(),
                 convertToCleanFns(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled())),
                 journal.getItems(),
                 item
         );
-        if (specialRules.apply(getStatus()).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-            Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
-            checkFn = item -> JobsClean.shouldTakeItem(
-                    journal.getCapacity(),
-                    ImmutableList.of(isAnyWorkResult::test),
-                    journal.getItems(),
-                    item
-            );
+        ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
+        for (Integer i : sortByPriority(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet())) {
+            if (specialRules.apply(statusFactory.fromJobBlockState(i)).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+                Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
+                checkFn = item -> JobsClean.shouldTakeItem(
+                        journal.getCapacity(),
+                        ImmutableList.of(itum -> isAnyWorkResult.test(item) || originalCheck.Matches(itum)),
+                        journal.getItems(),
+                        item
+                );
+                break;
+            }
         }
 
         if (this.suppliesTarget != null) {

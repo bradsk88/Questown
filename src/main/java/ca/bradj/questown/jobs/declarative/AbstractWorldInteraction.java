@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -266,8 +267,8 @@ public abstract class AbstractWorldInteraction<
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action())) {
-            Integer work = this.workRequiredAtStates.get(workSpot.action());
-            if (work != null && work > 0) {
+            Integer work = Util.getOrDefault(this.workRequiredAtStates, workSpot.action(), 0);
+            if (work > 0) {
                 if (workSpot.action() == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = AbstractWorkStatusStore.State.fresh();
@@ -278,6 +279,10 @@ public abstract class AbstractWorldInteraction<
                     }
                 }
             }
+        }
+
+        if (!workRequiredAtStates.containsKey(workSpot.action())) {
+            return vNull;
         }
 
         // TODO: If workspot is waiting for time, return  null

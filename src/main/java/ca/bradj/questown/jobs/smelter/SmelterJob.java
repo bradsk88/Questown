@@ -6,6 +6,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Util;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
@@ -62,7 +63,8 @@ public class SmelterJob {
                         Util.constant(INGREDIENTS_QTY),
                         Util.constant(TOOLS),
                         Util.constant(WORK),
-                        Util.constant(TIME)
+                        Util.constant(TIME),
+                        ImmutableList.of(2, 1, 0)
                 ),
                 new WorkWorldInteractions(
                         100,

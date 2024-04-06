@@ -13,9 +13,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.QTNBT;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
@@ -26,6 +24,8 @@ import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.containers.ContainerTargetV2;
+import ca.bradj.questown.town.containers.TownContainersV2;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
@@ -1045,6 +1045,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public DebugHandle getDebugHandle() {
         return debugHandle;
+    }
+
+    @Override
+    public Collection<MCTownItem> getItemMatches(Predicate<MCTownItem> mcTownItemPredicate) {
+        ImmutableList<ContainerTargetV2<MCRoom, MCContainer, MCTownItem>> containers =
+                TownContainersV2.findMatching(this, mcTownItemPredicate);
+        ImmutableList.Builder<MCTownItem> b = ImmutableList.builder();
+        containers.forEach(c ->
+                c.getItems().stream().filter(mcTownItemPredicate).forEach(
+                        b::add));
+        return b.build();
     }
 
     @Override

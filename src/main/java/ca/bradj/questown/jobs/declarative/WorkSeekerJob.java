@@ -62,6 +62,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 TOOLS_REQUIRED_AT_STATES,
                 WORK_REQUIRED_AT_STATES,
                 TIME_REQUIRED_AT_STATES,
+                WorksBehaviour.standardPriority(),
                 ImmutableMap.of(),
                 WorksBehaviour.standardGlobalRules(),
                 ExpirationRules.never(),

@@ -314,13 +314,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
         }
         JobsClean.<BlockPos, MCTownItem>tryTakeContainerItems(
                 i -> journal.addItem(MCHeldItem.fromTown(i)),
-                new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+                new JobsClean.SuppliesTarget<>() {
                     @Override
                     public boolean isCloseTo() {
                         if (suppliesTarget == null) {
                             return false;
                         }
-                        return Jobs.isCloseTo(entityPos, suppliesTarget.getBlockPos());
+                        return Jobs.isCloseTo(
+                                entityPos,
+                                Positions.ToBlock(suppliesTarget.getPosition(), suppliesTarget.getYPosition())
+                        );
                     }
 
                     @Override

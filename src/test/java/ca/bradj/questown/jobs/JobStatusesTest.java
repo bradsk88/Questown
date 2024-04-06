@@ -115,6 +115,11 @@ class JobStatusesTest {
         }
 
         @Override
+        public String nameV2() {
+            return name();
+        }
+
+        @Override
         public boolean isUnset() {
             return false;
         }
@@ -453,6 +458,10 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
+    }
+    @Test
+    void StatusChooseHighPriorityItemlessWorkOverLowPriorityToolWork() {
+        Assertions.assertTrue(false);
     }
 
     @Test

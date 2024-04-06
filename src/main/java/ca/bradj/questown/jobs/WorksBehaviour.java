@@ -54,7 +54,7 @@ public class WorksBehaviour {
                 resultGenerator,
                 claimSpots
         );
-        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
+        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, states.statePriority);
     }
 
     public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> singleItemOutput(
@@ -111,6 +111,10 @@ public class WorksBehaviour {
 
     public static ImmutableList<String> standardGlobalRules() {
         return standardProductionRules().specialGlobalRules();
+    }
+
+    public static ImmutableList<Integer> standardPriority() {
+        return ImmutableList.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     }
 
 
@@ -259,6 +263,7 @@ public class WorksBehaviour {
                         states.toolsRequired(),
                         states.workRequired(),
                         states.timeRequired(),
+                        states.statePriority,
                         special.specialStatusRules(),
                         special.specialGlobalRules(),
                         expiration,

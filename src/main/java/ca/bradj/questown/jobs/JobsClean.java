@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -106,7 +105,7 @@ public class JobsClean {
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
-            Collection<TestFn<I>> recipe,
+            Collection<Predicate<I>> recipe,
             Collection<H> currentHeldItems,
             I item
     ) {
@@ -121,8 +120,8 @@ public class JobsClean {
 
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
 
-        ImmutableList<TestFn<I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<TestFn<I>> ingredientsToSatisfy = new ArrayList<>();
+        ImmutableList<Predicate<I>> initial = ImmutableList.copyOf(recipe);
+        ArrayList<Predicate<I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
@@ -135,7 +134,7 @@ public class JobsClean {
                 }
             }
         }
-        for (TestFn<I> ingredient : ingredientsToSatisfy) {
+        for (Predicate<I> ingredient : ingredientsToSatisfy) {
             if (ingredient.test(item)) {
                 return true;
             }
