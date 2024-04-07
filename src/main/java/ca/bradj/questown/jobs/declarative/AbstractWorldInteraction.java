@@ -281,10 +281,6 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        if (!workRequiredAtStates.containsKey(workSpot.action())) {
-            return vNull;
-        }
-
         // TODO: If workspot is waiting for time, return  null
 
         return new WorkOutput<>(

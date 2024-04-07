@@ -164,6 +164,9 @@ class JobStatusesTest {
             TestStatus.ITEM_WORK, true
     );
 
+    /**
+     * @deprecated Use ConstInventoryV2 for a self-describing interface
+     */
     record ConstInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
@@ -173,6 +176,43 @@ class JobStatusesTest {
         @Override
         public boolean hasNonSupplyItems(boolean allowCaching) {
             return hasNonSupplyItems;
+        }
+    }
+
+    record ConstInventoryV2(
+            boolean inventoryFull,
+            boolean hasNonSupplyItems,
+            Collection<InvBuildingBlock> supplyItemStatus
+    ) implements EntityInvStateProvider<TestStatus> {
+
+        @Override
+        public boolean hasNonSupplyItems(boolean allowCaching) {
+            return hasNonSupplyItems;
+        }
+
+        @Override
+        public Map<TestStatus, Boolean> getSupplyItemStatus() {
+            ImmutableMap.Builder<TestStatus, Boolean> b = ImmutableMap.builder();
+            supplyItemStatus.forEach(v -> b.put(v.status, v.hasInInventory));
+            return b.build();
+        }
+    }
+
+    private static InvBuildingBlock status(TestStatus s) {
+        return new InvBuildingBlock(s);
+    }
+
+    private static class InvBuildingBlock {
+        private final TestStatus status;
+        private boolean hasInInventory;
+
+        private InvBuildingBlock(TestStatus status) {
+            this.status = status;
+        }
+
+        public InvBuildingBlock withSuppliesInInventory(boolean in) {
+            this.hasInInventory = in;
+            return this;
         }
     }
 
@@ -188,7 +228,7 @@ class JobStatusesTest {
         }
     }
 
-    static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
+    static class NoOpJob implements LegacyJob<TestStatus, TestStatus> {
 
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
@@ -202,7 +242,7 @@ class JobStatusesTest {
 
     }
 
-    static class FailJob implements JobStatuses.Job<TestStatus, TestStatus> {
+    static class FailJob implements LegacyJob<TestStatus, TestStatus> {
 
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
@@ -216,7 +256,7 @@ class JobStatusesTest {
 
     }
 
-    private static final JobStatuses.Job<TestStatus, TestStatus> jobWithItemlessWork = new JobStatuses.Job<>() {
+    private static final LegacyJob<TestStatus, TestStatus> jobWithItemlessWork = new LegacyJob<>() {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return TestStatus.ITEMLESS_WORK;
@@ -228,7 +268,7 @@ class JobStatusesTest {
         }
     };
 
-    private static final JobStatuses.Job<TestStatus, TestStatus> jobWithItemWorkOnly = new JobStatuses.Job<>() {
+    private static final LegacyJob<TestStatus, TestStatus> jobWithItemWorkOnly = new LegacyJob<>() {
         @Override
         public @Nullable TestStatus tryChoosingItemlessWork() {
             return null;
@@ -374,7 +414,7 @@ class JobStatusesTest {
                 true,
                 new ConstInventory(true, false, HAS_ALL_SUPPLIES),
                 new ConstTown(true, false, true, false),
-                new JobStatuses.Job<>() {
+                new LegacyJob<>() {
                     @Override
                     public @Nullable TestStatus tryChoosingItemlessWork() {
                         return TestStatus.GOING_TO_JOB;
@@ -437,6 +477,7 @@ class JobStatusesTest {
         );
         Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
+
     @Test
     void StatusShouldBe_NoSpace_WhenInvHasSomeItemsButNotFull_AndTownHasNoSpace_AndCannotDoWork() {
         boolean canDoWork = false;
@@ -459,17 +500,13 @@ class JobStatusesTest {
         );
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
     }
-    @Test
-    void StatusChooseHighPriorityItemlessWorkOverLowPriorityToolWork() {
-        Assertions.assertTrue(false);
-    }
 
     @Test
     void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfBothAreNeeded() {
         Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
         Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-            0, ImmutableList.of(sameRoom),
-            1, ImmutableList.of(sameRoom)
+                0, ImmutableList.of(sameRoom),
+                1, ImmutableList.of(sameRoom)
         ));
 
         Assertions.assertEquals(1, s.size());
@@ -480,9 +517,9 @@ class JobStatusesTest {
     void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfAllAreNeeded() {
         Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
         Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-            0, ImmutableList.of(sameRoom),
-            1, ImmutableList.of(sameRoom),
-            2, ImmutableList.of(sameRoom)
+                0, ImmutableList.of(sameRoom),
+                1, ImmutableList.of(sameRoom),
+                2, ImmutableList.of(sameRoom)
         ));
 
         Assertions.assertEquals(1, s.size());

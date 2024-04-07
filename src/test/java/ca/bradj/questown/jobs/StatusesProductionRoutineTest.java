@@ -421,7 +421,7 @@ public class StatusesProductionRoutineTest {
     }
 
     @Test
-    void StatusShouldBe_INGREDIENTS_WhenSitesNeedItemWork_AndEntityInJobSite_WithSupplies() {
+    void StatusShouldBe_USE_INGREDIENTS_WhenSitesNeedItemWork_AndEntityInJobSite_WithSupplies() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true // We have ingredients
@@ -508,7 +508,6 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
 
-    @Disabled("Re-evaluate")
     @Test
     void StatusShouldBe_WORK_insteadOfINGREDIENTS_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
         ImmutableList<Integer> preferences = ImmutableList.of(
