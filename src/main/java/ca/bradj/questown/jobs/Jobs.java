@@ -16,6 +16,7 @@ import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
@@ -316,17 +317,13 @@ public class Jobs {
             ResourceLocation roomType,
             StateCheck check
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
-        return rooms.stream()
-                    .filter(v -> {
-                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                            if (check.Check(town.getServerLevel(), e.getKey())) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    })
-                    .toList();
+        Collection<RoomWithBlocks<MCRoom, BlockPos, Block>> roomWithBlocks = JobsClean.roomsWithState(
+                town.getRoomHandle().getRoomsMatching(roomType),
+                pos -> check.Check(town.getServerLevel(), pos)
+        );
+        return roomWithBlocks.stream()
+                             .map(v -> new RoomRecipeMatch<>(v.room, roomType, v.containedBlocks.entrySet()))
+                             .toList();
     }
 
     public interface LootDropper<I> {

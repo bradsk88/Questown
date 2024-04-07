@@ -289,7 +289,7 @@ public class MCTownStateWorldInteraction extends
 
             @Override
             public boolean hasSupplies() {
-                // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
+                // TODO: Reduce deuplication with TownNeeds.getRoomsNeedingIngredientsOrTools
                 int curState = workStates.processingState();
                 Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {

@@ -12,7 +12,9 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.Emptyable;
 import ca.bradj.questown.logic.TownContainerChecks;
+import ca.bradj.questown.logic.TownNeeds;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -28,7 +30,6 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -38,7 +39,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -663,58 +663,25 @@ public class DeclarativeJob extends
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> canClaim
     ) {
-        // TODO: Fully cover with tests, then try delegating to MCTownStateWorldInteraction.hasSupplies
-        HashMap<Integer, ArrayList<MCRoom>> b = new HashMap<>();
+        return TownNeeds.getRoomsNeedingIngredientsOrTools(
+                asEmptyable(ingredientsRequiredAtStates),
+                ingredientQtyRequiredAtStates,
+                asEmptyable(toolsRequiredAtStates),
+                i -> JobsClean.roomsWithState(
+                        town.getRoomHandle().getRoomsMatching(workRoomId),
+                        (bp) -> i.equals(JobBlock.getState(work, bp))
+                ),
+                getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()),
+                work,
+                canClaim,
+                maxState
+        );
+    }
 
-        b.putAll(Util.makeMutable(getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData())));
-
-        // TODO: Move to JobRequirements and test
-        ingredientsRequiredAtStates.forEach((state, ingrs) -> {
-            if (ingrs.isEmpty()) {
-                b.put(state, new ArrayList<>());
-                return;
-            }
-            Collection<RoomRecipeMatch<MCRoom>> matches = Jobs.roomsWithState(town, workRoomId,
-                    (sl, bp) -> state.equals(JobBlock.getState(work, bp))
-            );
-            List<MCRoom> roomz = matches.stream().filter(room -> {
-                for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
-                    AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
-                    if (jobBlockState == null) {
-                        continue;
-                    }
-                    if (!canClaim.test(e.getKey())) {
-                        continue;
-                    }
-                    if (jobBlockState.ingredientCount() < ingredientQtyRequiredAtStates.get(state)) {
-                        return true;
-                    }
-                }
-                return false;
-            }).map(v -> v.room).toList();
-            b.put(state, Lists.newArrayList(roomz));
-        });
-
-        // TODO: Move to JobRequirements and test
-        HashMap<Integer, Ingredient> stateTools = new HashMap<>();
-        if (toolsRequiredAtStates.values().stream().anyMatch(v -> !v.isEmpty())) {
-            for (int i = 0; i < maxState; i++) {
-                stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
-            }
-        }
-        stateTools.forEach((state, ingrs) -> {
-            if (!b.containsKey(state)) {
-                b.put(state, new ArrayList<>());
-            }
-            // Hold on to tools that are required at this state and any previous states
-            for (int i = 0; i <= state; i++) {
-                final Integer ii = i;
-                b.get(state)
-                 .addAll((Jobs.roomsWithState(town, workRoomId, (sl, bp) -> ii.equals(JobBlock.getState(work, bp)))
-                              .stream().map(v -> v.room).toList()));
-            }
-        });
-        return ImmutableMap.copyOf(b);
+    private ImmutableMap<Integer, Emptyable> asEmptyable(Map<Integer, Ingredient> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<Integer, Emptyable> builder = ImmutableMap.builder();
+        ingredientsRequiredAtStates.forEach((k, v) -> builder.put(k, v::isEmpty));
+        return builder.build();
     }
 
     @Override

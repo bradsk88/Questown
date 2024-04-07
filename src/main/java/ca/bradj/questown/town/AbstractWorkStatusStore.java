@@ -26,7 +26,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
 
-    public static class State {
+    public static class State{
         private final int processingState;
         private final int ingredientCount;
 

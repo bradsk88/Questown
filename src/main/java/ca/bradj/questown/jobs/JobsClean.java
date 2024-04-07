@@ -1,15 +1,17 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.function.*;
 
 public class JobsClean {
@@ -94,6 +96,25 @@ public class JobsClean {
         }
         // Item is not a tool
         return true;
+    }
+
+    public static <ROOM, POS, BLOCK> ImmutableList<RoomWithBlocks<ROOM, POS, BLOCK>> roomsWithState(
+            Collection<? extends RoomWithBlocks<ROOM, POS, BLOCK>> rooms,
+            Predicate<POS> hasState
+    ) {
+        ImmutableList.Builder<RoomWithBlocks<ROOM, POS, BLOCK>> b = ImmutableList.builder();
+
+        rooms.stream()
+             .filter(v -> {
+                 for (Map.Entry<POS, ?> e : v.containedBlocks.entrySet()) {
+                     if (hasState.test(e.getKey())) {
+                         return true;
+                     }
+                 }
+                 return false;
+             })
+             .forEach(b::add);
+        return b.build();
     }
 
     public interface TestFn<I extends Item<I>> {
