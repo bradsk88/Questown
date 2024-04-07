@@ -9,5 +9,6 @@ import java.util.Map;
  */
 public interface LegacyJob<STATUS, SUP_CAT> {
     @Nullable STATUS tryChoosingItemlessWork();
+
     @Nullable STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus);
 }

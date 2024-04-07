@@ -263,6 +263,11 @@ public class StatusesProductionRoutineTest {
                     BLOCK_READY_FOR_WORK
             );
         }
+
+        @Override
+        public int getMaxState() {
+            return BLOCK_READY_TO_EXTRACT_PRODUCT;
+        }
     }
 
     private static class FailProductionJob implements IProductionJob<PTestStatus> {
@@ -287,6 +292,11 @@ public class StatusesProductionRoutineTest {
                     BLOCK_READY_FOR_INGREDIENTS,
                     BLOCK_READY_FOR_WORK
             );
+        }
+
+        @Override
+        public int getMaxState() {
+            return BLOCK_READY_TO_EXTRACT_PRODUCT;
         }
     }
 
@@ -589,7 +599,7 @@ public class StatusesProductionRoutineTest {
     }
 
     @Test
-    void StatusShouldBe_collectingProduct_insteadOfItemWorks_EvenWhenSiteNeedsBothKindsOfWork_WhileInJobSite() {
+    void StatusShouldBe_extractingResult_insteadOfItemWorks_EvenWhenSiteNeedsBothKindsOfWork_WhileInJobSite() {
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(

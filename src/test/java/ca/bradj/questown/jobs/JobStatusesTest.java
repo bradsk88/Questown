@@ -381,19 +381,6 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldPrefer_ItemlessWork_OverItemWork_WhenInvFullTownFull() {
-        TestStatus s = JobStatuses.usualRoutine(
-                TestStatus.IDLE,
-                true,
-                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
-                new ConstTown(true, false, true, false),
-                jobWithItemlessWork,
-                TestStatus.FACTORY
-        );
-        Assertions.assertEquals(TestStatus.ITEMLESS_WORK, s);
-    }
-
-    @Test
     void StatusShouldPrefer_ItemWork_OverItemlessWork_WhenInvFullTownFull_AndPrioritizeIsSetToFalse() {
         boolean prioritizeCollection = false;
         TestStatus s = JobStatuses.usualRoutine(

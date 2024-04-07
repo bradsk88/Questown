@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
@@ -91,12 +92,34 @@ public class JobStatuses {
             workToTry.putAll(job.getSupplyUsesKeyedByPriority(supplyItemStatus));
         }
         workToTry.putAll(job.getItemlessWorkKeyedByPriority());
+
+        @Nullable STATUS normalStatus = null;
+        boolean foundExtraction = false;
+        boolean canGo = false;
+
         for (int i = 0; i < 10; i++) { // TODO: Smarter range
             Supplier<STATUS> potentialWork = Util.getOrDefault(workToTry, i, () -> null);
             STATUS successfulChoice = potentialWork.get();
             if (successfulChoice != null) {
-                return successfulChoice;
+                if (factory.extractingProduct().equals(successfulChoice)) {
+                    foundExtraction = true;
+                }
+                if (normalStatus == null) {
+                    if (factory.goingToJobSite().equals(successfulChoice)) {
+                        canGo = true;
+                    } else {
+                        normalStatus = successfulChoice;
+                    }
+                }
             }
+        }
+
+        if (foundExtraction && prioritizeExtraction) {
+            return nullIfUnchanged(currentStatus, factory.extractingProduct());
+        } else if (normalStatus != null) {
+            return nullIfUnchanged(currentStatus, normalStatus);
+        } else if (canGo) {
+            return nullIfUnchanged(currentStatus, factory.goingToJobSite());
         }
 
         boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems(town.isCachingAllowed());
@@ -241,30 +264,28 @@ public class JobStatuses {
                         ImmutableList<Integer> allByPref = job.getAllWorkStatesSortedByPreference();
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
                         for (int i = 0; i < allByPref.size(); i++) {
-                            final int ii = i;
-                            b.put(i, () -> {
-                                Integer potentialStatus = allByPref.get(ii);
-                                STATUS potentialSTATUS = factory.fromJobBlockState(potentialStatus);
-                                if (potentialSTATUS.isExtractingProduct()) {
-                                    Collection<ROOM> rooms = town.roomsWithCompletedProduct();
-                                    if (rooms.isEmpty()) {
-                                        return null;
-                                    }
-
-                                    ROOM location = entity.getEntityCurrentJobSite();
-                                    if (location != null) {
-                                        if (rooms.contains(location)) {
-                                            return factory.extractingProduct();
-                                        }
-                                    }
-                                    return null;
-                                }
-                                if (workReadyToDo.contains(potentialStatus)) {
-                                    return potentialSTATUS;
-                                }
-                                return null;
-                            });
+                            Integer potentialStatus = allByPref.get(i);
+                            STATUS potentialSTATUS = factory.fromJobBlockState(potentialStatus);
+                            if (workReadyToDo.contains(potentialStatus)) {
+                                b.put(i, () -> potentialSTATUS);
+                                break;
+                            }
                         }
+
+                        b.put(job.getMaxState(), () -> {
+                            Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                            if (rooms.isEmpty()) {
+                                return null;
+                            }
+                            ROOM location = entity.getEntityCurrentJobSite();
+                            if (location != null) {
+                                if (rooms.contains(location)) {
+                                    return factory.extractingProduct();
+                                }
+                            }
+                            return factory.goingToJobSite();
+                        });
+
                         return b.build();
                     }
 
@@ -313,9 +334,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        final Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = sanitizeRoomNeeds(
-                                town.roomsToGetSuppliesForByState()
-                        );
+                        final Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         ImmutableList<Integer> allByPref = job.getAllWorkStatesSortedByPreference();
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
@@ -331,8 +350,8 @@ public class JobStatuses {
                                                             .contains(location)) {
                                                 return factory.fromJobBlockState(s);
                                             }
-                                            return factory.goingToJobSite();
                                         }
+                                        return factory.goingToJobSite();
                                     }
                                     return null;
                                 });

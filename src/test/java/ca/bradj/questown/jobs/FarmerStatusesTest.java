@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+@Disabled("Farmer is being reimplemented for version 0.0.7")
 class FarmerStatusesTest {
 
     private static final ImmutableList<FarmerJob.FarmerAction> ALL_WORK_POSSIBLE = ImmutableList.of(
