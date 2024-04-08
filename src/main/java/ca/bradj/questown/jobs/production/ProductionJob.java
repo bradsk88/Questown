@@ -255,8 +255,12 @@ public abstract class ProductionJob<
 
         if (status.isWorkingOnProduction()) {
             WorkSpot<?, BlockPos> productionSpot = findProductionSpot(sl);
-            this.setLookTarget(productionSpot.position());
-            return productionSpot.interactionSpot();
+            if (productionSpot != null) {
+                this.setLookTarget(productionSpot.position());
+                return productionSpot.interactionSpot();
+            }
+            QT.JOB_LOGGER.error("Production spot was null somehow");
+            return null;
         }
 
         if (status.isDroppingLoot()) {
