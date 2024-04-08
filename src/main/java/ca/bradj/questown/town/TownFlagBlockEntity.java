@@ -102,9 +102,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         (CompoundTag tag, TownFlagBlockEntity t) -> {
                             TownRoomsMapSerializer.INSTANCE.deserialize(
                                     tag, t, t.roomsHandle.getRegisteredRooms());
+                            QT.FLAG_LOGGER.debug("Initialized rooms from {}", tag);
                             return true;
                         },
-                        t -> t.roomsHandle.initializeNew(t)
+                        t -> {
+                            t.roomsHandle.initializeNew(t);
+                            QT.FLAG_LOGGER.debug("Initialized rooms for new flag");
+                        }
                 )
         );
         b.put(
@@ -113,9 +117,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
                             MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
                             t.isInitializedQuests = true;
+                            QT.FLAG_LOGGER.debug("Initialized quests from {}", tag);
                             return true;
                         },
-                        t -> t.questsHandle.initialize(t)
+                        t -> {
+                            t.questsHandle.initialize(t);
+                            QT.FLAG_LOGGER.debug("Initialized quests for new flag");
+                        }
                 )
         );
         b.put(
@@ -123,9 +131,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         (tag, t) -> {
                             CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
                             t.morningRewards.deserializeNbt(t, data);
+                            QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
                             return true;
                         },
-                        t -> {}
+                        t -> {
+                            QT.FLAG_LOGGER.debug("Initialized morning rewards for new flag");
+                        }
                 )
         );
         b.put(
@@ -134,18 +145,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                             ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
                             Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
                             l.forEach(t.pois::registerWelcomeMat);
+                            QT.FLAG_LOGGER.debug("Initialized welcome mats from {}", tag);
                             return true;
                         },
-                        t -> {}
+                        t -> QT.FLAG_LOGGER.debug("Initialized welcome mats for new flag")
                 )
         );
         b.put(
                 NBT_JOBS, new InitPair(
                         (tag, t) -> {
-                            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag.getCompound(NBT_JOBS), t.workHandle);
+                            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
+                            QT.FLAG_LOGGER.debug("Initialized jobs from {}", tag);
                             return true;
                         },
-                        t -> {}
+                        t -> QT.FLAG_LOGGER.debug("Initialized jobs for new flag")
                 )
         );
         b.put(
@@ -158,9 +171,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                                     QTNBT.getCompound(tag, NBT_KNOWLEDGE),
                                     t.knowledgeHandle
                             );
+                            QT.FLAG_LOGGER.debug("Initialized knowledge from {}", tag);
                             return true;
                         },
-                        t -> t.knowledgeHandle.initialize(t)
+                        t -> {
+                            t.knowledgeHandle.initialize(t);
+                            QT.FLAG_LOGGER.debug("Initialized knowledge for new flag");
+                        }
                 )
         );
         b.put(
@@ -168,6 +185,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         (tag, t) -> {
                             long currentTick = Util.getTick(t.getServerLevel());
                             TownVillagerHandle.SERIALIZER.deserialize(tag, t.villagerHandle, currentTick);
+                            QT.FLAG_LOGGER.debug("Initialized villagers from {}", tag);
                             return true;
                         },
                         t -> {
@@ -185,7 +203,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                                               .rootId();
                                 ResourceLocation diningRoom = DinerWork.asWork(rid)
                                                                        .baseRoom();
-                                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
+                                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(
+                                        diningRoom);
                                 if (diningRooms.isEmpty()) {
                                     t.changeJobForVisitor(
                                             e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
@@ -195,6 +214,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                                 }
                             });
                             t.villagerHandle.addStatsListener(s -> t.setChanged());
+                            QT.FLAG_LOGGER.debug("Initialized villagers for new flag");
                         }
                 )
         );
@@ -319,8 +339,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         boolean stateChanged = e.state.tick(e, tag, sl);
 
         if ((stateChanged || e.changed) && e.everScanned) {
-            e.state.putStateOnTile(tag, e.uuid);
             e.writeTownData(tag);
+            e.state.putStateOnTile(tag, e.uuid);
             e.changed = false;
             setChanged(level, blockEntityPos, state);
         }
@@ -520,12 +540,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
         grantAdvancementOnApproach();
-
         initPairs.forEach((k, v) -> {
-            initializers.add(t -> {
-                v.onFlagPlace.accept(t);
-                return true;
-            });
+            v.onFlagPlace.accept(this);
         });
         initializers.add(t -> {
             if (!this.isInitializedQuests) {
