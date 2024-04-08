@@ -324,41 +324,10 @@ public class DeclarativeJob extends
 
             @Override
             public boolean hasSupplies() {
-                Set<Integer> statesWithRooms = roomsToGetSuppliesForByState().keySet();
-                ImmutableMap.Builder<Integer, Integer> oneTool = ImmutableMap.builder();
-                toolsRequiredAtStates.forEach(
-                        (k, v) -> {
-                            if (!v.isEmpty()) {
-                                oneTool.put(k, 1);
-                            }
-                        }
-                );
-                boolean townHasTools = TownContainerChecks.townHasSupplies(
-                        statesWithRooms,
-                        Jobs.unMC2(toolsRequiredAtStates),
-                        oneTool.build(),
-                        town::getItemMatches,
-                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
-                        (lvl, item) -> false
-                );
-                if (!townHasTools) {
-                    return false;
-                }
+                return TownContainerChecks.hasSupplies(
+                        () -> roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()),
 
-                return TownContainerChecks.townHasSupplies(
-                        statesWithRooms,
-                        Jobs.unMC2(ingredientsRequiredAtStates),
-                        ingredientQtyRequiredAtStates,
-                        town::getItemMatches,
-                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
-                        (lvl, item) -> {
-                            ProductionStatus s = ProductionStatus.fromJobBlockStatus(lvl);
-                            Collection<String> sr = specialRules.apply(s);
-                            if (sr.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-                                return Works.isWorkResult(town.getTownData(), item);
-                            }
-                            return false;
-                        }
+
                 );
             }
 
