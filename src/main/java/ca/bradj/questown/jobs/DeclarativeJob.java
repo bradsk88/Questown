@@ -325,9 +325,13 @@ public class DeclarativeJob extends
             @Override
             public boolean hasSupplies() {
                 return TownContainerChecks.hasSupplies(
-                        () -> roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()),
-
-
+                        () -> roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet(),
+                        Jobs.unMC2(toolsRequiredAtStates),
+                        ingredientQtyRequiredAtStates,
+                        Jobs.unMC3(toolsRequiredAtStates),
+                        town::getItemMatches,
+                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
+                        item -> Works.isWorkResult(town.getTownData(), item)
                 );
             }
 

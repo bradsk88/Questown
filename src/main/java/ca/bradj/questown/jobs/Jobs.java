@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -255,6 +256,27 @@ public class Jobs {
         ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
+        );
+        return b.build();
+    }
+
+    public static ImmutableMap<Integer, PredicateCollection<MCTownItem>> unMC3(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, new PredicateCollection<>() {
+                            @Override
+                            public boolean test(MCTownItem mcTownItem) {
+                                return v.test(mcTownItem.toItemStack());
+                            }
+
+                            @Override
+                            public boolean isEmpty() {
+                                return v.isEmpty();
+                            }
+                        }
+                )
         );
         return b.build();
     }
