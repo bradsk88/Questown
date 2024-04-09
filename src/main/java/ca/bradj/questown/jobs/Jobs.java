@@ -5,7 +5,6 @@ import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
-import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -25,21 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -250,20 +243,20 @@ public class Jobs {
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Predicate<MCTownItem>> unMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    public static <K> ImmutableMap<K, Predicate<MCTownItem>> unMC2(
+            ImmutableMap<K, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<K, Predicate<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
         );
         return b.build();
     }
 
-    public static ImmutableMap<Integer, PredicateCollection<MCTownItem>> unMC3(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    public static <K> ImmutableMap<K, PredicateCollection<MCTownItem>> unMC3(
+            ImmutableMap<K, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<K, PredicateCollection<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, new PredicateCollection<>() {
                             @Override
@@ -281,26 +274,26 @@ public class Jobs {
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    public static <K> ImmutableMap<K, Function<MCHeldItem, Boolean>> unMCHeld(
+            ImmutableMap<K, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<K, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
         );
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unMCHeld2(
-            ImmutableMap<Integer, Ingredient> input
+    public static <K> ImmutableMap<K, Predicate<MCHeldItem>> unMCHeld2(
+            ImmutableMap<K, Ingredient> input
     ) {
         return unFn(unMCHeld(input));
     }
 
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(
-            Map<Integer, Function<MCHeldItem, Boolean>> input
+    public static <K> ImmutableMap<K, Predicate<MCHeldItem>> unFn(
+            Map<K, Function<MCHeldItem, Boolean>> input
     ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<K, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         input.forEach((k, v) -> b.put(k, v::apply));
         return b.build();
     }

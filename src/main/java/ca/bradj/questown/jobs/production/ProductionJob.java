@@ -100,7 +100,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     private BlockPos jobSite;
 
-    protected abstract Map<Integer, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
+    protected abstract Map<STATUS, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
             ContainerRoomFinder<MCRoom, MCTownItem> rooms,
             WorksBehaviour.TownData townData
     );
@@ -206,7 +206,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         return journal.removeItem(mct);
     }
 
-    protected abstract Map<Integer, Boolean> getSupplyItemStatus();
+    protected abstract Map<STATUS, Boolean> getSupplyItemStatus();
 
     protected void tryDropLoot(
             BlockPos entityPos
@@ -228,17 +228,18 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     @NotNull
     protected ImmutableList<Predicate<MCTownItem>> convertToCleanFns(
-            Map<Integer, ? extends Collection<MCRoom>> statusMap
+            Map<STATUS, ? extends Collection<MCRoom>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
-        Optional<Integer> first = statusMap.entrySet().stream().filter(v -> !v.getValue().isEmpty())
-                                           .map(Map.Entry::getKey).findFirst();
+        Optional<STATUS> first = statusMap.entrySet().stream().filter(v -> !v.getValue().isEmpty())
+                                          .map(Map.Entry::getKey).findFirst();
 
         if (first.isEmpty()) {
             return ImmutableList.of();
         }
 
-        return ImmutableList.copyOf(recipe.getRecipe(first.get()).stream().map(v -> (Predicate<MCTownItem>) v::test)
+        return ImmutableList.copyOf(recipe.getRecipe(first.get().value()).stream()
+                                          .map(v -> (Predicate<MCTownItem>) v::test)
                                           .toList());
     }
 
@@ -324,9 +325,9 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             Random rand
     );
 
-    private ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
+    private ControlledCache<Map<STATUS, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
 
-    protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    protected abstract Map<STATUS, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> canClaim
@@ -364,11 +365,11 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            ControlledCache<Map<STATUS, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
-    protected abstract ImmutableList<Integer> sortByPriority(Collection<Integer> states);
+    protected abstract ImmutableList<STATUS> sortByPriority(Collection<STATUS> states);
 
     private void setupForGetSupplies(
             TownInterface town
@@ -380,8 +381,9 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 item
         );
         ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
-        for (Integer i : sortByPriority(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet())) {
-            if (specialRules.apply(statusFactory.fromJobBlockState(i)).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+        for (STATUS i : sortByPriority(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled())
+                                                                     .keySet())) {
+            if (specialRules.apply(i).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
                 Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
                 checkFn = item -> JobsClean.shouldTakeItem(
                         journal.getCapacity(),
@@ -498,7 +500,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<Integer> defaultEntityInvProvider(WorksBehaviour.TownData townData) {
+    protected EntityInvStateProvider<STATUS> defaultEntityInvProvider(WorksBehaviour.TownData townData) {
         return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
@@ -508,15 +510,14 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             @Override
             public boolean hasNonSupplyItems(boolean allowCaching) {
 
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.get(allowCaching).entrySet().stream()
-                                                                          .filter(v -> !v.getValue().isEmpty())
-                                                                          .map(Map.Entry::getKey)
-                                                                          .collect(Collectors.toSet());
+                Set<STATUS> statesToFeed = roomsNeedingIngredientsOrTools.get(allowCaching).entrySet().stream()
+                                                                         .filter(v -> !v.getValue().isEmpty())
+                                                                         .map(Map.Entry::getKey)
+                                                                         .collect(Collectors.toSet());
                 ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> b = ImmutableList.builder();
                 statesToFeed.stream()
                             .flatMap(
-                                    v -> recipe.getRecipe(
-                                                       v)
+                                    v -> recipe.getRecipe(v.value())
                                                .stream())
                             .forEach(b::add);
                 Collection<String> stateRules = specialRules.apply(statusFactory.fromJobBlockState(0));
@@ -527,7 +528,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             }
 
             @Override
-            public Map<Integer, Boolean> getSupplyItemStatus() {
+            public Map<STATUS, Boolean> getSupplyItemStatus() {
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };

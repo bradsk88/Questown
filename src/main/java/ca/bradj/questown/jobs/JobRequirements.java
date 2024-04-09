@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -10,19 +11,20 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class JobRequirements {
-    public static <ROOM> Map<Integer, ImmutableList<ROOM>> roomsWhereSpecialRulesApply(
+    public static <ROOM> Map<ProductionStatus, ImmutableList<ROOM>> roomsWhereSpecialRulesApply(
             int maxState,
-            Function<Integer, ? extends Collection<String>> specialRules,
+            Function<ProductionStatus, ? extends Collection<String>> specialRules,
             Supplier<List<ROOM>> roomsWithWorkResultsInStorage
     ) {
-        ImmutableMap.Builder<Integer, ImmutableList<ROOM>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<ProductionStatus, ImmutableList<ROOM>> b = ImmutableMap.builder();
 
         for (int i = 0; i < maxState; i++) {
-            Collection<String> rules = specialRules.apply(i);
+            ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
+            Collection<String> rules = specialRules.apply(s);
             if (rules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
                 List<ROOM> rooms = roomsWithWorkResultsInStorage.get();
                 if (rooms != null && !rooms.isEmpty()) {
-                    b.put(i, ImmutableList.copyOf(rooms));
+                    b.put(s, ImmutableList.copyOf(rooms));
                 }
             }
 

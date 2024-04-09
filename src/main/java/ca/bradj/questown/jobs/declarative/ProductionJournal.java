@@ -107,12 +107,12 @@ public class ProductionJournal<
     }
 
     public void tick(
-            JobTownProvider<MCRoom> townState,
+            JobTownProvider<MCRoom, ProductionStatus> townState,
             EntityLocStateProvider<MCRoom> entityState,
-            EntityInvStateProvider<Integer> inventory,
+            EntityInvStateProvider<ProductionStatus> inventory,
             IProductionStatusFactory<ProductionStatus> factory,
             boolean prioritizeExtraction,
-            ImmutableList<Integer> statePriority
+            ImmutableList<ProductionStatus> statePriority
     ) {
         if (status == null || status.isUnset()) {
             throw new IllegalStateException("Must initialize status");

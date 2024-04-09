@@ -13,12 +13,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>, ROOM extends Room> {
+public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>, ROOM extends Room> {
 
     public void tryGetSupplies(
             STATUS status,
             int upToAmount,
-            Map<Integer, Collection<ROOM>> roomsNeedingIngredientsOrTools,
+            Map<STATUS, Collection<ROOM>> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<JobsClean.TestFn<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
@@ -30,7 +30,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             return;
         }
 
-        Optional<Integer> first = roomsNeedingIngredientsOrTools.entrySet()
+        Optional<STATUS> first = roomsNeedingIngredientsOrTools.entrySet()
                 .stream()
                 .filter(v -> !v.getValue().isEmpty())
                 .map(Map.Entry::getKey)
@@ -41,7 +41,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             return;
         }
 
-        Collection<Predicate<TOWN_ITEM>> apply = recipe.apply(first.get()).stream().map(
+        Collection<Predicate<TOWN_ITEM>> apply = recipe.apply(first.get().value()).stream().map(
                 v -> (Predicate<TOWN_ITEM>) v::test
         ).collect(Collectors.toList());
         Predicate<TOWN_ITEM> originalTest = item -> JobsClean.shouldTakeItem(

@@ -53,9 +53,9 @@ public class GathererMappedAxeWork extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
     );
-    public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
-            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
-            ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
+    public static final ImmutableMap<Integer, String> SPECIAL_RULES = ImmutableMap.of(
+            BLOCK_STATE_NEED_ROAM, SpecialRules.REMOVE_FROM_WORLD,
+            ProductionStatus.FACTORY.waitingForTimedState().value(), SpecialRules.REMOVE_FROM_WORLD
     );
 
     public GathererMappedAxeWork(

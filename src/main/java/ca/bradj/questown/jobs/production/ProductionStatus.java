@@ -5,13 +5,10 @@ import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
+import java.util.*;
 
 public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
@@ -129,6 +126,17 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return new ProductionStatus("state:" + s, s);
     }
 
+    public static ProductionStatus slowUnsafe(int s) {
+        if (s < firstNonCustomIndex) {
+            return fromJobBlockStatus(s);
+        }
+        Optional<ProductionStatus> first = allStatuses.stream().filter(v -> v.value == s).findFirst();
+        if (first.isEmpty()) {
+            throw new IllegalArgumentException("There is no ProductionStatus for integer " + s);
+        }
+        return first.get();
+    }
+
     private ProductionStatus(
             String name,
             int i
@@ -140,6 +148,24 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static ProductionStatus from(String s) {
         int i = Integer.parseInt(s);
         return new ProductionStatus(s, i);
+    }
+
+    public static <V> ImmutableMap<ProductionStatus, V> mapUnsafe(ImmutableMap<Integer, V> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<ProductionStatus, V> b = ImmutableMap.builder();
+        ingredientsRequiredAtStates.forEach((k, v) -> b.put(ProductionStatus.slowUnsafe(k), v));
+        return b.build();
+    }
+
+    public static <V> Map<Integer, V> unmap(Map<ProductionStatus, V> in) {
+        ImmutableMap.Builder<Integer, V> b = ImmutableMap.builder();
+        in.forEach((k, v) -> b.put(k.value, v));
+        return b.build();
+    }
+
+    public static ImmutableList<ProductionStatus> list(Collection<Integer> in) {
+        ImmutableList.Builder<ProductionStatus> b = ImmutableList.builder();
+        in.forEach(v -> b.add(ProductionStatus.fromJobBlockStatus(v)));
+        return b.build();
     }
 
     @Override
@@ -165,6 +191,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     @Override
     public boolean isWaitingForTimers() {
         return WAITING_FOR_TIMED_STATE.equals(this);
+    }
+
+    @Override
+    public int value() {
+        return value;
     }
 
     @Override
@@ -249,5 +280,10 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
                 "value=" + value +
                 ", name='" + name + '\'' +
                 '}';
+    }
+
+    @Override
+    public int compareTo(@NotNull ProductionStatus o) {
+        return 0;
     }
 }

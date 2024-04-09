@@ -109,10 +109,10 @@ public class DeclarativeJob extends
             return ProductionStatus.FACTORY.relaxing();
         }
     };
-    private final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
+    private final ImmutableMap<ProductionStatus, Ingredient> ingredientsRequiredAtStates;
+    private final ImmutableMap<ProductionStatus, Integer> ingredientQtyRequiredAtStates;
+    private final ImmutableMap<ProductionStatus, Ingredient> toolsRequiredAtStates;
+    private final ImmutableMap<ProductionStatus, Integer> workRequiredAtStates;
 
     private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
             MCTownItem.fromMCItemStack(Items.COAL.getDefaultInstance()),
@@ -136,8 +136,8 @@ public class DeclarativeJob extends
     private int ticksSinceStart;
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
-    private ImmutableMap<Integer, Predicate<MCHeldItem>> statesWhereSpecialRulesApply = ImmutableMap.of();
-    private final ImmutableList<Integer> statesPriority;
+    private ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> statesWhereSpecialRulesApply = ImmutableMap.of();
+    private final ImmutableList<ProductionStatus> statesPriority;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -152,7 +152,7 @@ public class DeclarativeJob extends
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableList<Integer> statesPriority,
-            ImmutableMap<ProductionStatus, ? extends Collection<String>> specialStatusRules,
+            ImmutableMap<Integer, ? extends Collection<String>> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
@@ -162,7 +162,7 @@ public class DeclarativeJob extends
                 buildRecipe(ingredientsRequiredAtStates, toolsRequiredAtStates), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(jobId, signalSource, capacity, MCHeldItem::Air,
                         STATUS_FACTORY
-                ), STATUS_FACTORY, specialStatusRules, specialGlobalRules, () -> {
+                ), STATUS_FACTORY, ProductionStatus.mapUnsafe(specialStatusRules), specialGlobalRules, () -> {
                     if (specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
                         return makeClaim(ownerUUID);
                     }
@@ -180,11 +180,11 @@ public class DeclarativeJob extends
         );
         this.maxState = maxState;
         this.workRoomId = workRoomId;
-        this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
-        this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
-        this.toolsRequiredAtStates = toolsRequiredAtStates;
-        this.workRequiredAtStates = workRequiredAtStates;
-        this.statesPriority = statesPriority;
+        this.ingredientsRequiredAtStates = ProductionStatus.mapUnsafe(ingredientsRequiredAtStates);
+        this.ingredientQtyRequiredAtStates = ProductionStatus.mapUnsafe(ingredientsQtyRequiredAtStates);
+        this.toolsRequiredAtStates = ProductionStatus.mapUnsafe(toolsRequiredAtStates);
+        this.workRequiredAtStates = ProductionStatus.mapUnsafe(workRequiredAtStates);
+        this.statesPriority = ProductionStatus.list(statesPriority);
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
     }
@@ -253,12 +253,15 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
-            ControlledCache<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            ControlledCache<Map<ProductionStatus, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<ProductionStatus, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         for (int i = 0; i < maxState; i++) {
-            b.put(i, item -> Works.isWorkResult(town.getTownData(), item.toItem()));
+            b.put(
+                    ProductionStatus.fromJobBlockStatus(i),
+                    item -> Works.isWorkResult(town.getTownData(), item.toItem())
+            );
         }
         this.statesWhereSpecialRulesApply = b.build();
 
@@ -285,7 +288,7 @@ public class DeclarativeJob extends
         }
         this.workSpot = null;
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
-        JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
+        JobTownProvider<MCRoom, ProductionStatus> jtp = new JobTownProvider<>() {
             private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
 
             @Override
@@ -296,7 +299,7 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public Map<Integer, Collection<MCRoom>> roomsToGetSuppliesForByState() {
+            public Map<ProductionStatus, Collection<MCRoom>> roomsToGetSuppliesForByState() {
                 return roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled());
             }
 
@@ -324,13 +327,13 @@ public class DeclarativeJob extends
 
             @Override
             public boolean hasSupplies() {
-                return TownContainerChecks.hasSupplies(
+                return TownContainerChecks.<MCTownItem, ProductionStatus>hasSupplies(
                         () -> roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet(),
                         Jobs.unMC2(toolsRequiredAtStates),
                         ingredientQtyRequiredAtStates,
                         Jobs.unMC3(toolsRequiredAtStates),
                         town::getItemMatches,
-                        lvl -> specialRules.apply(ProductionStatus.fromJobBlockStatus(lvl)),
+                        lvl -> specialRules.apply(lvl),
                         item -> Works.isWorkResult(town.getTownData(), item)
                 );
             }
@@ -399,8 +402,8 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected ImmutableList<Integer> sortByPriority(Collection<Integer> states) {
-        ImmutableList.Builder<Integer> b = ImmutableList.builder();
+    protected ImmutableList<ProductionStatus> sortByPriority(Collection<ProductionStatus> states) {
+        ImmutableList.Builder<ProductionStatus> b = ImmutableList.builder();
         statesPriority.forEach(v -> {
             if (states.contains(v)) {
                 b.add(v);
@@ -415,7 +418,7 @@ public class DeclarativeJob extends
 
     private void tryGetSupplies(
             TownInterface town,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos
     ) {
         if (suppliesTarget == null) {
@@ -585,9 +588,9 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<Integer, Boolean> getSupplyItemStatus() {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        ImmutableMap<Integer, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
+    protected Map<ProductionStatus, Boolean> getSupplyItemStatus() {
+        ImmutableMap.Builder<ProductionStatus, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
         statesWhereSpecialRulesApply.forEach((k, v) -> // FIXME: Test this
                 b.put(k, item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
 
@@ -611,9 +614,15 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
-        return JobSites.find(jobRooms(town, roomsWhereSpecialRulesApply),
-                match -> match.containedBlocks.entrySet(), match -> match.room, work, getSupplyItemStatus(),
-                maxState, specialGlobalRules, new MCPosKit(rand, isEmpty)
+        return JobSites.find(
+                jobRooms(town, roomsWhereSpecialRulesApply),
+                match -> match.containedBlocks.entrySet(),
+                match -> match.room,
+                work,
+                ProductionStatus.unmap(getSupplyItemStatus()),
+                maxState,
+                specialGlobalRules,
+                new MCPosKit(rand, isEmpty)
         );
     }
 
@@ -631,7 +640,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    protected Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, AbstractWorkStatusStore.State> work,
             Predicate<BlockPos> canClaim
@@ -651,23 +660,21 @@ public class DeclarativeJob extends
         );
     }
 
-    private ImmutableMap<Integer, Emptyable> asEmptyable(Map<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Emptyable> builder = ImmutableMap.builder();
+    private static <K> ImmutableMap<K, Emptyable> asEmptyable(Map<K, Ingredient> ingredientsRequiredAtStates) {
+        ImmutableMap.Builder<K, Emptyable> builder = ImmutableMap.builder();
         ingredientsRequiredAtStates.forEach((k, v) -> builder.put(k, v::isEmpty));
         return builder.build();
     }
 
     @Override
-    protected Map<Integer, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
+    protected Map<ProductionStatus, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
             ContainerRoomFinder<MCRoom, MCTownItem> rooms,
             WorksBehaviour.TownData townData
     ) {
         Supplier<List<MCRoom>> resultRooms = () -> rooms.getRoomsWithContainersOfItem(
                 i -> Works.isWorkResult(townData, i));
-        Function<Integer, ? extends Collection<String>> rules = k -> specialRules.apply(
-                ProductionStatus.fromJobBlockStatus(k));
         return JobRequirements.roomsWhereSpecialRulesApply(
-                maxState, rules, resultRooms
+                maxState, specialRules, resultRooms
         );
     }
 

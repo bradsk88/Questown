@@ -1,14 +1,10 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -37,13 +33,13 @@ public class JobsClean {
     }
 
     @NotNull
-    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+    static <K, I> ImmutableMap<K, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
-            ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+            ImmutableMap<K, Predicate<I>> ingredientsRequiredAtStates,
+            ImmutableMap<K, Predicate<I>> toolsRequiredAtStates
     ) {
-        HashMap<Integer, Boolean> b = new HashMap<>();
-        BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
+        HashMap<K, Boolean> b = new HashMap<>();
+        BiConsumer<K, Predicate<I>> fn = (state, ingr) -> {
             if (ingr == null) {
                 if (!b.containsKey(state)) {
                     b.put(state, false);

@@ -191,9 +191,9 @@ public class JobStatuses {
     public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
-            EntityInvStateProvider<Integer> inventory,
+            EntityInvStateProvider<STATUS> inventory,
             EntityLocStateProvider<ROOM> entity,
-            JobTownProvider<ROOM> town,
+            JobTownProvider<ROOM, STATUS> town,
             IProductionJob<STATUS> job,
             IProductionStatusFactory<STATUS> factory
     ) {
@@ -235,7 +235,7 @@ public class JobStatuses {
                                                     .isEmpty());
                     }
                 },
-                new Job<>() {
+                new Job<STATUS, STATUS>() {
                     @Override
                     public @Nullable STATUS tryChoosingItemlessWork() {
                         Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
@@ -261,18 +261,17 @@ public class JobStatuses {
                     @Override
                     public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority() {
                         Collection<Integer> workReadyToDo = town.getStatesWithUnfinishedItemlessWork();
-                        ImmutableList<Integer> allByPref = job.getAllWorkStatesSortedByPreference();
+                        ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
                         for (int i = 0; i < allByPref.size(); i++) {
-                            Integer potentialStatus = allByPref.get(i);
-                            STATUS potentialSTATUS = factory.fromJobBlockState(potentialStatus);
+                            STATUS potentialStatus = allByPref.get(i);
                             if (workReadyToDo.contains(potentialStatus)) {
-                                b.put(i, () -> potentialSTATUS);
+                                b.put(i, () -> potentialStatus);
                                 break;
                             }
                         }
 
-                        b.put(job.getMaxState(), () -> {
+                        b.put(job.getMaxState().value(), () -> {
                             Collection<ROOM> rooms = town.roomsWithCompletedProduct();
                             if (rooms.isEmpty()) {
                                 return null;
@@ -290,31 +289,29 @@ public class JobStatuses {
                     }
 
                     @Override
-                    public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+                    public @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
-
-                        roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
+                        Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         boolean foundWork = false;
 
-                        List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
+                        List<STATUS> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
                                                                .stream()
                                                                .filter(work -> supplyItemStatus.getOrDefault(
                                                                        work, false))
                                                                .toList();
 
-                        for (Integer s : orderedWithSupplies) {
+                        for (STATUS s : orderedWithSupplies) {
                             if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
                                                                             .isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
                                     if (roomNeedsMap.get(s)
                                                     .contains(location)) {
-                                        return factory.fromJobBlockState(s);
+                                        return s;
                                     }
                                 }
                             }
@@ -329,17 +326,17 @@ public class JobStatuses {
                     }
 
                     @Override
-                    public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<Integer, Boolean> supplyItemStatus) {
+                    public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<STATUS, Boolean> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        final Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
+                        final Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
-                        ImmutableList<Integer> allByPref = job.getAllWorkStatesSortedByPreference();
+                        ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
                         for (int i = 0; i < allByPref.size(); i++) {
-                            final int s = allByPref.get(i);
+                            final STATUS s = allByPref.get(i);
                             boolean hasSuppliesForStatus = Util.getOrDefault(supplyItemStatus, s, false);
                             if (hasSuppliesForStatus) {
                                 b.put(i, () -> {
@@ -348,7 +345,7 @@ public class JobStatuses {
                                         if (location != null) {
                                             if (roomNeedsMap.get(s)
                                                             .contains(location)) {
-                                                return factory.fromJobBlockState(s);
+                                                return s;
                                             }
                                         }
                                         return factory.goingToJobSite();
@@ -373,15 +370,15 @@ public class JobStatuses {
         return status;
     }
 
-    public static <ROOM extends Room> Map<Integer, ? extends Collection<ROOM>> sanitizeRoomNeeds(
-            Map<Integer, ? extends Collection<ROOM>> roomNeedsMap
+    public static <ROOM extends Room, STATUS extends IProductionStatus<?>> Map<STATUS, ? extends Collection<ROOM>> sanitizeRoomNeeds(
+            Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap
     ) {
         // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
         // show up as "needing" 0.
-        Map<Integer, Collection<ROOM>> b = new HashMap<>();
+        Map<STATUS, Collection<ROOM>> b = new HashMap<>();
         roomNeedsMap.forEach((k, rooms) -> {
             ImmutableSet.Builder<ROOM> allPrevRooms = ImmutableSet.builder();
-            for (int i = 0; i < k; i++) {
+            for (int i = 0; i < k.value(); i++) {
                 Collection<ROOM> elements = b.get(i);
                 if (elements == null) {
                     elements = ImmutableList.of();

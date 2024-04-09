@@ -137,7 +137,7 @@ public class DeclarativeJobs {
             MCTownStateWorldInteraction wi,
             int maxState,
             boolean prioritizeExtraction,
-            ImmutableList<Integer> statePriority
+            ImmutableList<ProductionStatus> statePriority
     ) {
         ImmutableSet<ProductionStatus> c = handler.keySet();
         ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();

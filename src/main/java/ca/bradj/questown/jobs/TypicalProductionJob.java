@@ -1,28 +1,29 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.IProductionJob;
+import ca.bradj.questown.jobs.production.IProductionStatus;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
-public class TypicalProductionJob<S> implements IProductionJob<S> {
+public class TypicalProductionJob<S extends IProductionStatus<S>> implements IProductionJob<S> {
 
-    private final ImmutableList<Integer> sorted;
-    private final int maxState;
+    private final ImmutableList<S> sorted;
+    private final S maxState;
 
-    public TypicalProductionJob(ImmutableList<Integer> sorted) {
+    public TypicalProductionJob(ImmutableList<S> sorted) {
         this.sorted = sorted;
-        this.maxState = sorted.stream().max(Integer::compare).get();
+        this.maxState = sorted.stream().max(Comparable::compareTo).get();
     }
 
     @Override
-    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+    public ImmutableList<S> getAllWorkStatesSortedByPreference() {
         return sorted;
     }
 
     @Override
-    public int getMaxState() {
+    public S getMaxState() {
         return maxState;
     }
 
@@ -32,7 +33,7 @@ public class TypicalProductionJob<S> implements IProductionJob<S> {
     }
 
     @Override
-    public @Nullable S tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+    public @Nullable S tryUsingSupplies(Map<S, Boolean> supplyItemStatus) {
         return null;
     }
 

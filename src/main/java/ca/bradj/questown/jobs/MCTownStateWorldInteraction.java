@@ -227,13 +227,13 @@ public class MCTownStateWorldInteraction extends
         ticksSinceLastAction += interval;
     }
 
-    public JobTownProvider<MCRoom> asTownJobs(
+    public JobTownProvider<MCRoom, ProductionStatus> asTownJobs(
             @NotNull AbstractWorkStatusStore.State workStates,
             MCRoom mcRoom,
             BlockPos roomBlock,
             @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers
     ) {
-        return new JobTownProvider<MCRoom>() {
+        return new JobTownProvider<>() {
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
                 if (workStates.processingState() == maxState) {
@@ -243,20 +243,21 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<Integer, Collection<MCRoom>> roomsToGetSuppliesForByState() {
+            public Map<ProductionStatus, Collection<MCRoom>> roomsToGetSuppliesForByState() {
                 int curState = workStates.processingState();
+                ProductionStatus curStatus = ProductionStatus.fromJobBlockStatus(curState);
                 Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return ImmutableMap.of(curStatus, ImmutableList.of(mcRoom));
                 }
 
                 Function<MCTownItem, Boolean> toolChk = toolsRequiredAtStates.get(curState);
                 if (toolChk != null) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return ImmutableMap.of(curStatus, ImmutableList.of(mcRoom));
                 }
 
                 if (workStates.workLeft() > 0) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return ImmutableMap.of(curStatus, ImmutableList.of(mcRoom));
                 }
 
                 return ImmutableMap.of();
@@ -322,11 +323,11 @@ public class MCTownStateWorldInteraction extends
         };
     }
 
-    public EntityInvStateProvider<Integer> asInventory(
+    public EntityInvStateProvider<ProductionStatus> asInventory(
             Supplier<Collection<MCHeldItem>> heldItems,
             Supplier<Integer> state
     ) {
-        return new EntityInvStateProvider<Integer>() {
+        return new EntityInvStateProvider<ProductionStatus>() {
             @Override
             public boolean inventoryFull() {
                 Collection<MCHeldItem> items = heldItems.get();
@@ -344,12 +345,12 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<Integer, Boolean> getSupplyItemStatus() {
-                return JobsClean.getSupplyItemStatuses(
+            public Map<ProductionStatus, Boolean> getSupplyItemStatus() {
+                return ProductionStatus.mapUnsafe(JobsClean.getSupplyItemStatuses(
                         heldItems,
                         Jobs.unFn(ingredientsRequiredAtStates()),
                         Jobs.unHeld(toolsRequiredAtStates)
-                );
+                ));
             }
         };
     }

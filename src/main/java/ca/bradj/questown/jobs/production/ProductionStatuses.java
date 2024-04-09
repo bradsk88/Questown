@@ -10,12 +10,12 @@ public class ProductionStatuses {
     public static @Nullable <ROOM extends Room> ProductionStatus getNewStatusFromSignal(
             ProductionStatus currentStatus,
             Signals signal,
-            EntityInvStateProvider<Integer> inventory,
-            JobTownProvider<ROOM> town,
+            EntityInvStateProvider<ProductionStatus> inventory,
+            JobTownProvider<ROOM, ProductionStatus> town,
             EntityLocStateProvider<ROOM> entity,
             IProductionStatusFactory<ProductionStatus> factory,
             boolean prioritizeExtraction,
-            ImmutableList<Integer> statePriority
+            ImmutableList<ProductionStatus> statePriority
     ) {
         switch (signal) {
             case MORNING, NOON -> {
@@ -30,16 +30,15 @@ public class ProductionStatuses {
 
     public static <ROOM extends Room> @Nullable ProductionStatus getMorningStatus(
             ProductionStatus currentStatus,
-            EntityInvStateProvider<Integer> inventory,
-            JobTownProvider<ROOM> town,
+            EntityInvStateProvider<ProductionStatus> inventory,
+            JobTownProvider<ROOM, ProductionStatus> town,
             EntityLocStateProvider<ROOM> entity,
             IProductionStatusFactory<ProductionStatus> factory,
             boolean prioritizeExtraction,
-            ImmutableList<Integer> statePriority
+            ImmutableList<ProductionStatus> statePriority
     ) {
         ProductionStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, prioritizeExtraction, inventory, entity, town,
-                // TODO: Allow preferences to be provided/serialized
                 new TypicalProductionJob<>(statePriority),
                 factory
         );
@@ -48,8 +47,8 @@ public class ProductionStatuses {
 
     public static <ROOM extends Room> @Nullable ProductionStatus getEveningStatus(
             ProductionStatus currentStatus,
-            EntityInvStateProvider<Integer> inventory,
-            JobTownProvider<ROOM> town,
+            EntityInvStateProvider<ProductionStatus> inventory,
+            JobTownProvider<ROOM, ProductionStatus> town,
             IStatusFactory<ProductionStatus> factory,
             boolean allowCaching
     ) {

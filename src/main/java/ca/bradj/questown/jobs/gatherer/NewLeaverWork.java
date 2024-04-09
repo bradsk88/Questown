@@ -3,8 +3,6 @@ package ca.bradj.questown.jobs.gatherer;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,10 +55,10 @@ public class NewLeaverWork {
             ImmutableMap<Integer, Supplier<Ingredient>> toolsRequiredAtStates,
             ImmutableMap<Integer, Supplier<Integer>> workRequiredAtStates,
             ImmutableMap<Integer, Supplier<Integer>> timeRequiredAtStates,
-            ImmutableMap<ProductionStatus, String> specialRules,
+            ImmutableMap<Integer, String> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
-        ImmutableMap.Builder<ProductionStatus, ImmutableList<String>> rules = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, ImmutableList<String>> rules = ImmutableMap.builder();
         specialRules.forEach((k, v)  -> rules.put(k, ImmutableList.of(v)));
         return productionWork(
                 icon,

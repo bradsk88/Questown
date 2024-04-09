@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.rooms.XWall;
@@ -15,8 +16,8 @@ import java.util.function.Supplier;
 
 public class JobSites {
 
-    public static <POS, MATCH, ROOM extends Room> POS find(
-            Supplier<Collection<MATCH>> matches,
+    public static <POS, MATCH extends RoomWithBlocks<ROOM, POS, ?>, ROOM extends Room> POS find(
+            Supplier<? extends Collection<MATCH>> matches,
             Function<MATCH, Collection<? extends Map.Entry<POS, ?>>> containedBlocks,
             Function<MATCH, ROOM> room,
             Function<POS, AbstractWorkStatusStore. @Nullable State> getState,

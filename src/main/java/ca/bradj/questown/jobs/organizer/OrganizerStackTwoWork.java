@@ -62,12 +62,12 @@ public class OrganizerStackTwoWork {
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(
-                                ProductionStatus.fromJobBlockStatus(1), ImmutableList.of(
+                                1, ImmutableList.of(
                                         SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
                                         SpecialRules.INGREDIENTS_MUST_BE_SAME,
                                         SpecialRules.TAKE_ONLY_LESS_THAN_QUANTITY
                                 ),
-                                ProductionStatus.fromJobBlockStatus(MAX_STATE), ImmutableList.of(
+                                MAX_STATE, ImmutableList.of(
                                         SpecialRules.FORCE_DROP_LOOT,
                                         SpecialRules.DROP_LOOT_AS_STACK
                                 )

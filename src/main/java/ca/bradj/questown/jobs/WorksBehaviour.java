@@ -9,7 +9,6 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -54,7 +53,12 @@ public class WorksBehaviour {
                 resultGenerator,
                 claimSpots
         );
-        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, states.statePriority);
+        return DeclarativeJobs.warper(
+                wi,
+                states.maxState(),
+                prioritizeExtraction,
+                ProductionStatus.list(states.statePriority)
+        );
     }
 
     public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> singleItemOutput(
@@ -114,7 +118,11 @@ public class WorksBehaviour {
     }
 
     public static ImmutableList<Integer> standardPriority() {
-        return ImmutableList.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        ImmutableList.Builder<Integer> b = ImmutableList.builder();
+        for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {
+            b.add(i);
+        }
+        return b.build();
     }
 
 
