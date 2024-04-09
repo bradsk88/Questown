@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -20,17 +21,17 @@ class JobRequirementsTest {
 
     @Test
     void roomsWhereSpecialRulesApply_shouldReturnRoomInState1_IfState1HasWorkResultRule_AndTownHasWorkResults() {
-        ImmutableMap<Integer, ImmutableList<String>> definedRules = ImmutableMap.of(
-                0, ImmutableList.of(), // No rules at 0
-                1, ImmutableList.of(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)
+        ImmutableMap<ProductionStatus, ImmutableList<String>> definedRules = ImmutableMap.of(
+                ProductionStatus.fromJobBlockStatus(0), ImmutableList.of(), // No rules at 0
+                ProductionStatus.fromJobBlockStatus(1), ImmutableList.of(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)
         );
-        Map<Integer, ? extends List<Room>> rooms = JobRequirements.roomsWhereSpecialRulesApply(
+        Map<ProductionStatus, ? extends List<Room>> rooms = JobRequirements.roomsWhereSpecialRulesApply(
                 2,
                 definedRules::get,
                 () -> ImmutableList.of(EXAMPLE_ROOM)
         );
-        Assertions.assertFalse(rooms.containsKey(0));
-        Assertions.assertTrue(rooms.containsKey(1));
-        Assertions.assertEquals(1, rooms.get(1).size());
+        Assertions.assertFalse(rooms.containsKey(ProductionStatus.fromJobBlockStatus(0)));
+        Assertions.assertTrue(rooms.containsKey(ProductionStatus.fromJobBlockStatus(1)));
+        Assertions.assertEquals(1, rooms.get(ProductionStatus.fromJobBlockStatus(1)).size());
     }
 }

@@ -1,9 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
-import ca.bradj.roomrecipes.core.space.Position;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -486,30 +482,5 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
-    }
-
-    @Test
-    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfBothAreNeeded() {
-        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
-        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-                0, ImmutableList.of(sameRoom),
-                1, ImmutableList.of(sameRoom)
-        ));
-
-        Assertions.assertEquals(1, s.size());
-        Assertions.assertNotNull(s.get(0));
-    }
-
-    @Test
-    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfAllAreNeeded() {
-        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
-        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-                0, ImmutableList.of(sameRoom),
-                1, ImmutableList.of(sameRoom),
-                2, ImmutableList.of(sameRoom)
-        ));
-
-        Assertions.assertEquals(1, s.size());
-        Assertions.assertNotNull(s.get(0));
     }
 }

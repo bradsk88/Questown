@@ -21,5 +21,6 @@ public class CommandInit {
         DebugAllDoorsCommand.register(event.getDispatcher());
         SpawnVillagerCommand.register(event.getDispatcher());
         DisableCachingCommand.register(event.getDispatcher());
+        ClearWorkStatesCommand.register(event.getDispatcher());
     }
 }

@@ -370,38 +370,6 @@ public class JobStatuses {
         return status;
     }
 
-    public static <ROOM extends Room, STATUS extends IProductionStatus<?>> Map<STATUS, ? extends Collection<ROOM>> sanitizeRoomNeeds(
-            Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap
-    ) {
-        // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
-        // show up as "needing" 0.
-        Map<STATUS, Collection<ROOM>> b = new HashMap<>();
-        roomNeedsMap.forEach((k, rooms) -> {
-            ImmutableSet.Builder<ROOM> allPrevRooms = ImmutableSet.builder();
-            for (int i = 0; i < k.value(); i++) {
-                Collection<ROOM> elements = b.get(i);
-                if (elements == null) {
-                    elements = ImmutableList.of();
-                }
-                allPrevRooms.addAll(elements);
-            }
-            ImmutableSet<ROOM> prevRooms = allPrevRooms.build();
-            ImmutableList.Builder<ROOM> bld = ImmutableList.builder();
-            rooms.forEach(room -> {
-                if (prevRooms.contains(room)) {
-                    return;
-                }
-                bld.add(room);
-            });
-            ImmutableList<ROOM> build = bld.build();
-            if (!build.isEmpty()) {
-                b.put(k, build);
-            }
-        });
-        return ImmutableMap.copyOf(b);
-    }
-
-
     private static <S> S nullIfUnchanged(
             S oldStatus,
             S newStatus

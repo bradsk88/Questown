@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -10,6 +11,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -23,9 +25,9 @@ public class StatusesProductionRoutineTest {
 
     // These names are just here to help better understand what the "magic
     // numbers" used by this test represent.
-    private static final int BLOCK_READY_FOR_INGREDIENTS = 0;
-    private static final int BLOCK_READY_FOR_WORK = 1;
-    private static final int BLOCK_READY_TO_EXTRACT_PRODUCT = 2;
+    private static final PTestStatus BLOCK_READY_FOR_INGREDIENTS = PTestStatus.FACTORY.fromJobBlockState(0);
+    private static final PTestStatus BLOCK_READY_FOR_WORK = PTestStatus.FACTORY.fromJobBlockState(1);
+    private static final PTestStatus BLOCK_READY_TO_EXTRACT_PRODUCT = PTestStatus.FACTORY.fromJobBlockState(2);
 
     Room arbitraryRoom = new Room(
             new Position(0, 0),
@@ -35,8 +37,8 @@ public class StatusesProductionRoutineTest {
     record TestInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
-            Map<Integer, Boolean> getSupplyItemStatus
-    ) implements EntityInvStateProvider<Integer> {
+            Map<PTestStatus, Boolean> getSupplyItemStatus
+    ) implements EntityInvStateProvider<PTestStatus> {
         @Override
         public boolean hasNonSupplyItems(boolean allowCaching) {
             return hasNonSupplyItems;
@@ -50,14 +52,14 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, Collection<Room>> roomsToGetSuppliesForByState,
+            Map<PTestStatus, Collection<Room>> roomsToGetSuppliesForByState,
             boolean isCachingAllowed
-    ) implements JobTownProvider<Room> {
+    ) implements JobTownProvider<Room, PTestStatus> {
         public TestJobTown(
                 boolean hasSupplies,
                 boolean hasSpace,
                 Collection<Room> roomsWithCompletedProduct,
-                Map<Integer, Collection<Room>> roomsNeedingIngredientsByState
+                Map<PTestStatus, Collection<Room>> roomsNeedingIngredientsByState
         ) {
             this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, false);
         }
@@ -97,9 +99,9 @@ public class StatusesProductionRoutineTest {
             @Override
             public PTestStatus fromJobBlockState(int s) {
                 return switch (s) {
-                    case BLOCK_READY_FOR_INGREDIENTS -> INGREDIENTS;
-                    case BLOCK_READY_FOR_WORK -> ITEM_WORK;
-                    case BLOCK_READY_TO_EXTRACT_PRODUCT -> COLLECTING_PRODUCT;
+                    case 0 -> INGREDIENTS;
+                    case 1 -> ITEM_WORK;
+                    case 2 -> COLLECTING_PRODUCT;
                     default -> throw new IllegalStateException("Unexpected state " + s);
                 };
             }
@@ -242,6 +244,26 @@ public class StatusesProductionRoutineTest {
         public boolean isWaitingForTimers() {
             return this == WAITING;
         }
+
+        @Override
+        public int value() {
+            final PTestStatus v = this;
+            if (this == INGREDIENTS) {
+                return 0;
+            }
+            if (this == ITEM_WORK) {
+                return 1;
+            }
+            if (this == COLLECTING_PRODUCT) {
+                return 2;
+            }
+            return -1;
+        }
+
+        @Override
+        public int compareTo(@NotNull StatusesProductionRoutineTest.PTestStatus o) {
+            return Integer.compare(value(), o.value());
+        }
     }
 
     private static class NoOpProductionJob implements IProductionJob<PTestStatus> {
@@ -252,12 +274,12 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
             return null;
         }
 
         @Override
-        public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+        public ImmutableList<PTestStatus> getAllWorkStatesSortedByPreference() {
             return ImmutableList.of(
                     BLOCK_READY_FOR_INGREDIENTS,
                     BLOCK_READY_FOR_WORK
@@ -265,7 +287,7 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public int getMaxState() {
+        public PTestStatus getMaxState() {
             return BLOCK_READY_TO_EXTRACT_PRODUCT;
         }
     }
@@ -282,12 +304,12 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
             throw err;
         }
 
         @Override
-        public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+        public ImmutableList<PTestStatus> getAllWorkStatesSortedByPreference() {
             return ImmutableList.of(
                     BLOCK_READY_FOR_INGREDIENTS,
                     BLOCK_READY_FOR_WORK
@@ -295,7 +317,7 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public int getMaxState() {
+        public PTestStatus getMaxState() {
             return BLOCK_READY_TO_EXTRACT_PRODUCT;
         }
     }
@@ -433,10 +455,10 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldBe_USE_INGREDIENTS_WhenSitesNeedItemWork_AndEntityInJobSite_WithSupplies() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true // We have ingredients
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
         PTestStatus s = JobStatuses.productionRoutine(
@@ -458,11 +480,11 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldBe_work_WhenSitesNeedWork_AndEntityInJobSite_WithSupplies() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work 2 be done
         );
@@ -494,11 +516,11 @@ public class StatusesProductionRoutineTest {
         );
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(otherRoom.room), // There are ing. needed in another room
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done in this room
         );
@@ -520,17 +542,17 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void StatusShouldBe_WORK_insteadOfINGREDIENTS_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
-        ImmutableList<Integer> preferences = ImmutableList.of(
+        ImmutableList<PTestStatus> preferences = ImmutableList.of(
                 BLOCK_READY_FOR_WORK,
                 BLOCK_READY_FOR_INGREDIENTS
         );
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -549,7 +571,7 @@ public class StatusesProductionRoutineTest {
 
 
                     @Override
-                    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+                    public ImmutableList<PTestStatus> getAllWorkStatesSortedByPreference() {
                         return preferences;
                     }
                 },
@@ -560,17 +582,17 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void StatusShouldBe_INGREDIENTS_insteadOfWORK_DueToPreferences_WhenSiteNeedsBothKindsOfWork_AndEntityInJobSite_WithSupplies() {
-        ImmutableList<Integer> preferences = ImmutableList.of(
+        ImmutableList<PTestStatus> preferences = ImmutableList.of(
                 BLOCK_READY_FOR_INGREDIENTS,
                 BLOCK_READY_FOR_WORK
         );
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -589,7 +611,7 @@ public class StatusesProductionRoutineTest {
 
 
                     @Override
-                    public ImmutableList<Integer> getAllWorkStatesSortedByPreference() {
+                    public ImmutableList<PTestStatus> getAllWorkStatesSortedByPreference() {
                         return preferences;
                     }
                 },
@@ -602,11 +624,11 @@ public class StatusesProductionRoutineTest {
     void StatusShouldBe_extractingResult_insteadOfItemWorks_EvenWhenSiteNeedsBothKindsOfWork_WhileInJobSite() {
 
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -632,11 +654,11 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldBe_GoingToJobSite_InsteadOfCollectingProduct_WhenOutOfSite() {
         boolean hasSupplies = true; // Town has supplies
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -662,11 +684,11 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldPrefer_INGREDIENTS_OverCollectingSupplies_WhenSiteNeedsINGREDIENTS_AndAlreadyInSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -690,11 +712,11 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldBe_GoingToJob_IfRoomHasFinishedItems_AndNotInSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
@@ -719,15 +741,15 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<Integer, Collection<Room>> roomsToGetSuppliesForByState,
+            Map<PTestStatus, Collection<Room>> roomsToGetSuppliesForByState,
             boolean isUnfinishedTimeWorkPresent,
             boolean isCachingAllowed
-    ) implements JobTownProvider<Room> {
+    ) implements JobTownProvider<Room, PTestStatus> {
         private TestJobTownWithTime(
                 boolean hasSupplies,
                 boolean hasSpace,
                 Collection<Room> roomsWithCompletedProduct,
-                Map<Integer, Collection<Room>> roomsNeedingIngredientsByState,
+                Map<PTestStatus, Collection<Room>> roomsNeedingIngredientsByState,
                 boolean isUnfinishedTimeWorkPresent
         ) {
             this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, isUnfinishedTimeWorkPresent, false);
@@ -743,12 +765,12 @@ public class StatusesProductionRoutineTest {
     void StatusShouldBe_WaitingForNextStage_IfRoomNeedsTime() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
 
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 // Villager has no items (otherwise would choose status: dropping loot)
                 BLOCK_READY_FOR_INGREDIENTS, false,
                 BLOCK_READY_FOR_WORK, false
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
                 BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
         );
@@ -775,12 +797,12 @@ public class StatusesProductionRoutineTest {
     void StatusShouldBe_CollectingSupplies_IfWorkIsNeededOnClaimedSpot_AndIngrRequiredOnUnclaimed() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
 
-        Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
+        Map<PTestStatus, Boolean> invItemsForWork = ImmutableMap.of(
                 // Villager has no items (otherwise would choose status: dropping loot)
                 BLOCK_READY_FOR_INGREDIENTS, false,
                 BLOCK_READY_FOR_WORK, false
         );
-        Map<Integer, Collection<Room>> workToBeDone = ImmutableMap.of(
+        Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
                 BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
         );

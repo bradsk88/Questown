@@ -35,7 +35,7 @@ class JobSitesTest {
                 new TestRoomMatch("shop")
         );
 
-        Position result = JobSites.find(
+        Position result = JobSites.<Position, TestRoomMatch, Room>find(
                 () -> matches,
                 (match) -> ImmutableList.of(
                         new AbstractMap.SimpleEntry<>(new Position(0, 0), "")

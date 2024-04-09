@@ -29,8 +29,9 @@ class AbstractSupplyGetterTest {
     void tryGetSupplies_ShouldGrabExactlyOneItem_OnFirstAttempt() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
+        ImmutableMap<StatusesProductionRoutineTest.PTestStatus, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0),
+                ImmutableList.of(ARBITRARY_ROOM)
         );
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
@@ -92,8 +93,9 @@ class AbstractSupplyGetterTest {
     void tryGetSupplies_ShouldGrabExactlyOneItem_OnFirstAttempt_IfRecipeCallsForTwoItems() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
+        ImmutableMap<StatusesProductionRoutineTest.PTestStatus, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0),
+                ImmutableList.of(ARBITRARY_ROOM)
         );
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
@@ -158,8 +160,9 @@ class AbstractSupplyGetterTest {
     void tryGetSupplies_ShouldNotGrabMore_OnSecondAttempt_IfRecipeCallsForOneItem() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
+        ImmutableMap<StatusesProductionRoutineTest.PTestStatus, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0),
+                ImmutableList.of(ARBITRARY_ROOM)
         );
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();

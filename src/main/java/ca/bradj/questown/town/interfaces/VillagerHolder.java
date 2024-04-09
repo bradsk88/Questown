@@ -2,6 +2,7 @@ package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.VillagerStatsData;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,4 +45,6 @@ public interface VillagerHolder {
     void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce);
 
     boolean canDine(UUID uuid);
+
+    ImmutableList<UUID> getVillagers();
 }

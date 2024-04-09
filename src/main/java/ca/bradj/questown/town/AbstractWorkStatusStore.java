@@ -6,6 +6,7 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -339,5 +340,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
         Claim newClaim = makeClaim.get();
         return prevClaim.owner().equals(newClaim.owner());
+    }
+
+    @Override
+    public void clearAllStates() {
+        ImmutableList<POS> keysCopy = ImmutableList.copyOf(jobStatuses.keySet());
+        keysCopy.forEach(this::clearState);
     }
 }

@@ -19,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -278,5 +279,10 @@ public class TownVillagerHandle implements VillagerHolder {
      */
     public void associate(TownFlagBlockEntity t) {
         this.town = t;
+    }
+
+    @Override
+    public ImmutableList<UUID> getVillagers() {
+        return ImmutableList.copyOf(entities.stream().map(Entity::getUUID).toList());
     }
 }
