@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobsClean;
 import ca.bradj.questown.jobs.StatusesProductionRoutineTest;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 class AbstractSupplyGetterTest {
@@ -36,8 +38,8 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, JobsClean.TestFn<GathererJournalTest.TestItem>> recipe = ImmutableMap.of(
-                0, (item) -> neededItem.get().equals(item)
+        final Map<StatusesProductionRoutineTest.PTestStatus, JobsClean.TestFn<GathererJournalTest.TestItem>> recipe = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0), (item) -> neededItem.get().equals(item)
         );
 
         JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
@@ -72,7 +74,7 @@ class AbstractSupplyGetterTest {
                 6, // Standard inventory size
                 roomsNeedingIngOrTool,
                 suppliesTarget,
-                (state) -> ImmutableList.of(recipe.get(state)),
+                (state) -> ImmutableList.of(Util.getOrDefault(recipe, state, (item) -> false)::test),
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""), // Air
                         new GathererJournalTest.TestItem(""), // Air
@@ -82,8 +84,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                ImmutableList.of(), // No special rules
-                (i) -> false // Nothing matches as a "work result"
+                v -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
@@ -100,8 +101,8 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, Collection<JobsClean.TestFn<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
-                0, ImmutableList.of(
+        final Map<StatusesProductionRoutineTest.PTestStatus, Collection<Predicate<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0), ImmutableList.of(
                         (item) -> neededItem.get().equals(item),
                         (item) -> neededItem.get().equals(item)
                 )
@@ -139,7 +140,7 @@ class AbstractSupplyGetterTest {
                 6, // Standard inventory size
                 roomsNeedingIngOrTool,
                 suppliesTarget,
-                (state) -> recipe.get(state),
+                (state) -> recipe.getOrDefault(state, ImmutableList.of(o -> false)),
                 ImmutableList.of(
                         new GathererJournalTest.TestItem(""), // Air
                         new GathererJournalTest.TestItem(""), // Air
@@ -149,8 +150,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                ImmutableList.of(), // No special rules
-                (i) -> false // Nothing matches as a "work result"
+                v -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
@@ -167,8 +167,8 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, Collection<JobsClean.TestFn<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
-                0, ImmutableList.of(
+        final Map<StatusesProductionRoutineTest.PTestStatus, Collection<Predicate<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0), ImmutableList.of(
                         (item) -> neededItem.get().equals(item)
                 )
         );
@@ -215,8 +215,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                ImmutableList.of(), // No special rules
-                (i) -> false // Nothing matches as a "work result"
+                v -> v
         );
 
         g.tryGetSupplies(
@@ -234,8 +233,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                ImmutableList.of(), // No special rules
-                (i) -> false // Nothing matches as a "work result"
+                v -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);

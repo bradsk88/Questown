@@ -456,18 +456,19 @@ public class DeclarativeJob extends
                 asItemsHolder().getCapacity(),
                 roomsNeedingIngredientsOrTools,
                 st,
-                status -> {
-                    // FIXME: Factor in special rules here
-                    Predicate<MCTownItem> ings = Jobs.unMC2(ingredientsRequiredAtStates).get(status);
-                    if (ings == null) {
-                        return ImmutableList.of();
-                    }
-                    return ImmutableList.of(ings);
-                },
+                status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply(
+                        specialRules.apply(status),
+                        v -> Util.getOrDefault(ingredientsRequiredAtStates, status, Ingredient.EMPTY)
+                                 .test(v.toItemStack()),
+                        i -> Works.isWorkResult(town.getTownData(), i)
+                )),
                 asItemsHolder().getItems(),
                 (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                specialRules.apply(ProductionStatus.fromJobBlockStatus(0)),
-                i -> Works.isWorkResult(town.getTownData(), i)
+                originalCheck -> SpecialRuleIngredientAnyValidWorkOutput.apply(
+                        specialRules.apply(computeStatus()),
+                        originalCheck,
+                        i -> Works.isWorkResult(town.getTownData(), i)
+                )
         );
     }
 

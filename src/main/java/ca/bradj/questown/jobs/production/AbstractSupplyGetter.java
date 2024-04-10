@@ -24,8 +24,7 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
             Function<STATUS, Collection<Predicate<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker,
-            Collection<String> statusRules,
-            Predicate<TOWN_ITEM> isAnyWorkResult
+            Function<Predicate<TOWN_ITEM>, Predicate<TOWN_ITEM>> applySpecialRules
     ) {
         if (!status.isCollectingSupplies()) {
             return;
@@ -46,14 +45,7 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
         Predicate<TOWN_ITEM> originalTest = item -> JobsClean.shouldTakeItem(
                 upToAmount, apply, currentHeldItems, item
         );
-        Predicate<TOWN_ITEM> shouldTake = originalTest;
-
-        if (statusRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-            shouldTake = item -> JobsClean.shouldTakeItem(
-                    upToAmount, ImmutableList.of(isAnyWorkResult), currentHeldItems, item
-            ) || originalTest.test(item);
-        }
-
+        Predicate<TOWN_ITEM> shouldTake = applySpecialRules.apply(originalTest);
         JobsClean.tryTakeContainerItems(taker, suppliesTarget, shouldTake::test);
     }
 
