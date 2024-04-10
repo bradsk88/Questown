@@ -387,7 +387,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
                 checkFn = item -> JobsClean.shouldTakeItem(
                         journal.getCapacity(),
-                        ImmutableList.of(itum -> isAnyWorkResult.test(item) || originalCheck.Matches(itum)),
+                        ImmutableList.of(itum -> isAnyWorkResult.test(itum) || originalCheck.Matches(itum)),
                         journal.getItems(),
                         item
                 );

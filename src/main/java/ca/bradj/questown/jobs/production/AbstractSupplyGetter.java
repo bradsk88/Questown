@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -20,7 +21,7 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
             int upToAmount,
             Map<STATUS, Collection<ROOM>> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
-            Function<Integer, Collection<JobsClean.TestFn<TOWN_ITEM>>> recipe,
+            Function<STATUS, Collection<Predicate<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker,
             Collection<String> statusRules,
@@ -41,9 +42,7 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
             return;
         }
 
-        Collection<Predicate<TOWN_ITEM>> apply = recipe.apply(first.get().value()).stream().map(
-                v -> (Predicate<TOWN_ITEM>) v::test
-        ).collect(Collectors.toList());
+        Collection<Predicate<TOWN_ITEM>> apply = new ArrayList<>(recipe.apply(first.get()));
         Predicate<TOWN_ITEM> originalTest = item -> JobsClean.shouldTakeItem(
                 upToAmount, apply, currentHeldItems, item
         );
