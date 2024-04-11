@@ -168,6 +168,12 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return b.build();
     }
 
+    public static ImmutableList<Integer> unlist(Collection<ProductionStatus> in) {
+        ImmutableList.Builder<Integer> b = ImmutableList.builder();
+        in.forEach(v -> b.add(v.value));
+        return b.build();
+    }
+
     @Override
     public IStatusFactory<ProductionStatus> getFactory() {
         return FACTORY;

@@ -16,7 +16,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
+public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements
+        WorkStatusHandle<POS, ITEM> {
 
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
@@ -27,7 +28,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
 
-    public static class State{
+    public static class State {
         private final int processingState;
         private final int ingredientCount;
 
@@ -171,11 +172,17 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             POS pos,
             BiFunction<POS, State, State> mutator
     ) {
-        State newV = jobStatuses.compute(pos, mutator);
-        QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
-        if (cascading.containsKey(pos)) {
-            cascading.get(pos).accept(newV);
-        }
+        jobStatuses.compute(pos, (p, old) -> {
+            State nu = mutator.apply(p, old);
+            if (nu.equals(old)) {
+                return nu;
+            }
+            QT.FLAG_LOGGER.debug("Job state set to {} at {}", nu.toShortString(), pos);
+            if (cascading.containsKey(pos)) {
+                cascading.get(pos).accept(nu);
+            }
+            return nu;
+        });
     }
 
     @Override
@@ -246,7 +253,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             ROOM o,
             long ticksSinceLast
     ) {
-        timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(k, (kk, vv) -> vv == null ? null : vv - ticksSinceLast));
+        timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(
+                k,
+                (kk, vv) -> vv == null ? null : vv - ticksSinceLast
+        ));
         claims.forEach((k, v) -> claims.compute(k, (kk, vv) -> {
             if (vv == null) {
                 return null;
@@ -254,19 +264,19 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return vv.ticked();
         }));
         ImmutableMap.copyOf(timeJobStatuses)
-                .entrySet()
-                .stream()
-                .filter((e) -> e.getValue() <= 0)
-                .forEach(
-                        e -> {
-                            QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
-                            modifyJobBlockState(
-                                    e.getKey(),
-                                    (pos, state) -> state.setProcessing(state.processingState + 1)
-                            );
-                            timeJobStatuses.remove(e.getKey());
-                        }
-                );
+                    .entrySet()
+                    .stream()
+                    .filter((e) -> e.getValue() <= 0)
+                    .forEach(
+                            e -> {
+                                QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
+                                modifyJobBlockState(
+                                        e.getKey(),
+                                        (pos, state) -> state.setProcessing(state.processingState + 1)
+                                );
+                                timeJobStatuses.remove(e.getKey());
+                            }
+                    );
 
         for (InclusiveSpace s : o.getSpaces()) {
             for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
@@ -333,7 +343,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public boolean canClaim(POS position, Supplier<Claim> makeClaim) {
+    public boolean canClaim(
+            POS position,
+            Supplier<Claim> makeClaim
+    ) {
         Claim prevClaim = claims.get(position);
         if (prevClaim == null) {
             return true;

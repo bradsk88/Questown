@@ -15,6 +15,7 @@ import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -211,6 +212,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     protected void tryDropLoot(
             BlockPos entityPos
     ) {
+        this.onActionTaken();
         if (successTarget == null) {
             return;
         }
@@ -224,6 +226,10 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
+    }
+
+    protected void onActionTaken() {
+        this.jobSite = null;
     }
 
     @NotNull
@@ -339,7 +345,17 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             LivingEntity entity,
             Direction facingPos
     ) {
+        // TODO: Spread over multiple ticks
+        // TickPhase = TickPhase + 1 % 4
+        // If phase = 1 -> update states for special rule room job blocks
+        // If phase = 2 -> update room needs
+        // If phase = 3 -> child tick
+        // Should preserve behaviour but improve performance
+        // Can probably use this pattern elsewhere too
+
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
+
+        updateWorkStatesForSpecialRooms(town, work);
 
         this.roomsNeedingIngredientsOrTools = new ControlledCache<>(() -> roomsNeedingIngredientsOrTools(
                 town,
@@ -348,6 +364,28 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         ));
 
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
+    }
+
+    private void updateWorkStatesForSpecialRooms(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, MCHeldItem> work
+    ) {
+        getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()).forEach(
+                (status, rooms) -> rooms.forEach(
+                        room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
+                                block -> {
+                                    BlockPos bp = Positions.ToBlock(block, room.yCoord);
+                                    BlockState bs = town.getServerLevel().getBlockState(bp);
+                                    if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
+                                        work.setJobBlockState(
+                                                bp,
+                                                AbstractWorkStatusStore.State.freshAtState(status.value())
+                                        );
+                                    }
+                                }
+                        )
+                )
+        );
     }
 
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {

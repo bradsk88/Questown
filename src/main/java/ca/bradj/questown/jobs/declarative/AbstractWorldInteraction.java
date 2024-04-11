@@ -259,6 +259,7 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
+        // FIXME: Or special rules apply (TEST)
         if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
             TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
             if (o != null) {

@@ -260,6 +260,10 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         MultiLevelRoomDetector ptr = initMLRD(t, recipesAtLevel, doorsAtLevel);
         ptr.setArtSink(artSink::put);
         return () -> {
+            // TODO: Config.ROOM_DETECTION_ITERATIONS_PER_TICK.get()
+            //  Loop proceed() N times based on config - let people tweak this
+            //  (One proceed per tick can be quite slow in big towns)
+            //  (More powerful servers can handle more proceeds)
             boolean done = ptr.proceed();
             if (!done) {
                 return false;

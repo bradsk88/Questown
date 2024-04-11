@@ -75,4 +75,6 @@ public class SpecialRules {
     // If this rule is enabled, the villager will assume the "dropping_loot"
     // status at the corresponding production state.
     public static final String FORCE_DROP_LOOT = "force_drop_loot";
+
+    public static final String STATELESS = "stateless";
 }

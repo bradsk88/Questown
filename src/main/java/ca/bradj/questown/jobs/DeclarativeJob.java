@@ -421,6 +421,7 @@ public class DeclarativeJob extends
             Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos
     ) {
+        super.onActionTaken();
         if (suppliesTarget == null) {
             return;
         }
@@ -479,6 +480,7 @@ public class DeclarativeJob extends
             VisitorMobEntity entity,
             @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
     ) {
+        super.onActionTaken();
         ServerLevel sl = town.getServerLevel();
         Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpots = listAllWorkSpots(work::getJobBlockState,
                 entityCurrentJobSite.room, sl::isEmptyBlock, sl.random
@@ -496,7 +498,7 @@ public class DeclarativeJob extends
 
         if (allSpots == null) {
             Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
-            if (workSpot1 == null) {
+            if (workSpot1 == null && !specialRules.apply(status).contains(SpecialRules.STATELESS)) {
                 QT.JOB_LOGGER.error(
                         "Worker somehow has different status than all existing work spots. This is probably a bug.");
                 return;
@@ -623,15 +625,17 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
+        // TODO: Change to JobFinder (new) and pre-find job sites on each tick
         return JobSites.find(
-                jobRooms(town, roomsWhereSpecialRulesApply),
+                () -> town.getRoomsMatching(workRoomId),
                 match -> match.containedBlocks.entrySet(),
                 match -> match.room,
                 work,
                 ProductionStatus.unmap(getSupplyItemStatus()),
                 maxState,
                 specialGlobalRules,
-                new MCPosKit(rand, isEmpty)
+                new MCPosKit(rand, isEmpty),
+                ProductionStatus.unlist(statesPriority)
         );
     }
 

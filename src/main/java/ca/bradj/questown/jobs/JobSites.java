@@ -24,7 +24,8 @@ public class JobSites {
             Map<Integer, Boolean> statusItems,
             int maxState,
             ImmutableList<String> specialGlobalRules,
-            PosKit<POS> poskit
+            PosKit<POS> poskit,
+            List<Integer> statusPreference
     ) {
         List<MATCH> rooms = new ArrayList<>(matches.get());
 
@@ -33,26 +34,45 @@ public class JobSites {
         // For now, we use randomization
         Collections.shuffle(rooms);
 
+        Map<Integer, POS> posForStatus = new HashMap<>();
+
         for (MATCH match : rooms) {
             for (Map.Entry<POS, ?> blocks : containedBlocks.apply(match)) {
+                if (posForStatus.keySet().containsAll(statusPreference)) {
+                    break;
+                }
                 POS blockPos = blocks.getKey();
                 @Nullable Integer blockState = JobBlock.getState(getState, blockPos);
                 if (blockState == null) {
                     continue;
                 }
-                if (maxState == blockState) {
+                if (posForStatus.containsKey(blockState)) {
+                    continue;
+                }
+                if (maxState == blockState) { // TODO: Base on "priority"
                     return blockPos;
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
-                    return findInteractionSpot(
+                    POS interactionSpot = findInteractionSpot(
                             blockPos,
                             room.apply(match),
                             specialGlobalRules,
                             poskit
                     );
+                    if (interactionSpot != null) {
+                        posForStatus.put(blockState, interactionSpot);
+                    }
                 }
             }
+        }
+
+        for (Integer i : statusPreference) {
+            POS v = posForStatus.get(i);
+            if (v == null) {
+                continue;
+            }
+            return v;
         }
 
         return null;
