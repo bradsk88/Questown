@@ -84,7 +84,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                v -> v
+                (state, v) -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
@@ -150,7 +150,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                v -> v
+                (state, v) -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
@@ -215,7 +215,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                v -> v
+                (state, v) -> v
         );
 
         g.tryGetSupplies(
@@ -233,7 +233,7 @@ class AbstractSupplyGetterTest {
                         new GathererJournalTest.TestItem("") // Air
                 ),
                 taken::add,
-                v -> v
+                (state, v) -> v
         );
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);

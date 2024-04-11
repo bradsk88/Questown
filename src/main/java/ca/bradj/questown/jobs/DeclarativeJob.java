@@ -451,6 +451,7 @@ public class DeclarativeJob extends
                 suppliesTarget.getContainer().removeItem(i, quantity);
             }
         };
+        WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(ownerUUID); // TODO: Use shared status handle when appropriate
         getter.tryGetSupplies(
                 computeStatus(),
                 asItemsHolder().getCapacity(),
@@ -464,8 +465,8 @@ public class DeclarativeJob extends
                 )),
                 asItemsHolder().getItems(),
                 (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                originalCheck -> SpecialRuleIngredientAnyValidWorkOutput.apply(
-                        specialRules.apply(computeStatus()),
+                (targetState, originalCheck) -> SpecialRuleIngredientAnyValidWorkOutput.apply(
+                        specialRules.apply(ProductionStatus.fromJobBlockStatus(targetState)),
                         originalCheck,
                         i -> Works.isWorkResult(town.getTownData(), i)
                 )
@@ -611,7 +612,7 @@ public class DeclarativeJob extends
 
     @Override
     protected @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel sl) {
-        return workSpot;
+        return workSpot; // FIXME: Null for organizer
     }
 
     @Override
