@@ -117,7 +117,8 @@ class AbstractItemWITest {
                     ingredientQtyRequiredAtStates,
                     workRequiredAtStates,
                     (x, i) -> Util.getOrDefault(timeRequiredAtStates, i, 0),
-                    (v) -> new Claim(UUID.randomUUID(), 100)
+                    (v) -> new Claim(UUID.randomUUID(), 100),
+                    state -> ImmutableList.of()
             );
             this.inventory = inventory;
         }
@@ -131,6 +132,14 @@ class AbstractItemWITest {
         @Override
         protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
             return inventory.getItems();
+        }
+
+        @Override
+        protected boolean isWorkResult(
+                Void unused,
+                GathererJournalTest.TestItem item
+        ) {
+            return false;
         }
 
         @Override

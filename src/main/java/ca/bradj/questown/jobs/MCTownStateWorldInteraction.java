@@ -48,15 +48,25 @@ public class MCTownStateWorldInteraction extends
             int interval,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots
+            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Function<Integer, Collection<String>> specialRules
     ) {
         super(
                 jobId, villagerIndex, interval, states.maxState(), Jobs.unMC(states.toolsRequired()),
                 states.workRequired(), Jobs.unMCHeld(states.ingredientsRequired()),
-                states.ingredientQtyRequired(), states.timeRequired(), claimSpots
+                states.ingredientQtyRequired(), states.timeRequired(), claimSpots, specialRules
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
+    }
+
+    @Override
+    protected boolean isWorkResult(
+            Inputs inputs,
+            MCHeldItem item
+    ) {
+        // TODO: Store/get town data on town state
+        return Works.isWorkResult(WorksBehaviour.TownData.noData(), item.toItem());
     }
 
     @Override

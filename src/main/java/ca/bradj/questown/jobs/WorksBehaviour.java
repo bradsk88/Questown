@@ -34,7 +34,6 @@ import java.util.function.Supplier;
 public class WorksBehaviour {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
     static final Predicate<Block> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
-    private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static Warper<ServerLevel, MCTownState> productionWarper(
             JobID id,
@@ -43,7 +42,8 @@ public class WorksBehaviour {
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Function<Integer, Collection<String>> specialRules
     ) {
         MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
                 id,
@@ -51,7 +51,8 @@ public class WorksBehaviour {
                 pauseForAction,
                 states,
                 resultGenerator,
-                claimSpots
+                claimSpots,
+                specialRules
         );
         return DeclarativeJobs.warper(
                 wi,
@@ -143,6 +144,9 @@ public class WorksBehaviour {
     public record TownData(
             Function<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> allKnownGatherItemsFn
     ) {
+        public static TownData noData() {
+            return new TownData((p) -> ImmutableSet.of());
+        }
     }
 
 
@@ -297,7 +301,8 @@ public class WorksBehaviour {
                         },
                         world.actionDuration(),
                         states,
-                        world.resultGenerator()
+                        world.resultGenerator(),
+                        status -> special.specialStatusRules().get(status)
                 )
         );
     }

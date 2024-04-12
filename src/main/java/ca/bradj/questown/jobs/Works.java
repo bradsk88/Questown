@@ -123,9 +123,7 @@ public class Works {
             Work work = wFn.getValue()
                            .get();
             ImmutableSet<MCTownItem> possibleResults = work.results().apply(td);
-            if (possibleResults.contains(mcTownItem)) {
-                return true;
-            }
+            return possibleResults.stream().anyMatch(v -> v.unit().equals(mcTownItem.unit()));
         }
         return false;
     }

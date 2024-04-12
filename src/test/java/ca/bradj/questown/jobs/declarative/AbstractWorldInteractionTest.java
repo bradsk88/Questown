@@ -52,7 +52,8 @@ class AbstractWorldInteractionTest {
                     ingredientsRequiredAtStates,
                     ingredientQuantityRequiredAtStates,
                     timeRequiredAtStates,
-                    (v) -> claim.get()
+                    (v) -> claim.get(),
+                    state -> ImmutableList.of()
             );
             this.workStatuses = workStatuses;
             this.inventory = inventory;
@@ -177,6 +178,14 @@ class AbstractWorldInteractionTest {
         @Override
         public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
             return null;
+        }
+
+        @Override
+        protected boolean isWorkResult(
+                Void unused,
+                GathererJournalTest.TestItem item
+        ) {
+            return false;
         }
 
         @Override

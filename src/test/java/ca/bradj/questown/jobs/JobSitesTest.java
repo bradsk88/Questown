@@ -25,7 +25,8 @@ class JobSitesTest {
                 ImmutableMap.of(),
                 2,
                 ImmutableList.of(),
-                new TestPosKit()
+                new TestPosKit(),
+                WorksBehaviour.standardPriority()
         );
         Assertions.assertNull(result);
     }
@@ -45,7 +46,8 @@ class JobSitesTest {
                 ImmutableMap.of(),
                 2,
                 ImmutableList.of(),
-                new TestPosKit()
+                new TestPosKit(),
+                WorksBehaviour.standardPriority()
         );
         Assertions.assertNull(result);
     }
@@ -80,7 +82,8 @@ class JobSitesTest {
                 statusItems,
                 2,
                 ImmutableList.of(),
-                new TestPosKit()
+                new TestPosKit(),
+                WorksBehaviour.standardPriority()
         );
         Assertions.assertEquals(new Position(0, 1), result);
     }
@@ -125,7 +128,8 @@ class JobSitesTest {
                 ImmutableMap.of(),
                 2,
                 ImmutableList.of(),
-                new TestPosKit()
+                new TestPosKit(),
+                WorksBehaviour.standardPriority()
         );
         Assertions.assertEquals(new Position(1, 1), result);
     }

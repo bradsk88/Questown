@@ -8,7 +8,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ContainerRoomFinder;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -326,7 +326,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     protected abstract BlockPos findJobSite(
             RoomsHolder town,
             Supplier<? extends Collection<MCRoomWithBlocks>> roomsWhereSpecialRulesApply,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     );
@@ -335,7 +335,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     protected abstract Map<STATUS, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
     );
 
@@ -377,10 +377,14 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                     BlockPos bp = Positions.ToBlock(block, room.yCoord);
                                     BlockState bs = town.getServerLevel().getBlockState(bp);
                                     if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
-                                        work.setJobBlockState(
-                                                bp,
-                                                AbstractWorkStatusStore.State.freshAtState(status.value())
-                                        );
+                                        if (work.getJobBlockState(bp) == null) {
+                                            State fresh = State.freshAtState(
+                                                    status.value());
+                                            work.setJobBlockState(
+                                                    bp,
+                                                    fresh
+                                            );
+                                        }
                                     }
                                 }
                         )

@@ -118,6 +118,11 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     @Override
+    public int quantity() {
+        return quantity;
+    }
+
+    @Override
     public String getShortName() {
         String name = "[unknown]";
         ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(get());

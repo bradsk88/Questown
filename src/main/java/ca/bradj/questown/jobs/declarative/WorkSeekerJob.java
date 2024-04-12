@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.ExpirationRules;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
@@ -108,6 +109,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
+                state -> specialRules.apply(ProductionStatus.fromJobBlockStatus(state)),
                 resultGenerator,
                 claimSpots,
                 interval,

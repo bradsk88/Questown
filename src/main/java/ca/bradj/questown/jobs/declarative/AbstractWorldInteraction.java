@@ -45,7 +45,8 @@ public abstract class AbstractWorldInteraction<
             ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Function<EXTRA, Claim> claimSpots
+            Function<EXTRA, Claim> claimSpots,
+            Function<Integer, Collection<String>> specialRules
     ) {
         if (toolsRequiredAtStates.isEmpty() && workRequiredAtStates.isEmpty() && ingredientQuantityRequiredAtStates.isEmpty() && timeRequiredAtStates.isEmpty()) {
             QT.JOB_LOGGER.error(
@@ -66,7 +67,8 @@ public abstract class AbstractWorldInteraction<
                 ingredientQuantityRequiredAtStates,
                 workRequiredAtStates,
                 (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
-                claimSpots
+                claimSpots,
+                specialRules
         ) {
             @Override
             protected TOWN setHeldItem(
@@ -85,6 +87,14 @@ public abstract class AbstractWorldInteraction<
                     int villagerIndex
             ) {
                 return self.getHeldItems(extra, villagerIndex);
+            }
+
+            @Override
+            protected boolean isWorkResult(
+                    EXTRA extra,
+                    HELD_ITEM item
+            ) {
+                return self.isWorkResult(extra, item);
             }
 
             @Override
@@ -132,6 +142,11 @@ public abstract class AbstractWorldInteraction<
         };
         this.claimSpots = claimSpots;
     }
+
+    protected abstract boolean isWorkResult(
+            EXTRA extra,
+            HELD_ITEM item
+    );
 
     protected TOWN tryGiveItems(
             EXTRA inputs,
@@ -187,7 +202,10 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
-    protected abstract int getAffectedTime(EXTRA extra, Integer nextStepTime);
+    protected abstract int getAffectedTime(
+            EXTRA extra,
+            Integer nextStepTime
+    );
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,
@@ -259,12 +277,9 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        // FIXME: Or special rules apply (TEST)
-        if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
-            TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
-            if (o != null) {
-                return new WorkOutput<>(o, workSpot);
-            }
+        TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
+        if (o != null) {
+            return new WorkOutput<>(o, workSpot);
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action())) {
@@ -304,7 +319,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             POS position
     ) {
-            AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
+        AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
@@ -369,15 +384,25 @@ public abstract class AbstractWorldInteraction<
 
     public void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.addItemInsertionListener(listener);
-    };
+    }
+
+    ;
+
     public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.removeItemInsertionListener(listener);
-    };
+    }
+
+    ;
 
     public void addJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.add(listener);
-    };
+    }
+
+    ;
+
     public void removeJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.remove(listener);
-    };
+    }
+
+    ;
 }

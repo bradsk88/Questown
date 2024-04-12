@@ -6,12 +6,12 @@ import java.util.function.Predicate;
 public class SpecialRuleIngredientAnyValidWorkOutput {
     public static <ITEM> Predicate<ITEM> apply(
             Collection<String> rules,
-            Predicate<ITEM> oPred,
+            Predicate<ITEM> originalCheck,
             Predicate<ITEM> isWorkResult
     ) {
         if (!rules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-            return oPred;
+            return originalCheck;
         }
-        return z -> isWorkResult.test(z) || oPred.test(z);
+        return z -> isWorkResult.test(z) || originalCheck.test(z);
     }
 }

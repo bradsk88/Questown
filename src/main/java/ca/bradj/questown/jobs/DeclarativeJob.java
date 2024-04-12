@@ -219,6 +219,7 @@ public class DeclarativeJob extends
     ) {
         return new RealtimeWorldInteraction(jobId, asItemsHolder(), maxState, ingredientsRequiredAtStates,
                 ingredientsQtyRequiredAtStates, workRequiredAtStates, timeRequiredAtStates, toolsRequiredAtStates,
+                state -> specialRules.apply(ProductionStatus.fromJobBlockStatus(state)),
                 resultGenerator, claimSpots, interval, sound
         );
     }
@@ -664,7 +665,7 @@ public class DeclarativeJob extends
                 asEmptyable(toolsRequiredAtStates),
                 i -> JobsClean.roomsWithState(
                         town.getRoomHandle().getRoomsMatching(workRoomId),
-                        (bp) -> i.equals(JobBlock.getState(work, bp))
+                        (bp) -> Integer.valueOf(i.value()).equals(JobBlock.getState(work, bp))
                 ),
                 getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()),
                 work,

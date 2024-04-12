@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.SpecialRuleIngredientAnyValidWorkOutput;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -28,6 +29,7 @@ public abstract class AbstractItemWI<
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
+    private final Function<Integer, Collection<String>> specialRules;
 
     public AbstractItemWI(
             int villagerIndex,
@@ -35,7 +37,8 @@ public abstract class AbstractItemWI<
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates,
-            Function<EXTRA, Claim> claimSpots
+            Function<EXTRA, Claim> claimSpots,
+            Function<Integer, Collection<String>> specialRules
     ) {
         this.villagerIndex = villagerIndex;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
@@ -43,6 +46,7 @@ public abstract class AbstractItemWI<
         this.workRequiredAtStates = workRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
         this.claimSpots = claimSpots;
+        this.specialRules = specialRules;
     }
 
     @Override
@@ -144,9 +148,14 @@ public abstract class AbstractItemWI<
         boolean canDo = false;
         Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates()
                                                   .get(curValue);
-        if (ingredient != null) {
-            canDo = ingredient.apply(item);
-        }
+        canDo = SpecialRuleIngredientAnyValidWorkOutput.<ITEM>apply(
+                specialRules.apply(curValue), itum -> {
+                    if (ingredient == null) {
+                        return false;
+                    }
+                    return ingredient.apply(item);
+                }, itum -> this.isWorkResult(extra, itum)
+        ).test(item);
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
         if (qtyRequired == null) {
@@ -172,6 +181,11 @@ public abstract class AbstractItemWI<
         }
         return updatedTown;
     }
+
+    protected abstract boolean isWorkResult(
+            EXTRA extra,
+            ITEM item
+    );
 
     @Nullable
     private static <POS, TOWN> TOWN maybeUpdateBlockState(

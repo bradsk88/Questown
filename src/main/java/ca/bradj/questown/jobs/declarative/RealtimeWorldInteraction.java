@@ -71,6 +71,7 @@ public class RealtimeWorldInteraction
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            Function<Integer, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             int interval,
@@ -86,7 +87,8 @@ public class RealtimeWorldInteraction
                 stripMC(ingredientsRequiredAtStates),
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates,
-                claimSpots
+                claimSpots,
+                specialRules
         );
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
@@ -116,6 +118,14 @@ public class RealtimeWorldInteraction
         ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get()
                                                                             .toItemStack())));
         return b.build();
+    }
+
+    @Override
+    protected boolean isWorkResult(
+            MCExtra mcExtra,
+            MCHeldItem item
+    ) {
+        return Works.isWorkResult(mcExtra.town().getTownData(), item.toItem());
     }
 
     @Override

@@ -265,7 +265,7 @@ public class JobStatuses {
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
                         for (int i = 0; i < allByPref.size(); i++) {
                             STATUS potentialStatus = allByPref.get(i);
-                            if (workReadyToDo.contains(potentialStatus)) {
+                            if (workReadyToDo.contains(potentialStatus.value())) {
                                 b.put(i, () -> potentialStatus);
                                 break;
                             }
