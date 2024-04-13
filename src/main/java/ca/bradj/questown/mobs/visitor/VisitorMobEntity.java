@@ -136,7 +136,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     TownInterface town;
     Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job = getInitialJob();
 
-    public WorkToUndo getWorkToUndo() {
+    public @Nullable WorkToUndo getWorkToUndo() {
         return workToUndo;
     }
 

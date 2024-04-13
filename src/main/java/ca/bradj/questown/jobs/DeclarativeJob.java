@@ -499,7 +499,7 @@ public class DeclarativeJob extends
 
         if (allSpots == null) {
             Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
-            if (workSpot1 == null && !specialRules.apply(status).contains(SpecialRules.STATELESS)) {
+            if (workSpot1 == null) {
                 QT.JOB_LOGGER.error(
                         "Worker somehow has different status than all existing work spots. This is probably a bug.");
                 return;

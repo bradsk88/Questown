@@ -24,6 +24,7 @@ public abstract class AbstractWorldInteraction<
     private final AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN> workWI;
     protected final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
+    private final Function<Integer, Collection<String>> specialRules;
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
@@ -141,6 +142,7 @@ public abstract class AbstractWorldInteraction<
             }
         };
         this.claimSpots = claimSpots;
+        this.specialRules = specialRules;
     }
 
     protected abstract boolean isWorkResult(
@@ -150,13 +152,17 @@ public abstract class AbstractWorldInteraction<
 
     protected TOWN tryGiveItems(
             EXTRA inputs,
+            @Nullable TOWN currentTown,
             Iterable<HELD_ITEM> newItemsSource,
             POS sourcePos
     ) {
         Stack<HELD_ITEM> stack = new Stack<>();
         newItemsSource.forEach(stack::push); // TODO: This is potentially infinite
 
-        TOWN ts = getTown(inputs);
+        TOWN ts = currentTown;
+        if (ts == null) {
+            ts = getTown(inputs);
+        }
         if (stack.isEmpty()) {
             QT.JOB_LOGGER.error(
                     "No results during extraction phase. That's probably a bug. Town State: {}",
@@ -264,7 +270,9 @@ public abstract class AbstractWorldInteraction<
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(tryExtractProduct(extra, workSpot.position()), workSpot);
+                return new WorkOutput<>(
+                        tryExtractProduct(extra, workSpot.position()), workSpot
+                );
             }
         }
 
@@ -322,10 +330,23 @@ public abstract class AbstractWorldInteraction<
         AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
 
+            TOWN ts = null;
+            if (specialRules.apply(s.processingState()).contains(SpecialRules.DROP_LOOT_AS_STACK)) {
+                INNER_ITEM item = getLastInsertedIngredients(inputs, villagerIndex);
+                Map<Integer, Integer> qtys = ingredientQuantityRequiredAtStates();
+                Integer qy = qtys.get(s.processingState() - 1);
+                if (qy == null) {
+                    QT.JOB_LOGGER.debug("Current state: {}", s.processingState());
+                    QT.JOB_LOGGER.debug("Quantities: {}", qtys);
+                    throw new IllegalStateException("DROP_LOOT_AS_STACK can only be used when previous stage has quantity");
+                }
+                ts = addToNearbyChest(inputs, ts, position, createStackWithQuantity(item, qy));
+            }
+
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
             Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
-            TOWN town = tryGiveItems(inputs, generatedResult, position);
+            TOWN town = tryGiveItems(inputs, ts, generatedResult, position);
             if (town != null) {
                 jobCompletedListeners.forEach(Runnable::run);
             }
@@ -334,6 +355,22 @@ public abstract class AbstractWorldInteraction<
         }
         return null;
     }
+
+    protected abstract TOWN addToNearbyChest(
+            @NotNull EXTRA inputs,
+            TOWN updatedTown,
+            POS chestPosition,
+            INNER_ITEM stackWithQuantity
+    );
+
+    protected abstract INNER_ITEM createStackWithQuantity(
+            INNER_ITEM item,
+            int qy
+    );
+
+    protected abstract @Nullable INNER_ITEM getLastInsertedIngredients(EXTRA inputs,
+                                                             int villagerIndex
+    );
 
     protected abstract TOWN setJobBlockState(
             @NotNull EXTRA inputs,

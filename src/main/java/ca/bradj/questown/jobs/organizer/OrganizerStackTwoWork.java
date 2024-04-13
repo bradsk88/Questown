@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.ChestBlock;
 public class OrganizerStackTwoWork {
     public static final JobID ID = new JobID("organizer", "stack_two_work");
     public static final ItemStack RESULT = Items.AIR.getDefaultInstance();
-    public static final int MAX_STATE = 3;
+    public static final int MAX_STATE = 2;
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS = ImmutableMap.of();
     private static final ImmutableMap<Integer, Integer> INGREDIENTS_QTY = ImmutableMap.of(
             1, 2
@@ -30,7 +30,7 @@ public class OrganizerStackTwoWork {
     );
     private static final ImmutableMap<Integer, Integer> WORK = ImmutableMap.of(
             0, 1,
-            2, 100
+            1, 40
     );
     private static final ImmutableMap<Integer, Integer> TIME = ImmutableMap.of();
 

@@ -1,8 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.logic.TownContainerChecksTest.TestItem;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -14,33 +16,106 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
-    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
+    private record TestHeldItem(
+            String name,
+            int quantity
+    ) implements HeldItem<TestHeldItem, TestItem> {
+        public TestHeldItem(
+                String name,
+                int quantity
+        ) {
+            this.quantity = quantity;
+            this.name = name;
+        }
 
-        private final InventoryHandle<GathererJournalTest.TestItem> inventory;
+        @Override
+        public boolean isLocked() {
+            return false;
+        }
+
+        @Override
+        public TestItem get() {
+            return new TestItem(name, quantity);
+        }
+
+        @Override
+        public TestHeldItem locked() {
+            return new TestHeldItem(name, quantity);
+        }
+
+        @Override
+        public TestHeldItem unlocked() {
+            return new TestHeldItem(name, quantity);
+        }
+
+        @Override
+        public @Nullable String acquiredViaLootTablePrefix() {
+            return null;
+        }
+
+        @Override
+        public @Nullable String foundInBiome() {
+            return null;
+        }
+
+        @Override
+        public String toShortString() {
+            return name;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
+
+        @Override
+        public boolean isFood() {
+            return false;
+        }
+
+        @Override
+        public TestHeldItem shrink() {
+            return new TestHeldItem(name, quantity - 1);
+        }
+
+        @Override
+        public String getShortName() {
+            return name;
+        }
+
+        @Override
+        public TestHeldItem unit() {
+            return new TestHeldItem(name, 1);
+        }
+    }
+
+    private static class TestWI extends AbstractWorldInteraction<Void, Position, TestItem, TestHeldItem, Boolean> {
+
+        private final InventoryHandle<TestItem> inventory;
+        private final ImmutableMap<Integer, Integer> qty;
         private boolean extracted;
         private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
+        private TestItem lastInserted;
+        private List<TestItem> chest = new ArrayList<>();
 
         public TestWI(
                 int maxState,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+                ImmutableMap<Integer, Function<TestItem, Boolean>> toolsRequiredAtStates,
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
+                ImmutableMap<Integer, Function<TestHeldItem, Boolean>> ingredientsRequiredAtStates,
                 ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
-                Supplier<Collection<GathererJournalTest.TestItem>> journal,
-                InventoryHandle<GathererJournalTest.TestItem> inventory,
+                InventoryHandle<TestItem> inventory,
                 ImmutableWorkStateContainer<Position, Boolean> workStatuses,
-                Supplier<Claim> claim
+                Supplier<Claim> claim,
+                Collection<String> specialRules
         ) {
             super(
                     new JobID("test", "test"),
@@ -53,18 +128,19 @@ class AbstractWorldInteractionTest {
                     ingredientQuantityRequiredAtStates,
                     timeRequiredAtStates,
                     (v) -> claim.get(),
-                    state -> ImmutableList.of()
+                    state -> specialRules
             );
             this.workStatuses = workStatuses;
             this.inventory = inventory;
+            this.qty = ingredientQuantityRequiredAtStates;
         }
 
         public static TestWI noMemoryInventory(
                 int i,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
+                ImmutableMap<Integer, Function<TestItem, Boolean>> toolsNeeded,
                 ImmutableMap<Integer, Integer> workRequired,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
-                Supplier<Collection<GathererJournalTest.TestItem>> inventory,
+                ImmutableMap<Integer, Function<TestHeldItem, Boolean>> ingredients,
+                Supplier<Collection<TestItem>> inventory,
                 Runnable onInventoryChange
         ) {
             ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
@@ -74,16 +150,16 @@ class AbstractWorldInteractionTest {
             ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
 
 
-            InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
+            InventoryHandle<TestItem> inventoryHandle = new InventoryHandle<TestItem>() {
                 @Override
-                public Collection<GathererJournalTest.TestItem> getItems() {
+                public Collection<TestItem> getItems() {
                     return inventory.get();
                 }
 
                 @Override
                 public void set(
                         int ii,
-                        GathererJournalTest.TestItem shrink
+                        TestItem shrink
                 ) {
                     onInventoryChange.run();
                 }
@@ -93,9 +169,14 @@ class AbstractWorldInteractionTest {
             return new TestWI(
                     i, toolsNeeded, workRequired, ingredients,
                     alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
-                    inventory, inventoryHandle, statuses,
-                    () -> new Claim(UUID.randomUUID(), 100)
+                    inventoryHandle, statuses,
+                    () -> new Claim(UUID.randomUUID(), 100),
+                    ImmutableList.of()
             );
+        }
+
+        public void setLastInserted(TestItem i) {
+            this.lastInserted = i;
         }
 
         @Override
@@ -103,15 +184,42 @@ class AbstractWorldInteractionTest {
                 Void unused,
                 Position position
         ) {
+            super.tryExtractProduct(unused, position);
             extracted = true;
             getWorkStatuses(null).clearState(position);
             return true;
         }
 
         @Override
+        protected Boolean addToNearbyChest(
+                @NotNull Void inputs,
+                Boolean updatedTown,
+                Position chestPosition,
+                TestItem stackWithQuantity
+        ) {
+            chest.add(stackWithQuantity);
+            return true;
+        }
+
+        @Override
+        protected TestItem createStackWithQuantity(
+                TestItem item,
+                int qy
+        ) {
+            return new TestItem(item.name(), qy);
+        }
+
+        @Override
+        protected TestItem getLastInsertedIngredients(Void inputs,
+                                                      int villagerIndex
+        ) {
+            return lastInserted;
+        }
+
+        @Override
         protected Boolean setJobBlockState(
                 @NotNull Void inputs,
-                Boolean ts,
+                Boolean town,
                 Position position,
                 State fresh
         ) {
@@ -122,7 +230,7 @@ class AbstractWorldInteractionTest {
         protected Boolean withEffectApplied(
                 @NotNull Void inputs,
                 Boolean ts,
-                GathererJournalTest.TestItem newItem
+                TestHeldItem newItem
         ) {
             return null;
         }
@@ -131,21 +239,21 @@ class AbstractWorldInteractionTest {
         protected Boolean withKnowledge(
                 @NotNull Void inputs,
                 Boolean ts,
-                GathererJournalTest.TestItem newItem
+                TestHeldItem newItem
         ) {
             return null;
         }
 
         @Override
         protected boolean isInstanze(
-                GathererJournalTest.TestItem testItem,
+                TestItem testItem,
                 Class<?> clazz
         ) {
             return false;
         }
 
         @Override
-        protected boolean isMulti(GathererJournalTest.TestItem testItem) {
+        protected boolean isMulti(TestItem testItem) {
             return false;
         }
 
@@ -155,11 +263,11 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Iterable<GathererJournalTest.TestItem> getResults(
+        protected Iterable<TestHeldItem> getResults(
                 Void inputs,
-                Collection<GathererJournalTest.TestItem> testItems
+                Collection<TestHeldItem> testItems
         ) {
-            return null;
+            return ImmutableList.of();
         }
 
         @Override
@@ -177,13 +285,13 @@ class AbstractWorldInteractionTest {
 
         @Override
         public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-            return null;
+            return qty;
         }
 
         @Override
         protected boolean isWorkResult(
                 Void unused,
-                GathererJournalTest.TestItem item
+                TestHeldItem item
         ) {
             return false;
         }
@@ -199,15 +307,15 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
-            inventory.set(itemIndex, item);
+        protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, TestHeldItem item) {
+            inventory.set(itemIndex, item.get());
             return true;
         }
 
         @Override
         protected Boolean degradeTool(
                 Void unused,
-                Boolean tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+                Boolean tuwn, Function<TestItem, Boolean> heldItemBooleanFunction
         ) {
             return tuwn;
         }
@@ -215,7 +323,7 @@ class AbstractWorldInteractionTest {
         @Override
         protected boolean canInsertItem(
                 Void unused,
-                GathererJournalTest.TestItem item,
+                TestHeldItem item,
                 Position bp
         ) {
             return true;
@@ -227,8 +335,8 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
-            return inventory.getItems();
+        protected Collection<TestHeldItem> getHeldItems(Void unused, int villagerIndex) {
+            return inventory.getItems().stream().map(v -> new TestHeldItem(v.name(), v.quantity())).toList();
         }
     }
 
@@ -305,17 +413,17 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
+                () -> ImmutableList.of(new TestItem("", 0)),
                 () -> inserted.set(true)
         );
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
 
-        wi.tryWorking(null, arbitrarySpot(0)); // Try doing work
-        wi.tryWorking(null, arbitrarySpot(0)); // Run once more to extract and reset state
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Try doing work
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Run once more to extract and reset state
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertFalse(inserted.get());
         Assertions.assertTrue(wi.extracted); // Extracted
         Assertions.assertNull(state);
@@ -329,17 +437,17 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(), // No work required
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertFalse(wi.extracted);
 
         Assertions.assertEquals(State.fresh().incrProcessing(), state);
@@ -356,19 +464,19 @@ class AbstractWorldInteractionTest {
                         0, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(inserted.get());
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.processingState());
         Assertions.assertEquals(100, state.workLeft());
@@ -387,14 +495,14 @@ class AbstractWorldInteractionTest {
                         0, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
-        wi.tryWorking(null, arbitrarySpot(0)); // Process
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Insert (see test above)
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Process
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.processingState());
         Assertions.assertEquals(99, state.workLeft());
@@ -412,17 +520,17 @@ class AbstractWorldInteractionTest {
                         0, 1 // 1 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Insert (see test above)
 
-        wi.tryWorking(null, arbitrarySpot(0)); // Process (see test above)
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Process (see test above)
 
-        wi.tryWorking(null, arbitrarySpot(0)); // Extract
-        @Nullable State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        wi.tryWorking(null, arbitrarySpotWithState(0)); // Extract
+        @Nullable State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(wi.extracted);
     }
@@ -438,19 +546,19 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
         Assertions.assertFalse(wi.extracted);
 
-        state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(1, state.processingState());
         Assertions.assertEquals(100, state.workLeft());
@@ -470,12 +578,12 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
-        WorkSpot<Integer, Position> spot = arbitrarySpot(0);
+        WorkSpot<Integer, Position> spot = arbitrarySpotWithState(0);
 
         Assertions.assertNull(wi.getJobBlockState(null, spot.position()));
 
@@ -501,16 +609,16 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
-        wi.tryWorking(null, arbitrarySpot(1));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
+        wi.tryWorking(null, arbitrarySpotWithState(1));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(1).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(1).position());
         Assertions.assertNotNull(state);
         Assertions.assertFalse(wi.extracted);
         Assertions.assertEquals(1, state.processingState());
@@ -530,17 +638,17 @@ class AbstractWorldInteractionTest {
                         2, 0 // No work requred at stage 2
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
-        wi.tryWorking(null, arbitrarySpot(1));
-        wi.tryWorking(null, arbitrarySpot(2));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
+        wi.tryWorking(null, arbitrarySpotWithState(1));
+        wi.tryWorking(null, arbitrarySpotWithState(2));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
@@ -560,13 +668,13 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, (i) -> true // Villager has all the items needed
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
+                () -> ImmutableList.of(new TestItem("", 0)),
                 () -> inserted.set(true)
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state); // Not processed
         Assertions.assertFalse(inserted.get()); // Not inserted
         Assertions.assertFalse(wi.extracted); // Not extracted
@@ -587,15 +695,15 @@ class AbstractWorldInteractionTest {
                         // No items required
                 ),
                 // This is not actually important because we've overloaded the item check, above
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("axe")),
+                () -> ImmutableList.of(new TestItem("axe", 1)),
                 () -> inserted.set(true)
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
         Assertions.assertFalse(inserted.get()); // Not inserted
         Assertions.assertFalse(wi.extracted); // Not extracted
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());
         Assertions.assertEquals(0, state.ingredientCount());
@@ -618,20 +726,25 @@ class AbstractWorldInteractionTest {
                         2, 0 // No work required at stage 2
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
+                () -> ImmutableList.of(new TestItem("grapes", 1)),
                 () -> inserted.set(true)
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
-        wi.tryWorking(null, arbitrarySpot(1));
-        wi.tryWorking(null, arbitrarySpot(2));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
+        wi.tryWorking(null, arbitrarySpotWithState(1));
+        wi.tryWorking(null, arbitrarySpotWithState(2));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertNull(state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
+    }
+
+    @NotNull
+    private static WorkSpot<Integer, Position> arbitrarySpotWithState(int state) {
+        return new WorkSpot<>(new Position(1, 2), state, 0, new Position(0, 1));
     }
 
     @Test
@@ -646,7 +759,7 @@ class AbstractWorldInteractionTest {
                         // No work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
                 ),
                 ImmutableMap.of(
                         0, 1
@@ -655,37 +768,83 @@ class AbstractWorldInteractionTest {
                         0, 0, // No timer at stage 0
                         1, 100 // Timer applies to stage 1
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
-                new InventoryHandle<GathererJournalTest.TestItem>() {
+                new InventoryHandle<TestItem>() {
                     @Override
-                    public Collection<GathererJournalTest.TestItem> getItems() {
-                        return ImmutableList.of(new GathererJournalTest.TestItem("grapes"));
+                    public Collection<TestItem> getItems() {
+                        return ImmutableList.of(new TestItem("grapes", 1));
                     }
 
                     @Override
                     public void set(
                             int ii,
-                            GathererJournalTest.TestItem shrink
+                            TestItem shrink
                     ) {
                         inserted.set(true);
                     }
                 },
                 testWorkStateContainer(),
-                () -> new Claim(UUID.randomUUID(), 100)
+                () -> new Claim(UUID.randomUUID(), 100),
+                ImmutableList.of()
         );
 
-        wi.tryWorking(null, arbitrarySpot(0));
+        wi.tryWorking(null, arbitrarySpotWithState(0));
 
-        State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
+        State state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
         Assertions.assertFalse(wi.extracted); // Not Extracted
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertNotNull(state);
         Assertions.assertEquals(State.fresh().incrProcessing(), state);
     }
 
-    @NotNull
-    private static WorkSpot<Integer, Position> arbitrarySpot(int state) {
-        return new WorkSpot<>(new Position(1, 2), state, 0, new Position(0, 1));
+
+    @Test
+    void Test_ShouldInsertStack_IfSpecialRuleIsActive() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        ImmutableWorkStateContainer<Position, Boolean> workStates = testWorkStateContainer();
+        TestWI wi = new TestWI(
+                1,
+                ImmutableMap.of(
+                        0, (i) -> true // Villager has the required tools
+                ),
+                ImmutableMap.of(
+                        // No work required
+                ),
+                ImmutableMap.of(
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
+                ),
+                ImmutableMap.of(
+                        0, 2 // Two grapes required
+                ),
+                ImmutableMap.of(
+                        0, 0 // No timers
+                ),
+                new InventoryHandle<TestItem>() {
+                    @Override
+                    public Collection<TestItem> getItems() {
+                        return ImmutableList.of();
+                    }
+
+                    @Override
+                    public void set(
+                            int ii,
+                            TestItem shrink
+                    ) {
+                        throw new UnsupportedOperationException();
+                    }
+                },
+                workStates,
+                () -> new Claim(UUID.randomUUID(), 100),
+                ImmutableList.of(SpecialRules.DROP_LOOT_AS_STACK)
+        );
+
+        workStates.setJobBlockState(arbitrarySpotWithState(1).position(), State.freshAtState(1));
+        wi.setLastInserted(new TestItem("wood", 1));
+
+        wi.tryWorking(null, arbitrarySpotWithState(1));
+
+        Assertions.assertEquals(1, wi.chest.size());
+        Assertions.assertEquals(2, wi.chest.get(0).quantity());
+        Assertions.assertEquals("wood", wi.chest.get(0).name());
     }
 
 }

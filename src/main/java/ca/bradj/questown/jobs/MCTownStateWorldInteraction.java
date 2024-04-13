@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -155,6 +157,43 @@ public class MCTownStateWorldInteraction extends
             int villagerIndex
     ) {
         return ProductionTimeWarper.getHeldItems(mcTownState.town(), villagerIndex);
+    }
+
+    @Override
+    protected MCTownState addToNearbyChest(
+            @NotNull Inputs inputs,
+            MCTownState updatedTown,
+            BlockPos chestPosition,
+            MCTownItem stackWithQuantity
+    ) {
+        if (updatedTown == null) {
+            updatedTown = inputs.town();
+        }
+        Map.Entry<MCTownState, MCTownItem> withAdded = updatedTown.withContainerItemAdded(stackWithQuantity);
+        if (withAdded == null) {
+            return null;
+        }
+        return withAdded.getKey();
+    }
+
+    @Override
+    protected MCTownItem createStackWithQuantity(
+            MCTownItem item,
+            int qy
+    ) {
+        return item.withQuantity(qy);
+    }
+
+    @Override
+    protected @Nullable MCTownItem getLastInsertedIngredients(
+            Inputs inputs,
+            int villagerIndex
+    ) {
+        MCHeldItem lastInserted = inputs.town.getVillager(villagerIndex).getLastInserted();
+        if (lastInserted == null) {
+            return null;
+        }
+        return lastInserted.get();
     }
 
     @Override

@@ -55,15 +55,16 @@ public class SpecialRules {
     // the same type. This rule is only relevant when tags or special rules are being used
     // for the job ingredients.
     // If specific items are defined on the job, this will have no effect.
-    // FIXME: IMplemnet (TDD is probably wise here)
     public static final String INGREDIENTS_MUST_BE_SAME = "ingredients_must_be_same";
 
-    // If this rule is enabled, the villager will drop their loot as a stack.
-    // For example, if they are carrying [axe, apple, apple], they will deposit
-    // [axe, 2 x apple] in the chest. Questown villagers are not supposed to be
-    // able to stack items. This was added to support the special "organizer"
-    // villager type - who has this unique capability.
-    // FIXME: Implement
+    // If this rule is enabled, the villager will drop the ingredients from the previous
+    // stage in town as a stack using the ingredient quantity from the previous stage to
+    // determine the size of the stack.
+    //
+    // Questown villagers are not supposed to be able to stack items. This rule was added
+    // to support the special "organizer" villager type - who has this unique capability.
+    //
+    // NOTE: This can only be used when INGREDIENTS_MUST_BE_SAME is also enabled.
     public static final String DROP_LOOT_AS_STACK = "drop_loot_as_stack";
 
     // If this rule is enabled, the villager will only take items from storage if they
@@ -75,6 +76,4 @@ public class SpecialRules {
     // If this rule is enabled, the villager will assume the "dropping_loot"
     // status at the corresponding production state.
     public static final String FORCE_DROP_LOOT = "force_drop_loot";
-
-    public static final String STATELESS = "stateless";
 }

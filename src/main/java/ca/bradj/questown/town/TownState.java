@@ -8,7 +8,6 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -192,6 +191,23 @@ public abstract class TownState<
         ), removed);
     }
 
+    public Map.Entry<SELF, I> withContainerItemAdded(I item) {
+        ImmutableList.Builder<ContainerTarget<C, I>> b = ImmutableList.builder();
+        I removed = null;
+        for (ContainerTarget<C, I> container : containers) {
+            @Nullable Map.Entry<ContainerTarget<C, I>, I> wRem = container.withItemAdded(item);
+            if (wRem != null) {
+                b.add(wRem.getKey());
+                removed = wRem.getValue();
+            } else {
+                b.add(container);
+            }
+        }
+        return new AbstractMap.SimpleEntry<>(newTownState(
+                villagers, b.build(), workStates, workTimers, gates, worldTimeAtSleep
+        ), removed);
+    }
+
     public SELF withTimerReducedBy(P bp, int stepInterval) {
         // TODO: Take "next step work" and "next step time" as inputs
         if (workTimers.get(bp) == null || workTimers.get(bp) == 0) {
@@ -217,19 +233,22 @@ public abstract class TownState<
         public final double xPosition, yPosition, zPosition;
         public final ImmutableSnapshot<I, ?> journal;
         private final List<Effect> effects = new ArrayList<>();
+        private @Nullable I lastInserted = null;
 
         public VillagerData(
                 double xPosition,
                 double yPosition,
                 double zPosition,
                 ImmutableSnapshot<I, ?> journal,
-                UUID uuid
+                UUID uuid,
+                @Nullable I lastInserted
         ) {
             this.xPosition = xPosition;
             this.yPosition = yPosition;
             this.zPosition = zPosition;
             this.journal = journal;
             this.uuid = uuid;
+            this.lastInserted = lastInserted;
         }
 
         @Override
@@ -251,7 +270,7 @@ public abstract class TownState<
 
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
+                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid, lastInserted
             );
         }
 
@@ -263,14 +282,14 @@ public abstract class TownState<
             int idx = journal.items().indexOf(first.get());
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
+                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid, lastInserted
             );
         }
 
         public VillagerData<I> withItems(ImmutableList<I> items) {
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withItems(items), uuid
+                    (ImmutableSnapshot) journal.withItems(items), uuid, lastInserted
             );
         }
 
@@ -291,6 +310,10 @@ public abstract class TownState<
             });
             effects.removeAll(r.build());
             return b.build();
+        }
+
+        public @Nullable I getLastInserted() {
+            return lastInserted;
         }
     }
 

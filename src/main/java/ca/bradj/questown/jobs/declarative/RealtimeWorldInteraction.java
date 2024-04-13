@@ -1,15 +1,18 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.InsertedItemAware;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -22,6 +25,8 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -202,6 +207,49 @@ public class RealtimeWorldInteraction
     }
 
     @Override
+    protected Boolean addToNearbyChest(
+            @NotNull MCExtra inputs,
+            Boolean updatedTown,
+            BlockPos chestPosition,
+            MCTownItem stackWithQuantity
+    ) {
+        if (!Jobs.isCloseTo(inputs.entity().blockPosition(), chestPosition)) {
+            return false;
+        }
+        BlockState bs = inputs.town().getServerLevel().getBlockState(chestPosition);
+        if (!(bs.getBlock() instanceof ChestBlock cb)) {
+            return false;
+        }
+        @NotNull ContainerTarget<MCContainer, MCTownItem> cont = TownContainers.fromChestBlock(
+                chestPosition,
+                cb,
+                inputs.town().getServerLevel()
+        );
+        Map.Entry<ContainerTarget<MCContainer, MCTownItem>, MCTownItem> add = cont.withItemAdded(stackWithQuantity);
+        return add != null;
+    }
+
+    @Override
+    protected MCTownItem createStackWithQuantity(
+            MCTownItem item,
+            int qy
+    ) {
+        return item.withQuantity(qy);
+    }
+
+    @Override
+    protected @Nullable MCTownItem getLastInsertedIngredients(
+            MCExtra inputs,
+            int villagerIndex
+    ) {
+        @Nullable VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
+        if (workToUndo == null) {
+            return null;
+        }
+        return workToUndo.item().get();
+    }
+
+    @Override
     protected Boolean setJobBlockState(
             @NotNull MCExtra inputs,
             Boolean ts,
@@ -351,6 +399,6 @@ public class RealtimeWorldInteraction
         if (wtu == null) {
             return true;
         }
-        return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
+        return tryGiveItems(mcExtra, true, ImmutableList.of(wtu.item()), wtu.pos());
     }
 }

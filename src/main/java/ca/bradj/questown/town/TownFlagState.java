@@ -52,8 +52,10 @@ public class TownFlagState {
                 }
                 Vec3 pos = entity.position();
                 ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
+                VisitorMobEntity.WorkToUndo workToUndo = ((VisitorMobEntity) entity).getWorkToUndo();
+                MCHeldItem item = workToUndo == null ? null : workToUndo.item();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
-                        pos.x, pos.y, pos.z, snapshot, entity.getUUID()
+                        pos.x, pos.y, pos.z, snapshot, entity.getUUID(), item
                 );
                 vB.add(data);
             }
@@ -76,7 +78,7 @@ public class TownFlagState {
             TownFlagBlockEntity e,
             ServerLevel sl,
             @Nullable Long optionalWarpDuration
-            ) {
+    ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) { // FIXME: Plus or minus some ticks?
             QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
@@ -137,7 +139,10 @@ public class TownFlagState {
 
             final int ii = i;
             vWarper.getTicks(dayTime, ticksPassed).forEach(
-                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(tick.tick(), ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)))
+                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
+                            tick.tick(),
+                            ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
+                    ))
             );
         }
 
@@ -212,7 +217,11 @@ public class TownFlagState {
     }
 
     // Returns true if changes detected
-    public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
+    public boolean tick(
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level
+    ) {
         if (!e.isInitialized()) {
             return false;
         }
@@ -220,7 +229,10 @@ public class TownFlagState {
         long start = System.currentTimeMillis();
         long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
-        long timeSinceWake = Math.max(0, gt - lastTick); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
+        long timeSinceWake = Math.max(
+                0,
+                gt - lastTick
+        ); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
@@ -243,7 +255,10 @@ public class TownFlagState {
     }
 
     void warp(
-            TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level, long timeSinceWake
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level,
+            long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
         try {
@@ -322,7 +337,10 @@ public class TownFlagState {
         return itemNames.hashCode();
     }
 
-    void putStateOnTile(CompoundTag flagTag, UUID uuid) {
+    void putStateOnTile(
+            CompoundTag flagTag,
+            UUID uuid
+    ) {
         @Nullable MCTownState state = captureState();
         if (state == null) {
             QT.FLAG_LOGGER.warn("TownState was null. Will not store.");

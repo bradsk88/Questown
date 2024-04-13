@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -64,6 +65,10 @@ public class TownStateSerializer {
             vTag.put("journal_items", journalItems);
             vTag.putUUID("uuid", e.uuid);
             vTag.putString("job", JobsRegistry.getStringValue(e.journal.jobId()));
+            @Nullable MCHeldItem li = e.getLastInserted();
+            if (li != null) {
+                vTag.put("last_inserted", li.serializeNBT());
+            }
             villagers.add(vTag);
         }
         tag.put("villagers", villagers);
@@ -137,10 +142,15 @@ public class TownStateSerializer {
                     vcTag.getString("journal_status"),
                     heldItems
             );
+            @Nullable MCHeldItem lastInserter = null;
+            if (vcTag.contains("last_inserted")) {
+                lastInserter = MCHeldItem.fromTag(vcTag.getCompound("last_inserted"));
+            }
             b.add(new TownState.VillagerData<>(
                     x, y, z,
                     journal,
-                    uuid
+                    uuid,
+                    lastInserter
             ));
         }
 

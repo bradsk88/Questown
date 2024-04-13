@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.leaver;
 
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -44,6 +45,19 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
                 return new AbstractMap.SimpleEntry<>(
                         new ContainerTarget<>(position, yPosition, interactPosition, container, check),
                         itm.unit()
+                );
+            }
+        }
+        return null;
+    }
+
+    public @Nullable Map.Entry<ContainerTarget<C, I>, I> withItemAdded(I stackWithQuantity) {
+        for (int i = 0; i < container.size(); i++) {
+            if (container.getItem(i).isEmpty()) {
+                container.setItem(i, stackWithQuantity);
+                return new AbstractMap.SimpleEntry<>(
+                        new ContainerTarget<>(position, yPosition, interactPosition, container, check),
+                        stackWithQuantity
                 );
             }
         }
@@ -130,7 +144,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return container.hasAnyOf(items);
     }
 
-    public interface CheckFn<I extends Item> {
+    public interface CheckFn<I extends Item<I>> {
         boolean Matches(I item);
     }
 
