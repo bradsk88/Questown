@@ -377,7 +377,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                     BlockPos bp = Positions.ToBlock(block, room.yCoord);
                                     BlockState bs = town.getServerLevel().getBlockState(bp);
                                     if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
-                                        if (work.getJobBlockState(bp) == null) {
+                                        State jobBlockState = work.getJobBlockState(bp);
+                                        if (jobBlockState == null || jobBlockState.processingState() < status.value()) {
                                             State fresh = State.freshAtState(
                                                     status.value());
                                             work.setJobBlockState(

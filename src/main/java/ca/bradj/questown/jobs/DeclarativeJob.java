@@ -387,7 +387,7 @@ public class DeclarativeJob extends
             return;
         }
 
-        if (wrappingUp && !hasAnyLootToDrop()) {
+        if (wrappingUp && !shouldDropLootBeforeWrapping()) {
             town.getVillagerHandle().changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
             return;
         }
@@ -400,6 +400,16 @@ public class DeclarativeJob extends
             boolean cacheEnabled = town.getDebugHandle().isCacheEnabled();
             tryGetSupplies(town, roomsNeedingIngredientsOrTools.get(cacheEnabled), entityBlockPos);
         }
+    }
+
+    private boolean shouldDropLootBeforeWrapping() {
+        for (int i = 0; i < maxState; i++) {
+            if (specialRules.apply(ProductionStatus.fromJobBlockStatus(i))
+                            .contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+                return false;
+            }
+        }
+        return hasAnyLootToDrop();
     }
 
     @Override
