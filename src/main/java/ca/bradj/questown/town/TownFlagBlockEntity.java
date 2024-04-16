@@ -264,7 +264,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownQuestsHandle questsHandle = new TownQuestsHandle();
     private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
 
-    private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
+    final TownVillagerHandle villagerHandle = new TownVillagerHandle();
 
     public TownFlagBlockEntity(
             BlockPos p_155229_,
@@ -566,13 +566,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     //  being done, and assign the rest to people who are idle or
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
-        WorksBehaviour.TownData td = getTownData();
         villagerHandle.stream()
                       .filter(v -> v instanceof VisitorMobEntity)
                       .map(v -> (VisitorMobEntity) v)
                       .filter(e -> {
                           for (WorkRequest r : workHandle.getRequestedResults()) {
-                              if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
+                              boolean canSatisfy = VillagerPreferredWork.canSatisfy(
+                                      e.getJobId(),
+                                      WorkSeekerJob::isSeekingWork,
+                                      job -> Works.get(job) != null,
+                                      Works.get(e.getJobId()).get().results().apply(getTownData()),
+                                      i -> r.asIngredient().test(i.toItemStack())
+                              );
+                              if (canSatisfy) {
                                   if (e.getStatusForServer()
                                        .isBusy()) {
                                       return false;
@@ -844,7 +850,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public boolean changeJobForVisitorFromBoard(UUID ownerUUID) {
-        JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
+        JobID work = getPreferredWork(ownerUUID, this);
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
             return true;
@@ -852,69 +858,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return false;
     }
 
-    private JobID getVillagerPreferredWork(
-            UUID uuid,
-            Collection<WorkRequest> requestedResults
+    @Nullable
+    private static JobID getPreferredWork(
+            UUID ownerUUID,
+            TownFlagBlockEntity self
     ) {
-        Optional<LivingEntity> f = villagerHandle.stream()
-                                                 .filter(v -> uuid.equals(v.getUUID()))
-                                                 .findFirst();
-        if (f.isEmpty()) {
-            QT.BLOCK_LOGGER.error("No entities found for UUID: {}", uuid);
-            return null;
-        }
-        LivingEntity ff = f.get();
-        if (!(ff instanceof VisitorMobEntity v)) {
-            QT.BLOCK_LOGGER.error("Entity is wrong type: {}", ff);
-            return null;
-        }
-
-        WorksBehaviour.TownData data = getTownData();
-
-        List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(v.getJobId()));
-
-        // TODO[TEST]: Allow work to be "claimed" so that if there are multiple
-        //  requests that can be satisfied by one job, the villagers with that
-        //  job will distribute themselves across those requests.
-
-        // For now, we use randomization to give work requests a fair chance of being selected
-        Collections.shuffle(preference);
-
-        // TODO[ASAP]: Use a job attempt counter to determine which preference they choose
-        //  With full random, the villager could theoretically never choose a job that
-        //  is possible with the items currently in town. Under true random, they could
-        //  potentially just keep choosing "gather with axe" over and over while there
-        //  are no axes in town, without trying "gather with shovel" while there IS a
-        //  shovel in town. Using a counter would allow the villager to consider every
-        //  job option.
-
-        for (JobID p : preference) {
-            if (!JobsRegistry.canFit(this, uuid, p, Util.getDayTime(getServerLevel()))) {
-                QT.FLAG_LOGGER.debug(
-                        "Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
-                continue;
-            }
-
-            if (JobsRegistry.canAlwaysWork(p, uuid)) {
-                return p;
-            }
-
-            List<Ingredient> i = requestedResults.stream()
-                                                 .map(WorkRequest::asIngredient)
-                                                 .toList();
-            for (Ingredient requestedResult : i) {
-                // TODO: Think about how work chains work.
-                //  E.g. If a blacksmith needs iron ingots to do a requested job,
-                //  but none of the other villagers produce that resource, the
-                //  blacksmith should light up red to indicate a broken chain and
-                //  that the player will need to contribute in order for the
-                //  blacksmith to work, rather than everything being automated.
-                if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
-                    return p;
-                }
-            }
-        }
-        return null;
+        return VillagerPreferredWork.compute(
+                ownerUUID,
+                self.villagerHandle.stream().filter(v -> ownerUUID.equals(v.getUUID())).findFirst().orElse(null),
+                JobsRegistry::getPreferredWorkIds,
+                j -> JobsRegistry.canFit(self, ownerUUID, j, Util.getDayTime(self.getServerLevel())),
+                j -> JobsRegistry.canAlwaysWork(j, ownerUUID),
+                self.workHandle.getRequestedResults().stream()
+                          .map(WorkRequest::asIngredient)
+                          .toList(),
+                (j, r) -> VillagerPreferredWork.canSatisfy(
+                        j,
+                        WorkSeekerJob::isSeekingWork,
+                        job -> Works.get(job) != null,
+                        Works.get(j).get().results().apply(self.getTownData()),
+                        i -> r.test(i.toItemStack())
+                )
+        );
     }
 
     @Override

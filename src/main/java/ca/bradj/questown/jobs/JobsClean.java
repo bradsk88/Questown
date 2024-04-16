@@ -33,13 +33,14 @@ public class JobsClean {
     }
 
     @NotNull
-    static <K, I> ImmutableMap<K, Boolean> getSupplyItemStatuses(
+    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
-            ImmutableMap<K, Predicate<I>> ingredientsRequiredAtStates,
-            ImmutableMap<K, Predicate<I>> toolsRequiredAtStates
+            Map<Integer, Predicate<I>> ingredientsRequiredAtStates,
+            Map<Integer, Predicate<I>> toolsRequiredAtStates,
+            int maxState
     ) {
-        HashMap<K, Boolean> b = new HashMap<>();
-        BiConsumer<K, Predicate<I>> fn = (state, ingr) -> {
+        HashMap<Integer, Boolean> b = new HashMap<>();
+        ingredientsRequiredAtStates.forEach((state, ingr) -> {
             if (ingr == null) {
                 if (!b.containsKey(state)) {
                     b.put(state, false);
@@ -52,9 +53,26 @@ public class JobsClean {
             if (!b.getOrDefault(state, false)) {
                 b.put(state, has);
             }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
+        });
+        toolsRequiredAtStates.forEach((state, ingr) -> {
+            if (ingr == null) {
+                if (!b.containsKey(state)) {
+                    b.put(state, false);
+                }
+                return;
+            }
+
+            boolean has = journal.get().stream().anyMatch(ingr);
+            if (!has) {
+                for (int i = state; i < maxState; i++) {
+                    b.put(i, false);
+                }
+            } else {
+                if (!b.getOrDefault(state, false)) {
+                    b.put(state, true);
+                }
+            }
+        });
         return ImmutableMap.copyOf(b);
     }
 

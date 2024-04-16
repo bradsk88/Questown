@@ -24,6 +24,7 @@ import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.NoOpWarper;
+import ca.bradj.questown.town.VillagerPreferredWork;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
@@ -138,28 +139,6 @@ public class JobsRegistry {
         return w.get().warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
     }
 
-    public static boolean canSatisfy(
-            WorksBehaviour.TownData town,
-            JobID p,
-            Ingredient requestedResult
-    ) {
-        if (WorkSeekerJob.isSeekingWork(p)) {
-            return false;
-        }
-
-        Supplier<Work> w = Works.get(p);
-        if (w == null) {
-            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
-            return false;
-        }
-        for (MCTownItem r : w.get().results().apply(town)) {
-            if (requestedResult.test(r.toItemStack())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
@@ -231,7 +210,7 @@ public class JobsRegistry {
         Supplier<Work> workSupplier = Works.get(p);
         Work work = workSupplier.get();
         Job<?, ?, ?> job = work.jobFunc().apply(owner);
-        return job.getSpecialRules(0).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT);
+        return job.getSpecialGlobalRules().contains(SpecialRules.CAN_ALWAYS_WORK);
     }
 
     private record Jerb(

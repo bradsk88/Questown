@@ -366,32 +366,10 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
     }
 
-    private void updateWorkStatesForSpecialRooms(
+    protected abstract void updateWorkStatesForSpecialRooms(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work
-    ) {
-        getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()).forEach(
-                (status, rooms) -> rooms.forEach(
-                        room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
-                                block -> {
-                                    BlockPos bp = Positions.ToBlock(block, room.yCoord);
-                                    BlockState bs = town.getServerLevel().getBlockState(bp);
-                                    if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
-                                        State jobBlockState = work.getJobBlockState(bp);
-                                        if (jobBlockState == null || jobBlockState.processingState() < status.value()) {
-                                            State fresh = State.freshAtState(
-                                                    status.value());
-                                            work.setJobBlockState(
-                                                    bp,
-                                                    fresh
-                                            );
-                                        }
-                                    }
-                                }
-                        )
-                )
-        );
-    }
+    );
 
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
         WorkStatusHandle<BlockPos, MCHeldItem> work;
@@ -424,8 +402,21 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 item
         );
         ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
-        for (STATUS i : sortByPriority(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled())
-                                                                     .keySet())) {
+        Set<STATUS> rooms = roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet();
+
+        Map<STATUS, Boolean> sis = getSupplyItemStatus();
+        for (STATUS i : sortByPriority(rooms)) {
+            boolean leaveIteration = false;
+            for (int j = 0; j <= i.value(); j++) {
+                Boolean b = sis.get(i);
+                if (b == null || !b) {
+                    leaveIteration = true;
+                    break;
+                }
+            }
+            if (leaveIteration) {
+                continue;
+            }
             if (specialRules.apply(i).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
                 Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
                 checkFn = item -> JobsClean.shouldTakeItem(

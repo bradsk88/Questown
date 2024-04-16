@@ -98,7 +98,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
+public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Worker {
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())

@@ -262,7 +262,7 @@ public class JobStatuses {
                     public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority() {
                         Collection<Integer> workReadyToDo = town.getStatesWithUnfinishedItemlessWork();
                         ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
-                        ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
+                        Map<Integer, Supplier<STATUS>> b = new HashMap<>();
                         for (int i = 0; i < allByPref.size(); i++) {
                             STATUS potentialStatus = allByPref.get(i);
                             if (workReadyToDo.contains(potentialStatus.value())) {
@@ -271,21 +271,27 @@ public class JobStatuses {
                             }
                         }
 
-                        b.put(job.getMaxState().value(), () -> {
+                        b.compute(job.getMaxState().value(), (idx, cur) -> () -> {
+                            if (cur != null) {
+                                return JobsClean.doOrGoTo(
+                                        cur.get(),
+                                        entity.getEntityCurrentJobSite() != null,
+                                        factory.goingToJobSite()
+                                );
+                            }
+
                             Collection<ROOM> rooms = town.roomsWithCompletedProduct();
                             if (rooms.isEmpty()) {
                                 return null;
                             }
-                            ROOM location = entity.getEntityCurrentJobSite();
-                            if (location != null) {
-                                if (rooms.contains(location)) {
-                                    return factory.extractingProduct();
-                                }
-                            }
-                            return factory.goingToJobSite();
+                            return JobsClean.doOrGoTo(
+                                    factory.extractingProduct(),
+                                    entity.getEntityCurrentJobSite() != null,
+                                    factory.goingToJobSite()
+                            );
                         });
 
-                        return b.build();
+                        return ImmutableMap.copyOf(b);
                     }
 
                     @Override

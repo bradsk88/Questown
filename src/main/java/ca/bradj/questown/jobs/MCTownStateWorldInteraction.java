@@ -398,7 +398,8 @@ public class MCTownStateWorldInteraction extends
                 return ProductionStatus.mapUnsafe(JobsClean.getSupplyItemStatuses(
                         heldItems,
                         Jobs.unFn(ingredientsRequiredAtStates()),
-                        Jobs.unHeld(toolsRequiredAtStates)
+                        Jobs.unHeld(toolsRequiredAtStates),
+                        maxState
                 ));
             }
         };

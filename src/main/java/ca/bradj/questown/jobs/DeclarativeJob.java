@@ -19,6 +19,7 @@ import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ContainerRoomFinder;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -39,6 +40,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -136,7 +138,7 @@ public class DeclarativeJob extends
     private int ticksSinceStart;
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
-    private ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> statesWhereSpecialRulesApply = ImmutableMap.of();
+    private ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> statesWhereSpecialRulesCreateWork = ImmutableMap.of();
     private final ImmutableList<ProductionStatus> statesPriority;
 
     public DeclarativeJob(
@@ -257,14 +259,7 @@ public class DeclarativeJob extends
             ControlledCache<Map<ProductionStatus, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        ImmutableMap.Builder<ProductionStatus, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        for (int i = 0; i < maxState; i++) {
-            b.put(
-                    ProductionStatus.fromJobBlockStatus(i),
-                    item -> Works.isWorkResult(town.getTownData(), item.toItem())
-            );
-        }
-        this.statesWhereSpecialRulesApply = b.build();
+        this.statesWhereSpecialRulesCreateWork = getStatesWhereSpecialRulesCreateWork(town);
 
         VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
         if (this.grabbingInsertedSupplies) {
@@ -290,7 +285,7 @@ public class DeclarativeJob extends
         this.workSpot = null;
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         JobTownProvider<MCRoom, ProductionStatus> jtp = new JobTownProvider<>() {
-            private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
+            private final Function<BlockPos, State> getJobBlockState = work::getJobBlockState;
 
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
@@ -318,7 +313,7 @@ public class DeclarativeJob extends
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
                     Ingredient toolsReq = toolsRequiredAtStates.get(s);
-                    if (toolsReq != null && !toolsReq.isEmpty()) {
+                    if (toolsReq == null || !toolsReq.isEmpty()) {
                         return;
                     }
                     b.add(s);
@@ -400,6 +395,30 @@ public class DeclarativeJob extends
             boolean cacheEnabled = town.getDebugHandle().isCacheEnabled();
             tryGetSupplies(town, roomsNeedingIngredientsOrTools.get(cacheEnabled), entityBlockPos);
         }
+    }
+
+    @NotNull
+    private ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> getStatesWhereSpecialRulesCreateWork(
+            TownInterface town
+    ) {
+        // TODO[RulesReg]: Return empty map unless a custom job behaviour is register
+        // E.g. return this.customBehaviours.reduce({}, (acc, runner) -> runner.apply(acc));
+        // This code below, for example would be a runner that is added during DecJob construction
+        // if the "any work output" rule is found on any stage.
+        // In the constructor, it would be pulled from a registry like:
+        // this.customBehaviours.add(CustomJobBehavioursRegistry.get(ruleId));
+        // This allows other mods to define custom job behaviours with the registry, too.
+        ImmutableMap.Builder<ProductionStatus, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        for (int i = 0; i < maxState; i++) {
+            if (specialRules.apply(ProductionStatus.fromJobBlockStatus(i))
+                            .contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
+                b.put(
+                        ProductionStatus.fromJobBlockStatus(i),
+                        item -> Works.isWorkResult(town.getTownData(), item.toItem())
+                );
+            }
+        }
+        return b.build();
     }
 
     private boolean shouldDropLootBeforeWrapping() {
@@ -511,7 +530,9 @@ public class DeclarativeJob extends
             Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
             if (workSpot1 == null) {
                 QT.JOB_LOGGER.error(
-                        "Worker somehow has different status than all existing work spots. This is probably a bug.");
+                        "Worker somehow has different status ({}) than all existing work spots. This is probably a bug.",
+                        status.nameV2()
+                );
                 return;
             }
             allSpots = workSpot1;
@@ -540,7 +561,7 @@ public class DeclarativeJob extends
     }
 
     Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
-            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            Function<BlockPos, State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
             Random rand
@@ -565,7 +586,7 @@ public class DeclarativeJob extends
     }
 
     private static void tryAddSpot(
-            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            Function<BlockPos, State> town,
             BlockPos bp,
             Map<Integer, List<WorkSpot<Integer, BlockPos>>> b,
             Function<BlockPos, BlockPos> is
@@ -611,15 +632,18 @@ public class DeclarativeJob extends
 
     @Override
     protected Map<ProductionStatus, Boolean> getSupplyItemStatus() {
-        ImmutableMap.Builder<ProductionStatus, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
-        statesWhereSpecialRulesApply.forEach((k, v) -> // FIXME: Test this
-                b.put(k, item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
+        statesWhereSpecialRulesCreateWork.forEach((k, v) -> // FIXME: Test this
+                b.put(k.value(), item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
 
-        return JobsClean.getSupplyItemStatuses(
-                asItemsHolder()::getItems,
-                b.build(),
-                Jobs.unMCHeld2(toolsRequiredAtStates)
+        return ProductionStatus.mapUnsafe(
+                JobsClean.getSupplyItemStatuses(
+                        asItemsHolder()::getItems,
+                        b.build(),
+                        ProductionStatus.unmap(Jobs.unMCHeld2(toolsRequiredAtStates)),
+                        maxState
+                )
         );
     }
 
@@ -632,7 +656,7 @@ public class DeclarativeJob extends
     protected BlockPos findJobSite(
             RoomsHolder town,
             Supplier<? extends Collection<MCRoomWithBlocks>> roomsWhereSpecialRulesApply,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
@@ -666,7 +690,7 @@ public class DeclarativeJob extends
     @Override
     protected Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
     ) {
         return TownNeeds.getRoomsNeedingIngredientsOrTools(
@@ -753,5 +777,40 @@ public class DeclarativeJob extends
         return ImmutableList.copyOf(
                 specialRules.apply(ProductionStatus.fromJobBlockStatus(state))
         );
+    }
+
+    @Override
+    public Collection<String> getSpecialGlobalRules() {
+        return specialGlobalRules;
+    }
+
+    @Override
+    protected void updateWorkStatesForSpecialRooms(
+            TownInterface town,
+            WorkStatusHandle<BlockPos, MCHeldItem> work
+    ) {
+        getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()).forEach(
+                // FIXME: If supplyItemStatus shows any missing tools, roll back the state to match the held tools
+                (status, rooms) -> rooms.forEach(
+                        room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
+                                block -> {
+                                    BlockPos bp = Positions.ToBlock(block, room.yCoord);
+                                    BlockState bs = town.getServerLevel().getBlockState(bp);
+                                    if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
+                                        State jobBlockState = work.getJobBlockState(bp);
+                                        if (jobBlockState == null) {
+                                            int wl = Util.getOrDefault(workRequiredAtStates, status, 0);
+                                            State fresh = State.fresh().setWorkLeft(wl);
+                                            work.setJobBlockState(
+                                                    bp,
+                                                    fresh
+                                            );
+                                        }
+                                    }
+                                }
+                        )
+                )
+        );
+
     }
 }

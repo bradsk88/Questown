@@ -76,4 +76,8 @@ public class SpecialRules {
     // If this rule is enabled, the villager will assume the "dropping_loot"
     // status at the corresponding production state.
     public static final String FORCE_DROP_LOOT = "force_drop_loot";
+
+    // If this rule is enabled, the associated work will always be included in the list of
+    // possible jobs that the WorkSeeker can transition to.
+    public static final String CAN_ALWAYS_WORK = "can_always_work";
 }

@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -63,4 +65,52 @@ class JobsCleanTest {
         Assertions.assertFalse(result);
     }
 
+    @Test
+    void getSupplyItemStatuses_ShouldReturnFalse_IfHasIngredientsForState1_ButMissingToolsFromState0() {
+        @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
+                () -> ImmutableList.of("wheat"),
+                ImmutableMap.of(
+                        // No ingredients are requited at state 0
+                        1, (i) -> i.equals("wheat") // wheat is required at 1
+                ),
+                ImmutableMap.of(
+                        0, (i) -> i.equals("tool") // tool is required at 0
+                ),
+                2
+        );
+        Assertions.assertFalse(result.get(0));
+        Assertions.assertFalse(result.get(1));
+    }
+    @Test
+    void getSupplyItemStatuses_ShouldReturnTrue_IfHasIngredientsForState1_AndToolFromState0() {
+        @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
+                () -> ImmutableList.of("wheat", "tool"),
+                ImmutableMap.of(
+                        // No ingredients are requited at state 0
+                        1, (i) -> i.equals("wheat") // wheat is required at 1
+                ),
+                ImmutableMap.of(
+                        0, (i) -> i.equals("tool") // tool is required at 0
+                ),
+                2
+        );
+        Assertions.assertTrue(result.get(0));
+        Assertions.assertTrue(result.get(1));
+    }
+    @Test
+    void getSupplyItemStatuses_ShouldReturnTrue_IfHasIngredientsForState1_AndNoToolsRequired() {
+        @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
+                () -> ImmutableList.of("wheat", "tool"),
+                ImmutableMap.of(
+                        // No ingredients are requited at state 0
+                        1, (i) -> i.equals("wheat") // wheat is required at 1
+                ),
+                ImmutableMap.of(
+                        // No tools
+                ),
+                2
+        );
+        Assertions.assertNull(result.get(0));
+        Assertions.assertTrue(result.get(1));
+    }
 }

@@ -73,7 +73,8 @@ public class OrganizerStackTwoWork {
                                 )
                         ),
                         ImmutableList.of(
-                                SpecialRules.PRIORITIZE_EXTRACTION
+                                SpecialRules.PRIORITIZE_EXTRACTION,
+                                SpecialRules.CAN_ALWAYS_WORK
                         )
                 ),
                 SoundEvents.CHEST_OPEN.getLocation(),
