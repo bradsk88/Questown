@@ -205,6 +205,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     }
 
     @Override
+    public ProductionStatus minusValue(int i) {
+        return ProductionStatus.fromJobBlockStatus(value - i);
+    }
+
+    @Override
     public boolean isDroppingLoot() {
         return DROPPING_LOOT.equals(this);
     }

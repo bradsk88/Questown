@@ -91,7 +91,7 @@ public class JobStatuses {
         if (hasWorkItems) {
             workToTry.putAll(job.getSupplyUsesKeyedByPriority(supplyItemStatus));
         }
-        workToTry.putAll(job.getItemlessWorkKeyedByPriority());
+        putAllOrFallback(workToTry, job.getItemlessWorkKeyedByPriority());
 
         @Nullable STATUS normalStatus = null;
         boolean foundExtraction = false;
@@ -175,6 +175,24 @@ public class JobStatuses {
         }
 
         return s2;
+    }
+
+    private static <STATUS extends IStatus<STATUS>> void putAllOrFallback(
+            Map<Integer, Supplier<STATUS>> workToTry,
+            ImmutableMap<Integer, Supplier<STATUS>> itemlessWorkKeyedByPriority
+    ) {
+        itemlessWorkKeyedByPriority.keySet().forEach(
+                key -> workToTry.compute(key, (k, cur) -> {
+                    Supplier<STATUS> il = itemlessWorkKeyedByPriority.get(k);
+                    if (il != null) {
+                        STATUS status = il.get();
+                        if (status != null) {
+                            return () -> status;
+                        }
+                    }
+                    return cur;
+                })
+        );
     }
 
     /**
@@ -305,10 +323,10 @@ public class JobStatuses {
                         boolean foundWork = false;
 
                         List<STATUS> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
-                                                               .stream()
-                                                               .filter(work -> supplyItemStatus.getOrDefault(
-                                                                       work, false))
-                                                               .toList();
+                                                              .stream()
+                                                              .filter(work -> supplyItemStatus.getOrDefault(
+                                                                      work, false))
+                                                              .toList();
 
                         for (STATUS s : orderedWithSupplies) {
                             if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)

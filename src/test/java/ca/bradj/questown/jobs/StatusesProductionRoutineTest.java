@@ -261,6 +261,11 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
+        public PTestStatus minusValue(int i) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public int compareTo(@NotNull StatusesProductionRoutineTest.PTestStatus o) {
             return Integer.compare(value(), o.value());
         }

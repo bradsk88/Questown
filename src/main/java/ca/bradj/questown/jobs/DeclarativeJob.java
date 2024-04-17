@@ -15,10 +15,10 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.Emptyable;
 import ca.bradj.questown.logic.TownContainerChecks;
 import ca.bradj.questown.logic.TownNeeds;
+import ca.bradj.questown.logic.TownWorkState;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ContainerRoomFinder;
@@ -27,6 +27,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -312,7 +313,7 @@ public class DeclarativeJob extends
                                   .toList(), getJobBlockState, (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID)));
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
-                    Ingredient toolsReq = toolsRequiredAtStates.get(s);
+                    Ingredient toolsReq = toolsRequiredAtStates.get(ProductionStatus.fromJobBlockStatus(s));
                     if (toolsReq == null || !toolsReq.isEmpty()) {
                         return;
                     }
@@ -720,7 +721,8 @@ public class DeclarativeJob extends
             WorksBehaviour.TownData townData
     ) {
         Supplier<List<MCRoom>> resultRooms = () -> rooms.getRoomsWithContainersOfItem(
-                i -> Works.isWorkResult(townData, i));
+                i -> Works.isWorkResult(townData, i)
+        );
         return JobRequirements.roomsWhereSpecialRulesApply(
                 maxState, specialRules, resultRooms
         );
@@ -787,29 +789,21 @@ public class DeclarativeJob extends
     @Override
     protected void updateWorkStatesForSpecialRooms(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCHeldItem> work
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
+            Map<ProductionStatus, Boolean> supplyItemStatus
     ) {
-        getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()).forEach(
-                // FIXME: If supplyItemStatus shows any missing tools, roll back the state to match the held tools
-                (status, rooms) -> rooms.forEach(
-                        room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
-                                block -> {
-                                    BlockPos bp = Positions.ToBlock(block, room.yCoord);
-                                    BlockState bs = town.getServerLevel().getBlockState(bp);
-                                    if (Works.get(getId()).get().isJobBlock().test(bs.getBlock())) {
-                                        State jobBlockState = work.getJobBlockState(bp);
-                                        if (jobBlockState == null) {
-                                            int wl = Util.getOrDefault(workRequiredAtStates, status, 0);
-                                            State fresh = State.fresh().setWorkLeft(wl);
-                                            work.setJobBlockState(
-                                                    bp,
-                                                    fresh
-                                            );
-                                        }
-                                    }
-                                }
-                        )
-                )
+        BiFunction<Position, MCRoom, BlockPos> pf = (p, r) -> Positions.ToBlock(p, r.yCoord);
+        TownWorkState.<ProductionStatus, MCRoom>updateForSpecialRooms(
+                () -> getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()),
+                (p, r) -> {
+                    BlockState bs = town.getServerLevel().getBlockState(pf.apply(p, r));
+                    return Works.get(getId()).get().isJobBlock().test(bs.getBlock());
+                },
+                s -> Util.getOrDefault(workRequiredAtStates, s, 0),
+                (p, r) -> work.getJobBlockState(pf.apply(p, r)),
+                (p, r, s) -> work.setJobBlockState(pf.apply(p, r), s),
+                s -> !Util.getOrDefault(toolsRequiredAtStates, s, Ingredient.EMPTY).isEmpty(),
+                supplyItemStatus
         );
 
     }

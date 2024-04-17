@@ -15,7 +15,6 @@ import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -77,6 +76,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             TownInterface town
     ) {
         if (this.jobSite == null) {
+            // FIXME: For Organizer, we should only find rooms that have items present
             ServerLevel sl = town.getServerLevel();
             this.jobSite = findJobSite(
                     town.getRoomHandle(),
@@ -355,7 +355,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
 
-        updateWorkStatesForSpecialRooms(town, work);
+        updateWorkStatesForSpecialRooms(town, work, getSupplyItemStatus());
 
         this.roomsNeedingIngredientsOrTools = new ControlledCache<>(() -> roomsNeedingIngredientsOrTools(
                 town,
@@ -368,7 +368,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     protected abstract void updateWorkStatesForSpecialRooms(
             TownInterface town,
-            WorkStatusHandle<BlockPos, MCHeldItem> work
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
+            Map<STATUS, Boolean> supplyItemStatus
     );
 
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
@@ -407,8 +408,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         Map<STATUS, Boolean> sis = getSupplyItemStatus();
         for (STATUS i : sortByPriority(rooms)) {
             boolean leaveIteration = false;
-            for (int j = 0; j <= i.value(); j++) {
-                Boolean b = sis.get(i);
+            for (int j = 0; j < i.value(); j++) {
+                Boolean b = sis.get(statusFactory.fromJobBlockState(j));
                 if (b == null || !b) {
                     leaveIteration = true;
                     break;

@@ -296,6 +296,7 @@ public abstract class AbstractWorldInteraction<
                 if (workSpot.action() == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = AbstractWorkStatusStore.State.fresh();
+                        jobBlockState = jobBlockState.setWorkLeft(Util.getOrDefault(workRequiredAtStates, 0, 0)); // FIXME: Test this line
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
