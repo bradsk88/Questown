@@ -27,6 +27,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, Boolean> airCheck;
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
     private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
+    private final Map<POS, ITEM> lastInserted = new HashMap<>();
 
     public static class State {
         private final int processingState;
@@ -359,5 +360,18 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public void clearAllStates() {
         ImmutableList<POS> keysCopy = ImmutableList.copyOf(jobStatuses.keySet());
         keysCopy.forEach(this::clearState);
+    }
+
+    @Override
+    public void setLastInserted(
+            POS bp,
+            ITEM item
+    ) {
+        this.lastInserted.put(bp, item);
+    }
+
+    @Override
+    public WorkToUndo<POS, ITEM> getLastInserted(POS bp) {
+        return new WorkToUndo<>(bp, lastInserted.get(bp));
     }
 }

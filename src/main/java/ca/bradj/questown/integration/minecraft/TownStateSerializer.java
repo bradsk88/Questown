@@ -142,15 +142,10 @@ public class TownStateSerializer {
                     vcTag.getString("journal_status"),
                     heldItems
             );
-            @Nullable MCHeldItem lastInserter = null;
-            if (vcTag.contains("last_inserted")) {
-                lastInserter = MCHeldItem.fromTag(vcTag.getCompound("last_inserted"));
-            }
             b.add(new TownState.VillagerData<>(
                     x, y, z,
                     journal,
-                    uuid,
-                    lastInserter
+                    uuid
             ));
         }
 

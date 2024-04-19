@@ -136,16 +136,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Wo
     TownInterface town;
     Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job = getInitialJob();
 
-    public @Nullable WorkToUndo getWorkToUndo() {
-        return workToUndo;
-    }
-
-    private @Nullable WorkToUndo workToUndo;
     private BlockPos wanderTarget;
     private List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
     private Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
     private int freezeTicks;
+    private BlockPos lastInsertionPos;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -304,12 +300,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Wo
         return job.getLook();
     }
 
-    public record WorkToUndo(
-            JobID jobID,
-            BlockPos pos,
-            MCHeldItem item
-    ) {}
-
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
@@ -324,10 +314,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Wo
                 this.job.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );
         this.cleanupJobListeners.add(this.job.addItemInsertionListener(
-                (bp, item) -> this.workToUndo = new WorkToUndo(job.getId(), bp, item)
+                (bp, item) -> {
+                    town.getWorkStatusHandle(null).setLastInserted(bp, item);
+                    this.lastInsertionPos = bp;
+                }
         ));
         this.cleanupJobListeners.add(this.job.addJobCompletionListener(
-                () -> this.workToUndo = null
+                (bp) -> {
+                    town.getWorkStatusHandle(null).setLastInserted(bp, null);
+                    this.lastInsertionPos = null;
+                }
         ));
     }
 
@@ -1083,6 +1079,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Wo
 
     public boolean canStopWorkingAtAnyTime() {
         return job.canStopWorkingAtAnyTime();
+    }
+
+    public BlockPos getLastInsertionPos() {
+        return lastInsertionPos;
     }
 
     public interface ChangeListener {

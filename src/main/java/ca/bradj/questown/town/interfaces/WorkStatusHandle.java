@@ -12,4 +12,18 @@ public interface WorkStatusHandle<POS, ITEM> extends ImmutableWorkStateContainer
     @Nullable Integer getTimeToNextState(POS bp);
 
     void clearAllStates();
+
+    void setLastInserted(
+            POS bp,
+            ITEM item
+    );
+
+
+    record WorkToUndo<POS, ITEM>(
+            POS pos,
+            ITEM item
+    ) {
+    }
+
+    WorkToUndo<POS, ITEM> getLastInserted(POS bp);
 }

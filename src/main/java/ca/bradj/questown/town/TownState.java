@@ -240,15 +240,13 @@ public abstract class TownState<
                 double yPosition,
                 double zPosition,
                 ImmutableSnapshot<I, ?> journal,
-                UUID uuid,
-                @Nullable I lastInserted
+                UUID uuid
         ) {
             this.xPosition = xPosition;
             this.yPosition = yPosition;
             this.zPosition = zPosition;
             this.journal = journal;
             this.uuid = uuid;
-            this.lastInserted = lastInserted;
         }
 
         @Override
@@ -270,7 +268,7 @@ public abstract class TownState<
 
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid, lastInserted
+                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
             );
         }
 
@@ -282,14 +280,14 @@ public abstract class TownState<
             int idx = journal.items().indexOf(first.get());
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid, lastInserted
+                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
             );
         }
 
         public VillagerData<I> withItems(ImmutableList<I> items) {
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withItems(items), uuid, lastInserted
+                    (ImmutableSnapshot) journal.withItems(items), uuid
             );
         }
 

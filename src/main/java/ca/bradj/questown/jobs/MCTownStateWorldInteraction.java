@@ -187,7 +187,8 @@ public class MCTownStateWorldInteraction extends
     @Override
     protected @Nullable MCTownItem getLastInsertedIngredients(
             Inputs inputs,
-            int villagerIndex
+            int villagerIndex,
+            BlockPos insertionPos
     ) {
         MCHeldItem lastInserted = inputs.town.getVillager(villagerIndex).getLastInserted();
         if (lastInserted == null) {

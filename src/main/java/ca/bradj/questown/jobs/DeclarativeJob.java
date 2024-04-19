@@ -777,7 +777,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+    public Function<Void, Void> addJobCompletionListener(Consumer<BlockPos> listener) {
         this.world.addJobCompletionListener(listener);
         return (nul) -> {
             this.world.removeJobCompletionListener(listener);

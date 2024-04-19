@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -29,7 +30,7 @@ public abstract class AbstractWorldInteraction<
     public final int interval;
     protected final int maxState;
 
-    private final List<Runnable> jobCompletedListeners = new ArrayList<>();
+    private final List<Consumer<POS>> jobCompletedListeners = new ArrayList<>();
 
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -296,7 +297,11 @@ public abstract class AbstractWorldInteraction<
                 if (workSpot.action() == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = AbstractWorkStatusStore.State.fresh();
-                        jobBlockState = jobBlockState.setWorkLeft(Util.getOrDefault(workRequiredAtStates, 0, 0)); // FIXME: Test this line
+                        jobBlockState = jobBlockState.setWorkLeft(Util.getOrDefault(
+                                workRequiredAtStates,
+                                0,
+                                0
+                        )); // FIXME: Test this line
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
@@ -333,13 +338,14 @@ public abstract class AbstractWorldInteraction<
 
             TOWN ts = null;
             if (specialRules.apply(s.processingState()).contains(SpecialRules.DROP_LOOT_AS_STACK)) {
-                INNER_ITEM item = getLastInsertedIngredients(inputs, villagerIndex);
+                INNER_ITEM item = getLastInsertedIngredients(inputs, villagerIndex, position);
                 Map<Integer, Integer> qtys = ingredientQuantityRequiredAtStates();
                 Integer qy = qtys.get(s.processingState() - 1);
                 if (qy == null) {
                     QT.JOB_LOGGER.debug("Current state: {}", s.processingState());
                     QT.JOB_LOGGER.debug("Quantities: {}", qtys);
-                    throw new IllegalStateException("DROP_LOOT_AS_STACK can only be used when previous stage has quantity");
+                    throw new IllegalStateException(
+                            "DROP_LOOT_AS_STACK can only be used when previous stage has quantity");
                 }
                 ts = addToNearbyChest(inputs, ts, position, createStackWithQuantity(item, qy));
             }
@@ -349,7 +355,7 @@ public abstract class AbstractWorldInteraction<
 
             TOWN town = tryGiveItems(inputs, ts, generatedResult, position);
             if (town != null) {
-                jobCompletedListeners.forEach(Runnable::run);
+                jobCompletedListeners.forEach(l -> l.accept(position));
             }
             return town;
             // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
@@ -369,8 +375,10 @@ public abstract class AbstractWorldInteraction<
             int qy
     );
 
-    protected abstract @Nullable INNER_ITEM getLastInsertedIngredients(EXTRA inputs,
-                                                             int villagerIndex
+    protected abstract @Nullable INNER_ITEM getLastInsertedIngredients(
+            EXTRA inputs,
+            int villagerIndex,
+            POS insertionPos
     );
 
     protected abstract TOWN setJobBlockState(
@@ -424,23 +432,15 @@ public abstract class AbstractWorldInteraction<
         this.itemWI.addItemInsertionListener(listener);
     }
 
-    ;
-
     public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.removeItemInsertionListener(listener);
     }
 
-    ;
-
-    public void addJobCompletionListener(Runnable listener) {
+    public void addJobCompletionListener(Consumer<POS> listener) {
         this.jobCompletedListeners.add(listener);
     }
 
-    ;
-
-    public void removeJobCompletionListener(Runnable listener) {
+    public void removeJobCompletionListener(Consumer<POS> listener) {
         this.jobCompletedListeners.remove(listener);
     }
-
-    ;
 }

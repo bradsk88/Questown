@@ -50,6 +50,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -144,7 +145,7 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+    public Function<Void, Void> addJobCompletionListener(Consumer<BlockPos> listener) {
         return (x) -> null;
     }
 

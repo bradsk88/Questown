@@ -52,10 +52,8 @@ public class TownFlagState {
                 }
                 Vec3 pos = entity.position();
                 ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
-                VisitorMobEntity.WorkToUndo workToUndo = ((VisitorMobEntity) entity).getWorkToUndo();
-                MCHeldItem item = workToUndo == null ? null : workToUndo.item();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
-                        pos.x, pos.y, pos.z, snapshot, entity.getUUID(), item
+                        pos.x, pos.y, pos.z, snapshot, entity.getUUID()
                 );
                 vB.add(data);
             }

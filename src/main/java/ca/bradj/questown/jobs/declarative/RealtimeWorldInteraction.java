@@ -240,10 +240,12 @@ public class RealtimeWorldInteraction
     @Override
     protected @Nullable MCTownItem getLastInsertedIngredients(
             MCExtra inputs,
-            int villagerIndex
+            int villagerIndex,
+            BlockPos insertionPos
     ) {
-        @Nullable VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
-        if (workToUndo == null) {
+        @Nullable WorkStatusHandle.WorkToUndo<BlockPos, MCHeldItem> workToUndo = inputs.town().getWorkStatusHandle(null)
+                                                                                       .getLastInserted(insertionPos);
+        if (workToUndo == null || workToUndo.item() == null) {
             return null;
         }
         return workToUndo.item().get();
@@ -395,7 +397,9 @@ public class RealtimeWorldInteraction
             VisitorMobEntity vmEntity
     ) {
         MCExtra mcExtra = new MCExtra(town, work, vmEntity);
-        VisitorMobEntity.WorkToUndo wtu = vmEntity.getWorkToUndo();
+        // TODO: Should this depend upon shared work state for some jobs?
+        WorkStatusHandle.WorkToUndo<BlockPos, MCHeldItem> wtu = town.getWorkStatusHandle(null)
+                                                                    .getLastInserted(vmEntity.getLastInsertionPos());
         if (wtu == null) {
             return true;
         }
