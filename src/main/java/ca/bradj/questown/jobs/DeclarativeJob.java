@@ -21,10 +21,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.interfaces.ContainerRoomFinder;
-import ca.bradj.questown.town.interfaces.RoomsHolder;
-import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -513,7 +510,7 @@ public class DeclarativeJob extends
     ) {
         super.onActionTaken();
         ServerLevel sl = town.getServerLevel();
-        Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpots = listAllWorkSpots(work::getJobBlockState,
+        Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpotsInCurRoom = listAllWorkSpots(work::getJobBlockState,
                 entityCurrentJobSite.room, sl::isEmptyBlock, sl.random
         );
 
@@ -521,14 +518,17 @@ public class DeclarativeJob extends
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
             return;
         }
-        Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpots.get(maxState);
+        Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpotsInCurRoom.get(maxState);
 
         if (status.isExtractingProduct()) {
-            allSpots = workSpots.get(maxState);
+            allSpots = workSpotsInCurRoom.get(maxState);
         }
 
         if (allSpots == null) {
-            Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
+            Collection<WorkSpot<Integer, BlockPos>> workSpot1 = getWorkSpots(
+                    workSpotsInCurRoom,
+                    status
+            );
             if (workSpot1 == null) {
                 QT.JOB_LOGGER.error(
                         "Worker somehow has different status ({}) than all existing work spots. This is probably a bug.",
@@ -559,6 +559,20 @@ public class DeclarativeJob extends
                 wrappingUp = true;
             }
         }
+    }
+
+    private static Collection<WorkSpot<Integer, BlockPos>> getWorkSpots(
+            Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpotsInCurRoom,
+            ProductionStatus status
+    ) {
+        Collection<WorkSpot<Integer, BlockPos>> workSpots;
+        for (int i = 0; i <= status.getProductionState(); i++) {
+            workSpots = workSpotsInCurRoom.get(status.getProductionState() - i);
+            if (workSpots != null) {
+                return workSpots;
+            }
+        }
+        return null;
     }
 
     Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
@@ -716,15 +730,17 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<ProductionStatus, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
-            ContainerRoomFinder<MCRoom, MCTownItem> rooms,
+    protected <X extends ContainerRoomFinder<MCRoom, MCTownItem> & RoomMatchFinder<MCRoom>> Map<ProductionStatus, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
+            X rooms,
             WorksBehaviour.TownData townData
     ) {
         Supplier<List<MCRoom>> resultRooms = () -> rooms.getRoomsWithContainersOfItem(
                 i -> Works.isWorkResult(townData, i)
         );
-        return JobRequirements.roomsWhereSpecialRulesApply(
-                maxState, specialRules, resultRooms
+        Supplier<Collection<MCRoom>> workRooms = () -> rooms.getRoomsMatching(workRoomId).stream().map(v -> v.room)
+                                                            .toList();
+        return JobRequirements.<MCRoom, ProductionStatus>roomsWhereSpecialRulesApply(
+                maxState, specialRules, resultRooms, workRooms, getSupplyItemStatus()::get
         );
     }
 

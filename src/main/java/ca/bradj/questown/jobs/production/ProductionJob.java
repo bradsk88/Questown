@@ -10,10 +10,7 @@ import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.interfaces.ContainerRoomFinder;
-import ca.bradj.questown.town.interfaces.RoomsHolder;
-import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -101,8 +98,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     private BlockPos jobSite;
 
-    protected abstract Map<STATUS, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
-            ContainerRoomFinder<MCRoom, MCTownItem> rooms,
+    protected abstract <X extends ContainerRoomFinder<MCRoom, MCTownItem> & RoomMatchFinder<MCRoom>> Map<STATUS, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
+            X rooms,
             WorksBehaviour.TownData townData
     );
 
