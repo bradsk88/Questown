@@ -552,7 +552,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                     v -> recipe.getRecipe(v.value())
                                                .stream())
                             .forEach(b::add);
-                Collection<String> stateRules = specialRules.apply(statusFactory.fromJobBlockState(0));
+                Collection<String> stateRules = getRulesForRolls(specialRules, statesToFeed);
                 if (stateRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
                     b.add(i -> Works.isWorkResult(townData, i));
                 }
@@ -564,6 +564,19 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };
+    }
+
+    private Collection<String> getRulesForRolls(
+            Function<STATUS, ? extends Collection<String>> specialRules,
+            Set<STATUS> statesToFeed
+    ) {
+        for (STATUS s : statesToFeed) {
+            Collection<String> rules = specialRules.apply(s);
+            if (rules != null) {
+                return rules;
+            }
+        }
+        return ImmutableList.of();
     }
 
     @Override

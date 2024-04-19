@@ -818,9 +818,23 @@ public class DeclarativeJob extends
                 s -> Util.getOrDefault(workRequiredAtStates, s, 0),
                 (p, r) -> work.getJobBlockState(pf.apply(p, r)),
                 (p, r, s) -> work.setJobBlockState(pf.apply(p, r), s),
-                s -> !Util.getOrDefault(toolsRequiredAtStates, s, Ingredient.EMPTY).isEmpty(),
-                supplyItemStatus
+                s -> !getOrPrevious(toolsRequiredAtStates, s).isEmpty(),
+                supplyItemStatus // FIXME: Only check tools, not ingredients
         );
 
+    }
+
+    private Ingredient getOrPrevious(
+            ImmutableMap<ProductionStatus, Ingredient> toolsRequiredAtStates,
+            ProductionStatus s
+    ) {
+        if (s.value() < 0) {
+            return Ingredient.EMPTY;
+        }
+        return Util.getOrDefault(
+                toolsRequiredAtStates,
+                s,
+                getOrPrevious(toolsRequiredAtStates, s.minusValue(1))
+        );
     }
 }
