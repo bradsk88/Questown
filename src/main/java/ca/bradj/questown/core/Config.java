@@ -73,6 +73,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CACHE_ENABLED_ON_START;
 
     static {
         // Scanning Config
@@ -243,6 +244,9 @@ public class Config {
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
         ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
+        CACHE_ENABLED_ON_START = BUILDER.comment(
+                "The state of the cache upon server start - which can be toggled via qtcachetoggle"
+        ).define("CacheEnabledOnStart", true);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(

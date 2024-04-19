@@ -1,8 +1,8 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.interfaces.DebugHandle;
-import com.google.common.base.Suppliers;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiFunction;
@@ -21,6 +21,7 @@ public class TownDebugHandle implements DebugHandle {
 
     void initialize(BiFunction<String, String, Void> broadcaster) {
         this.broadcaster = broadcaster;
+        this.cacheOff = !Config.CACHE_ENABLED_ON_START.get();
     }
 
     @Override
