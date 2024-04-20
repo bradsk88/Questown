@@ -210,8 +210,10 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected TestItem getLastInsertedIngredients(Void inputs,
-                                                      int villagerIndex
+        protected @Nullable TestItem getLastInsertedIngredients(
+                Void inputs,
+                int villagerIndex,
+                Position insertionPos
         ) {
             return lastInserted;
         }

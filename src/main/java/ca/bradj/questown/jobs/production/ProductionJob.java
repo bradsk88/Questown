@@ -204,7 +204,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         return journal.removeItem(mct);
     }
 
-    protected abstract Map<STATUS, Boolean> getSupplyItemStatus();
+    protected abstract Map<STATUS, Boolean> getSupplyItemStatus(boolean toolsOnly);
 
     protected void tryDropLoot(
             BlockPos entityPos
@@ -352,7 +352,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
 
-        updateWorkStatesForSpecialRooms(town, work, getSupplyItemStatus());
+        updateWorkStatesForSpecialRooms(town, work, getSupplyItemStatus(true));
 
         this.roomsNeedingIngredientsOrTools = new ControlledCache<>(() -> roomsNeedingIngredientsOrTools(
                 town,
@@ -402,7 +402,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
         Set<STATUS> rooms = roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet();
 
-        Map<STATUS, Boolean> sis = getSupplyItemStatus();
+        Map<STATUS, Boolean> sis = getSupplyItemStatus(false);
         for (STATUS i : sortByPriority(rooms)) {
             boolean leaveIteration = false;
             for (int j = 0; j < i.value(); j++) {
@@ -561,7 +561,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
             @Override
             public Map<STATUS, Boolean> getSupplyItemStatus() {
-                return ProductionJob.this.getSupplyItemStatus();
+                return ProductionJob.this.getSupplyItemStatus(false);
             }
         };
     }

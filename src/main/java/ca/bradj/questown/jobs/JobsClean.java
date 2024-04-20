@@ -40,6 +40,20 @@ public class JobsClean {
             int maxState
     ) {
         HashMap<Integer, Boolean> b = new HashMap<>();
+        boolean prevToolStatus = true;
+        for (int i = 0; i <= maxState; i++) {
+            Predicate<I> ingr = ingredientsRequiredAtStates.get(i);
+            Predicate<I> tool = toolsRequiredAtStates.get(i);
+            if (ingr == null && tool == null) {
+                b.put(i, prevToolStatus);
+                continue;
+            }
+            if (ingr == null) {
+                b.put(i, journal.get().stream().anyMatch(tool));
+                continue;
+            }
+            b.put(i, journal.get().stream().anyMatch(ingr));
+        }
         ingredientsRequiredAtStates.forEach((state, ingr) -> {
             if (ingr == null) {
                 if (!b.containsKey(state)) {

@@ -110,7 +110,25 @@ class JobsCleanTest {
                 ),
                 2
         );
-        Assertions.assertNull(result.get(0));
+        Assertions.assertTrue(result.get(0));
         Assertions.assertTrue(result.get(1));
+    }
+    @Test
+    void getSupplyItemStatuses_ShouldReturnTrueAtAllStatesAfterTool_IfOnlyToolsRequired() {
+        @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
+                () -> ImmutableList.of("wheat", "tool"),
+                ImmutableMap.of(
+                        // No ingredients required
+                ),
+                ImmutableMap.of(
+                        1, i -> i.equals("tool")
+                ),
+                4
+        );
+        Assertions.assertTrue(result.get(0));
+        Assertions.assertTrue(result.get(1));
+        Assertions.assertTrue(result.get(2));
+        Assertions.assertTrue(result.get(3));
+        Assertions.assertTrue(result.get(4));
     }
 }

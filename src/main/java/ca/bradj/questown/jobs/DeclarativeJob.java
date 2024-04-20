@@ -646,11 +646,13 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<ProductionStatus, Boolean> getSupplyItemStatus() {
+    protected Map<ProductionStatus, Boolean> getSupplyItemStatus(boolean toolsOnly) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
-        statesWhereSpecialRulesCreateWork.forEach((k, v) -> // FIXME: Test this
-                b.put(k.value(), item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
+        if (!toolsOnly) {
+            ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
+            statesWhereSpecialRulesCreateWork.forEach((k, v) -> // FIXME: Test this
+                    b.put(k.value(), item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
+        }
 
         return ProductionStatus.mapUnsafe(
                 JobsClean.getSupplyItemStatuses(
@@ -681,7 +683,7 @@ public class DeclarativeJob extends
                 match -> match.containedBlocks.entrySet(),
                 match -> match.room,
                 work,
-                ProductionStatus.unmap(getSupplyItemStatus()),
+                ProductionStatus.unmap(getSupplyItemStatus(false)),
                 maxState,
                 specialGlobalRules,
                 new MCPosKit(rand, isEmpty),
@@ -740,7 +742,7 @@ public class DeclarativeJob extends
         Supplier<Collection<MCRoom>> workRooms = () -> rooms.getRoomsMatching(workRoomId).stream().map(v -> v.room)
                                                             .toList();
         return JobRequirements.<MCRoom, ProductionStatus>roomsWhereSpecialRulesApply(
-                maxState, specialRules, resultRooms, workRooms, getSupplyItemStatus()::get
+                maxState, specialRules, resultRooms, workRooms, getSupplyItemStatus(false)::get
         );
     }
 
@@ -806,7 +808,7 @@ public class DeclarativeJob extends
     protected void updateWorkStatesForSpecialRooms(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
-            Map<ProductionStatus, Boolean> supplyItemStatus
+            Map<ProductionStatus, Boolean> supplyToolStatus
     ) {
         BiFunction<Position, MCRoom, BlockPos> pf = (p, r) -> Positions.ToBlock(p, r.yCoord);
         TownWorkState.<ProductionStatus, MCRoom>updateForSpecialRooms(
@@ -819,7 +821,7 @@ public class DeclarativeJob extends
                 (p, r) -> work.getJobBlockState(pf.apply(p, r)),
                 (p, r, s) -> work.setJobBlockState(pf.apply(p, r), s),
                 s -> !getOrPrevious(toolsRequiredAtStates, s).isEmpty(),
-                supplyItemStatus // FIXME: Only check tools, not ingredients
+                supplyToolStatus // FIXME: Only check tools, not ingredients
         );
 
     }
