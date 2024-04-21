@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -293,7 +294,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<ProductionStatus, Collection<MCRoom>> roomsToGetSuppliesForByState() {
+            public ImmutableMap<ProductionStatus, ImmutableList<Room>> roomsToGetSuppliesForByState() {
                 int curState = workStates.processingState();
                 ProductionStatus curStatus = ProductionStatus.fromJobBlockStatus(curState);
                 Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);

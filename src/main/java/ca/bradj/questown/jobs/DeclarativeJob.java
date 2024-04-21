@@ -12,6 +12,7 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.production.TownNeedsMap;
 import ca.bradj.questown.logic.Emptyable;
 import ca.bradj.questown.logic.TownContainerChecks;
 import ca.bradj.questown.logic.TownNeeds;
@@ -24,6 +25,8 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -38,6 +41,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
@@ -130,7 +134,7 @@ public class DeclarativeJob extends
     private Signals signal;
     private @Nullable WorkSpot<Integer, BlockPos> workSpot;
 
-    private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
+    private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem> getter = new AbstractSupplyGetter<>();
     private boolean wrappingUp;
     private int noSuppliesTicks;
     private int ticksSinceStart;
@@ -254,7 +258,7 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
-            ControlledCache<Map<ProductionStatus, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            ControlledCache<TownNeedsMap<ProductionStatus>> townNeedsMap,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         this.statesWhereSpecialRulesCreateWork = getStatesWhereSpecialRulesCreateWork(town);
@@ -293,8 +297,8 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public Map<ProductionStatus, Collection<MCRoom>> roomsToGetSuppliesForByState() {
-                return roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled());
+            public ImmutableMap<ProductionStatus, ImmutableList<Room>> roomsToGetSuppliesForByState() {
+                return townNeedsMap.get(town.getDebugHandle().isCacheEnabled()).roomsWhereSuppliesCanBeUsed;
             }
 
             @Override
@@ -322,12 +326,13 @@ public class DeclarativeJob extends
             @Override
             public boolean hasSupplies() {
                 return TownContainerChecks.<MCTownItem, ProductionStatus>hasSupplies(
-                        () -> roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet(),
+                        () -> townNeedsMap.get(town.getDebugHandle()
+                                                   .isCacheEnabled()).roomsWhereSuppliesCanBeUsed.keySet(),
                         Jobs.unMC2(toolsRequiredAtStates),
                         ingredientQtyRequiredAtStates,
                         Jobs.unMC3(toolsRequiredAtStates),
                         town::getItemMatches,
-                        lvl -> specialRules.apply(lvl),
+                        specialRules::apply,
                         item -> Works.isWorkResult(town.getTownData(), item)
                 );
             }
@@ -391,7 +396,7 @@ public class DeclarativeJob extends
         tryDropLoot(entityBlockPos);
         if (!wrappingUp) {
             boolean cacheEnabled = town.getDebugHandle().isCacheEnabled();
-            tryGetSupplies(town, roomsNeedingIngredientsOrTools.get(cacheEnabled), entityBlockPos);
+            tryGetSupplies(town, townNeedsMap.get(cacheEnabled).roomsWhereSuppliesCanBeUsed, entityBlockPos);
         }
     }
 
@@ -446,7 +451,7 @@ public class DeclarativeJob extends
 
     private void tryGetSupplies(
             TownInterface town,
-            Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Map<ProductionStatus, ? extends Collection<? extends Room>> roomsWhereSuppliesCanBeUsed,
             BlockPos entityBlockPos
     ) {
         super.onActionTaken();
@@ -480,16 +485,15 @@ public class DeclarativeJob extends
                 suppliesTarget.getContainer().removeItem(i, quantity);
             }
         };
-        WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(ownerUUID); // TODO: Use shared status handle when appropriate
         getter.tryGetSupplies(
                 computeStatus(),
                 asItemsHolder().getCapacity(),
-                roomsNeedingIngredientsOrTools,
+                roomsWhereSuppliesCanBeUsed,
                 st,
                 status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply(
                         specialRules.apply(status),
-                        v -> Util.getOrDefault(ingredientsRequiredAtStates, status, Ingredient.EMPTY)
-                                 .test(v.toItemStack()),
+                        (MCTownItem v) -> Util.getOrDefault(ingredientsRequiredAtStates, status, Ingredient.EMPTY)
+                                              .test(v.toItemStack()),
                         i -> Works.isWorkResult(town.getTownData(), i)
                 )),
                 asItemsHolder().getItems(),
@@ -705,7 +709,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<ProductionStatus, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    protected TownNeedsMap<ProductionStatus> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -721,6 +725,7 @@ public class DeclarativeJob extends
                 getRoomsWhereSpecialRulesApply(town.getRoomHandle(), town.getTownData()),
                 work,
                 canClaim,
+                s -> getSupplyItemStatus(true).get(s),
                 maxState
         );
     }

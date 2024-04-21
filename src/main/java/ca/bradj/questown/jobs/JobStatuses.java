@@ -318,7 +318,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
+                        ImmutableMap<STATUS, ImmutableList<Room>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         boolean foundWork = false;
 
@@ -355,7 +355,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        final Map<STATUS, ? extends Collection<ROOM>> roomNeedsMap = town.roomsToGetSuppliesForByState();
+                        final ImmutableMap<STATUS, ImmutableList<Room>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
                         ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();

@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
-import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -52,7 +52,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<PTestStatus, Collection<Room>> roomsToGetSuppliesForByState,
+            ImmutableMap<PTestStatus, ImmutableList<Room>> roomsToGetSuppliesForByState,
             boolean isCachingAllowed
     ) implements JobTownProvider<Room, PTestStatus> {
         public TestJobTown(
@@ -61,7 +61,13 @@ public class StatusesProductionRoutineTest {
                 Collection<Room> roomsWithCompletedProduct,
                 Map<PTestStatus, Collection<Room>> roomsNeedingIngredientsByState
         ) {
-            this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, false);
+            this(
+                    hasSupplies,
+                    hasSpace,
+                    roomsWithCompletedProduct,
+                    Util.immutify(roomsNeedingIngredientsByState),
+                    false
+            );
         }
 
         @Override
@@ -150,6 +156,7 @@ public class StatusesProductionRoutineTest {
             public PTestStatus relaxing() {
                 return RELAXING;
             }
+
             @Override
             public PTestStatus noJobSite() {
                 return NO_JOBSITE;
@@ -746,7 +753,7 @@ public class StatusesProductionRoutineTest {
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            Map<PTestStatus, Collection<Room>> roomsToGetSuppliesForByState,
+            ImmutableMap<PTestStatus, ImmutableList<Room>> roomsToGetSuppliesForByState,
             boolean isUnfinishedTimeWorkPresent,
             boolean isCachingAllowed
     ) implements JobTownProvider<Room, PTestStatus> {
@@ -757,7 +764,14 @@ public class StatusesProductionRoutineTest {
                 Map<PTestStatus, Collection<Room>> roomsNeedingIngredientsByState,
                 boolean isUnfinishedTimeWorkPresent
         ) {
-            this(hasSupplies, hasSpace, roomsWithCompletedProduct, roomsNeedingIngredientsByState, isUnfinishedTimeWorkPresent, false);
+            this(
+                    hasSupplies,
+                    hasSpace,
+                    roomsWithCompletedProduct,
+                    Util.immutify(roomsNeedingIngredientsByState),
+                    isUnfinishedTimeWorkPresent,
+                    false
+            );
         }
 
         @Override

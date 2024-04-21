@@ -23,7 +23,7 @@ class AbstractSupplyGetterTest {
             new InclusiveSpace(new Position(3, 4), new Position(5, 6))
     );
 
-    private static class TestSupplyGetter extends AbstractSupplyGetter<StatusesProductionRoutineTest.PTestStatus, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room> {
+    private static class TestSupplyGetter extends AbstractSupplyGetter<StatusesProductionRoutineTest.PTestStatus, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem> {
 
     }
 

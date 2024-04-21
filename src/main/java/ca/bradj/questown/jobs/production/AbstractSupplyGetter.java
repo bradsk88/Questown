@@ -15,12 +15,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>, ROOM extends Room> {
+public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>> {
 
     public void tryGetSupplies(
             STATUS status,
             int upToAmount,
-            Map<STATUS, Collection<ROOM>> roomsNeedingIngredientsOrTools,
+            Map<STATUS, ? extends Collection<?>> roomsWhereSuppliesCanBeUsed,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<STATUS, Collection<Predicate<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
@@ -31,7 +31,7 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
             return;
         }
 
-        Optional<STATUS> first = roomsNeedingIngredientsOrTools.entrySet()
+        Optional<STATUS> first = roomsWhereSuppliesCanBeUsed.entrySet()
                 .stream()
                 .filter(v -> !v.getValue().isEmpty())
                 .map(Map.Entry::getKey)

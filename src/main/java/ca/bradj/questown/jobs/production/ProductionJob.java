@@ -12,6 +12,7 @@ import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -231,7 +232,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     @NotNull
     protected ImmutableList<Predicate<MCTownItem>> convertToCleanFns(
-            Map<STATUS, ? extends Collection<MCRoom>> statusMap
+            Map<STATUS, ? extends Collection<? extends Room>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<STATUS> first = statusMap.entrySet().stream().filter(v -> !v.getValue().isEmpty())
@@ -328,9 +329,9 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             Random rand
     );
 
-    private ControlledCache<Map<STATUS, Collection<MCRoom>>> roomsNeedingIngredientsOrTools;
+    private ControlledCache<TownNeedsMap<STATUS>> roomsNeedingIngredientsOrTools;
 
-    protected abstract Map<STATUS, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    protected abstract TownNeedsMap<STATUS> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -384,7 +385,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            ControlledCache<Map<STATUS, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            ControlledCache<TownNeedsMap<STATUS>> townNeedsMap,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
@@ -393,14 +394,20 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     private void setupForGetSupplies(
             TownInterface town
     ) {
+        Supplier<Map<STATUS, ? extends Collection<? extends Room>>> supplyUsers = () -> Util.applyOrDefault(
+                roomsNeedingIngredientsOrTools::get,
+                town.getDebugHandle().isCacheEnabled(),
+                TownNeedsMap.<STATUS>NONE()
+        ).roomsWhereSuppliesCanBeUsed;
+
         ContainerTarget.CheckFn<MCTownItem> originalCheck = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(),
-                convertToCleanFns(roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled())),
+                convertToCleanFns(supplyUsers.get()),
                 journal.getItems(),
                 item
         );
         ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
-        Set<STATUS> rooms = roomsNeedingIngredientsOrTools.get(town.getDebugHandle().isCacheEnabled()).keySet();
+        Set<STATUS> rooms = supplyUsers.get().keySet();
 
         Map<STATUS, Boolean> sis = getSupplyItemStatus(false);
         for (STATUS i : sortByPriority(rooms)) {
@@ -542,10 +549,13 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             @Override
             public boolean hasNonSupplyItems(boolean allowCaching) {
 
-                Set<STATUS> statesToFeed = roomsNeedingIngredientsOrTools.get(allowCaching).entrySet().stream()
-                                                                         .filter(v -> !v.getValue().isEmpty())
-                                                                         .map(Map.Entry::getKey)
-                                                                         .collect(Collectors.toSet());
+                Map<STATUS, ? extends Collection<? extends Room>> workTargets = roomsNeedingIngredientsOrTools
+                        .get(allowCaching)
+                        .roomsWhereWorkCanBeDoneByEntity;
+                Set<STATUS> statesToFeed = workTargets.entrySet().stream()
+                                                      .filter(v -> !v.getValue().isEmpty())
+                                                      .map(Map.Entry::getKey)
+                                                      .collect(Collectors.toSet());
                 ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> b = ImmutableList.builder();
                 statesToFeed.stream()
                             .flatMap(
@@ -588,16 +598,5 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         );
         boolean mustKeepWorking = importantStauses.stream().anyMatch(Supplier::get);
         return !mustKeepWorking;
-    }
-
-    public interface TestFn<S, I> {
-        boolean test(
-                Map<S, Boolean> canUseIngredientsForWork,
-                I item
-        );
-
-        boolean testAssumeNeeded(
-                I item
-        );
     }
 }

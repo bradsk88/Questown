@@ -1,15 +1,15 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.roomrecipes.core.Room;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.Collection;
-import java.util.Map;
 
 public interface JobTownProvider<ROOM extends Room, STATUS> extends TownProvider {
     Collection<ROOM> roomsWithCompletedProduct();
 
-    Map<STATUS, Collection<ROOM>> roomsToGetSuppliesForByState();
+    ImmutableMap<STATUS, ImmutableList<Room>> roomsToGetSuppliesForByState();
 
     boolean isUnfinishedTimeWorkPresent();
 
