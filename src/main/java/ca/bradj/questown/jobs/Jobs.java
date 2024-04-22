@@ -171,13 +171,16 @@ public class Jobs {
         return town.getRoomHandle().getRoomsMatching(id).stream()
                    .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
                    .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                   .filter(v -> InclusiveSpaces.contains(
-                           v.room.getSpaces(),
-                           Positions.FromBlockPos(entityBlockPos)
-                   ) || (
-                           InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
-                                   v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                   ))
+                   .filter(v -> {
+                       boolean isInRoom = InclusiveSpaces.contains(
+                               v.room.getSpaces(),
+                               Positions.FromBlockPos(entityBlockPos)
+                       ) || (
+                               InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
+                                       v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
+                       );
+                       return isInRoom;
+                   })
                    .findFirst()
                    .orElse(null);
     }

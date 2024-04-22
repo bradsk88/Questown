@@ -81,6 +81,7 @@ class JobsCleanTest {
         Assertions.assertFalse(result.get(0));
         Assertions.assertFalse(result.get(1));
     }
+
     @Test
     void getSupplyItemStatuses_ShouldReturnTrue_IfHasIngredientsForState1_AndToolFromState0() {
         @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
@@ -97,6 +98,7 @@ class JobsCleanTest {
         Assertions.assertTrue(result.get(0));
         Assertions.assertTrue(result.get(1));
     }
+
     @Test
     void getSupplyItemStatuses_ShouldReturnTrue_IfHasIngredientsForState1_AndNoToolsRequired() {
         @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
@@ -113,6 +115,7 @@ class JobsCleanTest {
         Assertions.assertTrue(result.get(0));
         Assertions.assertTrue(result.get(1));
     }
+
     @Test
     void getSupplyItemStatuses_ShouldReturnTrueAtAllStatesAfterTool_IfOnlyToolsRequired() {
         @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
@@ -124,6 +127,29 @@ class JobsCleanTest {
                         1, i -> i.equals("tool")
                 ),
                 4
+        );
+        Assertions.assertTrue(result.get(0));
+        Assertions.assertTrue(result.get(1));
+        Assertions.assertTrue(result.get(2));
+        Assertions.assertTrue(result.get(3));
+        Assertions.assertTrue(result.get(4));
+    }
+
+    @Test
+    void getSupplyItemStatuses_ShouldHandle_ToolsRequiredAtState0_NothingRequiredAtState1_SpecialRoomsAtState1() {
+        @NotNull ImmutableMap<Integer, Boolean> result = JobsClean.getSupplyItemStatuses(
+                () -> ImmutableList.of("tool"),
+                ImmutableMap.of(
+                        // No ingredients required
+                ),
+                ImmutableMap.of(
+                        0, i -> i.equals("tool")
+                ),
+                4,
+                false,
+                ImmutableMap.of(
+                        1, v -> true
+                )
         );
         Assertions.assertTrue(result.get(0));
         Assertions.assertTrue(result.get(1));

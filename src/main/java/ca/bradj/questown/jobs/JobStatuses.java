@@ -100,6 +100,7 @@ public class JobStatuses {
         for (int i = 0; i < 10; i++) { // TODO: Smarter range
             Supplier<STATUS> potentialWork = Util.getOrDefault(workToTry, i, () -> null);
             STATUS successfulChoice = potentialWork.get();
+            // FIXME: We should also check if we can grab supplies for a preferred state, and we should do that.
             if (successfulChoice != null) {
                 if (factory.extractingProduct().equals(successfulChoice)) {
                     foundExtraction = true;

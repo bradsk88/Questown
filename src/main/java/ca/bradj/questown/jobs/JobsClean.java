@@ -1,6 +1,9 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -30,6 +33,32 @@ public class JobsClean {
         return journal.getItems().stream()
                       .filter(Predicates.not(Item::isEmpty))
                       .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+    }
+
+    @NotNull
+    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+            Supplier<Collection<I>> journal,
+            Map<Integer, Predicate<I>> ingredientsRequiredAtStates,
+            Map<Integer, Predicate<I>> toolsRequiredAtStates,
+            int maxState,
+            boolean toolsOnly,
+            Map<Integer, Predicate<I>> statesWhereSpecialRulesCreateWork
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<I>> b = ImmutableMap.builder();
+        if (!toolsOnly) {
+            statesWhereSpecialRulesCreateWork.forEach((k, v) -> // FIXME: Test this
+                    b.put(k,
+                            item -> v.test(item) || Util.getOrDefault(ingredientsRequiredAtStates, k, (I z) -> false)
+                                                        .test(item)
+                    ));
+        }
+
+        return JobsClean.getSupplyItemStatuses(
+                journal,
+                b.build(),
+                toolsRequiredAtStates,
+                maxState
+        );
     }
 
     @NotNull

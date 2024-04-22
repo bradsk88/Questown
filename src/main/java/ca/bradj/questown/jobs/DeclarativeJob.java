@@ -315,9 +315,10 @@ public class DeclarativeJob extends
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
                     Ingredient toolsReq = toolsRequiredAtStates.get(ProductionStatus.fromJobBlockStatus(s));
-                    if (toolsReq == null || !toolsReq.isEmpty()) {
+                    if (toolsReq != null && !toolsReq.isEmpty()) {
                         return;
                     }
+                    // FIXME: We should not add this state if its requiring ingredients still
                     b.add(s);
                 });
                 return b.build();
@@ -492,8 +493,7 @@ public class DeclarativeJob extends
                 st,
                 status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply(
                         specialRules.apply(status),
-                        (MCTownItem v) -> Util.getOrDefault(ingredientsRequiredAtStates, status, Ingredient.EMPTY)
-                                              .test(v.toItemStack()),
+                        v -> this.isIngredientOrTool(status, v),
                         i -> Works.isWorkResult(town.getTownData(), i)
                 )),
                 asItemsHolder().getItems(),
@@ -504,6 +504,23 @@ public class DeclarativeJob extends
                         i -> Works.isWorkResult(town.getTownData(), i)
                 )
         );
+    }
+
+    private boolean isIngredientOrTool(
+            ProductionStatus status,
+            MCTownItem v
+    ) {
+        boolean isIngr = Util.getOrDefault(
+                                     Jobs.unMC2(ingredientsRequiredAtStates),
+                                     status,
+                                     i -> false
+                             )
+                             .test(v);
+        if (isIngr) {
+            return true;
+        }
+        return Util.getOrDefault(Jobs.unMC2(toolsRequiredAtStates), status, i -> false).test(v);
+
     }
 
     private void tryWorking(
@@ -651,20 +668,15 @@ public class DeclarativeJob extends
 
     @Override
     protected Map<ProductionStatus, Boolean> getSupplyItemStatus(boolean toolsOnly) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        if (!toolsOnly) {
-            ImmutableMap<ProductionStatus, Predicate<MCHeldItem>> ingrs = Jobs.unMCHeld2(ingredientsRequiredAtStates);
-            statesWhereSpecialRulesCreateWork.forEach((k, v) -> // FIXME: Test this
-                    b.put(k.value(), item -> v.test(item) || Util.getOrDefault(ingrs, k, (z) -> false).test(item)));
-        }
-
         return ProductionStatus.mapUnsafe(
                 JobsClean.getSupplyItemStatuses(
                         asItemsHolder()::getItems,
-                        b.build(),
+                        ProductionStatus.unmap(Jobs.unMCHeld2(ingredientsRequiredAtStates)),
                         ProductionStatus.unmap(Jobs.unMCHeld2(toolsRequiredAtStates)),
-                        maxState
-                )
+                        maxState,
+                        toolsOnly,
+                        ProductionStatus.unmap(statesWhereSpecialRulesCreateWork)
+                        )
         );
     }
 
