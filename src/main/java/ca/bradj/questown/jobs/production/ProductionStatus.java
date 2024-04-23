@@ -126,6 +126,13 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return new ProductionStatus("state:" + s, s);
     }
 
+    public static ProductionStatus fromJobBlockStatusOrNull(int s) {
+        if (s >= firstNonCustomIndex) {
+            return null;
+        }
+        return new ProductionStatus("state:" + s, s);
+    }
+
     public static ProductionStatus slowUnsafe(int s) {
         if (s < firstNonCustomIndex) {
             return fromJobBlockStatus(s);

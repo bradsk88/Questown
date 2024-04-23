@@ -25,7 +25,6 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -41,7 +40,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
@@ -71,6 +69,11 @@ public class DeclarativeJob extends
         @Override
         public ProductionStatus noJobSite() {
             return ProductionStatus.FACTORY.noJobSite();
+        }
+
+        @Override
+        public ProductionStatus fromJobBlockStateOrNull(int i) {
+            return ProductionStatus.fromJobBlockStatusOrNull(i);
         }
 
         @Override
@@ -339,6 +342,22 @@ public class DeclarativeJob extends
             }
 
             @Override
+            public boolean hasSupplies(int i) {
+                ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
+                return TownContainerChecks.<MCTownItem, ProductionStatus>hasSupplies(
+                        () -> Util.only(
+                                townNeedsMap.get(town.getDebugHandle().isCacheEnabled()).roomsWhereSuppliesCanBeUsed, s
+                        ).keySet(),
+                        Jobs.unMC2(Util.only(toolsRequiredAtStates, s)),
+                        Util.only(ingredientQtyRequiredAtStates, s),
+                        Jobs.unMC3(Util.only(toolsRequiredAtStates, s)),
+                        town::getItemMatches,
+                        v -> s.equals(v) ? specialRules.apply(v) : null,
+                        item -> Works.isWorkResult(town.getTownData(), item)
+                );
+            }
+
+            @Override
             public boolean hasSpace() {
                 return Jobs.townHasSpace(town);
             }
@@ -446,6 +465,11 @@ public class DeclarativeJob extends
         return b.build();
     }
 
+    @Override
+    protected @Nullable Integer getRequiredQuantity(ProductionStatus s) {
+        return ingredientQtyRequiredAtStates.get(s);
+    }
+
     private void seekFallbackWork(TownInterface town) {
         town.changeJobForVisitor(ownerUUID, expiration.noSuppliesFallbackFn().apply(jobId));
     }
@@ -491,25 +515,39 @@ public class DeclarativeJob extends
                 asItemsHolder().getCapacity(),
                 roomsWhereSuppliesCanBeUsed,
                 st,
-                status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply(
+                status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply2(
                         specialRules.apply(status),
-                        v -> this.isIngredientOrTool(status, v),
-                        i -> Works.isWorkResult(town.getTownData(), i)
+                        (Integer i, MCTownItem v) -> this.isIngredientOrTool(status, i, v),
+                        (Integer i, MCTownItem v) -> {
+                            if (quantityMet(status, i)) {
+                                return false;
+                            }
+                            return Works.isWorkResult(town.getTownData(), v);
+                        }
                 )),
                 asItemsHolder().getItems(),
                 (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                (targetState, originalCheck) -> SpecialRuleIngredientAnyValidWorkOutput.apply(
+                (targetState, originalCheck) -> SpecialRuleIngredientAnyValidWorkOutput.apply2(
                         specialRules.apply(ProductionStatus.fromJobBlockStatus(targetState)),
                         originalCheck,
-                        i -> Works.isWorkResult(town.getTownData(), i)
+                        (Integer i, MCTownItem v) -> {
+                            if (quantityMet(ProductionStatus.fromJobBlockStatus(targetState), i)) {
+                                return false;
+                            }
+                            return Works.isWorkResult(town.getTownData(), v);
+                        }
                 )
         );
     }
 
     private boolean isIngredientOrTool(
             ProductionStatus status,
+            int amountHeldAlready,
             MCTownItem v
     ) {
+        if (quantityMet(status, amountHeldAlready)) {
+            return false;
+        }
         boolean isIngr = Util.getOrDefault(
                                      Jobs.unMC2(ingredientsRequiredAtStates),
                                      status,
@@ -521,6 +559,21 @@ public class DeclarativeJob extends
         }
         return Util.getOrDefault(Jobs.unMC2(toolsRequiredAtStates), status, i -> false).test(v);
 
+    }
+
+    @Override
+    protected boolean quantityMet(
+            ProductionStatus status,
+            Integer amountHeldAlready
+    ) {
+        Integer qty = ingredientQtyRequiredAtStates.get(status);
+        if (qty == null) {
+            return true;
+        }
+        if (amountHeldAlready >= qty) {
+            return true;
+        }
+        return false;
     }
 
     private void tryWorking(
@@ -676,7 +729,7 @@ public class DeclarativeJob extends
                         maxState,
                         toolsOnly,
                         ProductionStatus.unmap(statesWhereSpecialRulesCreateWork)
-                        )
+                )
         );
     }
 
@@ -838,7 +891,7 @@ public class DeclarativeJob extends
                 (p, r) -> work.getJobBlockState(pf.apply(p, r)),
                 (p, r, s) -> work.setJobBlockState(pf.apply(p, r), s),
                 s -> !getOrPrevious(toolsRequiredAtStates, s).isEmpty(),
-                supplyToolStatus // FIXME: Only check tools, not ingredients
+                supplyToolStatus
         );
 
     }

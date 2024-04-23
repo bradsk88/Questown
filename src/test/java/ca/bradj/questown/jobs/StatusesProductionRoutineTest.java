@@ -79,6 +79,11 @@ public class StatusesProductionRoutineTest {
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
             return ImmutableList.of();
         }
+
+        @Override
+        public boolean hasSupplies(int i) {
+            return hasSupplies;
+        }
     }
 
     private record TestEntityLoc(
@@ -160,6 +165,14 @@ public class StatusesProductionRoutineTest {
             @Override
             public PTestStatus noJobSite() {
                 return NO_JOBSITE;
+            }
+
+            @Override
+            public PTestStatus fromJobBlockStateOrNull(int i) {
+                if (i <= 2) {
+                    return fromJobBlockState(i);
+                }
+                return null;
             }
         };
 
@@ -777,6 +790,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
             return ImmutableList.of();
+        }
+
+        @Override
+        public boolean hasSupplies(int i) {
+            return hasSupplies;
         }
     }
 

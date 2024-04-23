@@ -219,6 +219,16 @@ class JobStatusesTest {
             boolean isTimerActive
     ) implements TownStateProvider {
         @Override
+        public boolean hasSupplies(int i) {
+            return hasSupplies;
+        }
+
+        @Override
+        public boolean canUseMoreSupplies(int i) {
+            return canUseMoreSupplies;
+        }
+
+        @Override
         public boolean isCachingAllowed() {
             return false;
         }

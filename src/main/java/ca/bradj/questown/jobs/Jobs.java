@@ -247,7 +247,7 @@ public class Jobs {
     }
 
     public static <K> ImmutableMap<K, Predicate<MCTownItem>> unMC2(
-            ImmutableMap<K, Ingredient> toolsRequiredAtStates
+            Map<K, Ingredient> toolsRequiredAtStates
     ) {
         ImmutableMap.Builder<K, Predicate<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
@@ -257,7 +257,7 @@ public class Jobs {
     }
 
     public static <K> ImmutableMap<K, PredicateCollection<MCTownItem>> unMC3(
-            ImmutableMap<K, Ingredient> toolsRequiredAtStates
+            Map<K, Ingredient> toolsRequiredAtStates
     ) {
         ImmutableMap.Builder<K, PredicateCollection<MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(

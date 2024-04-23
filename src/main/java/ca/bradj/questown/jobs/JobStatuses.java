@@ -2,12 +2,10 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -35,6 +33,8 @@ public class JobStatuses {
         ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus);
 
         ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority();
+
+        @Nullable SUP_CAT fromInt(int i);
     }
 
     /**
@@ -61,6 +61,11 @@ public class JobStatuses {
                 return ImmutableMap.of(
                         1, job::tryChoosingItemlessWork
                 );
+            }
+
+            @Override
+            public SUP_CAT fromInt(int i) {
+                return null;
             }
 
             @Override
@@ -100,17 +105,21 @@ public class JobStatuses {
         for (int i = 0; i < 10; i++) { // TODO: Smarter range
             Supplier<STATUS> potentialWork = Util.getOrDefault(workToTry, i, () -> null);
             STATUS successfulChoice = potentialWork.get();
-            // FIXME: We should also check if we can grab supplies for a preferred state, and we should do that.
-            if (successfulChoice != null) {
-                if (factory.extractingProduct().equals(successfulChoice)) {
-                    foundExtraction = true;
+            if (successfulChoice == null) {
+                boolean hasSupplies = Util.getOrDefault(supplyItemStatus, job.fromInt(i), true);
+                if (!hasSupplies && town.hasSupplies(i) && town.canUseMoreSupplies(i)) {
+                    normalStatus = factory.collectingSupplies();
                 }
-                if (normalStatus == null) {
-                    if (factory.goingToJobSite().equals(successfulChoice)) {
-                        canGo = true;
-                    } else {
-                        normalStatus = successfulChoice;
-                    }
+                continue;
+            }
+            if (factory.extractingProduct().equals(successfulChoice)) {
+                foundExtraction = true;
+            }
+            if (normalStatus == null) {
+                if (factory.goingToJobSite().equals(successfulChoice)) {
+                    canGo = true;
+                } else {
+                    normalStatus = successfulChoice;
                 }
             }
         }
@@ -231,6 +240,11 @@ public class JobStatuses {
                     }
 
                     @Override
+                    public boolean hasSupplies(int i) {
+                        return town.hasSupplies(i);
+                    }
+
+                    @Override
                     public boolean hasSpace() {
                         return town.hasSpace();
                     }
@@ -252,6 +266,13 @@ public class JobStatuses {
                                     .stream()
                                     .allMatch(v -> v.getValue()
                                                     .isEmpty());
+                    }
+
+                    @Override
+                    public boolean canUseMoreSupplies(int i) {
+                        return !Util.getOrDefault(
+                                town.roomsToGetSuppliesForByState(), factory.fromJobBlockState(i), ImmutableList.of()
+                        ).isEmpty();
                     }
                 },
                 new Job<STATUS, STATUS>() {
@@ -285,18 +306,18 @@ public class JobStatuses {
                         for (int i = 0; i < allByPref.size(); i++) {
                             STATUS potentialStatus = allByPref.get(i);
                             if (workReadyToDo.contains(potentialStatus.value())) {
-                                b.put(i, () -> potentialStatus);
+                                b.put(i, () -> JobsClean.doOrGoTo(
+                                        potentialStatus,
+                                        entity.getEntityCurrentJobSite() != null,
+                                        factory.goingToJobSite()
+                                ));
                                 break;
                             }
                         }
 
                         b.compute(job.getMaxState().value(), (idx, cur) -> () -> {
                             if (cur != null) {
-                                return JobsClean.doOrGoTo(
-                                        cur.get(),
-                                        entity.getEntityCurrentJobSite() != null,
-                                        factory.goingToJobSite()
-                                );
+                                return cur.get();
                             }
 
                             Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -311,6 +332,11 @@ public class JobStatuses {
                         });
 
                         return ImmutableMap.copyOf(b);
+                    }
+
+                    @Override
+                    public @Nullable STATUS fromInt(int i) {
+                        return factory.fromJobBlockStateOrNull(i);
                     }
 
                     @Override

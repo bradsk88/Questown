@@ -363,6 +363,11 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
+            public boolean hasSupplies(int i) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public boolean hasSpace() {
                 return containers.stream().anyMatch(v -> !v.isFull());
             }

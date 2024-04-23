@@ -30,6 +30,11 @@ class FarmerStatusesTest {
         ) {
             this(hasSupplies, hasSpace, false);
         }
+
+        @Override
+        public boolean hasSupplies(int i) {
+            return hasSupplies;
+        }
     }
 
 

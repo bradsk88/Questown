@@ -183,7 +183,7 @@ public class JobsClean {
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
-            Collection<Predicate<I>> recipe,
+            Collection<BiPredicate<Integer, I>> recipe,
             Collection<H> currentHeldItems,
             I item
     ) {
@@ -198,22 +198,25 @@ public class JobsClean {
 
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
 
-        ImmutableList<Predicate<I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<Predicate<I>> ingredientsToSatisfy = new ArrayList<>();
+        ImmutableList<BiPredicate<Integer, I>> initial = ImmutableList.copyOf(recipe);
+        ArrayList<BiPredicate<Integer, I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
+        int held = 0;
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
-                if (ingredientsToSatisfy.get(i).test(heldItem.get())) {
+                if (ingredientsToSatisfy.get(i).test(0, heldItem.get())) {
                     ingredientsToSatisfy.remove(i);
                     i--;
                     heldItemsToCheck.remove(heldItem);
+                    held++;
                     break;
                 }
             }
         }
-        for (Predicate<I> ingredient : ingredientsToSatisfy) {
-            if (ingredient.test(item)) {
+
+        for (BiPredicate<Integer, I> ingredient : ingredientsToSatisfy) {
+            if (ingredient.test(held, item)) {
                 return true;
             }
         }
@@ -234,13 +237,13 @@ public class JobsClean {
         );
     }
 
-    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
+    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> boolean tryTakeContainerItems(
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<TOWN_ITEM, Boolean> isRemovalCandidate
     ) {
         if (!suppliesTarget.isCloseTo()) {
-            return;
+            return false;
         }
         String start = suppliesTarget.toShortString();
         List<TOWN_ITEM> items = suppliesTarget.getItems();
@@ -251,8 +254,9 @@ public class JobsClean {
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit, start);
                 villager.accept(unit);
                 suppliesTarget.removeItem(i, 1);
-                break;
+                return true;
             }
         }
+        return false;
     }
 }

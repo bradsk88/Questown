@@ -76,6 +76,11 @@ public class FarmerStatuses {
                     }
 
                     @Override
+                    public boolean hasSupplies(int i) {
+                        return town.hasSupplies(i);
+                    }
+
+                    @Override
                     public boolean hasSpace() {
                         return town.hasSpace();
                     }
@@ -93,6 +98,11 @@ public class FarmerStatuses {
                     @Override
                     public boolean canUseMoreSupplies() {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
+                    }
+
+                    @Override
+                    public boolean canUseMoreSupplies(int i) {
+                        return canUseMoreSupplies();
                     }
                 },
                 new LegacyJob<GathererJournal.Status, GathererJournal.Status>() {

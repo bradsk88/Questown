@@ -238,4 +238,86 @@ class AbstractSupplyGetterTest {
 
         Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
     }
+    @Test
+    void tryGetSupplies_ShouldNotGrabMore_OnSecondAttempt_IfRecipeCallsForOneItem_AndSpecialRuleApplies() {
+        // Grabbing more is a level-up ability. We can implement support once leveling up exists.
+        TestSupplyGetter g = new TestSupplyGetter();
+        ImmutableMap<StatusesProductionRoutineTest.PTestStatus, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0),
+                ImmutableList.of(ARBITRARY_ROOM)
+        );
+        Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
+        final Map<Integer, Integer> removedFromSlots = new HashMap<>();
+
+        final Map<StatusesProductionRoutineTest.PTestStatus, Collection<Predicate<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.fromJobBlockState(0), ImmutableList.of(
+                        (item) -> neededItem.get().equals(item)
+                )
+        );
+
+        JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
+            @Override
+            public boolean isCloseTo() {
+                return true;
+            }
+
+            @Override
+            public String toShortString() {
+                return "chest";
+            }
+
+            @Override
+            public List<GathererJournalTest.TestItem> getItems() {
+                return ImmutableList.of(neededItem.get(), neededItem.get());
+            }
+
+            @Override
+            public void removeItem(
+                    int i,
+                    int quantity
+            ) {
+                removedFromSlots.compute(i, (k, v) -> v == null ? quantity : v + quantity);
+            }
+        };
+
+        ArrayList<GathererJournalTest.TestItem> taken = new ArrayList<>();
+
+        g.tryGetSupplies(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
+                6, // Standard inventory size
+                roomsNeedingIngOrTool,
+                suppliesTarget,
+                (state) -> recipe.get(state),
+                ImmutableList.of(
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem("") // Air
+                ),
+                taken::add,
+                (state, v) -> v
+        );
+
+        g.tryGetSupplies(
+                StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
+                6, // Standard inventory size
+                roomsNeedingIngOrTool,
+                suppliesTarget,
+                (state) -> recipe.get(state),
+                ImmutableList.of(
+                        neededItem.get(), // Pretend the inventory was updated
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem(""), // Air
+                        new GathererJournalTest.TestItem("") // Air
+                ),
+                taken::add,
+                (state, v) -> (x) -> true // All states are special and make all items valid for pickup (this is the worst case)
+        );
+
+        Assertions.assertIterableEquals(ImmutableList.of(neededItem.get()), taken);
+    }
 }

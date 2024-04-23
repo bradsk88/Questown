@@ -591,6 +591,11 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     }
 
                     @Override
+                    public boolean hasSupplies(int i) {
+                        return hasSupplies();
+                    }
+
+                    @Override
                     public boolean hasSpace() {
                         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
                     }

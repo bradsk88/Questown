@@ -32,10 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
@@ -246,6 +243,31 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                           .map(v -> (Predicate<MCTownItem>) v::test)
                                           .toList());
     }
+    @NotNull
+    protected ImmutableList<BiPredicate<Integer, MCTownItem>> convertToCleanFns2(
+            Map<STATUS, ? extends Collection<? extends Room>> statusMap,
+            Function<STATUS, Integer> quantityRequired
+    ) {
+        // TODO: Be smarter? We're just finding the first room that needs stuff.
+        Optional<STATUS> first = statusMap.entrySet().stream().filter(v -> !v.getValue().isEmpty())
+                                          .map(Map.Entry::getKey).findFirst();
+
+        if (first.isEmpty()) {
+            return ImmutableList.of();
+        }
+
+        return ImmutableList.copyOf(recipe.getRecipe(first.get().value()).stream()
+                                          .map((v) -> {
+                                              Integer qty = quantityRequired.apply(first.get());
+                                              return (BiPredicate<Integer, MCTownItem>) (i, z) -> {
+                                                  if (qty != null && i >= qty) {
+                                                      return false;
+                                                  }
+                                                  return v.test(z);
+                                              };
+                                          })
+                                          .toList());
+    }
 
     @Override
     public BlockPos getLook() {
@@ -402,7 +424,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
         ContainerTarget.CheckFn<MCTownItem> originalCheck = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(),
-                convertToCleanFns(supplyUsers.get()),
+                convertToCleanFns2(supplyUsers.get(), this::getRequiredQuantity),
                 journal.getItems(),
                 item
         );
@@ -426,7 +448,12 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
                 checkFn = item -> JobsClean.shouldTakeItem(
                         journal.getCapacity(),
-                        ImmutableList.of(itum -> isAnyWorkResult.test(itum) || originalCheck.Matches(itum)),
+                        ImmutableList.of((held, itum) -> {
+                            if (quantityMet(i, held)) {
+                                return false;
+                            }
+                            return isAnyWorkResult.test(itum) || originalCheck.Matches(itum);
+                        }),
                         journal.getItems(),
                         item
                 );
@@ -445,6 +472,13 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
+
+    protected abstract boolean quantityMet(
+            STATUS i,
+            Integer held
+    );
+
+    protected abstract @Nullable Integer getRequiredQuantity(STATUS s);
 
     @Override
     public boolean shouldDisappear(
