@@ -202,21 +202,21 @@ public class JobsClean {
         ArrayList<BiPredicate<Integer, I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
-        int held = 0;
+        int amountHeld = 0;
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
                 if (ingredientsToSatisfy.get(i).test(0, heldItem.get())) {
                     ingredientsToSatisfy.remove(i);
                     i--;
                     heldItemsToCheck.remove(heldItem);
-                    held++;
+                    amountHeld++;
                     break;
                 }
             }
         }
 
         for (BiPredicate<Integer, I> ingredient : ingredientsToSatisfy) {
-            if (ingredient.test(held, item)) {
+            if (ingredient.test(amountHeld, item)) {
                 return true;
             }
         }

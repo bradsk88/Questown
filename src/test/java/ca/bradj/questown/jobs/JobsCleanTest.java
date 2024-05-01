@@ -7,14 +7,15 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 class JobsCleanTest {
 
-    ImmutableList<Predicate<TestItem>> bakerRecipe = ImmutableList.of(
-            item -> "wheat".equals(item.value),
-            item -> "wheat".equals(item.value),
-            item -> "coal".equals(item.value)
+    ImmutableList<BiPredicate<Integer, TestItem>> bakerRecipe = ImmutableList.of(
+            (s, item) -> "wheat".equals(item.value),
+            (s, item) -> "wheat".equals(item.value),
+            (s, item) -> "coal".equals(item.value)
     );
 
     @Test

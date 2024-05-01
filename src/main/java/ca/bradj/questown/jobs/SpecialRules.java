@@ -37,7 +37,7 @@ public class SpecialRules {
     // toward that spot. If this rule is not enabled, or there are no interaction spots
     // on the layer below the job block, they will navigate to a spot on the same level
     // as the job block.
-    public static final String PREFER_INTERACTION_BELOW = "claim_spot";
+    public static final String PREFER_INTERACTION_BELOW = "prefer_interaction_below";
 
     // If this rule is enabled, the villager will continue working into the evening until
     // it is time for them to go to bed. If this rule is disabled, villagers will become

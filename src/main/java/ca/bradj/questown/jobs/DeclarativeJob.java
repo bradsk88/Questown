@@ -5,10 +5,12 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.ItemCheckWrappers.WrapperContext;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -527,17 +529,37 @@ public class DeclarativeJob extends
                 )),
                 asItemsHolder().getItems(),
                 (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                (targetState, originalCheck) -> SpecialRuleIngredientAnyValidWorkOutput.apply2(
-                        specialRules.apply(ProductionStatus.fromJobBlockStatus(targetState)),
-                        originalCheck,
-                        (Integer i, MCTownItem v) -> {
-                            if (quantityMet(ProductionStatus.fromJobBlockStatus(targetState), i)) {
-                                return false;
-                            }
-                            return Works.isWorkResult(town.getTownData(), v);
+                (targetState, originalCheck) -> {
+                    ProductionStatus ps = ProductionStatus.fromJobBlockStatus(targetState);
+                    WrapperContext ctx = new WrapperContext(
+                            town.getTownData(),
+                            journal::getCapacity,
+                            z -> quantityMet(ps, z),
+                            journal::getItems,
+                            this,
+                            ps
+                    );
+                    BiPredicate<Integer, MCTownItem> check = originalCheck;
+                    for (String s : specialRules.apply(ps)) {
+                        Optional<BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> wrapped = ItemCheckWrappers.get(s);
+                        if (wrapped.isPresent()) {
+                            check = replace(check, wrapped.get(), ctx);
                         }
-                )
+                    }
+                    return check;
+                }
         );
+    }
+
+    @NotNull
+    private static BiPredicate<Integer, MCTownItem> replace(
+            BiPredicate<Integer, MCTownItem> originalCheck,
+            BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>> wrapped,
+            WrapperContext wc
+    ) {
+        BiPredicate<Integer, MCTownItem> cz = originalCheck;
+        originalCheck = (stage, item) -> wrapped.apply(wc, innerItem -> cz.test(stage, innerItem)).test(item);
+        return originalCheck;
     }
 
     private boolean isIngredientOrTool(
@@ -908,5 +930,30 @@ public class DeclarativeJob extends
                 s,
                 getOrPrevious(toolsRequiredAtStates, s.minusValue(1))
         );
+    }
+
+    @Override
+    protected ContainerTarget.@Nullable CheckFn<MCTownItem> wrapItemCheck(
+            WorksBehaviour.TownData town,
+            ProductionStatus i,
+            ContainerTarget.CheckFn<MCTownItem> originalCheck
+    ) {
+        Predicate<MCTownItem> check = originalCheck::Matches;
+        ItemCheckWrappers.WrapperContext ctx = new ItemCheckWrappers.WrapperContext(
+                town,
+                journal::getCapacity,
+                held -> quantityMet(i, held),
+                journal::getItems,
+                this,
+                i
+        );
+        for (String rule : specialRules.apply(i)) {
+            Optional<BiFunction<ItemCheckWrappers.WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> fn = ItemCheckWrappers.get(
+                    rule);
+            if (fn.isPresent()) {
+                check = fn.get().apply(ctx, check);
+            }
+        }
+        return check::test;
     }
 }

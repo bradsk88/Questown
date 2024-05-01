@@ -26,18 +26,18 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
             return;
         }
 
-        Set<STATUS> first = roomsWhereSuppliesCanBeUsed.entrySet()
+        Set<STATUS> rooms = roomsWhereSuppliesCanBeUsed.entrySet()
                                                        .stream()
                                                        .filter(v -> !v.getValue().isEmpty())
                                                        .map(Map.Entry::getKey)
                                                        .collect(Collectors.toSet());
 
-        if (first.isEmpty()) {
+        if (rooms.isEmpty()) {
             QT.JOB_LOGGER.warn("Trying to try container items when no rooms need items");
             return;
         }
 
-        for (STATUS s : first) {
+        for (STATUS s : rooms) {
             Collection<BiPredicate<Integer, TOWN_ITEM>> apply = new ArrayList<>(recipe.apply(s));
             BiPredicate<Integer, TOWN_ITEM> originalTest = (held, item) -> JobsClean.shouldTakeItem(
                     upToAmount, apply, currentHeldItems, item

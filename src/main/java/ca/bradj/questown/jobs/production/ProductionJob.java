@@ -5,7 +5,10 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.ItemCheckWrappers.WrapperContext;
+import ca.bradj.questown.jobs.WorksBehaviour.TownData;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.ContainerTarget.CheckFn;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
@@ -98,7 +101,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
     protected abstract <X extends ContainerRoomFinder<MCRoom, MCTownItem> & RoomMatchFinder<MCRoom>> Map<STATUS, ImmutableList<MCRoom>> getRoomsWhereSpecialRulesApply(
             X rooms,
-            WorksBehaviour.TownData townData
+            TownData townData
     );
 
     @Override
@@ -444,21 +447,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             if (leaveIteration) {
                 continue;
             }
-            if (specialRules.apply(i).contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-                Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(town.getTownData(), item);
-                checkFn = item -> JobsClean.shouldTakeItem(
-                        journal.getCapacity(),
-                        ImmutableList.of((held, itum) -> {
-                            if (quantityMet(i, held)) {
-                                return false;
-                            }
-                            return isAnyWorkResult.test(itum) || originalCheck.Matches(itum);
-                        }),
-                        journal.getItems(),
-                        item
-                );
-                break;
-            }
+            checkFn = wrapItemCheck(town.getTownData(), i, checkFn);
+            if (checkFn == null) break;
         }
 
         if (this.suppliesTarget != null) {
@@ -472,6 +462,13 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
+
+    @Nullable
+    protected abstract ContainerTarget.CheckFn<MCTownItem> wrapItemCheck(
+            TownData town,
+            STATUS i,
+            ContainerTarget.CheckFn<MCTownItem> originalCheck
+    );
 
     protected abstract boolean quantityMet(
             STATUS i,
@@ -573,7 +570,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<STATUS> defaultEntityInvProvider(WorksBehaviour.TownData townData) {
+    protected EntityInvStateProvider<STATUS> defaultEntityInvProvider(TownData townData) {
         return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
