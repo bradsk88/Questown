@@ -5,10 +5,8 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.ItemCheckWrappers.WrapperContext;
 import ca.bradj.questown.jobs.WorksBehaviour.TownData;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.leaver.ContainerTarget.CheckFn;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
@@ -231,23 +229,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     }
 
     @NotNull
-    protected ImmutableList<Predicate<MCTownItem>> convertToCleanFns(
-            Map<STATUS, ? extends Collection<? extends Room>> statusMap
-    ) {
-        // TODO: Be smarter? We're just finding the first room that needs stuff.
-        Optional<STATUS> first = statusMap.entrySet().stream().filter(v -> !v.getValue().isEmpty())
-                                          .map(Map.Entry::getKey).findFirst();
-
-        if (first.isEmpty()) {
-            return ImmutableList.of();
-        }
-
-        return ImmutableList.copyOf(recipe.getRecipe(first.get().value()).stream()
-                                          .map(v -> (Predicate<MCTownItem>) v::test)
-                                          .toList());
-    }
-    @NotNull
-    protected ImmutableList<BiPredicate<Integer, MCTownItem>> convertToCleanFns2(
+    protected ImmutableList<BiPredicate<AmountHeld, MCTownItem>> convertToCleanFns2(
             Map<STATUS, ? extends Collection<? extends Room>> statusMap,
             Function<STATUS, Integer> quantityRequired
     ) {
@@ -262,11 +244,11 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         return ImmutableList.copyOf(recipe.getRecipe(first.get().value()).stream()
                                           .map((v) -> {
                                               Integer qty = quantityRequired.apply(first.get());
-                                              return (BiPredicate<Integer, MCTownItem>) (i, z) -> {
-                                                  if (qty != null && i >= qty) {
+                                              return (BiPredicate<AmountHeld, MCTownItem>) (i, z) -> {
+                                                  if (qty != null && i.value() >= qty) {
                                                       return false;
                                                   }
-                                                  return v.test(z);
+                                                  return v.test(i, z);
                                               };
                                           })
                                           .toList());
@@ -431,7 +413,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 journal.getItems(),
                 item
         );
-        ContainerTarget.CheckFn<MCTownItem> checkFn = originalCheck;
+        Predicate<MCTownItem> checkFn = originalCheck::Matches;
         Set<STATUS> rooms = supplyUsers.get().keySet();
 
         Map<STATUS, Boolean> sis = getSupplyItemStatus(false);
@@ -452,27 +434,26 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         }
 
         if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(checkFn)) {
-                this.suppliesTarget = town.findMatchingContainer(checkFn);
+            if (!this.suppliesTarget.hasItem(checkFn::test)) {
+                this.suppliesTarget = town.findMatchingContainer(checkFn::test);
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(checkFn);
+            this.suppliesTarget = town.findMatchingContainer(checkFn::test);
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
 
-    @Nullable
-    protected abstract ContainerTarget.CheckFn<MCTownItem> wrapItemCheck(
+    protected abstract @NotNull Predicate<MCTownItem> wrapItemCheck(
             TownData town,
             STATUS i,
-            ContainerTarget.CheckFn<MCTownItem> originalCheck
+            @NotNull Predicate<MCTownItem> originalCheck
     );
 
     protected abstract boolean quantityMet(
             STATUS i,
-            Integer held
+            AmountHeld held
     );
 
     protected abstract @Nullable Integer getRequiredQuantity(STATUS s);
@@ -587,16 +568,8 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                                       .filter(v -> !v.getValue().isEmpty())
                                                       .map(Map.Entry::getKey)
                                                       .collect(Collectors.toSet());
-                ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> b = ImmutableList.builder();
-                statesToFeed.stream()
-                            .flatMap(
-                                    v -> recipe.getRecipe(v.value())
-                                               .stream())
-                            .forEach(b::add);
-                Collection<String> stateRules = getRulesForRolls(specialRules, statesToFeed);
-                if (stateRules.contains(SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT)) {
-                    b.add(i -> Works.isWorkResult(townData, i));
-                }
+                ImmutableList.Builder<Predicate<MCTownItem>> b = ImmutableList.builder();
+                statesToFeed.forEach(v -> b.addAll(getPredicatesForHeldItemsAtState(townData, v)));
                 return Jobs.hasNonSupplyItems(journal, b.build());
             }
 
@@ -607,17 +580,15 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         };
     }
 
-    private Collection<String> getRulesForRolls(
-            Function<STATUS, ? extends Collection<String>> specialRules,
-            Set<STATUS> statesToFeed
+    private List<Predicate<MCTownItem>> getPredicatesForHeldItemsAtState(
+            TownData townData,
+            STATUS v
     ) {
-        for (STATUS s : statesToFeed) {
-            Collection<String> rules = specialRules.apply(s);
-            if (rules != null) {
-                return rules;
-            }
-        }
-        return ImmutableList.of();
+        // We are checking for "is held", rather than checking for "can hold". So ignore amount held.
+        AmountHeld held = AmountHeld.ignored();
+        return recipe.getRecipe(v.value()).stream().map(
+                r -> wrapItemCheck(townData, v, item -> r.test(held, item))
+        ).toList();
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.util.function.Predicate;
 
 class JobsCleanTest {
 
-    ImmutableList<BiPredicate<Integer, TestItem>> bakerRecipe = ImmutableList.of(
+    ImmutableList<BiPredicate<AmountHeld, TestItem>> bakerRecipe = ImmutableList.of(
             (s, item) -> "wheat".equals(item.value),
             (s, item) -> "wheat".equals(item.value),
             (s, item) -> "coal".equals(item.value)

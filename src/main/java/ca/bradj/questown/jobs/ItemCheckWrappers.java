@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.WorksBehaviour.TownData;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Map;
@@ -16,11 +17,14 @@ import java.util.function.Supplier;
 
 public class ItemCheckWrappers {
 
-    // TODO: Convert to deferred register for extensibility
-    private static Map<String, BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> forRules;
+    public interface CheckWrapper extends BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>> {
+    }
 
-    public static Optional<BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> get(String rule) {
-        BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>> v = forRules.get(rule);
+    // TODO: Convert to deferred register for extensibility
+    private static Map<String, @NotNull CheckWrapper> forRules;
+
+    public static Optional<@NotNull CheckWrapper> get(String rule) {
+        CheckWrapper v = forRules.get(rule);
         if (v == null) {
             return Optional.empty();
         }
@@ -30,7 +34,7 @@ public class ItemCheckWrappers {
     public record WrapperContext(
             TownData townData,
             Supplier<Integer> capacity,
-            Predicate<Integer> quantityMet,
+            Predicate<AmountHeld> quantityMet,
             Supplier<? extends Collection<MCHeldItem>> inventory,
             DeclarativeJob job,
             ProductionStatus jobBlockStatus
@@ -38,14 +42,14 @@ public class ItemCheckWrappers {
     }
 
     public static void staticInitialize() {
-        ImmutableMap.Builder<String, BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<String, CheckWrapper> b = ImmutableMap.builder();
         b.put(
                 SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
                 (WrapperContext ctx, Predicate<MCTownItem> originalCheck) -> {
                     Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(ctx.townData(), item);
                     return item -> JobsClean.shouldTakeItem(
                             ctx.capacity().get(),
-                            ImmutableList.of((Integer held, MCTownItem itum) -> {
+                            ImmutableList.of((AmountHeld held, MCTownItem itum) -> {
                                 if (ctx.quantityMet().test(held)) {
                                     return false;
                                 }

@@ -187,11 +187,11 @@ public class Jobs {
 
     public static boolean hasNonSupplyItems(
             ItemsHolder<MCHeldItem> journal,
-            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
+            ImmutableList<Predicate<MCTownItem>> recipe
     ) {
         return journal.getItems().stream()
                       .filter(Predicates.not(Item::isEmpty))
-                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch((z) -> z.test(v.get()))));
     }
 
     public static boolean isUnfinishedTimeWorkPresent(

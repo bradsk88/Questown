@@ -10,7 +10,6 @@ import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -168,7 +167,13 @@ public class DeclarativeJob extends
             @Nullable ResourceLocation sound
     ) {
         super(ownerUUID, inventoryCapacity, allowedToPickUp,
-                buildRecipe(ingredientsRequiredAtStates, toolsRequiredAtStates), marker,
+                buildRecipe(ingredientsRequiredAtStates, toolsRequiredAtStates,
+                        (s, h) -> quantityMet(
+                                ProductionStatus.fromJobBlockStatus(s),
+                                si -> ingredientsQtyRequiredAtStates.get(si.value()),
+                                h
+                        )
+                ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(jobId, signalSource, capacity, MCHeldItem::Air,
                         STATUS_FACTORY
                 ), STATUS_FACTORY, ProductionStatus.mapUnsafe(specialStatusRules), specialGlobalRules, () -> {
@@ -235,19 +240,25 @@ public class DeclarativeJob extends
 
     private static RecipeProvider buildRecipe(
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            BiPredicate<Integer, AmountHeld> quantityMet
     ) {
         return s -> {
             ImmutableList.Builder<JobsClean.TestFn<MCTownItem>> bb = ImmutableList.builder();
             Ingredient ingr = ingredientsRequiredAtStates.get(s);
             if (ingr != null) {
-                bb.add(item -> ingr.test(item.toItemStack()));
+                bb.add((held, item) -> {
+                    if (quantityMet.test(s, held)) {
+                        return false;
+                    }
+                    return ingr.test(item.toItemStack());
+                });
             }
             // Hold on to tools required for this state and all previous states
             for (int i = 0; i <= s; i++) {
                 Ingredient tool = toolsRequiredAtStates.get(i);
                 if (tool != null) {
-                    bb.add(item -> {
+                    bb.add((held, item) -> {
                         ItemStack itemStack = item.toItemStack();
                         return tool.test(itemStack);
                     });
@@ -517,54 +528,20 @@ public class DeclarativeJob extends
                 asItemsHolder().getCapacity(),
                 roomsWhereSuppliesCanBeUsed,
                 st,
-                status -> ImmutableList.of(SpecialRuleIngredientAnyValidWorkOutput.apply2(
-                        specialRules.apply(status),
-                        (Integer i, MCTownItem v) -> this.isIngredientOrTool(status, i, v),
-                        (Integer i, MCTownItem v) -> {
-                            if (quantityMet(status, i)) {
-                                return false;
-                            }
-                            return Works.isWorkResult(town.getTownData(), v);
-                        }
-                )),
-                asItemsHolder().getItems(),
-                (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item)),
-                (targetState, originalCheck) -> {
-                    ProductionStatus ps = ProductionStatus.fromJobBlockStatus(targetState);
-                    WrapperContext ctx = new WrapperContext(
-                            town.getTownData(),
-                            journal::getCapacity,
-                            z -> quantityMet(ps, z),
-                            journal::getItems,
-                            this,
-                            ps
-                    );
-                    BiPredicate<Integer, MCTownItem> check = originalCheck;
-                    for (String s : specialRules.apply(ps)) {
-                        Optional<BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> wrapped = ItemCheckWrappers.get(s);
-                        if (wrapped.isPresent()) {
-                            check = replace(check, wrapped.get(), ctx);
-                        }
-                    }
-                    return check;
-                }
+                status -> ImmutableList.of(
+                        (AmountHeld i, MCTownItem v) -> wrapItemCheck(
+                                town.getTownData(), status,
+                                iiii -> this.isIngredientOrTool(status, i, iiii)
+                        ).test(v)
+                ),
+                asItemsHolder()::getItems,
+                (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item))
         );
-    }
-
-    @NotNull
-    private static BiPredicate<Integer, MCTownItem> replace(
-            BiPredicate<Integer, MCTownItem> originalCheck,
-            BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>> wrapped,
-            WrapperContext wc
-    ) {
-        BiPredicate<Integer, MCTownItem> cz = originalCheck;
-        originalCheck = (stage, item) -> wrapped.apply(wc, innerItem -> cz.test(stage, innerItem)).test(item);
-        return originalCheck;
     }
 
     private boolean isIngredientOrTool(
             ProductionStatus status,
-            int amountHeldAlready,
+            AmountHeld amountHeldAlready,
             MCTownItem v
     ) {
         if (quantityMet(status, amountHeldAlready)) {
@@ -586,16 +563,21 @@ public class DeclarativeJob extends
     @Override
     protected boolean quantityMet(
             ProductionStatus status,
-            Integer amountHeldAlready
+            AmountHeld amountHeldAlready
     ) {
-        Integer qty = ingredientQtyRequiredAtStates.get(status);
+        return quantityMet(status, ingredientQtyRequiredAtStates::get, amountHeldAlready);
+    }
+
+    private static boolean quantityMet(
+            ProductionStatus status,
+            Function<ProductionStatus, @Nullable Integer> qtyForState,
+            AmountHeld amountHeldAlready
+    ) {
+        Integer qty = qtyForState.apply(status);
         if (qty == null) {
             return true;
         }
-        if (amountHeldAlready >= qty) {
-            return true;
-        }
-        return false;
+        return !amountHeldAlready.canHoldMore(qty);
     }
 
     private void tryWorking(
@@ -933,12 +915,12 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected ContainerTarget.@Nullable CheckFn<MCTownItem> wrapItemCheck(
+    protected @NotNull Predicate<MCTownItem> wrapItemCheck(
             WorksBehaviour.TownData town,
             ProductionStatus i,
-            ContainerTarget.CheckFn<MCTownItem> originalCheck
+            @NotNull Predicate<MCTownItem> originalCheck
     ) {
-        Predicate<MCTownItem> check = originalCheck::Matches;
+        Predicate<MCTownItem> check = originalCheck;
         ItemCheckWrappers.WrapperContext ctx = new ItemCheckWrappers.WrapperContext(
                 town,
                 journal::getCapacity,
@@ -948,12 +930,11 @@ public class DeclarativeJob extends
                 i
         );
         for (String rule : specialRules.apply(i)) {
-            Optional<BiFunction<ItemCheckWrappers.WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>>> fn = ItemCheckWrappers.get(
-                    rule);
+            Optional<ItemCheckWrappers.CheckWrapper> fn = ItemCheckWrappers.get(rule);
             if (fn.isPresent()) {
                 check = fn.get().apply(ctx, check);
             }
         }
-        return check::test;
+        return check;
     }
 }

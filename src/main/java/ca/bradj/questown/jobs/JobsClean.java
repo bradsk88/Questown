@@ -1,8 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import com.google.common.base.Predicates;
@@ -32,7 +30,7 @@ public class JobsClean {
     ) {
         return journal.getItems().stream()
                       .filter(Predicates.not(Item::isEmpty))
-                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(AmountHeld.none(), v.get()))));
     }
 
     @NotNull
@@ -175,7 +173,7 @@ public class JobsClean {
     }
 
     public interface TestFn<I extends Item<I>> {
-        boolean test(I item);
+        boolean test(AmountHeld held, I item);
     }
 
     public static <
@@ -183,7 +181,7 @@ public class JobsClean {
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
-            Collection<BiPredicate<Integer, I>> recipe,
+            Collection<BiPredicate<AmountHeld, I>> recipe,
             Collection<H> currentHeldItems,
             I item
     ) {
@@ -198,24 +196,25 @@ public class JobsClean {
 
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
 
-        ImmutableList<BiPredicate<Integer, I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<BiPredicate<Integer, I>> ingredientsToSatisfy = new ArrayList<>();
+        ImmutableList<BiPredicate<AmountHeld, I>> initial = ImmutableList.copyOf(recipe);
+        ArrayList<BiPredicate<AmountHeld, I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
-        int amountHeld = 0;
+        AmountHeld amountHeld = AmountHeld.none();
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
-                if (ingredientsToSatisfy.get(i).test(0, heldItem.get())) {
+                AmountHeld numHeld = AmountHeld.none(); // We do not need to check if we can add it to our "amount held"
+                if (ingredientsToSatisfy.get(i).test(numHeld, heldItem.get())) {
                     ingredientsToSatisfy.remove(i);
                     i--;
                     heldItemsToCheck.remove(heldItem);
-                    amountHeld++;
+                    amountHeld = amountHeld.up();
                     break;
                 }
             }
         }
 
-        for (BiPredicate<Integer, I> ingredient : ingredientsToSatisfy) {
+        for (BiPredicate<AmountHeld, I> ingredient : ingredientsToSatisfy) {
             if (ingredient.test(amountHeld, item)) {
                 return true;
             }

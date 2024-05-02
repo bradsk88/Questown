@@ -115,15 +115,15 @@ public class Works {
         return works.get(jobID);
     }
 
-    public static boolean isWorkResult(
+    public static boolean isWorkResult( // TODO: Remove any calls to this function from anywhere other than ItemCheckWrappers
             WorksBehaviour.TownData td,
-            MCTownItem mcTownItem
+            MCTownItem realItem
     ) {
         for (Map.Entry<JobID, Supplier<Work>> wFn : works.entrySet()) {
             Work work = wFn.getValue()
                            .get();
             ImmutableSet<MCTownItem> possibleResults = work.results().apply(td);
-            return possibleResults.stream().anyMatch(v -> v.unit().equals(mcTownItem.unit()));
+            return possibleResults.stream().anyMatch(v -> realItem.hasEmptyNBT() && v.unit().isSameIgnoringNBT(realItem.unit()));
         }
         return false;
     }
