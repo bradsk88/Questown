@@ -237,13 +237,13 @@ class JobStatusesTest {
     static class NoOpJob implements LegacyJob<TestStatus, TestStatus> {
 
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
-            return null;
+        public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
+            return new StatusSupplier<>(TestStatus.ITEMLESS_WORK, () -> null);
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-            return null;
+        public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+            return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> null);
         }
 
     }
@@ -251,12 +251,12 @@ class JobStatusesTest {
     static class FailJob implements LegacyJob<TestStatus, TestStatus> {
 
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
+        public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
         }
 
@@ -264,31 +264,31 @@ class JobStatusesTest {
 
     private static final LegacyJob<TestStatus, TestStatus> jobWithItemlessWork = new LegacyJob<>() {
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
-            return TestStatus.ITEMLESS_WORK;
+        public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
+            return new StatusSupplier<>(TestStatus.ITEMLESS_WORK, () -> TestStatus.ITEMLESS_WORK);
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-            return TestStatus.ITEM_WORK;
+        public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+            return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
         }
     };
 
     private static final LegacyJob<TestStatus, TestStatus> jobWithItemWorkOnly = new LegacyJob<>() {
         @Override
-        public @Nullable TestStatus tryChoosingItemlessWork() {
-            return null;
+        public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
+            return new StatusSupplier<>(TestStatus.ITEMLESS_WORK, () -> null);
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK, false)) {
-                return TestStatus.ITEM_WORK;
+                return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
             }
             if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK_2, false)) {
-                return TestStatus.ITEM_WORK_2;
+                return new StatusSupplier<>(TestStatus.ITEM_WORK_2, () -> TestStatus.ITEM_WORK_2);
             }
-            return null;
+            return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> null);
         }
     };
 
@@ -409,13 +409,13 @@ class JobStatusesTest {
                 new ConstTown(true, false, true, false),
                 new LegacyJob<>() {
                     @Override
-                    public @Nullable TestStatus tryChoosingItemlessWork() {
-                        return TestStatus.GOING_TO_JOB;
+                    public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
+                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.GOING_TO_JOB);
                     }
 
                     @Override
-                    public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-                        return TestStatus.ITEM_WORK;
+                    public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
                     }
                 },
                 TestStatus.FACTORY

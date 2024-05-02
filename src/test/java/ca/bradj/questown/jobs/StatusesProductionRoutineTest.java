@@ -294,12 +294,12 @@ public class StatusesProductionRoutineTest {
     private static class NoOpProductionJob implements IProductionJob<PTestStatus> {
 
         @Override
-        public @Nullable PTestStatus tryChoosingItemlessWork() {
+        public @Nullable StatusSupplier<PTestStatus> tryChoosingItemlessWork() {
             return null;
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
+        public @Nullable StatusSupplier<PTestStatus> tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
             return null;
         }
 
@@ -324,12 +324,12 @@ public class StatusesProductionRoutineTest {
         );
 
         @Override
-        public @Nullable PTestStatus tryChoosingItemlessWork() {
+        public @Nullable StatusSupplier<PTestStatus> tryChoosingItemlessWork() {
             throw err;
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
+        public @Nullable StatusSupplier<PTestStatus> tryUsingSupplies(Map<PTestStatus, Boolean> supplyItemStatus) {
             throw err;
         }
 
@@ -369,7 +369,8 @@ public class StatusesProductionRoutineTest {
                         )
                 ),
                 new NoOpProductionJob(), // Do not provide alternate logic for doing supply-work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
     }
@@ -399,7 +400,8 @@ public class StatusesProductionRoutineTest {
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertNull(s);
     }
@@ -424,7 +426,8 @@ public class StatusesProductionRoutineTest {
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertNull(s);
     }
@@ -448,7 +451,8 @@ public class StatusesProductionRoutineTest {
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
     }
@@ -472,7 +476,8 @@ public class StatusesProductionRoutineTest {
                         )
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
     }
@@ -497,7 +502,8 @@ public class StatusesProductionRoutineTest {
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
@@ -524,7 +530,8 @@ public class StatusesProductionRoutineTest {
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
@@ -560,7 +567,8 @@ public class StatusesProductionRoutineTest {
                         workToBeDone
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
@@ -600,7 +608,8 @@ public class StatusesProductionRoutineTest {
                         return preferences;
                     }
                 },
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
     }
@@ -640,7 +649,8 @@ public class StatusesProductionRoutineTest {
                         return preferences;
                     }
                 },
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
@@ -671,7 +681,8 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
     }
@@ -701,7 +712,8 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
     }
@@ -729,7 +741,8 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
     }
@@ -757,7 +770,8 @@ public class StatusesProductionRoutineTest {
                 ),
 
                 new FailProductionJob(), // Shouldn't do any non-standard work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
     }
@@ -824,7 +838,8 @@ public class StatusesProductionRoutineTest {
                         true // A time-based job is ticking away
                 ),
                 new NoOpProductionJob(), // Causes us to skip the "use supplies" work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.WAITING, s);
     }
@@ -856,7 +871,8 @@ public class StatusesProductionRoutineTest {
                         true // A time-based job is ticking away
                 ),
                 new NoOpProductionJob(), // Causes us to skip the "use supplies" work
-                PTestStatus.FACTORY
+                PTestStatus.FACTORY,
+                BLOCK_READY_TO_EXTRACT_PRODUCT
         );
         Assertions.assertEquals(PTestStatus.WAITING, s);
     }

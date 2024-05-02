@@ -544,9 +544,6 @@ public class DeclarativeJob extends
             AmountHeld amountHeldAlready,
             MCTownItem v
     ) {
-        if (quantityMet(status, amountHeldAlready)) {
-            return false;
-        }
         boolean isIngr = Util.getOrDefault(
                                      Jobs.unMC2(ingredientsRequiredAtStates),
                                      status,
@@ -554,7 +551,7 @@ public class DeclarativeJob extends
                              )
                              .test(v);
         if (isIngr) {
-            return true;
+            return !quantityMet(status, amountHeldAlready);
         }
         return Util.getOrDefault(Jobs.unMC2(toolsRequiredAtStates), status, i -> false).test(v);
 

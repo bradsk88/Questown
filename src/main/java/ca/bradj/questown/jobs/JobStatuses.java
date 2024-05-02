@@ -30,11 +30,12 @@ public class JobStatuses {
     }
 
     public interface Job<STATUS, SUP_CAT> extends LegacyJob<STATUS, SUP_CAT> {
-        ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus);
+        ImmutableMap<Integer, StatusSupplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus);
 
-        ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority();
+        ImmutableMap<Integer, StatusSupplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority();
 
         @Nullable SUP_CAT fromInt(int i);
+        @Nullable SUP_CAT convert(STATUS i);
     }
 
     /**
@@ -50,16 +51,16 @@ public class JobStatuses {
     ) {
         return usualRoutineV2(currentStatus, prioritizeExtraction, inventory, town, new Job<>() {
             @Override
-            public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus) {
+            public ImmutableMap<Integer, StatusSupplier<STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus) {
                 return ImmutableMap.of(
-                        0, () -> job.tryUsingSupplies(supplyItemStatus)
+                        0, job.tryUsingSupplies(supplyItemStatus)
                 );
             }
 
             @Override
-            public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority() {
+            public ImmutableMap<Integer, StatusSupplier<STATUS>> getItemlessWorkKeyedByPriority() {
                 return ImmutableMap.of(
-                        1, job::tryChoosingItemlessWork
+                        1, job.tryChoosingItemlessWork()
                 );
             }
 
@@ -69,12 +70,17 @@ public class JobStatuses {
             }
 
             @Override
-            public @Nullable STATUS tryChoosingItemlessWork() {
+            public @Nullable SUP_CAT convert(STATUS i) {
+                return null;
+            }
+
+            @Override
+            public @Nullable StatusSupplier<STATUS> tryChoosingItemlessWork() {
                 return job.tryChoosingItemlessWork();
             }
 
             @Override
-            public @Nullable STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus) {
+            public StatusSupplier<STATUS> tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus) {
                 return job.tryUsingSupplies(supplyItemStatus);
             }
         }, factory);
@@ -92,7 +98,7 @@ public class JobStatuses {
         STATUS s = null;
         Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
         boolean hasWorkItems = supplyItemStatus.containsValue(true);
-        Map<Integer, Supplier<@Nullable STATUS>> workToTry = new HashMap<>();
+        Map<Integer, StatusSupplier<STATUS>> workToTry = new HashMap<>();
         if (hasWorkItems) {
             workToTry.putAll(job.getSupplyUsesKeyedByPriority(supplyItemStatus));
         }
@@ -103,10 +109,13 @@ public class JobStatuses {
         boolean canGo = false;
 
         for (int i = 0; i < 10; i++) { // TODO: Smarter range
-            Supplier<STATUS> potentialWork = Util.getOrDefault(workToTry, i, () -> null);
-            STATUS successfulChoice = potentialWork.get();
+            StatusSupplier<STATUS> potentialWork = workToTry.get(i);
+            if (potentialWork == null) {
+                continue;
+            }
+            STATUS successfulChoice = potentialWork.actualStatus().get();
             if (successfulChoice == null) {
-                boolean hasSupplies = Util.getOrDefault(supplyItemStatus, job.fromInt(i), true);
+                boolean hasSupplies = Util.getOrDefault(supplyItemStatus, job.convert(potentialWork.targetStatus()), true);
                 if (!hasSupplies && town.hasSupplies(i) && town.canUseMoreSupplies(i)) {
                     normalStatus = factory.collectingSupplies();
                 }
@@ -188,16 +197,16 @@ public class JobStatuses {
     }
 
     private static <STATUS extends IStatus<STATUS>> void putAllOrFallback(
-            Map<Integer, Supplier<STATUS>> workToTry,
-            ImmutableMap<Integer, Supplier<STATUS>> itemlessWorkKeyedByPriority
+            Map<Integer, StatusSupplier<STATUS>> workToTry,
+            ImmutableMap<Integer, StatusSupplier<STATUS>> itemlessWorkKeyedByPriority
     ) {
         itemlessWorkKeyedByPriority.keySet().forEach(
                 key -> workToTry.compute(key, (k, cur) -> {
-                    Supplier<STATUS> il = itemlessWorkKeyedByPriority.get(k);
+                    StatusSupplier<STATUS> il = itemlessWorkKeyedByPriority.get(k);
                     if (il != null) {
-                        STATUS status = il.get();
+                        @Nullable STATUS status = il.actualStatus().get();
                         if (status != null) {
-                            return () -> status;
+                            return il;
                         }
                     }
                     return cur;
@@ -223,7 +232,8 @@ public class JobStatuses {
             EntityLocStateProvider<ROOM> entity,
             JobTownProvider<ROOM, STATUS> town,
             IProductionJob<STATUS> job,
-            IProductionStatusFactory<STATUS> factory
+            IProductionStatusFactory<STATUS> factory,
+            STATUS maxState
     ) {
         if (factory.waitingForTimedState()
                    .equals(currentStatus)) {
@@ -277,10 +287,10 @@ public class JobStatuses {
                 },
                 new Job<STATUS, STATUS>() {
                     @Override
-                    public @Nullable STATUS tryChoosingItemlessWork() {
+                    public @Nullable StatusSupplier<STATUS> tryChoosingItemlessWork() {
                         Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
                         for (Integer state : states) {
-                            return factory.fromJobBlockState(state);
+                            return new StatusSupplier<>(fromInt(state), () -> factory.fromJobBlockState(state));
                         }
 
                         Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -291,33 +301,33 @@ public class JobStatuses {
                         ROOM location = entity.getEntityCurrentJobSite();
                         if (location != null) {
                             if (rooms.contains(location)) {
-                                return factory.extractingProduct();
+                                return new StatusSupplier<>(maxState, factory::extractingProduct);
                             }
                         }
 
-                        return factory.goingToJobSite();
+                        return new StatusSupplier<>(maxState, factory::goingToJobSite);
                     }
 
                     @Override
-                    public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getItemlessWorkKeyedByPriority() {
+                    public ImmutableMap<Integer, StatusSupplier<STATUS>> getItemlessWorkKeyedByPriority() {
                         Collection<Integer> workReadyToDo = town.getStatesWithUnfinishedItemlessWork();
                         ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
-                        Map<Integer, Supplier<STATUS>> b = new HashMap<>();
+                        Map<Integer, StatusSupplier<STATUS>> b = new HashMap<>();
                         for (int i = 0; i < allByPref.size(); i++) {
                             STATUS potentialStatus = allByPref.get(i);
                             if (workReadyToDo.contains(potentialStatus.value())) {
-                                b.put(i, () -> JobsClean.doOrGoTo(
+                                b.put(i, new StatusSupplier<>(potentialStatus, () -> JobsClean.doOrGoTo(
                                         potentialStatus,
                                         entity.getEntityCurrentJobSite() != null,
                                         factory.goingToJobSite()
-                                ));
+                                )));
                                 break;
                             }
                         }
 
-                        b.compute(job.getMaxState().value(), (idx, cur) -> () -> {
+                        b.compute(job.getMaxState().value(), (idx, cur) -> new StatusSupplier<>(job.getMaxState(), () -> {
                             if (cur != null) {
-                                return cur.get();
+                                return cur.actualStatus().get();
                             }
 
                             Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -329,7 +339,7 @@ public class JobStatuses {
                                     entity.getEntityCurrentJobSite() != null,
                                     factory.goingToJobSite()
                             );
-                        });
+                        }));
 
                         return ImmutableMap.copyOf(b);
                     }
@@ -340,14 +350,19 @@ public class JobStatuses {
                     }
 
                     @Override
-                    public @Nullable STATUS tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus) {
+                    public @Nullable STATUS convert(STATUS i) {
+                        return i;
+                    }
+
+                    @Override
+                    public @Nullable StatusSupplier<STATUS> tryUsingSupplies(Map<STATUS, Boolean> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
                         ImmutableMap<STATUS, ImmutableList<Room>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
-                        boolean foundWork = false;
+                        STATUS foundWork = null;
 
                         List<STATUS> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
                                                               .stream()
@@ -358,18 +373,17 @@ public class JobStatuses {
                         for (STATUS s : orderedWithSupplies) {
                             if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
                                                                             .isEmpty()) { // TODO: Unit test the second leg of this condition
-                                foundWork = true;
+                                foundWork = s;
                                 if (location != null) {
-                                    if (roomNeedsMap.get(s)
-                                                    .contains(location)) {
-                                        return s;
+                                    if (roomNeedsMap.get(s).contains(location)) {
+                                        return StatusSupplier.found(s);
                                     }
                                 }
                             }
                         }
 
-                        if (foundWork) {
-                            return factory.goingToJobSite();
+                        if (foundWork != null) {
+                            return new StatusSupplier<>(foundWork, () -> factory.goingToJobSite());
                         }
                         // TODO: Return null here. This call to `try` might be needed for the farmer job.
                         //  Let's convert that into a production job.
@@ -377,7 +391,7 @@ public class JobStatuses {
                     }
 
                     @Override
-                    public ImmutableMap<Integer, Supplier<@Nullable STATUS>> getSupplyUsesKeyedByPriority(Map<STATUS, Boolean> supplyItemStatus) {
+                    public ImmutableMap<Integer, StatusSupplier<STATUS>> getSupplyUsesKeyedByPriority(Map<STATUS, Boolean> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
@@ -385,12 +399,12 @@ public class JobStatuses {
                         final ImmutableMap<STATUS, ImmutableList<Room>> roomNeedsMap = town.roomsToGetSuppliesForByState();
 
                         ImmutableList<STATUS> allByPref = job.getAllWorkStatesSortedByPreference();
-                        ImmutableMap.Builder<Integer, Supplier<STATUS>> b = ImmutableMap.builder();
+                        ImmutableMap.Builder<Integer, StatusSupplier<STATUS>> b = ImmutableMap.builder();
                         for (int i = 0; i < allByPref.size(); i++) {
                             final STATUS s = allByPref.get(i);
                             boolean hasSuppliesForStatus = Util.getOrDefault(supplyItemStatus, s, false);
                             if (hasSuppliesForStatus) {
-                                b.put(i, () -> {
+                                b.put(i, new StatusSupplier<>(s, () -> {
                                     if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
                                                                                     .isEmpty()) { // TODO: Unit test the second leg of this condition
                                         if (location != null) {
@@ -402,7 +416,7 @@ public class JobStatuses {
                                         return factory.goingToJobSite();
                                     }
                                     return null;
-                                });
+                                }));
                             }
                         }
                         return b.build();

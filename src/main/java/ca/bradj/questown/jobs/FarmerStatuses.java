@@ -107,12 +107,12 @@ public class FarmerStatuses {
                 },
                 new LegacyJob<GathererJournal.Status, GathererJournal.Status>() {
                     @Override
-                    public GathererJournal.@Nullable Status tryChoosingItemlessWork() {
+                    public StatusSupplier<GathererJournal.Status> tryChoosingItemlessWork() {
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : PRIORITY_ITEMLESS_WORK.entrySet()) {
                             if (farm.isWorkPossible(s.getKey())) {
-                                return JobsClean.doOrGoTo(
+                                return new StatusSupplier<>(s.getValue(), () -> JobsClean.doOrGoTo(
                                         s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
-                                );
+                                ));
                             }
                         }
                         if (town.hasSupplies()) {
@@ -120,24 +120,24 @@ public class FarmerStatuses {
                         }
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : FALLBACK_ITEMLESS_WORK.entrySet()) {
                             if (farm.isWorkPossible(s.getKey())) {
-                                return JobsClean.doOrGoTo(
+                                return new StatusSupplier<>(s.getValue(), () -> JobsClean.doOrGoTo(
                                         s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
-                                );
+                                ));
                             }
                         }
                         return null;
                     }
 
                     @Override
-                    public @Nullable GathererJournal.Status tryUsingSupplies(
+                    public StatusSupplier<GathererJournal.Status> tryUsingSupplies(
                             Map<GathererJournal.Status, Boolean> supplyItemStatus
                     ) {
                         for (Map.Entry<FarmerJob.FarmerAction, GathererJournal.Status> s : ITEM_WORK.entrySet()) {
                             if (supplyItemStatus.getOrDefault(s.getValue(), false)) {
                                 if (farm.isWorkPossible(s.getKey())) {
-                                    return JobsClean.doOrGoTo(
+                                    return new StatusSupplier<>(s.getValue(), () -> JobsClean.doOrGoTo(
                                             s.getValue(), isInFarm, GathererJournal.Status.GOING_TO_JOBSITE
-                                    );
+                                    ));
                                 }
                             }
                         }

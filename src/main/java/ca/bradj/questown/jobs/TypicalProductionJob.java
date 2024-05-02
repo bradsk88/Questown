@@ -28,12 +28,12 @@ public class TypicalProductionJob<S extends IProductionStatus<S>> implements IPr
     }
 
     @Override
-    public @Nullable S tryChoosingItemlessWork() {
+    public @Nullable StatusSupplier<S> tryChoosingItemlessWork() {
         return null;
     }
 
     @Override
-    public @Nullable S tryUsingSupplies(Map<S, Boolean> supplyItemStatus) {
+    public @Nullable StatusSupplier<S> tryUsingSupplies(Map<S, Boolean> supplyItemStatus) {
         return null;
     }
 

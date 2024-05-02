@@ -338,6 +338,7 @@ public abstract class AbstractWorldInteraction<
 
             TOWN ts = null;
             if (specialRules.apply(s.processingState()).contains(SpecialRules.DROP_LOOT_AS_STACK)) {
+                // FIXME: This crashes if the world is rebooted after the ingredients were inserted
                 INNER_ITEM item = getLastInsertedIngredients(inputs, villagerIndex, position);
                 Map<Integer, Integer> qtys = ingredientQuantityRequiredAtStates();
                 Integer qy = qtys.get(s.processingState() - 1);

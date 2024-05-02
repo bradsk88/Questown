@@ -5,6 +5,8 @@ import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
+
 public class ProductionStatuses {
 
     public static @Nullable <ROOM extends Room> ProductionStatus getNewStatusFromSignal(
@@ -19,7 +21,15 @@ public class ProductionStatuses {
     ) {
         switch (signal) {
             case MORNING, NOON -> {
-                return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction, statePriority);
+                return getMorningStatus(
+                        currentStatus,
+                        inventory,
+                        town,
+                        entity,
+                        factory,
+                        prioritizeExtraction,
+                        statePriority
+                );
             }
             case NIGHT, EVENING -> {
                 return getEveningStatus(currentStatus, inventory, town, factory, town.isCachingAllowed());
@@ -37,10 +47,12 @@ public class ProductionStatuses {
             boolean prioritizeExtraction,
             ImmutableList<ProductionStatus> statePriority
     ) {
+        Comparator<ProductionStatus> cmp = Comparator.comparingInt(ProductionStatus::getProductionState);
+        ProductionStatus maxState = statePriority.stream().max(cmp).orElse(currentStatus);
         ProductionStatus newStatus = JobStatuses.productionRoutine(
                 currentStatus, prioritizeExtraction, inventory, entity, town,
                 new TypicalProductionJob<>(statePriority),
-                factory
+                factory, maxState
         );
         return nullIfUnchanged(currentStatus, newStatus);
     }
