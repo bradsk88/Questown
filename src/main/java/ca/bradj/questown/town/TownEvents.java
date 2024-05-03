@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.ItemCheckWrappers;
 import ca.bradj.questown.jobs.Works;
+import ca.bradj.questown.jobs.declarative.ProductExtractionWrappers;
 import ca.bradj.questown.mc.Compat;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -17,5 +18,6 @@ public final class TownEvents {
         Compat.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
         Compat.enqueueOrLog(event, Works::staticInitialize);
         Compat.enqueueOrLog(event, ItemCheckWrappers::staticInitialize);
+        Compat.enqueueOrLog(event, ProductExtractionWrappers::staticInitialize);
     }
 }

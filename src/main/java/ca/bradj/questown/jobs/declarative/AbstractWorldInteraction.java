@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.ProductExtractionWrappers.ProductExtractionWrapper;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -337,18 +338,15 @@ public abstract class AbstractWorldInteraction<
         if (s != null && s.processingState() == maxState) {
 
             TOWN ts = null;
-            if (specialRules.apply(s.processingState()).contains(SpecialRules.DROP_LOOT_AS_STACK)) {
-                // FIXME: This crashes if the world is rebooted after the ingredients were inserted
-                INNER_ITEM item = getLastInsertedIngredients(inputs, villagerIndex, position);
-                Map<Integer, Integer> qtys = ingredientQuantityRequiredAtStates();
-                Integer qy = qtys.get(s.processingState() - 1);
-                if (qy == null) {
-                    QT.JOB_LOGGER.debug("Current state: {}", s.processingState());
-                    QT.JOB_LOGGER.debug("Quantities: {}", qtys);
-                    throw new IllegalStateException(
-                            "DROP_LOOT_AS_STACK can only be used when previous stage has quantity");
-                }
-                ts = addToNearbyChest(inputs, ts, position, createStackWithQuantity(item, qy));
+            ProductExtractionWrappers.Ctx<TOWN, INNER_ITEM> ctx = new ProductExtractionWrappers.Ctx<TOWN, INNER_ITEM>(
+                    () -> getLastInsertedIngredients(inputs, villagerIndex, position),
+                    () -> ingredientQuantityRequiredAtStates().get(s.processingState() - 1),
+                    (town, item) -> addToNearbyChest(inputs, town, position, item),
+                    this::createStackWithQuantity,
+                    (town, state) -> setJobBlockState(inputs, town, position, state)
+            );
+            for (ProductExtractionWrapper wrapper : ProductExtractionWrappers.get(specialRules.apply(s.processingState()))) {
+                ts = wrapper.preProcess(ctx, ts);
             }
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
