@@ -22,7 +22,7 @@ public class ProductExtractionWrappers {
     ) {
     }
 
-    private static Map<String, ProductExtractionWrapper> forRules;
+    private static Map<String, ProductExtractionWrapper> forRules = ImmutableMap.of();
 
     public static void staticInitialize() {
         ImmutableMap.Builder<String, ProductExtractionWrapper> b = ImmutableMap.builder();

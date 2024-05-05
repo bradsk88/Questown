@@ -15,11 +15,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 class AbstractItemWITest {
 
     public static final Position arbitraryPosition = new Position(1, 2);
+
 
     private record StateWithTimer(
             AbstractWorkStatusStore.State state,
@@ -39,7 +41,8 @@ class AbstractItemWITest {
 
     ;
 
-    private static class TestItemWI extends AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
+    private static class TestItemWI extends
+            AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
         private final Map<Position, StateWithTimer> map = new HashMap<>();
 
         private final ImmutableWorkStateContainer<Position, TestTownState> statuses = new ImmutableWorkStateContainer<Position, TestTownState>() {
@@ -103,6 +106,7 @@ class AbstractItemWITest {
             }
         };
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
+        Collection<Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> wrappers = ImmutableList.of();
 
         public TestItemWI(
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
@@ -124,22 +128,33 @@ class AbstractItemWITest {
         }
 
         @Override
-        protected TestTownState setHeldItem(Void uxtra, TestTownState tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+        protected TestTownState setHeldItem(
+                Void uxtra,
+                TestTownState tuwn,
+                int villagerIndex,
+                int itemIndex,
+                GathererJournalTest.TestItem item
+        ) {
             inventory.set(itemIndex, item);
             return TestTownState.updateVillagerItems();
         }
 
         @Override
-        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
+        protected Collection<GathererJournalTest.TestItem> getHeldItems(
+                Void unused,
+                int villagerIndex
+        ) {
             return inventory.getItems();
         }
 
         @Override
-        protected boolean isWorkResult(
+        protected Collection<? extends Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> getItemInsertionCheckModifiers(
                 Void unused,
-                GathererJournalTest.TestItem item
+                Collection<String> activeSpecialRules,
+                Predicate<GathererJournalTest.TestItem> originalCheck,
+                QuantityRequired qtyRequired
         ) {
-            return false;
+            return wrappers;
         }
 
         @Override
@@ -542,5 +557,32 @@ class AbstractItemWITest {
         Assertions.assertEquals(0, state.workLeft());
         Assertions.assertEquals(1, state.processingState());
         Assertions.assertEquals(1, wi.timeLeft(arbitraryPosition));
+    }
+
+
+    @Test
+    void tryInsertIngredients_shouldLeaveStateUnchanged_IfInventoryHasItems_ButTownDoesNotHaveEnoughToMeetQuantity() {
+        TestInvHandle inventory = new TestInvHandle(
+                new ArrayList<>(ImmutableList.of(
+                        new GathererJournalTest.TestItem("gold")
+                ))
+        );
+        TestItemWI wi = new TestItemWI(
+                ImmutableMap.of(
+                        0, (item) -> true // All (1) items in inventory are wanted
+                ),
+                ImmutableMap.of(
+                        0, 2 // Want 2 items (IMPORTANT FOR THIS TEST)
+                ),
+                ImmutableMap.of(
+                        0, 0 // No work required
+                ),
+                ImmutableMap.of(
+                        0, 0 // No time required
+                ),
+                inventory
+        );
+        TestTownState res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        Assertions.assertNull(res);
     }
 }

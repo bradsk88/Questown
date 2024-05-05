@@ -6,12 +6,12 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.declarative.QuantityRequired;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
-import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -25,7 +25,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -64,12 +63,26 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected boolean isWorkResult(
+    protected Collection<? extends Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>> getItemInsertionCheckModifiers(
             Inputs inputs,
-            MCHeldItem item
+            Collection<String> activeSpecialRules,
+            Predicate<MCHeldItem> originalCheck,
+            QuantityRequired qtyRequired,
+            int villagerIndex
     ) {
-        // TODO: Store/get town data on town state
-        return Works.isWorkResult(WorksBehaviour.TownData.noData(), item.toItem());
+        ItemCheckWrappers.WrapperContext ctx = new ItemCheckWrappers.WrapperContext(
+                getTownData(inputs),
+                inputs.town().getVillager(villagerIndex)::getCapacity,
+                held -> !held.canHoldMore(qtyRequired.value()),
+                inputs.town.getVillager(villagerIndex).journal::items,
+                qtyRequired::value
+        );
+        return ItemCheckWrappers.getForHeld(ctx, activeSpecialRules);
+    }
+
+    @Override
+    protected @NotNull WorksBehaviour.TownData getTownData(Inputs inputs) {
+        return WorksBehaviour.TownData.noData();
     }
 
     @Override

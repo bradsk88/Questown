@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class RealtimeWorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
@@ -126,11 +127,27 @@ public class RealtimeWorldInteraction
     }
 
     @Override
-    protected boolean isWorkResult(
+    protected Collection<? extends Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>> getItemInsertionCheckModifiers(
             MCExtra mcExtra,
-            MCHeldItem item
+            Collection<String> activeSpecialRules,
+            Predicate<MCHeldItem> originalCheck,
+            QuantityRequired qtyRequired,
+            int villagerIndex
     ) {
-        return Works.isWorkResult(mcExtra.town().getTownData(), item.toItem());
+
+        ItemCheckWrappers.WrapperContext ctx = new ItemCheckWrappers.WrapperContext(
+                getTownData(mcExtra),
+                mcExtra.entity()::getCapacity,
+                held -> !held.canHoldMore(qtyRequired.value()),
+                mcExtra.entity()::getQTInventory,
+                qtyRequired::value
+        );
+        return ItemCheckWrappers.getForHeld(ctx, activeSpecialRules);
+    }
+
+    @Override
+    protected WorksBehaviour.@NotNull TownData getTownData(MCExtra inputs) {
+        return inputs.town().getTownData();
     }
 
     @Override

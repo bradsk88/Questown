@@ -91,4 +91,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     ImmutableList<String> getSpecialRules(int state);
 
     Collection<String> getSpecialGlobalRules();
+
+    Integer getCapacity();
+
+    Collection<H> getQTInventory();
 }

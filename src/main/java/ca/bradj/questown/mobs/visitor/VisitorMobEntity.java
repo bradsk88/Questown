@@ -1085,6 +1085,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, Wo
         return lastInsertionPos;
     }
 
+    public Integer getCapacity() {
+        return job.getCapacity();
+    }
+
+    public Collection<MCHeldItem> getQTInventory() {
+        return job.getQTInventory();
+    }
+
     public interface ChangeListener {
         void Changed();
 

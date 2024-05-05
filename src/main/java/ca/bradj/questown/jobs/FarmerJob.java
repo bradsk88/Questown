@@ -170,6 +170,16 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
     }
 
     @Override
+    public Integer getCapacity() {
+        return journal.getCapacity();
+    }
+
+    @Override
+    public Collection<MCHeldItem> getQTInventory() {
+        return journal.getItems();
+    }
+
+    @Override
     public Function<Void, Void> addStatusListener(StatusListener o) {
         return this.journal.addStatusListener(o);
     }

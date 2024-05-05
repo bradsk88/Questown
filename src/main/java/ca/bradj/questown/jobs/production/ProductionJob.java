@@ -601,4 +601,14 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         boolean mustKeepWorking = importantStauses.stream().anyMatch(Supplier::get);
         return !mustKeepWorking;
     }
+
+    @Override
+    public Integer getCapacity() {
+        return journal.getCapacity();
+    }
+
+    @Override
+    public Collection<MCHeldItem> getQTInventory() {
+        return journal.getItems();
+    }
 }

@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public abstract class AbstractWorldInteraction<
         EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>,
@@ -93,11 +94,19 @@ public abstract class AbstractWorldInteraction<
             }
 
             @Override
-            protected boolean isWorkResult(
+            protected Collection<? extends Function<Predicate<HELD_ITEM>, Predicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
                     EXTRA extra,
-                    HELD_ITEM item
+                    Collection<String> activeSpecialRules,
+                    Predicate<HELD_ITEM> originalCheck,
+                    QuantityRequired qtyRequired
             ) {
-                return self.isWorkResult(extra, item);
+                return self.getItemInsertionCheckModifiers(
+                        extra,
+                        activeSpecialRules,
+                        originalCheck,
+                        qtyRequired,
+                        villagerIndex
+                );
             }
 
             @Override
@@ -147,9 +156,12 @@ public abstract class AbstractWorldInteraction<
         this.specialRules = specialRules;
     }
 
-    protected abstract boolean isWorkResult(
+    protected abstract Collection<? extends Function<Predicate<HELD_ITEM>, Predicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
             EXTRA extra,
-            HELD_ITEM item
+            Collection<String> activeSpecialRules,
+            Predicate<HELD_ITEM> originalCheck,
+            QuantityRequired qtyRequired,
+            int villagerIndex
     );
 
     protected TOWN tryGiveItems(
@@ -207,6 +219,8 @@ public abstract class AbstractWorldInteraction<
         getWorkStatuses(inputs).clearClaim(sourcePos);
         return ts;
     }
+
+    protected abstract @NotNull WorksBehaviour.TownData getTownData(EXTRA inputs);
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 

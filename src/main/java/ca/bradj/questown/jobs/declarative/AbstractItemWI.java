@@ -1,9 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.HeldItem;
-import ca.bradj.questown.jobs.SpecialRuleIngredientAnyValidWorkOutput;
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public abstract class AbstractItemWI<
         POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN
@@ -145,19 +145,15 @@ public abstract class AbstractItemWI<
     ) {
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
-        boolean canDo = false;
-        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates()
-                                                  .get(curValue);
-        canDo = SpecialRuleIngredientAnyValidWorkOutput.<ITEM>apply(
-                specialRules.apply(curValue), itum -> {
-                    if (ingredient == null) {
-                        return false;
-                    }
-                    return ingredient.apply(item);
-                }, itum -> this.isWorkResult(extra, itum)
-        ).test(item);
+        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);
+        Predicate<ITEM> asPred = Util.funcToPredNullable(ingredient);
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
+        Predicate<ITEM> check = Predicates.applyWrapping(
+                getItemInsertionCheckModifiers(extra, specialRules.apply(curValue), asPred, new QuantityRequired(qtyRequired)),
+                asPred
+        );
+        boolean canDo = check.test(item);
         if (qtyRequired == null) {
             qtyRequired = 0;
         }
@@ -182,9 +178,11 @@ public abstract class AbstractItemWI<
         return updatedTown;
     }
 
-    protected abstract boolean isWorkResult(
+    protected abstract Collection<? extends Function<Predicate<ITEM>, Predicate<ITEM>>> getItemInsertionCheckModifiers(
             EXTRA extra,
-            ITEM item
+            Collection<String> activeSpecialRules,
+            Predicate<ITEM> originalCheck,
+            QuantityRequired qtyRequired
     );
 
     @Nullable

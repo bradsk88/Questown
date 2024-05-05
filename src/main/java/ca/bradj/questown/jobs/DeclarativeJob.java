@@ -923,13 +923,12 @@ public class DeclarativeJob extends
                 journal::getCapacity,
                 held -> quantityMet(i, held),
                 journal::getItems,
-                this,
-                i
+                () -> ingredientQtyRequiredAtStates.get(i)
         );
         for (String rule : specialRules.apply(i)) {
             Optional<ItemCheckWrappers.CheckWrapper> fn = ItemCheckWrappers.get(rule);
             if (fn.isPresent()) {
-                check = fn.get().apply(ctx, check);
+                check = fn.get().wrapTownCheck(ctx, check);
             }
         }
         return check;
