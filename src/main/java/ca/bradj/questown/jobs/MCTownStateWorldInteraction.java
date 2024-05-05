@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
@@ -60,6 +61,20 @@ public class MCTownStateWorldInteraction extends
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
+    }
+
+    @Override
+    protected MCHeldItem getHeldItemProxyFor(MCTownItem key) {
+        return MCHeldItem.fromTown(key);
+    }
+
+    @Override
+    protected ImmutableMap<MCTownItem, Integer> getItemsInTownWithoutCustomNBT(Inputs inputs) {
+        HashMap<MCTownItem, Integer> b = new HashMap<>();
+        inputs.town().containers.stream().flatMap(v -> v.getItems().stream()).forEach(
+                item -> b.compute(item, (i, prev) -> prev == null ? 1 : prev + 1)
+        );
+        return ImmutableMap.copyOf(b);
     }
 
     @Override

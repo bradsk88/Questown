@@ -31,13 +31,12 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static ca.bradj.questown.town.TownContainers.getAllContainers;
 
 public class RealtimeWorldInteraction
         extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
@@ -124,6 +123,24 @@ public class RealtimeWorldInteraction
         ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get()
                                                                             .toItemStack())));
         return b.build();
+    }
+
+    @Override
+    protected MCHeldItem getHeldItemProxyFor(MCTownItem key) {
+        return MCHeldItem.fromTown(key);
+    }
+
+    @Override
+    protected ImmutableMap<MCTownItem, Integer> getItemsInTownWithoutCustomNBT(MCExtra mcExtra) {
+        HashMap<MCTownItem, Integer> b = new HashMap<>();
+        List<ContainerTarget<MCContainer, MCTownItem>> containers = getAllContainers(
+                mcExtra.town().getRoomHandle(),
+                mcExtra.town().getServerLevel()
+        );
+        containers.stream().flatMap(v -> v.getItems().stream()).forEach(
+                item -> b.compute(item, (i, prev) -> prev == null ? 1 : prev + 1)
+        );
+        return ImmutableMap.copyOf(b);
     }
 
     @Override

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
@@ -49,14 +50,31 @@ public class TownContainers {
         return allContainers.stream().filter(v -> v.hasItem(c));
     }
 
+    /**
+     * @deprecated Use version which accepts RoomsHolder
+     */
     public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {
         return getAllContainersStream(townFlagBlockEntity, level).toList();
+    }
+
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(RoomsHolder roomsHolder, ServerLevel level) {
+        return getAllContainersStream(roomsHolder, level).toList();
     }
 
         @NotNull
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(TownFlagBlockEntity townFlagBlockEntity, ServerLevel level) {
         return townFlagBlockEntity
                 .getRoomHandle()
+                .getMatches()
+                .stream()
+                .flatMap(v -> v.getContainedBlocks().entrySet().stream())
+                .filter(v -> v.getValue() instanceof ChestBlock)
+                .map(v -> fromChestBlockMaybe(v.getKey(), (ChestBlock) v.getValue(), level))
+                .filter(Objects::nonNull);
+    }
+        @NotNull
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(RoomsHolder roomsHolder, ServerLevel level) {
+        return roomsHolder
                 .getMatches()
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream())

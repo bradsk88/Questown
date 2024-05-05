@@ -9,6 +9,7 @@ import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -107,6 +108,7 @@ class AbstractItemWITest {
         };
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
         Collection<Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> wrappers = ImmutableList.of();
+        int ingredientsLeftInTown = Integer.MAX_VALUE;
 
         public TestItemWI(
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
@@ -125,6 +127,15 @@ class AbstractItemWITest {
                     state -> ImmutableList.of()
             );
             this.inventory = inventory;
+        }
+
+        @Override
+        protected boolean hasMore(
+                Void unused,
+                Predicate<GathererJournalTest.TestItem> itemBooleanFunction,
+                int amountNeeded
+        ) {
+            return ingredientsLeftInTown >= amountNeeded;
         }
 
         @Override
@@ -220,10 +231,11 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(update);
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("Not holding a valid item for insertion", update.reason());
     }
 
     @Test
@@ -246,10 +258,11 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("Not holding a valid item for insertion", update.reason());
     }
 
     @Test
@@ -270,10 +283,12 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("The job calls for 0 items at this state: 0", update.reason());
     }
 
     @Test
@@ -292,10 +307,12 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("The job calls for 0 items at this state: 0", update.reason());
     }
 
     @Test
@@ -312,10 +329,12 @@ class AbstractItemWITest {
                 ImmutableMap.of(),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("The job calls for 0 items at this state: 0", update.reason());
     }
 
     @Test
@@ -338,10 +357,12 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("Not holding a valid item for insertion", update.reason());
     }
 
     @Test
@@ -366,10 +387,12 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
-        Assertions.assertNull(res);
+
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("Not holding a valid item for insertion", update.reason());
     }
 
     @Test
@@ -422,9 +445,9 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        TestTownState res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
-        Assertions.assertNotNull(res);
-        Assertions.assertTrue(res.updatedHeldItems);
+        OrReason<TestTownState> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        Assertions.assertNotNull(res.value(), res.reason());
+        Assertions.assertTrue(res.value().updatedHeldItems);
     }
 
     @Test
@@ -582,7 +605,39 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        TestTownState res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
-        Assertions.assertNull(res);
+        wi.ingredientsLeftInTown = 0;
+        @NotNull OrReason<TestTownState> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        Assertions.assertNull(res.value());
+        Assertions.assertEquals("There are not enough ingredients in town. [Quantity required: 2, In Block: 0,  In Hand: 1", res.reason());
+    }
+
+    @Test
+    void tryInsertIngredients_shouldUpdateTownState_AfterInsertingOnce_IfInventoryHasItems_ButTownDoesNotHaveEnoughToMeetQuantity() {
+        TestInvHandle inventory = new TestInvHandle(
+                new ArrayList<>(ImmutableList.of(
+                        new GathererJournalTest.TestItem("gold")
+                ))
+        );
+        TestItemWI wi = new TestItemWI(
+                ImmutableMap.of(
+                        0, (item) -> true // All (1) items in inventory are wanted
+                ),
+                ImmutableMap.of(
+                        0, 2 // Want 2 items (IMPORTANT FOR THIS TEST)
+                ),
+                ImmutableMap.of(
+                        0, 0 // No work required
+                ),
+                ImmutableMap.of(
+                        0, 0 // No time required
+                ),
+                inventory
+        );
+        // 0 in town, 1 in the block, 1 in hand.
+        wi.ingredientsLeftInTown = 0;
+        wi.statuses.setJobBlockState(arbitraryPosition, AbstractWorkStatusStore.State.fresh().incrIngredientCount());
+
+        OrReason<?> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        Assertions.assertNotNull(res.value(), res.reason());
     }
 }

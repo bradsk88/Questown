@@ -291,6 +291,16 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
+        protected TestHeldItem getHeldItemProxyFor(TestItem key) {
+            return new TestHeldItem(key.name(), key.quantity());
+        }
+
+        @Override
+        protected ImmutableMap<TestItem, Integer> getItemsInTownWithoutCustomNBT(Void unused) {
+            return ImmutableMap.of();
+        }
+
+        @Override
         protected Collection<? extends Function<Predicate<TestHeldItem>, Predicate<TestHeldItem>>> getItemInsertionCheckModifiers(
                 Void unused,
                 Collection<String> activeSpecialRules,

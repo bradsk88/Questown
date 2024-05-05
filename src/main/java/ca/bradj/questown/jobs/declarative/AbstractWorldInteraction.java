@@ -75,6 +75,21 @@ public abstract class AbstractWorldInteraction<
                 specialRules
         ) {
             @Override
+            protected boolean hasMore(
+                    EXTRA extra,
+                    Predicate<HELD_ITEM> heldItemBooleanFunction,
+                    int amountNeeded
+            ) {
+                Map<INNER_ITEM, Integer> itemsInTown = getItemsInTownWithoutCustomNBT(extra);
+                for (Map.Entry<INNER_ITEM, Integer> entry : itemsInTown.entrySet()) {
+                    if (heldItemBooleanFunction.test(getHeldItemProxyFor(entry.getKey()))) {
+                        return entry.getValue() >= amountNeeded;
+                    }
+                }
+                return false;
+            }
+
+            @Override
             protected TOWN setHeldItem(
                     EXTRA uxtra,
                     TOWN tuwn,
@@ -155,6 +170,10 @@ public abstract class AbstractWorldInteraction<
         this.claimSpots = claimSpots;
         this.specialRules = specialRules;
     }
+
+    protected abstract HELD_ITEM getHeldItemProxyFor(INNER_ITEM key);
+
+    protected abstract ImmutableMap<INNER_ITEM, Integer> getItemsInTownWithoutCustomNBT(EXTRA extra);
 
     protected abstract Collection<? extends Function<Predicate<HELD_ITEM>, Predicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
             EXTRA extra,
@@ -301,9 +320,9 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
-        if (o != null) {
-            return new WorkOutput<>(o, workSpot);
+        OrReason<TOWN> o = itemWI.tryInsertIngredients(extra, workSpot);
+        if (o.value() != null) {
+            return new WorkOutput<>(o.value(), workSpot);
         }
 
         if (this.workRequiredAtStates.containsKey(workSpot.action())) {

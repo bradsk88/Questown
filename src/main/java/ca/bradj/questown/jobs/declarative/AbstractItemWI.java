@@ -50,7 +50,7 @@ public abstract class AbstractItemWI<
     }
 
     @Override
-    public TOWN tryInsertIngredients(
+    public @NotNull OrReason<TOWN> tryInsertIngredients(
             EXTRA extra,
             WorkSpot<Integer, POS> ws
     ) {
@@ -67,12 +67,30 @@ public abstract class AbstractItemWI<
         }
 
         if (state.processingState() != curState) {
-            return null;
+            return OrReason.reason(String.format(
+                    "State at %s has changed since last work decision [%s => %s]",
+                    ws.position(), curState, state.processingState()
+            ));
         }
 
         Integer qty = ingredientQtyRequiredAtStates.get(state.processingState());
-        if (qty != null && qty == state.ingredientCount()) {
-            return null;
+        if (qty == null) {
+            return OrReason.reason("The job calls for 0 items at this state: " + state.processingState());
+        }
+        if (qty == state.ingredientCount()) {
+            return OrReason.reason("Quantity already met");
+        }
+
+        if (!hasMore(
+                extra,
+                Util.funcToPredNullable(ingredientsRequiredAtStates.get(state.processingState())),
+                qty - (state.ingredientCount() + 1)
+        )) {
+            return OrReason.reason(String.format(
+                    "There are not enough ingredients in town. " +
+                            "[Quantity required: %d, In Block: %d,  In Hand: 1",
+                    qty, state.ingredientCount()
+            ));
         }
 
         int i = -1;
@@ -109,16 +127,22 @@ public abstract class AbstractItemWI<
                 Claim claim = claimSpots.apply(extra);
                 if (claim != null) {
                     if (getWorkStatuses(extra).claimSpot(bp, claim)) {
-                        return town;
+                        return OrReason.success(town);
                     }
-                    return null;
+                    return OrReason.reason(String.format("Spot cannot be claimed: %s", bp));
                 } else {
-                    return town;
+                    return OrReason.success(town);
                 }
             }
         }
-        return null;
+        return OrReason.reason("Not holding a valid item for insertion");
     }
+
+    protected abstract boolean hasMore(
+            EXTRA extra,
+            Predicate<ITEM> itemBooleanFunction,
+            int amountNeeded
+    );
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,
@@ -150,7 +174,12 @@ public abstract class AbstractItemWI<
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
         Predicate<ITEM> check = Predicates.applyWrapping(
-                getItemInsertionCheckModifiers(extra, specialRules.apply(curValue), asPred, new QuantityRequired(qtyRequired)),
+                getItemInsertionCheckModifiers(
+                        extra,
+                        specialRules.apply(curValue),
+                        asPred,
+                        new QuantityRequired(qtyRequired)
+                ),
                 asPred
         );
         boolean canDo = check.test(item);
