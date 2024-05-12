@@ -6,10 +6,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ItemCheckWrappers.WrapperContext;
-import ca.bradj.questown.jobs.declarative.MCExtra;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ControlledCache;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -619,7 +616,8 @@ public class DeclarativeJob extends
         }
 
         // TODO: Pass in the previous workspot and keep working it, if it's sill workable
-        WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = this.world.tryWorking(town, work, entity, allSpots);
+        WithReason<WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> workedWR = this.world.tryWorking(town, work, entity, allSpots);
+        WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = workedWR.value();
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
             this.setLookTarget(worked.spot().position());

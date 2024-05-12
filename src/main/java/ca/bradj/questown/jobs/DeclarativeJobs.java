@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.mc.Util;
@@ -70,14 +71,14 @@ public class DeclarativeJobs {
                 @Nullable MCTownState
                 >> b = ImmutableMap.builder();
         Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
-            @Nullable WorkOutput<MCTownState, WorkSpot<Integer, BlockPos>> v = ii.wi.tryWorking(
+            WithReason<@Nullable WorkOutput<MCTownState, WorkSpot<Integer, BlockPos>>> v = ii.wi.tryWorking(
                     ii.inState,
                     new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1, ii.fakePos)
             );
-            if (v == null) {
+            if (v.value() == null) {
                 return null;
             }
-            return v.town();
+            return v.value().town();
         };
 
         for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {

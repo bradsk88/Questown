@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -49,12 +50,12 @@ public class ProductionStatuses {
     ) {
         Comparator<ProductionStatus> cmp = Comparator.comparingInt(ProductionStatus::getProductionState);
         ProductionStatus maxState = statePriority.stream().max(cmp).orElse(currentStatus);
-        ProductionStatus newStatus = JobStatuses.productionRoutine(
+        WithReason<ProductionStatus> newStatus = JobStatuses.productionRoutine(
                 currentStatus, prioritizeExtraction, inventory, entity, town,
                 new TypicalProductionJob<>(statePriority),
                 factory, maxState
         );
-        return nullIfUnchanged(currentStatus, newStatus);
+        return nullIfUnchanged(currentStatus, WithReason.orNull(newStatus));
     }
 
     public static <ROOM extends Room> @Nullable ProductionStatus getEveningStatus(

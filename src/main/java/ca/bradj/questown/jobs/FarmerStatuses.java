@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
@@ -68,7 +69,7 @@ public class FarmerStatuses {
             EntityInvStateProvider inventory,
             boolean isInFarm
     ) {
-        GathererJournal.Status status = JobStatuses.usualRoutine(
+        GathererJournal.Status status = WithReason.<GathererJournal.Status>orNull(JobStatuses.usualRoutine(
                 currentStatus, false, inventory, new TownStateProvider() {
                     @Override
                     public boolean hasSupplies() {
@@ -145,7 +146,7 @@ public class FarmerStatuses {
                     }
                 },
                 GathererJournal.Status.FACTORY
-        );
+        ));
         if (isInFarm && ImmutableList.of(
                 GathererJournal.Status.DROPPING_LOOT,
                 GathererJournal.Status.COLLECTING_SUPPLIES

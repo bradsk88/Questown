@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import com.google.common.base.Predicates;
@@ -13,15 +14,15 @@ import java.util.function.*;
 
 public class JobsClean {
 
-    public static <STATUS extends IStatus<STATUS>> STATUS doOrGoTo(
+    public static <STATUS extends IStatus<STATUS>> WithReason<STATUS> doOrGoTo(
             STATUS status,
             boolean isAtJobSite,
             STATUS goStatus
     ) {
         if (isAtJobSite) {
-            return status;
+            return new WithReason<>(status, "Villager is not at job site");
         }
-        return goStatus;
+        return new WithReason<>(goStatus, "Already in job site");
     }
 
     public static <HELD extends HeldItem<HELD, TOWN_ITEM>, TOWN_ITEM extends Item<TOWN_ITEM>> boolean hasNonSupplyItems(

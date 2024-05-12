@@ -26,7 +26,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         this.toolsRequiredAtStates = toolsRequiredAtStates;
     }
 
-    public TOWN tryWork(
+    public WithReason<TOWN> tryWork(
             EXTRA extra,
             WorkSpot<Integer, POS> ws
     ) {
@@ -39,11 +39,11 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             nextStepWork = 0;
         }
         Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
-        TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
-        boolean didWork = updatedTown != null;
+        WithReason<TOWN> updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
+        boolean didWork = updatedTown.value() != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
         if (didWork && itemBooleanFunction != null) {
-            return degradeTool(extra, updatedTown, itemBooleanFunction);
+            return new WithReason<>(degradeTool(extra, updatedTown.value(), itemBooleanFunction), "Did work with tool (and " + updatedTown.reason() + ")");
         }
         return updatedTown;
     }
@@ -54,7 +54,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             Function<ITEM, Boolean> itemBooleanFunction
     );
 
-    private @Nullable TOWN applyWork(
+    private WithReason<@Nullable TOWN> applyWork(
             EXTRA extra,
             POS bp,
             int curState,
@@ -68,15 +68,15 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
         AbstractWorkStatusStore.State bs = oldState.decrWork(getWorkSpeedOf10(extra));
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
-            return null;
+            return new WithReason<>(null, "No work done due to mood?");
         }
         if (bs.workLeft() == 0) {
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }
         if (nextStepTime <= 0) {
-            return sl.setJobBlockState(bp, bs);
+            return new WithReason<>(sl.setJobBlockState(bp, bs), "Work was done (no timers)");
         } else {
-            return sl.setJobBlockStateWithTimer(bp, bs, nextStepTime);
+            return new WithReason<>(sl.setJobBlockStateWithTimer(bp, bs, nextStepTime), "Work was done (and timer set)");
         }
     }
 

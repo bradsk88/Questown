@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -265,12 +266,12 @@ class JobStatusesTest {
     private static final LegacyJob<TestStatus, TestStatus> jobWithItemlessWork = new LegacyJob<>() {
         @Override
         public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
-            return new StatusSupplier<>(TestStatus.ITEMLESS_WORK, () -> TestStatus.ITEMLESS_WORK);
+            return new StatusSupplier<>(TestStatus.ITEMLESS_WORK, () -> new WithReason<>(TestStatus.ITEMLESS_WORK, "mocked"));
         }
 
         @Override
         public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-            return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
+            return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> new WithReason<>(TestStatus.ITEM_WORK, "mocked"));
         }
     };
 
@@ -283,10 +284,10 @@ class JobStatusesTest {
         @Override
         public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
             if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK, false)) {
-                return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
+                return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> new WithReason<>(TestStatus.ITEM_WORK, "mocked"));
             }
             if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK_2, false)) {
-                return new StatusSupplier<>(TestStatus.ITEM_WORK_2, () -> TestStatus.ITEM_WORK_2);
+                return new StatusSupplier<>(TestStatus.ITEM_WORK_2, () -> new WithReason<>(TestStatus.ITEM_WORK_2, "mocked"));
             }
             return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> null);
         }
@@ -294,7 +295,7 @@ class JobStatusesTest {
 
     @Test
     void StatusShouldBe_CollectingSupplies_WhenInvEmptyTownFull() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of()),
@@ -302,12 +303,22 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.COLLECTING_SUPPLIES, s);
+        assertStatusEquals(TestStatus.COLLECTING_SUPPLIES, s);
+    }
+
+    private void assertStatusEquals(
+            TestStatus expected,
+            WithReason<TestStatus> actual
+    ) {
+        if (expected != null) {
+            Assertions.assertNotNull(actual);
+        }
+        Assertions.assertEquals(expected, actual.value(), actual.reason());
     }
 
     @Test
     void StatusShouldDo_ItemlessWork_WhenInvEmpty() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of()),
@@ -315,12 +326,12 @@ class JobStatusesTest {
                 jobWithItemlessWork,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEMLESS_WORK, s);
+        assertStatusEquals(TestStatus.ITEMLESS_WORK, s);
     }
 
     @Test
     void StatusShouldBe_ItemWork_WhenInvFullOfSuppliesTownEmpty() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, false, HAS_ALL_SUPPLIES),
@@ -328,12 +339,12 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        assertStatusEquals(TestStatus.ITEM_WORK, s);
     }
 
     @Test
     void StatusShouldBe_NoSupplies_WhenInvEmptyTownEmpty() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of()),
@@ -341,12 +352,12 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_SUPPLIES, s);
+        assertStatusEquals(TestStatus.NO_SUPPLIES, s);
     }
 
     @Test
     void StatusShouldDo_ItemWork_WhenInvHasSupplies_AndTownEmpty() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, true, HAS_ALL_SUPPLIES),
@@ -354,12 +365,12 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        assertStatusEquals(TestStatus.ITEM_WORK, s);
     }
 
     @Test
     void StatusShouldDo_ItemWork2_WhenInvHasWork2Supplies_AndTownEmpty() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, true, ImmutableMap.of(
@@ -370,12 +381,12 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK_2, s);
+        assertStatusEquals(TestStatus.ITEM_WORK_2, s);
     }
 
     @Test
     void StatusShouldBe_ItemWork_WhenInvFullTownFull() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, false, HAS_ALL_SUPPLIES),
@@ -383,13 +394,13 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        assertStatusEquals(TestStatus.ITEM_WORK, s);
     }
 
     @Test
     void StatusShouldPrefer_ItemWork_OverItemlessWork_WhenInvFullTownFull_AndPrioritizeIsSetToFalse() {
         boolean prioritizeCollection = false;
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 prioritizeCollection,
                 new ConstInventory(true, false, HAS_ALL_SUPPLIES),
@@ -397,12 +408,12 @@ class JobStatusesTest {
                 jobWithItemlessWork,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        assertStatusEquals(TestStatus.ITEM_WORK, s);
     }
 
     @Test
     void StatusShouldPrefer_ItemWork_OverItemlessWork_IfItemlessWorkIsInAnotherLocation_WhenInvFullTownFull() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, false, HAS_ALL_SUPPLIES),
@@ -410,22 +421,22 @@ class JobStatusesTest {
                 new LegacyJob<>() {
                     @Override
                     public @Nullable StatusSupplier<TestStatus> tryChoosingItemlessWork() {
-                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.GOING_TO_JOB);
+                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> new WithReason<>(TestStatus.GOING_TO_JOB, "mocked"));
                     }
 
                     @Override
                     public @Nullable StatusSupplier<TestStatus> tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> TestStatus.ITEM_WORK);
+                        return new StatusSupplier<>(TestStatus.ITEM_WORK, () -> new WithReason<>(TestStatus.ITEM_WORK, "mocked"));
                     }
                 },
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.ITEM_WORK, s);
+        assertStatusEquals(TestStatus.ITEM_WORK, s);
     }
 
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasNonSuppliesOnly() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, true, ImmutableMap.of()),
@@ -433,12 +444,12 @@ class JobStatusesTest {
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+        assertStatusEquals(TestStatus.DROPPING_LOOT, s);
     }
 
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of(
@@ -448,7 +459,7 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+        assertStatusEquals(TestStatus.DROPPING_LOOT, s);
     }
 
     @Test
@@ -457,7 +468,7 @@ class JobStatusesTest {
         boolean hasSupplies = false;
         boolean suppliesInInventory = false;
 
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of(
@@ -468,7 +479,7 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
+        assertStatusEquals(TestStatus.NO_JOBSITE, s);
     }
 
     @Test
@@ -480,7 +491,7 @@ class JobStatusesTest {
         boolean hasNonSupplyItems = true;
         boolean townHasSpace = false;
 
-        TestStatus s = JobStatuses.usualRoutine(
+        WithReason<TestStatus> s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
@@ -491,6 +502,6 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_SPACE, s);
+        assertStatusEquals(TestStatus.NO_SPACE, s);
     }
 }

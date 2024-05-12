@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Util;
@@ -351,7 +352,7 @@ public class StatusesProductionRoutineTest {
     @Test
     void InMorning_StatusShouldBe_DroppingLoot_WhenEntityIsInJobSite_AndInventoryIsOnlyWork1_AndAllBlocksNeedWork2() {
         boolean hasSupplies = true;
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
                 new TestInventory(false, false, ImmutableMap.of(
@@ -372,7 +373,17 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+        assertStatusEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
+    private void assertStatusEquals(
+            PTestStatus expected,
+            WithReason<PTestStatus> actual
+    ) {
+        if (expected != null) {
+            Assertions.assertNotNull(actual);
+        }
+        Assertions.assertEquals(expected, actual.value(), actual.reason());
     }
 
     @Test
@@ -383,7 +394,7 @@ public class StatusesProductionRoutineTest {
         );
 
         boolean hasSupplies = true;
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
                 new TestInventory(false, false, ImmutableMap.of(
@@ -409,7 +420,7 @@ public class StatusesProductionRoutineTest {
     @Test
     void StatusShouldStay_GoingToJobSite_WhenEntityIsNotInJobSite_AndHasSupplies() {
         boolean hasSupplies = true;
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
                 new TestInventory(false, false, ImmutableMap.of(
@@ -435,7 +446,7 @@ public class StatusesProductionRoutineTest {
     @Test
     void InMorning_StatusShouldBe_Idle_WhenAllSitesFull_AndInJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
                 new TestInventory(false, false, ImmutableMap.of(
@@ -454,13 +465,13 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
+        assertStatusEquals(PTestStatus.NO_JOBSITE, s);
     }
 
     @Test
     void InMorning_StatusShouldBe_NoJobSite_WhenAllSitesFull_AndOutOfJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
                 new TestInventory(false, false, ImmutableMap.of(
@@ -479,7 +490,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
+        assertStatusEquals(PTestStatus.NO_JOBSITE, s);
     }
 
     @Test
@@ -491,7 +502,7 @@ public class StatusesProductionRoutineTest {
         Map<PTestStatus, Collection<Room>> workToBeDone = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -505,7 +516,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
+        assertStatusEquals(PTestStatus.INGREDIENTS, s);
     }
 
     @Test
@@ -519,7 +530,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work 2 be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -533,7 +544,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
+        assertStatusEquals(PTestStatus.ITEM_WORK, s);
     }
 
     @Test
@@ -556,7 +567,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(otherRoom.room), // There are ing. needed in another room
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done in this room
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -570,7 +581,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
+        assertStatusEquals(PTestStatus.ITEM_WORK, s);
     }
 
     @Test
@@ -589,7 +600,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -611,7 +622,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.ITEM_WORK, s);
+        assertStatusEquals(PTestStatus.ITEM_WORK, s);
     }
 
     @Test
@@ -630,7 +641,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -652,7 +663,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
+        assertStatusEquals(PTestStatus.INGREDIENTS, s);
     }
 
     @Test
@@ -667,7 +678,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingredients needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -684,7 +695,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
+        assertStatusEquals(PTestStatus.COLLECTING_PRODUCT, s);
     }
 
     @Test
@@ -698,7 +709,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -715,7 +726,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
+        assertStatusEquals(PTestStatus.GOING_TO_JOB, s);
     }
 
     @Test
@@ -729,7 +740,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -744,7 +755,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.INGREDIENTS, s);
+        assertStatusEquals(PTestStatus.INGREDIENTS, s);
     }
 
     @Test
@@ -758,7 +769,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryRoom), // There are ingr. needed
                 BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryRoom) // There is work to be done
         );
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -773,7 +784,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
+        assertStatusEquals(PTestStatus.GOING_TO_JOB, s);
     }
 
     private record TestJobTownWithTime(
@@ -826,7 +837,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
         );
 
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -841,7 +852,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.WAITING, s);
+        assertStatusEquals(PTestStatus.WAITING, s);
     }
 
     @Disabled("The title doesn't seem to match the test. Update the test?")
@@ -859,7 +870,7 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
         );
 
-        PTestStatus s = JobStatuses.productionRoutine(
+        WithReason<PTestStatus> s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
                 new TestInventory(false, false, invItemsForWork),
@@ -874,7 +885,7 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY,
                 BLOCK_READY_TO_EXTRACT_PRODUCT
         );
-        Assertions.assertEquals(PTestStatus.WAITING, s);
+        assertStatusEquals(PTestStatus.WAITING, s);
     }
 
 }

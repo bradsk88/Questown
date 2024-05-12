@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Util;
@@ -12,7 +14,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 public class JobStatuses {
 
@@ -41,7 +42,7 @@ public class JobStatuses {
     /**
      * @deprecated Use usualRoutineV2
      */
-    public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutine(
+    public static <STATUS extends IStatus<STATUS>, SUP_CAT> WithReason<STATUS> usualRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
             EntityInvStateProvider<SUP_CAT> inventory,
@@ -49,44 +50,53 @@ public class JobStatuses {
             LegacyJob<STATUS, SUP_CAT> job,
             IStatusFactory<STATUS> factory
     ) {
-        return usualRoutineV2(currentStatus, prioritizeExtraction, inventory, town, new Job<>() {
-            @Override
-            public ImmutableMap<Integer, StatusSupplier<STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus) {
-                return ImmutableMap.of(
-                        0, job.tryUsingSupplies(supplyItemStatus)
-                );
-            }
+        WithReason<STATUS> v = usualRoutineV2(
+                currentStatus,
+                prioritizeExtraction,
+                inventory,
+                town,
+                new Job<STATUS, SUP_CAT>() {
+                    @Override
+                    public ImmutableMap<Integer, StatusSupplier<STATUS>> getSupplyUsesKeyedByPriority(Map<SUP_CAT, Boolean> supplyItemStatus) {
+                        return ImmutableMap.of(
+                                0, job.tryUsingSupplies(supplyItemStatus)
+                        );
+                    }
 
-            @Override
-            public ImmutableMap<Integer, StatusSupplier<STATUS>> getItemlessWorkKeyedByPriority() {
-                return ImmutableMap.of(
-                        1, job.tryChoosingItemlessWork()
-                );
-            }
+                    @Override
+                    public ImmutableMap<Integer, StatusSupplier<STATUS>> getItemlessWorkKeyedByPriority() {
+                        return ImmutableMap.of(
+                                1, job.tryChoosingItemlessWork()
+                        );
+                    }
 
-            @Override
-            public SUP_CAT fromInt(int i) {
-                return null;
-            }
+                    @Override
+                    public SUP_CAT fromInt(int i) {
+                        return null;
+                    }
 
-            @Override
-            public @Nullable SUP_CAT convert(STATUS i) {
-                return null;
-            }
+                    @Override
+                    public @Nullable SUP_CAT convert(STATUS i) {
+                        return null;
+                    }
 
-            @Override
-            public @Nullable StatusSupplier<STATUS> tryChoosingItemlessWork() {
-                return job.tryChoosingItemlessWork();
-            }
+                    @Override
+                    public @Nullable StatusSupplier<STATUS> tryChoosingItemlessWork() {
+                        return job.tryChoosingItemlessWork();
+                    }
 
-            @Override
-            public StatusSupplier<STATUS> tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus) {
-                return job.tryUsingSupplies(supplyItemStatus);
-            }
-        }, factory);
+                    @Override
+                    public StatusSupplier<STATUS> tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus) {
+                        return job.tryUsingSupplies(supplyItemStatus);
+                    }
+                },
+                factory
+        );
+
+        return v;
     }
 
-    public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutineV2(
+    public static <STATUS extends IStatus<STATUS>, SUP_CAT> WithReason<STATUS> usualRoutineV2(
             STATUS currentStatus,
             // TODO: Phase out in favour of preferences
             boolean prioritizeExtraction,
@@ -95,7 +105,6 @@ public class JobStatuses {
             Job<STATUS, SUP_CAT> job,
             IStatusFactory<STATUS> factory
     ) {
-        STATUS s = null;
         Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
         boolean hasWorkItems = supplyItemStatus.containsValue(true);
         Map<Integer, StatusSupplier<STATUS>> workToTry = new HashMap<>();
@@ -104,7 +113,7 @@ public class JobStatuses {
         }
         putAllOrFallback(workToTry, job.getItemlessWorkKeyedByPriority());
 
-        @Nullable STATUS normalStatus = null;
+        @Nullable WithReason<STATUS> normalStatus = null;
         boolean foundExtraction = false;
         boolean canGo = false;
 
@@ -113,19 +122,21 @@ public class JobStatuses {
             if (potentialWork == null) {
                 continue;
             }
-            STATUS successfulChoice = potentialWork.actualStatus().get();
+            WithReason<STATUS> successfulChoice = potentialWork.actualStatus().get();
             if (successfulChoice == null) {
                 boolean hasSupplies = Util.getOrDefault(supplyItemStatus, job.convert(potentialWork.targetStatus()), true);
                 if (!hasSupplies && town.hasSupplies(i) && town.canUseMoreSupplies(i)) {
-                    normalStatus = factory.collectingSupplies();
+                    normalStatus = new WithReason<>(factory.collectingSupplies(), String.format(
+                            "Need supplies and town has supplies for target status %s", potentialWork.targetStatus()
+                    ));
                 }
                 continue;
             }
-            if (factory.extractingProduct().equals(successfulChoice)) {
+            if (WithReason.isSame(factory.extractingProduct(), successfulChoice)) {
                 foundExtraction = true;
             }
             if (normalStatus == null) {
-                if (factory.goingToJobSite().equals(successfulChoice)) {
+                if (WithReason.isSame(factory.goingToJobSite(), successfulChoice)) {
                     canGo = true;
                 } else {
                     normalStatus = successfulChoice;
@@ -134,62 +145,63 @@ public class JobStatuses {
         }
 
         if (foundExtraction && prioritizeExtraction) {
-            return nullIfUnchanged(currentStatus, factory.extractingProduct());
+            return nullIfUnchanged(currentStatus, new WithReason<>(factory.extractingProduct(), "Found extraction and prioritized"));
         } else if (normalStatus != null) {
-            return nullIfUnchanged(currentStatus, normalStatus);
+            return nullIfUnchanged(currentStatus, normalStatus.wrap("Job-block-based status found"));
         } else if (canGo) {
-            return nullIfUnchanged(currentStatus, factory.goingToJobSite());
+            return nullIfUnchanged(currentStatus, new WithReason<>(factory.goingToJobSite(), "Job-block-based work found elsewhere"));
         }
 
+        WithReason<STATUS> s = null;
         boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems(town.isCachingAllowed());
         if (inventory.inventoryFull()) {
             if (town.hasSpace()) {
-                s = factory.droppingLoot();
+                s = new WithReason<>(factory.droppingLoot(), "Inventory is full and a place exists to put items");
             } else {
-                s = factory.noSpace();
+                s = new WithReason<>(factory.noSpace(), "Inventory is full but there is nowhere to put them");
             }
         }
 
         if (s != null) {
             s = nullIfUnchanged(currentStatus, s);
-            if (s != factory.goingToJobSite()) {
+            if (s != null && s.value() != factory.goingToJobSite()) {
                 return s;
             } else if (inventory.inventoryFull() || (hasItems && !town.hasSupplies())) {
                 return s;
             }
         }
 
-        STATUS s2 = s;
+        WithReason<STATUS> s2 = s;
         if (s2 != null) {
             return nullIfUnchanged(currentStatus, s2);
         } else if (inventory.hasNonSupplyItems(town.isCachingAllowed())) {
             if (town.hasSpace()) {
-                s2 = factory.droppingLoot();
+                s2 = new WithReason<>(factory.droppingLoot(), "There are non-work items in the inventory and space exists in town for them");
             } else {
-                s2 = factory.noSpace();
+                s2 = new WithReason<>(factory.noSpace(), "There are non-work items in the inventory but town is full");
             }
         } else if (!town.hasSupplies()) {
             if (town.canUseMoreSupplies()) {
-                s2 = nullIfUnchanged(currentStatus, factory.noSupplies());
+                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.noSupplies(), "Work can be done, but no ingredients are present in town"));
             } else if (hasItems) {
-                s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
+                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "There is no work to do, the villager has items, and there is space in town"));
             } else {
-                s2 = factory.noJobSite();
+                s2 = new WithReason<>(factory.noJobSite(), "There is no work to do, and nothing in the inventory");
             }
         } else {
             if (hasItems && !hasWorkItems) {
-                s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
+                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "Villager has items that are not for work"));
             } else if (town.canUseMoreSupplies()) {
-                s2 = nullIfUnchanged(currentStatus, factory.collectingSupplies());
+                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.collectingSupplies(), "Work can be done, and there are supplies"));
             } else {
                 if (town.isTimerActive()) {
-                    return factory.waitingForTimedState();
+                    return new WithReason<>(factory.waitingForTimedState(), "There are timers active");
                 }
-                return factory.noJobSite();
+                return new WithReason<>(factory.noJobSite(), "There are supplies in town, but no work to do");
             }
         }
 
-        if (s2 != factory.collectingSupplies() && s != null) {
+        if ((s2 != null && s2.value() != factory.collectingSupplies()) && s != null) {
             return s;
         }
 
@@ -204,7 +216,7 @@ public class JobStatuses {
                 key -> workToTry.compute(key, (k, cur) -> {
                     StatusSupplier<STATUS> il = itemlessWorkKeyedByPriority.get(k);
                     if (il != null) {
-                        @Nullable STATUS status = il.actualStatus().get();
+                        @Nullable WithReason<STATUS> status = il.actualStatus().get();
                         if (status != null) {
                             return il;
                         }
@@ -225,7 +237,7 @@ public class JobStatuses {
      *                              will cause the item to be spawned into the
      *                              world for collection by whomever walks by.
      */
-    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> WithReason<STATUS> productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
             EntityInvStateProvider<STATUS> inventory,
@@ -241,7 +253,7 @@ public class JobStatuses {
                 return null;
             }
         }
-        STATUS status = usualRoutineV2(
+        WithReason<STATUS> status = usualRoutineV2(
                 currentStatus, prioritizeExtraction, inventory,
                 new TownStateProvider() {
                     @Override
@@ -290,7 +302,10 @@ public class JobStatuses {
                     public @Nullable StatusSupplier<STATUS> tryChoosingItemlessWork() {
                         Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
                         for (Integer state : states) {
-                            return new StatusSupplier<>(fromInt(state), () -> factory.fromJobBlockState(state));
+                            return new StatusSupplier<>(fromInt(state), () -> new WithReason<>(
+                                    factory.fromJobBlockState(state),
+                                    String.format("Town lists status %d as having itemless work to do", state)
+                            ));
                         }
 
                         Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -301,11 +316,17 @@ public class JobStatuses {
                         ROOM location = entity.getEntityCurrentJobSite();
                         if (location != null) {
                             if (rooms.contains(location)) {
-                                return new StatusSupplier<>(maxState, factory::extractingProduct);
+                                return new StatusSupplier<>(maxState, () -> new WithReason<>(
+                                        factory.extractingProduct(),
+                                        String.format("Current room has product: %s", location)
+                                ));
                             }
                         }
 
-                        return new StatusSupplier<>(maxState, factory::goingToJobSite);
+                        return new StatusSupplier<>(maxState, () -> new WithReason<>(
+                                factory.extractingProduct(),
+                                String.format("A room has product: %s", location)
+                        ));
                     }
 
                     @Override
@@ -376,14 +397,17 @@ public class JobStatuses {
                                 foundWork = s;
                                 if (location != null) {
                                     if (roomNeedsMap.get(s).contains(location)) {
-                                        return StatusSupplier.found(s);
+                                        return StatusSupplier.found(s, "The current room needs the items that are being held");
                                     }
                                 }
                             }
                         }
 
                         if (foundWork != null) {
-                            return new StatusSupplier<>(foundWork, () -> factory.goingToJobSite());
+                            return new StatusSupplier<>(foundWork, () -> new WithReason<>(
+                                    factory.goingToJobSite(),
+                                    "Located work in a different room"
+                            ));
                         }
                         // TODO: Return null here. This call to `try` might be needed for the farmer job.
                         //  Let's convert that into a production job.
@@ -410,10 +434,10 @@ public class JobStatuses {
                                         if (location != null) {
                                             if (roomNeedsMap.get(s)
                                                             .contains(location)) {
-                                                return s;
+                                                return new WithReason<>(s, "Supplies can be used in the current room");
                                             }
                                         }
-                                        return factory.goingToJobSite();
+                                        return new WithReason<>(factory.goingToJobSite(), "Supplies can be used in a different room");
                                     }
                                     return null;
                                 }));
@@ -425,21 +449,36 @@ public class JobStatuses {
         );
         // TODO: For "no supplies" status, ignore rooms that only need tools
         // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
-        if (status == null || factory.idle()
-                                     .equals(status) || factory.noSupplies()
-                                                               .equals(status)) {
+        if (isDoNothingStatus(factory, status)) {
             if (town.isUnfinishedTimeWorkPresent()) {
-                return factory.waitingForTimedState();
+                status = nullIfUnchanged(currentStatus, new WithReason<>(factory.waitingForTimedState(), "Town has time work"));
             }
         }
+
+        if (status != null) {
+            QT.JOB_LOGGER.debug("Status changed to {} because {}", status.value(), status.reason());
+        }
+
         return status;
     }
 
-    private static <S> S nullIfUnchanged(
-            S oldStatus,
-            S newStatus
+    private static <STATUS extends IProductionStatus<STATUS>> boolean isDoNothingStatus(
+            IProductionStatusFactory<STATUS> factory,
+            WithReason<STATUS> status
     ) {
-        if (oldStatus == newStatus) {
+        return status == null || factory.idle()
+                                        .equals(status.value()) || factory.noSupplies()
+                                                                  .equals(status.value());
+    }
+
+    private static <S> @Nullable WithReason<S> nullIfUnchanged(
+            S oldStatus,
+            WithReason<S> newStatus
+    ) {
+        if (oldStatus == null && newStatus == null) {
+            return null;
+        }
+        if (oldStatus == newStatus.value()) {
             return null;
         }
         return newStatus;

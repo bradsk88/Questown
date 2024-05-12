@@ -272,21 +272,21 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra
     );
 
-    public @Nullable WorkOutput<@Nullable TOWN, WorkSpot<Integer, POS>> tryWorking(
+    public WithReason<@Nullable WorkOutput<@Nullable TOWN, WorkSpot<Integer, POS>>> tryWorking(
             EXTRA extra,
             WorkSpot<Integer, POS> workSpot
     ) {
         if (!isReady(extra)) {
-            return null;
+            return new WithReason<>(null, "World is not ready for work");
         }
         boolean canClaim = getWorkStatuses(extra).canClaim(workSpot.position(), () -> this.claimSpots.apply(extra));
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
             if (canClaim) {
-                return new WorkOutput<>(null, workSpot);
+                return new WithReason<>(new WorkOutput<>(null, workSpot), "Can claim: %s", workSpot);
             }
-            return null;
+            return new WithReason<>(null, "Cannot claim spot: %s", workSpot);
         }
         ticksSinceLastAction = 0;
 
@@ -297,7 +297,7 @@ public abstract class AbstractWorldInteraction<
         WorkOutput<TOWN, WorkSpot<Integer, POS>> vNull = new WorkOutput<>(null, workSpot);
 
         if (!isEntityClose(extra, workSpot.position())) {
-            return vNull;
+            return new WithReason<>(vNull, "Entity is not close to %s", workSpot.position());
         }
 
         ImmutableWorkStateContainer<POS, TOWN> workStatuses = getWorkStatuses(extra);
@@ -305,9 +305,9 @@ public abstract class AbstractWorldInteraction<
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(
+                return new WithReason<>(new WorkOutput<>(
                         tryExtractProduct(extra, workSpot.position()), workSpot
-                );
+                ), "Work spot has max state and 0 work left");
             }
         }
 
@@ -316,14 +316,16 @@ public abstract class AbstractWorldInteraction<
             Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
             boolean foundTool = items.stream().anyMatch(i -> tool.apply(i.get()));
             if (!foundTool) {
-                return vNull;
+                return new WithReason<>(vNull, "No tool held");
             }
         }
 
         OrReason<TOWN> o = itemWI.tryInsertIngredients(extra, workSpot);
         if (o.value() != null) {
-            return new WorkOutput<>(o.value(), workSpot);
+            return new WithReason<>(new WorkOutput<>(o.value(), workSpot), "Inserted ingredients");
         }
+
+        String reason = o.reason();
 
         if (this.workRequiredAtStates.containsKey(workSpot.action())) {
             Integer work = Util.getOrDefault(this.workRequiredAtStates, workSpot.action(), 0);
@@ -339,7 +341,7 @@ public abstract class AbstractWorldInteraction<
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
-                        return new WorkOutput<>(town, workSpot);
+                        return new WithReason<>(new WorkOutput<>(town, workSpot), "Finished work at %s (after %s)", workSpot.position(), reason);
                     }
                 }
             }
@@ -347,10 +349,7 @@ public abstract class AbstractWorldInteraction<
 
         // TODO: If workspot is waiting for time, return  null
 
-        return new WorkOutput<>(
-                workWI.tryWork(extra, workSpot),
-                workSpot
-        );
+        return workWI.tryWork(extra, workSpot).map((r) -> new WorkOutput<>(r, workSpot)).wrap("Work was done (after: " + reason + ")");
     }
 
     protected abstract Collection<HELD_ITEM> getHeldItems(

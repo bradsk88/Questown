@@ -81,7 +81,7 @@ public abstract class AbstractItemWI<
             return OrReason.reason("Quantity already met");
         }
 
-        if (!hasMore(
+        if (qty > 1 && !hasMore(
                 extra,
                 Util.funcToPredNullable(ingredientsRequiredAtStates.get(state.processingState())),
                 qty - (state.ingredientCount() + 1)

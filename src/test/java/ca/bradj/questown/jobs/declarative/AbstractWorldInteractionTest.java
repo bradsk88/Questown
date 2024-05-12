@@ -494,15 +494,15 @@ class AbstractWorldInteractionTest {
         Assertions.assertFalse(wi.extracted);
         Assertions.assertFalse(inserted.get());
 
-        wi.tryWorking(null, arbitrarySpotWithState(0));
+        WithReason<?> r = wi.tryWorking(null, arbitrarySpotWithState(0));
 
         state = wi.getJobBlockState(null, arbitrarySpotWithState(0).position());
-        Assertions.assertNotNull(state);
-        Assertions.assertEquals(0, state.processingState());
-        Assertions.assertEquals(100, state.workLeft());
-        Assertions.assertEquals(1, state.ingredientCount());
-        Assertions.assertFalse(wi.extracted);
-        Assertions.assertTrue(inserted.get());
+        Assertions.assertNotNull(state, r.reason());
+        Assertions.assertEquals(0, state.processingState(), r.reason());
+        Assertions.assertEquals(100, state.workLeft(), r.reason());
+        Assertions.assertEquals(1, state.ingredientCount(), r.reason());
+        Assertions.assertFalse(wi.extracted, r.reason());
+        Assertions.assertTrue(inserted.get(), r.reason());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -43,7 +44,7 @@ public class RealtimeWorldInteraction
 
     private int soundTicksLeft;
 
-    public WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
+    public WithReason<WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
@@ -52,14 +53,14 @@ public class RealtimeWorldInteraction
         ArrayList<WorkSpot<Integer, BlockPos>> shuffled = new ArrayList<>(workSpots);
         Compat.shuffle(shuffled, town.getServerLevel());
         for (WorkSpot<Integer, BlockPos> workSpot : shuffled) {
-            WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
-            if (v != null) {
+            WithReason<WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
+            if (v.value() != null) {
                 return v;
             }
         }
-        return new WorkOutput<>(
+        return new WithReason<>(new WorkOutput<>(
                 null, ImmutableList.copyOf(shuffled)
-                                   .get(0));
+                                   .get(0)), "Random choice");
     }
 
     private final ItemsHolder<MCHeldItem> journal;
@@ -376,20 +377,21 @@ public class RealtimeWorldInteraction
     }
 
     @Override
-    public @Nullable WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
+    public WithReason<@Nullable WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> tryWorking(
             MCExtra mcExtra,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
-        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = super.tryWorking(
+        WithReason<@Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>>> su = super.tryWorking(
                 mcExtra,
                 workSpot
         );
+        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = su.value();
         if (o != null && o.town() != null && o.town()) {
             playSound(
                     mcExtra, o.spot()
                               .interactionSpot());
         }
-        return o;
+        return su;
     }
 
     private void playSound(
