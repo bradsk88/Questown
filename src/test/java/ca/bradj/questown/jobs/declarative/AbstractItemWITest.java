@@ -108,14 +108,15 @@ class AbstractItemWITest {
         };
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
         Collection<Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> wrappers = ImmutableList.of();
-        int ingredientsLeftInTown = Integer.MAX_VALUE;
+        Map<GathererJournalTest.TestItem, Integer> ingredientsLeftInTown = ImmutableMap.of();
 
         public TestItemWI(
                 ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
                 ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
-                InventoryHandle<GathererJournalTest.TestItem> inventory
+                InventoryHandle<GathererJournalTest.TestItem> inventory,
+                ImmutableMap<GathererJournalTest.TestItem, Integer> ingredientsLeftInTown
         ) {
             super(
                     -1,
@@ -127,15 +128,12 @@ class AbstractItemWITest {
                     state -> ImmutableList.of()
             );
             this.inventory = inventory;
+            this.ingredientsLeftInTown = ingredientsLeftInTown;
         }
 
         @Override
-        protected boolean hasMore(
-                Void unused,
-                Predicate<GathererJournalTest.TestItem> itemBooleanFunction,
-                int amountNeeded
-        ) {
-            return ingredientsLeftInTown >= amountNeeded;
+        protected Map<GathererJournalTest.TestItem, Integer> getItemsInTownWithoutCustomNBT(Void unused) {
+            return ingredientsLeftInTown;
         }
 
         @Override
@@ -229,7 +227,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of( // There are items available in town
+                        new GathererJournalTest.TestItem("anything"), 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -240,13 +241,14 @@ class AbstractItemWITest {
 
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdate_IfItemRequirementsAreEmpty() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                )) // Empty inventory
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
-                ImmutableMap.of(),
+                ImmutableMap.of(
+                        // Requirements are empty
+                ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
                 ),
@@ -256,21 +258,52 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                    gold, 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(update.value());
-        Assertions.assertEquals("Not holding a valid item for insertion", update.reason());
+        Assertions.assertEquals("There are not enough ingredients. [Wanted 1; Found in town: 0; Found in inventory: 0; Found in Block 0]", update.reason());
+    }
+
+    @Test
+    void tryInsertIngredients_shouldReturnNoStateUpdate_IfItemRequirementsAreEmpty_Qty2() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
+        TestInvHandle inventory = new TestInvHandle(
+                new ArrayList<>(ImmutableList.of(gold))
+        );
+        TestItemWI wi = new TestItemWI(
+                ImmutableMap.of(),
+                ImmutableMap.of(
+                        0, 2 // Want up to 2 item
+                ),
+                ImmutableMap.of(
+                        0, 0 // No work required
+                ),
+                ImmutableMap.of(
+                        0, 0 // No time required
+                ),
+                inventory,
+                ImmutableMap.of(
+                        gold, 1
+                )
+        );
+        OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+
+        Assertions.assertFalse(inventory.inventoryUpdated);
+        Assertions.assertNull(update.value());
+        Assertions.assertEquals("There are not enough ingredients. [Wanted 2; Found in town: 0; Found in inventory: 0; Found in Block 0]", update.reason());
     }
 
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdate_IfItemQuantityRequirementsAreEmpty() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                )) // Empty inventory
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(),
@@ -281,7 +314,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                    gold, 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -293,10 +329,9 @@ class AbstractItemWITest {
 
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdate_IfWorkRequirementsAreEmpty() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                )) // Empty inventory
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(),
@@ -305,7 +340,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        gold, 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -317,17 +355,19 @@ class AbstractItemWITest {
 
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdate_IfAllRequirementsAreEmpty() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                )) // Empty inventory
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        gold, 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -355,7 +395,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -367,14 +410,13 @@ class AbstractItemWITest {
 
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdate_IfInventoryHasItems_ButTheyAreNotWanted() {
+        GathererJournalTest.TestItem dirt = new GathererJournalTest.TestItem("dirt");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("dirt")
-                ))
+                new ArrayList<>(ImmutableList.of(dirt))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> false // All items in inventory are not wanted
+                        0, (item) ->  !dirt.equals(item.get())// All items in inventory are not wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -385,7 +427,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of( // Wanted items exist in town
+                    new GathererJournalTest.TestItem("gold"), 1
+                )
         );
         OrReason<?> update = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
 
@@ -415,7 +460,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
 
         Assertions.assertNull(wi.statuses.getJobBlockState(arbitraryPosition));
@@ -443,7 +491,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
         OrReason<TestTownState> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
         Assertions.assertNotNull(res.value(), res.reason());
@@ -470,7 +521,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
@@ -501,7 +555,10 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
@@ -536,7 +593,10 @@ class AbstractItemWITest {
                         0, 0, // No time required
                         1, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
@@ -571,7 +631,10 @@ class AbstractItemWITest {
                         0, 0, // No time required
                         1, 1 // Time of 1 required at next state (1)
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
 
         wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
@@ -585,10 +648,9 @@ class AbstractItemWITest {
 
     @Test
     void tryInsertIngredients_shouldLeaveStateUnchanged_IfInventoryHasItems_ButTownDoesNotHaveEnoughToMeetQuantity() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                ))
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
@@ -603,20 +665,21 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of( // Town has no gold
+                        gold, 0
+                )
         );
-        wi.ingredientsLeftInTown = 0;
         @NotNull OrReason<TestTownState> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
         Assertions.assertNull(res.value());
-        Assertions.assertEquals("There are not enough ingredients in town. [Quantity required: 2, In Block: 0,  In Hand: 1", res.reason());
+        Assertions.assertEquals("There are not enough ingredients. [Wanted 2; Found in town: 0; Found in inventory: 1; Found in Block 0]", res.reason());
     }
 
     @Test
     void tryInsertIngredients_shouldUpdateTownState_AfterInsertingOnce_IfInventoryHasItems_ButTownDoesNotHaveEnoughToMeetQuantity() {
+        GathererJournalTest.TestItem gold = new GathererJournalTest.TestItem("gold");
         TestInvHandle inventory = new TestInvHandle(
-                new ArrayList<>(ImmutableList.of(
-                        new GathererJournalTest.TestItem("gold")
-                ))
+                new ArrayList<>(ImmutableList.of(gold))
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
@@ -631,10 +694,12 @@ class AbstractItemWITest {
                 ImmutableMap.of(
                         0, 0 // No time required
                 ),
-                inventory
+                inventory,
+                ImmutableMap.of(
+                        // No items in town
+                )
         );
         // 0 in town, 1 in the block, 1 in hand.
-        wi.ingredientsLeftInTown = 0;
         wi.statuses.setJobBlockState(arbitraryPosition, AbstractWorkStatusStore.State.fresh().incrIngredientCount());
 
         OrReason<?> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));

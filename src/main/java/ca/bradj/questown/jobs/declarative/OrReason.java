@@ -8,7 +8,7 @@ public record OrReason<X>(
         @Nullable X value,
         @Nullable String reason
 ) {
-    public static <TOWN> OrReason<TOWN> reason(String reason) {
+    public static <TOWN> OrReason<TOWN> reasonOnly(String reason) {
         return new OrReason<>(null, reason);
     }
 
@@ -16,10 +16,10 @@ public record OrReason<X>(
         return new OrReason<>(town, null);
     }
 
-    public static <TOWN, POS> OrReason<WorkOutput<TOWN, WorkSpot<Integer, POS>>> reason(
+    public static <TOWN> OrReason<TOWN> reasonOnly(
             String format,
             Object... args
     ) {
-        return reason(String.format(format, args));
+        return reasonOnly(String.format(format, args));
     }
 }

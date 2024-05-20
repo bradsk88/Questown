@@ -74,19 +74,10 @@ public abstract class AbstractWorldInteraction<
                 claimSpots,
                 specialRules
         ) {
+
             @Override
-            protected boolean hasMore(
-                    EXTRA extra,
-                    Predicate<HELD_ITEM> heldItemBooleanFunction,
-                    int amountNeeded
-            ) {
-                Map<INNER_ITEM, Integer> itemsInTown = getItemsInTownWithoutCustomNBT(extra);
-                for (Map.Entry<INNER_ITEM, Integer> entry : itemsInTown.entrySet()) {
-                    if (heldItemBooleanFunction.test(getHeldItemProxyFor(entry.getKey()))) {
-                        return entry.getValue() >= amountNeeded;
-                    }
-                }
-                return false;
+            protected Map<HELD_ITEM, Integer> getItemsInTownWithoutCustomNBT(EXTRA extra) {
+                return self.itemWI.getItemsInTownWithoutCustomNBT(extra);
             }
 
             @Override

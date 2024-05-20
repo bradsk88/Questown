@@ -67,7 +67,7 @@ public abstract class AbstractItemWI<
         }
 
         if (state.processingState() != curState) {
-            return OrReason.reason(String.format(
+            return OrReason.reasonOnly(String.format(
                     "State at %s has changed since last work decision [%s => %s]",
                     ws.position(), curState, state.processingState()
             ));
@@ -75,22 +75,24 @@ public abstract class AbstractItemWI<
 
         Integer qty = ingredientQtyRequiredAtStates.get(state.processingState());
         if (qty == null) {
-            return OrReason.reason("The job calls for 0 items at this state: " + state.processingState());
+            return OrReason.reasonOnly("The job calls for 0 items at this state: " + state.processingState());
         }
         if (qty == state.ingredientCount()) {
-            return OrReason.reason("Quantity already met");
+            return OrReason.reasonOnly("Quantity already met");
         }
 
-        if (qty > 1 && !hasMore(
-                extra,
-                Util.funcToPredNullable(ingredientsRequiredAtStates.get(state.processingState())),
-                qty - (state.ingredientCount() + 1)
-        )) {
-            return OrReason.reason(String.format(
-                    "There are not enough ingredients in town. " +
-                            "[Quantity required: %d, In Block: %d,  In Hand: 1",
-                    qty, state.ingredientCount()
-            ));
+        Function<ITEM, Boolean> ingredient = ingredientsRequiredAtStates().get(curState);
+        Predicate<ITEM> asPred = Util.funcToPredNullable(ingredient);
+        Predicate<ITEM> check = wrapItemCheck(extra, asPred, curState);
+
+        if (qty > 0) {
+            WithReason<Boolean> hasMoreResult = hasMore(extra, check, qty - state.ingredientCount());
+            if (!hasMoreResult.value) {
+                return OrReason.reasonOnly(
+                        "There are not enough ingredients. [%s; Found in Block %d]",
+                        hasMoreResult.reason(), state.ingredientCount()
+                );
+            }
         }
 
         int i = -1;
@@ -116,7 +118,7 @@ public abstract class AbstractItemWI<
             }
             Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
             final int ii = i;
-            TOWN town = tryInsertItem(extra, this, state, item, bp, nextStepWork, nextStepTime,
+            TOWN town = tryInsertItem(extra, this, state, item, check, bp, nextStepWork, nextStepTime,
                     (uxtra, tuwn) -> setHeldItem(uxtra, tuwn, villagerIndex, ii, item.shrink())
             );
             if (town != null) {
@@ -129,20 +131,73 @@ public abstract class AbstractItemWI<
                     if (getWorkStatuses(extra).claimSpot(bp, claim)) {
                         return OrReason.success(town);
                     }
-                    return OrReason.reason(String.format("Spot cannot be claimed: %s", bp));
+                    return OrReason.reasonOnly(String.format("Spot cannot be claimed: %s", bp));
                 } else {
                     return OrReason.success(town);
                 }
             }
         }
-        return OrReason.reason("Not holding a valid item for insertion");
+        return OrReason.reasonOnly("Not holding a valid item for insertion");
     }
 
-    protected abstract boolean hasMore(
+    private Predicate<ITEM> wrapItemCheck(
             EXTRA extra,
-            Predicate<ITEM> itemBooleanFunction,
+            Predicate<ITEM> check,
+            int state
+    ) {
+        Integer q = Util.getOrDefault(ingredientQtyRequiredAtStates, state, 0);
+        QuantityRequired qr = new QuantityRequired(q);
+        return Predicates.applyWrapping(
+                getItemInsertionCheckModifiers(
+                        extra,
+                        specialRules.apply(state),
+                        check,
+                        qr
+                ),
+                check
+        );
+    }
+
+    private WithReason<Boolean> hasMore(
+            EXTRA extra,
+            Predicate<ITEM> isCorrectItem,
             int amountNeeded
-    );
+    ) {
+        Collection<ITEM> held = getHeldItems(extra, villagerIndex);
+        long numHeld = held.stream().filter(isCorrectItem).count();
+        if (numHeld >= amountNeeded) {
+            return new WithReason<>(true, "Wanted %d; Found in inventory: %d", amountNeeded, numHeld);
+        }
+
+        long foundInTown = 0;
+        Map<ITEM, Integer> itemsInTown = getItemsInTownWithoutCustomNBT(extra);
+        for (Map.Entry<ITEM, Integer> entry : itemsInTown.entrySet()) {
+            if (isCorrectItem.test(entry.getKey())) {
+                foundInTown = entry.getValue();
+                break;
+            }
+        }
+
+        if (foundInTown >= amountNeeded) {
+            return new WithReason<>(true, "Wanted %d; Found in town: %s", amountNeeded, foundInTown);
+        }
+
+        if (foundInTown + numHeld >= amountNeeded) {
+            return new WithReason<>(
+                    true,
+                    "Wanted %d; Found in town: %d; Found in inventory: %d",
+                    amountNeeded, foundInTown, numHeld
+            );
+        }
+
+        return new WithReason<>(
+                false,
+                "Wanted %d; Found in town: %d; Found in inventory: %d",
+                amountNeeded, foundInTown, numHeld
+        );
+    }
+
+    protected abstract Map<ITEM, Integer> getItemsInTownWithoutCustomNBT(EXTRA extra);
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,
@@ -162,6 +217,7 @@ public abstract class AbstractItemWI<
             AbstractWorkStatusStore.InsertionRules<ITEM> rules,
             AbstractWorkStatusStore.State oldState,
             ITEM item,
+            Predicate<ITEM> check,
             POS bp,
             Integer workInNextStep,
             Integer timeInNextStep,
@@ -169,19 +225,9 @@ public abstract class AbstractItemWI<
     ) {
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
-        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates().get(curValue);
-        Predicate<ITEM> asPred = Util.funcToPredNullable(ingredient);
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
-        Predicate<ITEM> check = Predicates.applyWrapping(
-                getItemInsertionCheckModifiers(
-                        extra,
-                        specialRules.apply(curValue),
-                        asPred,
-                        new QuantityRequired(qtyRequired)
-                ),
-                asPred
-        );
+
         boolean canDo = check.test(item);
         if (qtyRequired == null) {
             qtyRequired = 0;
