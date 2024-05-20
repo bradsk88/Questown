@@ -21,7 +21,8 @@ import java.util.function.Supplier;
 public class ItemCheckWrappers {
 
     public static Collection<? extends Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>> getForHeld(
-            WrapperContext ctx, Collection<String> activeSpecialRules
+            WrapperContext ctx,
+            Collection<String> activeSpecialRules
     ) {
         return get(activeSpecialRules).stream().map(
                 cwFn -> (Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>) mcHeldItemPredicate ->
@@ -60,7 +61,29 @@ public class ItemCheckWrappers {
             if (wrapper == null) {
                 return;
             }
-            b.add(wrapper);
+            b.add(new CheckWrapper() {
+                @Override
+                public NoisyPredicate<MCTownItem> wrapTownCheck(
+                        WrapperContext ctx,
+                        NoisyPredicate<MCTownItem> check
+                ) {
+                    if (check == null) {
+                        return null;
+                    }
+                    return wrapper.wrapTownCheck(ctx, check);
+                }
+
+                @Override
+                public NoisyPredicate<MCHeldItem> wrapHandCheck(
+                        WrapperContext ctx,
+                        NoisyPredicate<MCHeldItem> check
+                ) {
+                    if (check == null) {
+                        return null;
+                    }
+                    return wrapper.wrapHandCheck(ctx, check);
+                }
+            });
         });
         return b.build();
     }
@@ -95,9 +118,14 @@ public class ItemCheckWrappers {
             @Override
             public NoisyPredicate<MCHeldItem> wrapHandCheck(
                     WrapperContext ctx,
-                    NoisyPredicate<MCHeldItem> check
+                    @Nullable NoisyPredicate<MCHeldItem> check
             ) {
-                NoisyPredicate<MCTownItem> originalCheckT = tI -> check.test(MCHeldItem.fromTown(tI));
+                NoisyPredicate<MCTownItem> originalCheckT;
+                if (check == null) {
+                    originalCheckT = null;
+                } else {
+                    originalCheckT = tI -> check.test(MCHeldItem.fromTown(tI));
+                }
                 return i -> {
                     MCTownItem ti = i.get();
                     return wrapTownCheck(ctx, originalCheckT).test(ti);
@@ -114,20 +142,13 @@ public class ItemCheckWrappers {
                 SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
                 IgnoringItemOrigin((WrapperContext ctx, NoisyPredicate<MCTownItem> originalCheck) -> {
                     Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(ctx.townData(), item);
-                    return item -> JobsClean.shouldTakeItem(
-                            ctx.capacity().get(),
-                            ImmutableList.of((AmountHeld held, MCTownItem itum) -> {
-                                if (ctx.quantityMet().test(held)) {
-                                    return new WithReason<>(false, "Quantity already met with %d held", held);
-                                }
-                                if (isAnyWorkResult.test(itum)) {
-                                    return new WithReason<>(true, "%s is work result", itum.getShortName());
-                                }
-                                return originalCheck.test(item).wrap("Stack is less than quantity limit. Item is not work result");
-                            }),
-                            ctx.inventory().get(),
-                            item
-                    );
+                    return item -> {
+                        if (isAnyWorkResult.test(item)) {
+                            return new WithReason<>(true, "%s is work result", item.getShortName());
+                        }
+                        return originalCheck.test(item)
+                                            .wrap("Stack is less than quantity limit. Item is not work result");
+                    };
                 })
         );
         b.put(

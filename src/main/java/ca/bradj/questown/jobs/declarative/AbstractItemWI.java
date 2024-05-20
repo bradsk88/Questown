@@ -83,12 +83,12 @@ public abstract class AbstractItemWI<
 
         Function<ITEM, Boolean> ingredient = ingredientsRequiredAtStates().get(curState);
         Predicate<ITEM> asPred = Util.funcToPredNullable(ingredient);
-        Predicate<ITEM> check = Util.toQuiet(wrapItemCheck(extra, i -> WithReason.bool(
+        NoisyPredicate<ITEM> check = wrapItemCheck(extra, asPred == null ? null : i -> WithReason.bool(
                 asPred.test(i),
                 "%s is a required ingredient for state %d",
                 "%s is not a required ingredient for state %d"
                 , curState
-        ), curState));
+        ), curState);
 
         if (qty > 0) {
             WithReason<Boolean> hasMoreResult = hasMore(extra, check, qty - state.ingredientCount());
@@ -165,11 +165,21 @@ public abstract class AbstractItemWI<
 
     private WithReason<Boolean> hasMore(
             EXTRA extra,
-            Predicate<ITEM> isCorrectItem,
+            NoisyPredicate<ITEM> isCorrectItem,
             int amountNeeded
     ) {
+        if (isCorrectItem == null) {
+            return new WithReason<>(false, "Check is null"); // TODO: Unit test?
+        }
         Collection<ITEM> held = getHeldItems(extra, villagerIndex);
-        long numHeld = held.stream().filter(isCorrectItem).count();
+        int numHeld = 0;
+        for (ITEM i : held) {
+            WithReason<Boolean> test = isCorrectItem.test(i);
+            if (!test.value) {
+                continue;
+            }
+            numHeld++;
+        }
         if (numHeld >= amountNeeded) {
             return new WithReason<>(true, "Wanted %d; Found in inventory: %d", amountNeeded, numHeld);
         }
@@ -177,7 +187,8 @@ public abstract class AbstractItemWI<
         long foundInTown = 0;
         Map<ITEM, Integer> itemsInTown = getItemsInTownWithoutCustomNBT(extra);
         for (Map.Entry<ITEM, Integer> entry : itemsInTown.entrySet()) {
-            if (isCorrectItem.test(entry.getKey())) {
+            WithReason<Boolean> test = isCorrectItem.test(entry.getKey());
+            if (test.value) {
                 foundInTown = entry.getValue();
                 break;
             }
@@ -222,7 +233,7 @@ public abstract class AbstractItemWI<
             AbstractWorkStatusStore.InsertionRules<ITEM> rules,
             AbstractWorkStatusStore.State oldState,
             ITEM item,
-            Predicate<ITEM> check,
+            NoisyPredicate<ITEM> check,
             POS bp,
             Integer workInNextStep,
             Integer timeInNextStep,
@@ -233,12 +244,12 @@ public abstract class AbstractItemWI<
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
 
-        boolean canDo = check.test(item);
+        WithReason<Boolean> canDo = check.test(item);
         if (qtyRequired == null) {
             qtyRequired = 0;
         }
         int curCount = oldState.ingredientCount();
-        if (canDo && curCount > qtyRequired) {
+        if (canDo.value && curCount > qtyRequired) {
             QT.BLOCK_LOGGER.error(
                     "Somehow exceeded required quantity: can accept up to {}, had {}",
                     qtyRequired,
@@ -247,10 +258,10 @@ public abstract class AbstractItemWI<
         }
 
         int count = curCount + 1;
-        boolean shrink = canDo && count <= qtyRequired;
+        boolean shrink = canDo.value && count <= qtyRequired;
 
         TOWN updatedTown = maybeUpdateBlockState(
-                oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
+                oldState, bp, workInNextStep, timeInNextStep, canDo.value, count, qtyRequired, ws);
 
         if (shrink) {
             return shrinkItem.apply(extra, updatedTown);
