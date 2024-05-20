@@ -8,6 +8,7 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
@@ -185,13 +187,31 @@ public class Jobs {
                    .orElse(null);
     }
 
-    public static boolean hasNonSupplyItems(
+    public static WithReason<Boolean> hasNonSupplyItems(
             ItemsHolder<MCHeldItem> journal,
-            ImmutableList<Predicate<MCTownItem>> recipe
+            ImmutableList<NoisyPredicate<MCTownItem>> recipe
     ) {
-        return journal.getItems().stream()
-                      .filter(Predicates.not(Item::isEmpty))
-                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch((z) -> z.test(v.get()))));
+        List<WithReason<Boolean>> tests = journal.getItems().stream()
+                                                 .map(z -> reasonedMatchCheck(recipe, z)).toList();
+        for (WithReason<Boolean> test : tests) {
+            if (test.value) {
+                return test;
+            }
+        }
+        return new WithReason<>(false, "[%s]", String.join(", ", tests.stream().map(v -> v.reason).toList()));
+    }
+
+    private static WithReason<Boolean> reasonedMatchCheck(
+            ImmutableList<NoisyPredicate<MCTownItem>> recipe,
+            MCHeldItem itemToCheck
+    ) {
+        List<WithReason<Boolean>> tests = recipe.stream().map((z) -> z.test(itemToCheck.get())).toList();
+        for (WithReason<Boolean> test : tests) {
+            if (test.value) {
+                return test;
+            }
+        }
+        return new WithReason<>(false, "All failed: %s", tests.stream().map(v -> v.reason).toList());
     }
 
     public static boolean isUnfinishedTimeWorkPresent(

@@ -21,7 +21,7 @@ public class JobStatuses {
             boolean allowCaching,
             EntityInvStateProvider<?> inventory
     ) {
-        if (inventory.hasNonSupplyItems(allowCaching)) {
+        if (inventory.hasNonSupplyItems(allowCaching).value) {
             return true;
         }
         return inventory.getSupplyItemStatus()
@@ -153,7 +153,7 @@ public class JobStatuses {
         }
 
         WithReason<STATUS> s = null;
-        boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems(town.isCachingAllowed());
+        boolean hasItems = hasWorkItems || inventory.hasNonSupplyItems(town.isCachingAllowed()).value;
         if (inventory.inventoryFull()) {
             if (town.hasSpace()) {
                 s = new WithReason<>(factory.droppingLoot(), "Inventory is full and a place exists to put items");
@@ -174,30 +174,33 @@ public class JobStatuses {
         WithReason<STATUS> s2 = s;
         if (s2 != null) {
             return nullIfUnchanged(currentStatus, s2);
-        } else if (inventory.hasNonSupplyItems(town.isCachingAllowed())) {
-            if (town.hasSpace()) {
-                s2 = new WithReason<>(factory.droppingLoot(), "There are non-work items in the inventory and space exists in town for them");
-            } else {
-                s2 = new WithReason<>(factory.noSpace(), "There are non-work items in the inventory but town is full");
-            }
-        } else if (!town.hasSupplies()) {
-            if (town.canUseMoreSupplies()) {
-                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.noSupplies(), "Work can be done, but no ingredients are present in town"));
-            } else if (hasItems) {
-                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "There is no work to do, the villager has items, and there is space in town"));
-            } else {
-                s2 = new WithReason<>(factory.noJobSite(), "There is no work to do, and nothing in the inventory");
-            }
         } else {
-            if (hasItems && !hasWorkItems) {
-                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "Villager has items that are not for work"));
-            } else if (town.canUseMoreSupplies()) {
-                s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.collectingSupplies(), "Work can be done, and there are supplies"));
-            } else {
-                if (town.isTimerActive()) {
-                    return new WithReason<>(factory.waitingForTimedState(), "There are timers active");
+            WithReason<Boolean> hasNS = inventory.hasNonSupplyItems(town.isCachingAllowed());
+            if (hasNS.value) {
+                if (town.hasSpace()) {
+                    s2 = new WithReason<>(factory.droppingLoot(), "There are non-work items in the inventory and space exists in town for them");
+                } else {
+                    s2 = new WithReason<>(factory.noSpace(), "There are non-work items in the inventory but town is full");
                 }
-                return new WithReason<>(factory.noJobSite(), "There are supplies in town, but no work to do");
+            } else if (!town.hasSupplies()) {
+                if (town.canUseMoreSupplies()) {
+                    s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.noSupplies(), "Work can be done, but no ingredients are present in town"));
+                } else if (hasItems) {
+                    s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "There is no work to do, the villager has items, and there is space in town"));
+                } else {
+                    s2 = new WithReason<>(factory.noJobSite(), "There is no work to do, and nothing in the inventory");
+                }
+            } else {
+                if (hasItems && !hasWorkItems) {
+                    s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.droppingLoot(), "Villager has items that are not for work"));
+                } else if (town.canUseMoreSupplies()) {
+                    s2 = nullIfUnchanged(currentStatus, new WithReason<>(factory.collectingSupplies(), "Work can be done, and there are supplies"));
+                } else {
+                    if (town.isTimerActive()) {
+                        return new WithReason<>(factory.waitingForTimedState(), "There are timers active");
+                    }
+                    return new WithReason<>(factory.noJobSite(), "There are supplies in town, but no work to do");
+                }
             }
         }
 

@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.WorksBehaviour.TownData;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.MCRoomWithBlocks;
 import ca.bradj.questown.mc.Util;
@@ -229,7 +230,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
     }
 
     @NotNull
-    protected ImmutableList<BiPredicate<AmountHeld, MCTownItem>> convertToCleanFns2(
+    protected ImmutableList<NoisyBiPredicate<AmountHeld, MCTownItem>> convertToCleanFns2(
             Map<STATUS, ? extends Collection<? extends Room>> statusMap,
             Function<STATUS, Integer> quantityRequired
     ) {
@@ -244,11 +245,16 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         return ImmutableList.copyOf(recipe.getRecipe(first.get().value()).stream()
                                           .map((v) -> {
                                               Integer qty = quantityRequired.apply(first.get());
-                                              return (BiPredicate<AmountHeld, MCTownItem>) (i, z) -> {
+                                              return (NoisyBiPredicate<AmountHeld, MCTownItem>) (i, z) -> {
                                                   if (qty != null && i.value() >= qty) {
-                                                      return false;
+                                                      return new WithReason<>(false, "Stack is too big");
                                                   }
-                                                  return v.test(i, z);
+                                                  return WithReason.bool(
+                                                          v.test(i, z),
+                                                          "%s is a required ingredient",
+                                                          "%s is not a required ingredient",
+                                                          z.getShortName()
+                                                  );
                                               };
                                           })
                                           .toList());
@@ -407,13 +413,12 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                 TownNeedsMap.<STATUS>NONE()
         ).roomsWhereSuppliesCanBeUsed;
 
-        ContainerTarget.CheckFn<MCTownItem> originalCheck = item -> JobsClean.shouldTakeItem(
+        NoisyPredicate<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(),
                 convertToCleanFns2(supplyUsers.get(), this::getRequiredQuantity),
                 journal.getItems(),
                 item
         );
-        Predicate<MCTownItem> checkFn = originalCheck::Matches;
         Set<STATUS> rooms = supplyUsers.get().keySet();
 
         Map<STATUS, Boolean> sis = getSupplyItemStatus(false);
@@ -434,21 +439,21 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         }
 
         if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(checkFn::test)) {
-                this.suppliesTarget = town.findMatchingContainer(checkFn::test);
+            if (!this.suppliesTarget.hasItem(Util.toQuiet(checkFn)::test)) {
+                this.suppliesTarget = town.findMatchingContainer(Util.toQuiet(checkFn)::test);
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(checkFn::test);
+            this.suppliesTarget = town.findMatchingContainer(Util.toQuiet(checkFn)::test);
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
 
-    protected abstract @NotNull Predicate<MCTownItem> wrapItemCheck(
+    protected abstract @NotNull NoisyPredicate<MCTownItem> wrapItemCheck(
             TownData town,
             STATUS i,
-            @NotNull Predicate<MCTownItem> originalCheck
+            @NotNull NoisyPredicate<MCTownItem> originalCheck
     );
 
     protected abstract boolean quantityMet(
@@ -559,7 +564,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
             }
 
             @Override
-            public boolean hasNonSupplyItems(boolean allowCaching) {
+            public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
 
                 Map<STATUS, ? extends Collection<? extends Room>> workTargets = roomsNeedingIngredientsOrTools
                         .get(allowCaching)
@@ -568,7 +573,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
                                                       .filter(v -> !v.getValue().isEmpty())
                                                       .map(Map.Entry::getKey)
                                                       .collect(Collectors.toSet());
-                ImmutableList.Builder<Predicate<MCTownItem>> b = ImmutableList.builder();
+                ImmutableList.Builder<NoisyPredicate<MCTownItem>> b = ImmutableList.builder();
                 statesToFeed.forEach(v -> b.addAll(getPredicatesForHeldItemsAtState(townData, v)));
                 return Jobs.hasNonSupplyItems(journal, b.build());
             }
@@ -580,14 +585,19 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
         };
     }
 
-    private List<Predicate<MCTownItem>> getPredicatesForHeldItemsAtState(
+    private List<NoisyPredicate<MCTownItem>> getPredicatesForHeldItemsAtState(
             TownData townData,
             STATUS v
     ) {
         // We are checking for "is held", rather than checking for "can hold". So ignore amount held.
         AmountHeld held = AmountHeld.ignored();
         return recipe.getRecipe(v.value()).stream().map(
-                r -> wrapItemCheck(townData, v, item -> r.test(held, item))
+                r -> wrapItemCheck(townData, v, item -> WithReason.bool(
+                        r.test(held, item),
+                        "%s is an ingredient",
+                        "%s is not an ingredient",
+                        item.getShortName()
+                ))
         ).toList();
     }
 

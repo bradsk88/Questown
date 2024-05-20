@@ -1,10 +1,8 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.AmountHeld;
-import ca.bradj.questown.jobs.HeldItem;
-import ca.bradj.questown.jobs.Item;
-import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,10 +39,15 @@ public class AbstractSupplyGetter<STATUS extends IProductionStatus<?>, POS, TOWN
 
         for (STATUS s : rooms) {
             Collection<BiPredicate<AmountHeld, TOWN_ITEM>> apply = new ArrayList<>(recipe.apply(s));
-            Predicate<TOWN_ITEM> originalTest = (item) -> JobsClean.shouldTakeItem(
-                    upToAmount, apply, currentHeldItems.get(), item
+            Collection<? extends NoisyBiPredicate<AmountHeld, TOWN_ITEM>> recipe1 = Util.sameNoise(
+                    apply,
+                    "%s is an ingredient",
+                    "%s is not an ingredient"
             );
-            if (JobsClean.tryTakeContainerItems(taker, suppliesTarget, originalTest::test)) {
+            NoisyPredicate<TOWN_ITEM> originalTest = (item) -> JobsClean.shouldTakeItem(
+                    upToAmount, recipe1, currentHeldItems.get(), item
+            );
+            if (JobsClean.tryTakeContainerItems(taker, suppliesTarget, Util.toQuiet(originalTest)::test)) {
                 return;
             }
         }

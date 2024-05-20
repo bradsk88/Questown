@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.QuantityRequired;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
@@ -78,7 +79,7 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected Collection<? extends Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>> getItemInsertionCheckModifiers(
+    protected Collection<? extends Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>> getItemInsertionCheckModifiers(
             Inputs inputs,
             Collection<String> activeSpecialRules,
             Predicate<MCHeldItem> originalCheck,
@@ -419,7 +420,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public boolean hasNonSupplyItems(boolean allowCaching) {
+            public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
                 return JobsClean.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),

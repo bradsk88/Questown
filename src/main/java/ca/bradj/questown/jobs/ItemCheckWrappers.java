@@ -3,6 +3,8 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.WorksBehaviour.TownData;
+import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -18,24 +20,24 @@ import java.util.function.Supplier;
 
 public class ItemCheckWrappers {
 
-    public static Collection<? extends Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>> getForHeld(
+    public static Collection<? extends Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>> getForHeld(
             WrapperContext ctx, Collection<String> activeSpecialRules
     ) {
         return get(activeSpecialRules).stream().map(
-                cwFn -> (Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>) mcHeldItemPredicate ->
+                cwFn -> (Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>) mcHeldItemPredicate ->
                         cwFn.wrapHandCheck(ctx, mcHeldItemPredicate)
         ).toList();
     }
 
     public interface CheckWrapper {
-        Predicate<MCTownItem> wrapTownCheck(
+        NoisyPredicate<MCTownItem> wrapTownCheck(
                 WrapperContext ctx,
-                Predicate<MCTownItem> check
+                NoisyPredicate<MCTownItem> check
         );
 
-        Predicate<MCHeldItem> wrapHandCheck(
+        NoisyPredicate<MCHeldItem> wrapHandCheck(
                 WrapperContext ctx,
-                Predicate<MCHeldItem> check
+                NoisyPredicate<MCHeldItem> check
         );
 
     }
@@ -79,23 +81,23 @@ public class ItemCheckWrappers {
      * simplify instantiation.
      */
     public static CheckWrapper IgnoringItemOrigin(
-            BiFunction<WrapperContext, Predicate<MCTownItem>, Predicate<MCTownItem>> checkWrapper
+            BiFunction<WrapperContext, NoisyPredicate<MCTownItem>, NoisyPredicate<MCTownItem>> checkWrapper
     ) {
         return new CheckWrapper() {
             @Override
-            public Predicate<MCTownItem> wrapTownCheck(
+            public NoisyPredicate<MCTownItem> wrapTownCheck(
                     WrapperContext ctx,
-                    Predicate<MCTownItem> check
+                    NoisyPredicate<MCTownItem> check
             ) {
                 return checkWrapper.apply(ctx, check);
             }
 
             @Override
-            public Predicate<MCHeldItem> wrapHandCheck(
+            public NoisyPredicate<MCHeldItem> wrapHandCheck(
                     WrapperContext ctx,
-                    Predicate<MCHeldItem> check
+                    NoisyPredicate<MCHeldItem> check
             ) {
-                Predicate<MCTownItem> originalCheckT = tI -> check.test(MCHeldItem.fromTown(tI));
+                NoisyPredicate<MCTownItem> originalCheckT = tI -> check.test(MCHeldItem.fromTown(tI));
                 return i -> {
                     MCTownItem ti = i.get();
                     return wrapTownCheck(ctx, originalCheckT).test(ti);
@@ -110,15 +112,18 @@ public class ItemCheckWrappers {
         ImmutableMap.Builder<String, CheckWrapper> b = ImmutableMap.builder();
         b.put(
                 SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
-                IgnoringItemOrigin((WrapperContext ctx, Predicate<MCTownItem> originalCheck) -> {
+                IgnoringItemOrigin((WrapperContext ctx, NoisyPredicate<MCTownItem> originalCheck) -> {
                     Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(ctx.townData(), item);
                     return item -> JobsClean.shouldTakeItem(
                             ctx.capacity().get(),
                             ImmutableList.of((AmountHeld held, MCTownItem itum) -> {
                                 if (ctx.quantityMet().test(held)) {
-                                    return false;
+                                    return new WithReason<>(false, "Quantity already met with %d held", held);
                                 }
-                                return isAnyWorkResult.test(itum) || originalCheck.test(itum);
+                                if (isAnyWorkResult.test(itum)) {
+                                    return new WithReason<>(true, "%s is work result", itum.getShortName());
+                                }
+                                return originalCheck.test(item).wrap("Stack is less than quantity limit. Item is not work result");
                             }),
                             ctx.inventory().get(),
                             item
@@ -127,16 +132,16 @@ public class ItemCheckWrappers {
         );
         b.put(
                 SpecialRules.TAKE_ONLY_LESS_THAN_QUANTITY,
-                IgnoringItemOrigin((WrapperContext ctx, Predicate<MCTownItem> originalCheck) -> {
+                IgnoringItemOrigin((WrapperContext ctx, NoisyPredicate<MCTownItem> originalCheck) -> {
                     Integer requiredQuantity = ctx.quantityRequired.get();
                     if (requiredQuantity == null) {
                         return originalCheck;
                     }
                     return item -> {
                         if (item.quantity() >= requiredQuantity) {
-                            return false;
+                            return new WithReason<>(false, "Item stack is larger than job quantity limit");
                         }
-                        return originalCheck.test(item);
+                        return originalCheck.test(item).wrap("Item stack is within spec");
                     };
                 })
         );

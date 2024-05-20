@@ -83,7 +83,12 @@ public abstract class AbstractItemWI<
 
         Function<ITEM, Boolean> ingredient = ingredientsRequiredAtStates().get(curState);
         Predicate<ITEM> asPred = Util.funcToPredNullable(ingredient);
-        Predicate<ITEM> check = wrapItemCheck(extra, asPred, curState);
+        Predicate<ITEM> check = Util.toQuiet(wrapItemCheck(extra, i -> WithReason.bool(
+                asPred.test(i),
+                "%s is a required ingredient for state %d",
+                "%s is not a required ingredient for state %d"
+                , curState
+        ), curState));
 
         if (qty > 0) {
             WithReason<Boolean> hasMoreResult = hasMore(extra, check, qty - state.ingredientCount());
@@ -140,9 +145,9 @@ public abstract class AbstractItemWI<
         return OrReason.reasonOnly("Not holding a valid item for insertion");
     }
 
-    private Predicate<ITEM> wrapItemCheck(
+    private NoisyPredicate<ITEM> wrapItemCheck(
             EXTRA extra,
-            Predicate<ITEM> check,
+            NoisyPredicate<ITEM> check,
             int state
     ) {
         Integer q = Util.getOrDefault(ingredientQtyRequiredAtStates, state, 0);
@@ -151,7 +156,7 @@ public abstract class AbstractItemWI<
                 getItemInsertionCheckModifiers(
                         extra,
                         specialRules.apply(state),
-                        check,
+                        Util.toQuiet(check),
                         qr
                 ),
                 check
@@ -253,7 +258,7 @@ public abstract class AbstractItemWI<
         return updatedTown;
     }
 
-    protected abstract Collection<? extends Function<Predicate<ITEM>, Predicate<ITEM>>> getItemInsertionCheckModifiers(
+    protected abstract Collection<? extends Function<NoisyPredicate<ITEM>, NoisyPredicate<ITEM>>> getItemInsertionCheckModifiers(
             EXTRA extra,
             Collection<String> activeSpecialRules,
             Predicate<ITEM> originalCheck,

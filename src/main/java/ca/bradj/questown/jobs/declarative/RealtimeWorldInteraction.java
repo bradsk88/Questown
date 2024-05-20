@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -145,7 +144,7 @@ public class RealtimeWorldInteraction
     }
 
     @Override
-    protected Collection<? extends Function<Predicate<MCHeldItem>, Predicate<MCHeldItem>>> getItemInsertionCheckModifiers(
+    protected Collection<? extends Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>> getItemInsertionCheckModifiers(
             MCExtra mcExtra,
             Collection<String> activeSpecialRules,
             Predicate<MCHeldItem> originalCheck,

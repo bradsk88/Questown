@@ -118,40 +118,46 @@ public class JobsClean {
         return ImmutableMap.copyOf(b);
     }
 
-    public static <I extends Item<I>> boolean hasNonSupplyItems(
+    public static <I extends Item<I>> WithReason<Boolean> hasNonSupplyItems(
             Collection<I> items,
             int state,
             ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
     ) {
-        if (items.isEmpty() || items.stream().allMatch(Item::isEmpty)) {
-            return false;
+        if (items.isEmpty()) {
+            return new WithReason<>(false, "Inventory is empty");
+        }
+
+        if (items.stream().allMatch(Item::isEmpty)) {
+            return new WithReason<>(false, "Inventory is full of air");
         }
 
         items = items.stream().filter(v -> !v.isEmpty()).toList();
 
         Predicate<I> ings = ingredientsRequiredAtStates.get(state);
         if (ings == null) {
-            return items.stream().anyMatch(
-                    i -> isNotToolFromAnyStage(i, toolsRequiredAtStates)
-            );
+            Util.anyMatch(items.stream(), i -> isNotToolFromAnyStage(i, toolsRequiredAtStates));;
         }
-        return items.stream().anyMatch(v -> !ings.test(v));
+        return Util.anyMatch(items.stream(), v -> {
+            if (ings.test(v)) {
+                return new WithReason<>(false, "%s is a required ingredient at state %d", v.getShortName(), state);
+            }
+            return new WithReason<>(true, "%s is NOT a required ingredient at state %d", v.getShortName(), state);
+        });
     }
 
 
     @NotNull
-    private static <I> boolean isNotToolFromAnyStage(
+    private static <I extends Item<I>> WithReason<Boolean> isNotToolFromAnyStage(
             I i,
             ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
     ) {
         for (Predicate<I> e : toolsRequiredAtStates.values()) {
             if (e.test(i)) {
-                return false;
+                return new WithReason<>(false, "%s is a required tool", i.getShortName());
             }
         }
-        // Item is not a tool
-        return true;
+        return new WithReason<>(true, "%s is not a required tool", i.getShortName());
     }
 
     public static <ROOM, POS, BLOCK> ImmutableList<RoomWithBlocks<ROOM, POS, BLOCK>> roomsWithState(
@@ -180,32 +186,33 @@ public class JobsClean {
     public static <
             I extends Item<I>,
             H extends HeldItem<H, I>
-            > boolean shouldTakeItem(
+            > WithReason<Boolean> shouldTakeItem(
             int invCapacity,
-            Collection<BiPredicate<AmountHeld, I>> recipe,
+            Collection<? extends NoisyBiPredicate<AmountHeld, I>> recipe,
             Collection<H> currentHeldItems,
             I item
     ) {
         if (recipe.isEmpty()) {
-            return false;
+            return new WithReason<>(false, "There are no active item requirements");
         }
 
         // Check if all items in the inventory are empty
         if (currentHeldItems.stream().noneMatch(Item::isEmpty)) {
-            return false;
+            return new WithReason<>(false, "There is no room for more items");
         }
 
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
 
-        ImmutableList<BiPredicate<AmountHeld, I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<BiPredicate<AmountHeld, I>> ingredientsToSatisfy = new ArrayList<>();
+        ImmutableList<NoisyBiPredicate<AmountHeld, I>> initial = ImmutableList.copyOf(recipe);
+        ArrayList<NoisyBiPredicate<AmountHeld, I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
         AmountHeld amountHeld = AmountHeld.none();
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
                 AmountHeld numHeld = AmountHeld.none(); // We do not need to check if we can add it to our "amount held"
-                if (ingredientsToSatisfy.get(i).test(numHeld, heldItem.get())) {
+                WithReason<Boolean> test = ingredientsToSatisfy.get(i).test(numHeld, heldItem.get());
+                if (test.value) {
                     ingredientsToSatisfy.remove(i);
                     i--;
                     heldItemsToCheck.remove(heldItem);
@@ -215,12 +222,13 @@ public class JobsClean {
             }
         }
 
-        for (BiPredicate<AmountHeld, I> ingredient : ingredientsToSatisfy) {
-            if (ingredient.test(amountHeld, item)) {
-                return true;
+        for (NoisyBiPredicate<AmountHeld, I> ingredient : ingredientsToSatisfy) {
+            WithReason<Boolean> test = ingredient.test(amountHeld, item);
+            if (test.value) {
+                return test;
             }
         }
-        return false;
+        return new WithReason<>(false, "No items match current job requirements");
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

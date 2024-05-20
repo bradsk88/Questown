@@ -77,7 +77,11 @@ public abstract class AbstractWorldInteraction<
 
             @Override
             protected Map<HELD_ITEM, Integer> getItemsInTownWithoutCustomNBT(EXTRA extra) {
-                return self.itemWI.getItemsInTownWithoutCustomNBT(extra);
+                ImmutableMap<INNER_ITEM, Integer> itemsInTownWithoutCustomNBT = self.getItemsInTownWithoutCustomNBT(
+                        extra);
+                ImmutableMap.Builder<HELD_ITEM, Integer> b = ImmutableMap.builder();
+                itemsInTownWithoutCustomNBT.forEach((k, v) -> b.put(getHeldItemProxyFor(k), v));
+                return b.build();
             }
 
             @Override
@@ -100,7 +104,7 @@ public abstract class AbstractWorldInteraction<
             }
 
             @Override
-            protected Collection<? extends Function<Predicate<HELD_ITEM>, Predicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
+            protected Collection<? extends Function<NoisyPredicate<HELD_ITEM>, NoisyPredicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
                     EXTRA extra,
                     Collection<String> activeSpecialRules,
                     Predicate<HELD_ITEM> originalCheck,
@@ -166,7 +170,7 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract ImmutableMap<INNER_ITEM, Integer> getItemsInTownWithoutCustomNBT(EXTRA extra);
 
-    protected abstract Collection<? extends Function<Predicate<HELD_ITEM>, Predicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
+    protected abstract Collection<? extends Function<NoisyPredicate<HELD_ITEM>, NoisyPredicate<HELD_ITEM>>> getItemInsertionCheckModifiers(
             EXTRA extra,
             Collection<String> activeSpecialRules,
             Predicate<HELD_ITEM> originalCheck,

@@ -8,6 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.farmer.FarmerWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Compat;
@@ -628,8 +629,8 @@ public class FarmerJob implements Job<MCHeldItem, FarmerJournal.Snapshot<MCHeldI
                     }
 
                     @Override
-                    public boolean hasNonSupplyItems(boolean allowCaching) {
-                        return journal.hasAnyLootToDrop();
+                    public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
+                        return WithReason.bool(journal.hasAnyLootToDrop(), "Farmer has loot to drop", "Farmer does not have loot to drop");
                     }
 
                     @Override

@@ -526,17 +526,17 @@ public class DeclarativeJob extends
                 roomsWhereSuppliesCanBeUsed,
                 st,
                 status -> ImmutableList.of(
-                        (AmountHeld i, MCTownItem v) -> wrapItemCheck(
+                        (AmountHeld i, MCTownItem v) -> Util.toQuiet(wrapItemCheck(
                                 town.getTownData(), status,
                                 iiii -> this.isIngredientOrTool(status, i, iiii)
-                        ).test(v)
+                        )).test(v)
                 ),
                 asItemsHolder()::getItems,
                 (item) -> asItemsHolder().addItem(MCHeldItem.fromTown(item))
         );
     }
 
-    private boolean isIngredientOrTool(
+    private WithReason<Boolean> isIngredientOrTool(
             ProductionStatus status,
             AmountHeld amountHeldAlready,
             MCTownItem v
@@ -548,9 +548,19 @@ public class DeclarativeJob extends
                              )
                              .test(v);
         if (isIngr) {
-            return !quantityMet(status, amountHeldAlready);
+            return WithReason.bool(
+                    !quantityMet(status, amountHeldAlready),
+                    "%s is ingredient (and it can be used)",
+                    "%s is an ingredient (but no more are needed)",
+                    v.getShortName()
+            );
         }
-        return Util.getOrDefault(Jobs.unMC2(toolsRequiredAtStates), status, i -> false).test(v);
+        return WithReason.bool(
+                Util.getOrDefault(Jobs.unMC2(toolsRequiredAtStates), status, i -> false).test(v),
+                "%s is required tool",
+                "%s is not a required tool",
+                v.getShortName()
+        );
 
     }
 
@@ -616,7 +626,12 @@ public class DeclarativeJob extends
         }
 
         // TODO: Pass in the previous workspot and keep working it, if it's sill workable
-        WithReason<WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> workedWR = this.world.tryWorking(town, work, entity, allSpots);
+        WithReason<WorkOutput<Boolean, WorkSpot<Integer, BlockPos>>> workedWR = this.world.tryWorking(
+                town,
+                work,
+                entity,
+                allSpots
+        );
         WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = workedWR.value();
         this.workSpot = worked.spot();
         if (worked.town() != null && worked.town()) {
@@ -910,12 +925,12 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected @NotNull Predicate<MCTownItem> wrapItemCheck(
+    protected @NotNull NoisyPredicate<MCTownItem> wrapItemCheck(
             WorksBehaviour.TownData town,
             ProductionStatus i,
-            @NotNull Predicate<MCTownItem> originalCheck
+            @NotNull NoisyPredicate<MCTownItem> originalCheck
     ) {
-        Predicate<MCTownItem> check = originalCheck;
+        NoisyPredicate<MCTownItem> check = originalCheck;
         ItemCheckWrappers.WrapperContext ctx = new ItemCheckWrappers.WrapperContext(
                 town,
                 journal::getCapacity,
