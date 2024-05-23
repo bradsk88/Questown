@@ -507,12 +507,12 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_Collecting_WhenInvHasToolsButNotIngredients_AndTownIsEmpty() {
+    void StatusShouldBe_Collecting_WhenInvHasToolsButNotIngredients_AndTownHasItems() {
         WithReason<TestStatus> s = JobStatuses.usualRoutineV2(
                 TestStatus.IDLE,
                 true,
                 new ConstInventoryV2(false, false, ImmutableList.of()),
-                new ConstTown(false, true, true, false),
+                new ConstTown(true, true, true, false),
                 new NoOpV2(),
                 TestStatus.FACTORY
         );
