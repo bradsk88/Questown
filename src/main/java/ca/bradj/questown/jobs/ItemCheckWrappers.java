@@ -20,6 +20,8 @@ import java.util.function.Supplier;
 
 public class ItemCheckWrappers {
 
+    public static final String LOW_STACK_OC_NULL = "Stack is less than quantity limit. Original check is null";
+
     public static Collection<? extends Function<NoisyPredicate<MCHeldItem>, NoisyPredicate<MCHeldItem>>> getForHeld(
             WrapperContext ctx,
             Collection<String> activeSpecialRules
@@ -33,12 +35,12 @@ public class ItemCheckWrappers {
     public interface CheckWrapper {
         NoisyPredicate<MCTownItem> wrapTownCheck(
                 WrapperContext ctx,
-                NoisyPredicate<MCTownItem> check
+                @Nullable NoisyPredicate<MCTownItem> check
         );
 
         NoisyPredicate<MCHeldItem> wrapHandCheck(
                 WrapperContext ctx,
-                NoisyPredicate<MCHeldItem> check
+                @Nullable NoisyPredicate<MCHeldItem> check
         );
 
     }
@@ -67,9 +69,6 @@ public class ItemCheckWrappers {
                         WrapperContext ctx,
                         NoisyPredicate<MCTownItem> check
                 ) {
-                    if (check == null) {
-                        return null;
-                    }
                     return wrapper.wrapTownCheck(ctx, check);
                 }
 
@@ -78,9 +77,6 @@ public class ItemCheckWrappers {
                         WrapperContext ctx,
                         NoisyPredicate<MCHeldItem> check
                 ) {
-                    if (check == null) {
-                        return null;
-                    }
                     return wrapper.wrapHandCheck(ctx, check);
                 }
             });
@@ -104,7 +100,7 @@ public class ItemCheckWrappers {
      * simplify instantiation.
      */
     public static CheckWrapper IgnoringItemOrigin(
-            BiFunction<WrapperContext, NoisyPredicate<MCTownItem>, NoisyPredicate<MCTownItem>> checkWrapper
+            BiFunction<WrapperContext, @Nullable NoisyPredicate<MCTownItem>, NoisyPredicate<MCTownItem>> checkWrapper
     ) {
         return new CheckWrapper() {
             @Override
@@ -140,11 +136,14 @@ public class ItemCheckWrappers {
         ImmutableMap.Builder<String, CheckWrapper> b = ImmutableMap.builder();
         b.put(
                 SpecialRules.INGREDIENT_ANY_VALID_WORK_OUTPUT,
-                IgnoringItemOrigin((WrapperContext ctx, NoisyPredicate<MCTownItem> originalCheck) -> {
+                IgnoringItemOrigin((WrapperContext ctx, @Nullable NoisyPredicate<MCTownItem> originalCheck) -> {
                     Predicate<MCTownItem> isAnyWorkResult = item -> Works.isWorkResult(ctx.townData(), item);
                     return item -> {
                         if (isAnyWorkResult.test(item)) {
                             return new WithReason<>(true, "%s is work result", item.getShortName());
+                        }
+                        if (originalCheck == null) {
+                            return new WithReason<>(false, LOW_STACK_OC_NULL);
                         }
                         return originalCheck.test(item)
                                             .wrap("Stack is less than quantity limit. Item is not work result");
@@ -153,7 +152,7 @@ public class ItemCheckWrappers {
         );
         b.put(
                 SpecialRules.TAKE_ONLY_LESS_THAN_QUANTITY,
-                IgnoringItemOrigin((WrapperContext ctx, NoisyPredicate<MCTownItem> originalCheck) -> {
+                IgnoringItemOrigin((WrapperContext ctx, @Nullable NoisyPredicate<MCTownItem> originalCheck) -> {
                     Integer requiredQuantity = ctx.quantityRequired.get();
                     if (requiredQuantity == null) {
                         return originalCheck;
@@ -161,6 +160,9 @@ public class ItemCheckWrappers {
                     return item -> {
                         if (item.quantity() >= requiredQuantity) {
                             return new WithReason<>(false, "Item stack is larger than job quantity limit");
+                        }
+                        if (originalCheck == null) {
+                            return new WithReason<>(false, LOW_STACK_OC_NULL);
                         }
                         return originalCheck.test(item).wrap("Item stack is within spec");
                     };

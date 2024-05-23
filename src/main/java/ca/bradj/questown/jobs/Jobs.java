@@ -194,7 +194,7 @@ public class Jobs {
         List<WithReason<Boolean>> tests = journal.getItems().stream()
                                                  .map(z -> reasonedMatchCheck(recipe, z)).toList();
         for (WithReason<Boolean> test : tests) {
-            if (test.value) {
+            if (!test.value) {
                 return test;
             }
         }

@@ -105,19 +105,19 @@ class AbstractWorkWITest {
                 ImmutableMap.of(),
                 ImmutableMap.of()
         );
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(2),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(1),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(2).setWorkLeft(0),
                 wi.state.get(new Position(0, 0))
@@ -134,19 +134,19 @@ class AbstractWorkWITest {
                         2, (GathererJournalTest.TestItem t) -> true
                 )
         );
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(1),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(2),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1, new Position(0, 1)), true);
         Assertions.assertEquals(
                 AbstractWorkStatusStore.State.freshAtState(3),
                 wi.state.get(new Position(0, 0))

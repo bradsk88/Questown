@@ -322,18 +322,11 @@ public abstract class AbstractWorldInteraction<
 
         String reason = o.reason();
 
+        jobBlockState = initializeState(jobBlockState);
         if (this.workRequiredAtStates.containsKey(workSpot.action())) {
             Integer work = Util.getOrDefault(this.workRequiredAtStates, workSpot.action(), 0);
             if (work > 0) {
                 if (workSpot.action() == 0) {
-                    if (jobBlockState == null) {
-                        jobBlockState = AbstractWorkStatusStore.State.fresh();
-                        jobBlockState = jobBlockState.setWorkLeft(Util.getOrDefault(
-                                workRequiredAtStates,
-                                0,
-                                0
-                        )); // FIXME: Test this line
-                    }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
                         return new WithReason<>(new WorkOutput<>(town, workSpot), "Finished work at %s (after %s)", workSpot.position(), reason);
@@ -344,7 +337,21 @@ public abstract class AbstractWorldInteraction<
 
         // TODO: If workspot is waiting for time, return  null
 
-        return workWI.tryWork(extra, workSpot).map((r) -> new WorkOutput<>(r, workSpot)).wrap("Work was done (after: " + reason + ")");
+        Integer qtyReq = ingredientQuantityRequiredAtStates().get(workSpot.action());
+        boolean canProgress = qtyReq == null || jobBlockState.ingredientCount() >= qtyReq;
+        return workWI.tryWork(extra, workSpot, canProgress).map((r) -> new WorkOutput<>(r, workSpot)).wrap("Work was done (after: " + reason + ")");
+    }
+
+    private AbstractWorkStatusStore.State initializeState(AbstractWorkStatusStore.State jobBlockState) {
+        if (jobBlockState == null) {
+            jobBlockState = AbstractWorkStatusStore.State.fresh();
+            jobBlockState = jobBlockState.setWorkLeft(Util.getOrDefault(
+                    workRequiredAtStates,
+                    0,
+                    0
+            )); // FIXME: Test this line
+        }
+        return jobBlockState;
     }
 
     protected abstract Collection<HELD_ITEM> getHeldItems(

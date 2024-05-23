@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.declarative.WithReason;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -171,8 +172,8 @@ class JobStatusesTest {
     ) implements EntityInvStateProvider<TestStatus> {
 
         @Override
-        public boolean hasNonSupplyItems(boolean allowCaching) {
-            return hasNonSupplyItems;
+        public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
+            return new WithReason<>(hasNonSupplyItems, "mock");
         }
     }
 
@@ -183,8 +184,8 @@ class JobStatusesTest {
     ) implements EntityInvStateProvider<TestStatus> {
 
         @Override
-        public boolean hasNonSupplyItems(boolean allowCaching) {
-            return hasNonSupplyItems;
+        public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
+            return new WithReason<>(hasNonSupplyItems,"mock");
         }
 
         @Override
@@ -503,5 +504,18 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         assertStatusEquals(TestStatus.NO_SPACE, s);
+    }
+
+    @Test
+    void StatusShouldBe_Collecting_WhenInvHasToolsButNotIngredients_AndTownIsEmpty() {
+        WithReason<TestStatus> s = JobStatuses.usualRoutineV2(
+                TestStatus.IDLE,
+                true,
+                new ConstInventoryV2(false, false, ImmutableList.of()),
+                new ConstTown(false, true, true, false),
+                new NoOpV2(),
+                TestStatus.FACTORY
+        );
+        assertStatusEquals(TestStatus.COLLECTING_PRODUCT, s);
     }
 }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
@@ -54,8 +55,8 @@ class FarmerStatusesTest {
             Map<GathererJournal.Status, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<GathererJournal.Status> {
         @Override
-        public boolean hasNonSupplyItems(boolean allowCaching) {
-            return hasNonSupplyItems;
+        public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
+            return new WithReason<>(hasNonSupplyItems, "Set by test");
         }
     }
 

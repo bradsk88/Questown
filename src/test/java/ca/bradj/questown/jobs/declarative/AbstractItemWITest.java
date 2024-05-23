@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.NoisyPredicate;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -107,7 +108,7 @@ class AbstractItemWITest {
             }
         };
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
-        Collection<Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> wrappers = ImmutableList.of();
+        Collection<Function<NoisyPredicate<GathererJournalTest.TestItem>, NoisyPredicate<GathererJournalTest.TestItem>>> wrappers = ImmutableList.of();
         Map<GathererJournalTest.TestItem, Integer> ingredientsLeftInTown = ImmutableMap.of();
 
         public TestItemWI(
@@ -157,7 +158,7 @@ class AbstractItemWITest {
         }
 
         @Override
-        protected Collection<? extends Function<Predicate<GathererJournalTest.TestItem>, Predicate<GathererJournalTest.TestItem>>> getItemInsertionCheckModifiers(
+        protected Collection<? extends Function<NoisyPredicate<GathererJournalTest.TestItem>, NoisyPredicate<GathererJournalTest.TestItem>>> getItemInsertionCheckModifiers(
                 Void unused,
                 Collection<String> activeSpecialRules,
                 Predicate<GathererJournalTest.TestItem> originalCheck,
@@ -267,7 +268,7 @@ class AbstractItemWITest {
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(update.value());
-        Assertions.assertEquals("There are not enough ingredients. [Wanted 1; Found in town: 0; Found in inventory: 0; Found in Block 0]", update.reason());
+        Assertions.assertEquals("There are not enough ingredients. [Wanted 1; Check is null; Found in Block 0]", update.reason());
     }
 
     @Test
@@ -296,7 +297,7 @@ class AbstractItemWITest {
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(update.value());
-        Assertions.assertEquals("There are not enough ingredients. [Wanted 2; Found in town: 0; Found in inventory: 0; Found in Block 0]", update.reason());
+        Assertions.assertEquals("There are not enough ingredients. [Wanted 2; Check is null; Found in Block 0]", update.reason());
     }
 
     @Test

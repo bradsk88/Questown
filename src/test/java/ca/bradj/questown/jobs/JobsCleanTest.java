@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -12,58 +13,58 @@ import java.util.function.Predicate;
 
 class JobsCleanTest {
 
-    ImmutableList<BiPredicate<AmountHeld, TestItem>> bakerRecipe = ImmutableList.of(
-            (s, item) -> "wheat".equals(item.value),
-            (s, item) -> "wheat".equals(item.value),
-            (s, item) -> "coal".equals(item.value)
+    ImmutableList<NoisyBiPredicate<AmountHeld, TestItem>> bakerRecipe = ImmutableList.of(
+            (s, item) -> new WithReason<>("wheat".equals(item.value), "mock"),
+            (s, item) -> new WithReason<>("wheat".equals(item.value), "mock"),
+            (s, item) -> new WithReason<>("coal".equals(item.value), "mock")
     );
 
     @Test
     void shouldTakeItem_ifInventoryEmpty_AndItemIsValidForRecipe() {
-        boolean result = JobsClean.shouldTakeItem(
+        WithReason<Boolean> result = JobsClean.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "", "", "", "", "", ""
                 ).stream().map(TestItem::new).toList(),
                 new TestItem("wheat")
         );
-        Assertions.assertTrue(result);
+        Assertions.assertTrue(result.value, result.reason);
     }
 
     @Test
     void shouldNotTakeItem_ifInventoryEmpty_AndItemIsNonRecipeItem() {
-        boolean result = JobsClean.shouldTakeItem(
+        WithReason<Boolean> result = JobsClean.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "", "", "", "", "", ""
                 ).stream().map(TestItem::new).toList(),
                 new TestItem("bomb")
         );
-        Assertions.assertFalse(result);
+        Assertions.assertFalse(result.value, result.reason);
     }
 
     @Test
     void shouldNotTakeItem_ifInventoryFull() {
-        boolean result = JobsClean.shouldTakeItem(
+        WithReason<Boolean> result = JobsClean.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "wheat", "wheat", "coal", "wheat", "wheat", "coal"
                 ).stream().map(TestItem::new).toList(),
                 new TestItem("wheat")
         );
-        Assertions.assertFalse(result);
+        Assertions.assertFalse(result.value, result.reason);
     }
 
     @Test
     void shouldNotTakeItem_ifInventoryHasOneOpening_AndItemIsNotPerfectFIt() {
-        boolean result = JobsClean.shouldTakeItem(
+        WithReason<Boolean> result = JobsClean.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "wheat", "wheat", "coal", "wheat", "wheat", "" // <-- want coal here
                 ).stream().map(TestItem::new).toList(),
                 new TestItem("wheat")
         );
-        Assertions.assertFalse(result);
+        Assertions.assertFalse(result.value, result.reason);
     }
 
     @Test

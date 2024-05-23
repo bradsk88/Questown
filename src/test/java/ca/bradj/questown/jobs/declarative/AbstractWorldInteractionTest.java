@@ -301,7 +301,7 @@ class AbstractWorldInteractionTest {
         }
 
         @Override
-        protected Collection<? extends Function<Predicate<TestHeldItem>, Predicate<TestHeldItem>>> getItemInsertionCheckModifiers(
+        protected Collection<? extends Function<NoisyPredicate<TestHeldItem>, NoisyPredicate<TestHeldItem>>> getItemInsertionCheckModifiers(
                 Void unused,
                 Collection<String> activeSpecialRules,
                 Predicate<TestHeldItem> originalCheck,
@@ -865,6 +865,57 @@ class AbstractWorldInteractionTest {
         Assertions.assertEquals(1, wi.chest.size());
         Assertions.assertEquals(2, wi.chest.get(0).quantity());
         Assertions.assertEquals("wood", wi.chest.get(0).name());
+    }
+
+    @Test
+    void Test_ShouldInsertStack_BeforeMovingToNextStage_WhenWorkAndIngredientsRequired() {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        ImmutableWorkStateContainer<Position, Boolean> workStates = testWorkStateContainer();
+        TestWI wi = new TestWI(
+                1,
+                ImmutableMap.of(
+                        0, (i) -> true // Villager has the required tools
+                ),
+                ImmutableMap.of(
+                        0, 1 // Work is required at stage 0
+                ),
+                ImmutableMap.of(
+                        0, (i) -> "grapes".equals(i.name()) // Grapes required at stage 0
+                ),
+                ImmutableMap.of(
+                        0, 1 // One grapes required
+                ),
+                ImmutableMap.of(
+                        0, 0 // No timers
+                ),
+                new InventoryHandle<TestItem>() {
+                    @Override
+                    public Collection<TestItem> getItems() {
+                        return ImmutableList.of(
+                                new TestItem("axe", 1)
+                        );
+                    }
+
+                    @Override
+                    public void set(
+                            int ii,
+                            TestItem shrink
+                    ) {
+                        throw new UnsupportedOperationException();
+                    }
+                },
+                workStates,
+                () -> new Claim(UUID.randomUUID(), 100),
+                ImmutableList.of(SpecialRules.DROP_LOOT_AS_STACK)
+        );
+
+        WorkSpot<Integer, Position> spot = arbitrarySpotWithState(0);
+        wi.tryWorking(null, spot);
+
+        Assertions.assertNotNull(workStates.getJobBlockState(spot.position()));
+        Assertions.assertEquals(0, workStates.getJobBlockState(spot.position()).processingState());
+        Assertions.assertEquals(0, workStates.getJobBlockState(spot.position()).workLeft());
+        Assertions.assertEquals(0, workStates.getJobBlockState(spot.position()).ingredientCount());
     }
 
 }

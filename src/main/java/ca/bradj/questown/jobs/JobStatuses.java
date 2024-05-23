@@ -115,6 +115,7 @@ public class JobStatuses {
 
         @Nullable WithReason<STATUS> normalStatus = null;
         boolean foundExtraction = false;
+
         boolean canGo = false;
 
         for (int i = 0; i < 10; i++) { // TODO: Smarter range
@@ -178,7 +179,7 @@ public class JobStatuses {
             WithReason<Boolean> hasNS = inventory.hasNonSupplyItems(town.isCachingAllowed());
             if (hasNS.value) {
                 if (town.hasSpace()) {
-                    s2 = new WithReason<>(factory.droppingLoot(), "There are non-work items in the inventory and space exists in town for them");
+                    s2 = new WithReason<>(factory.droppingLoot(), "There are non-work items in the inventory and space exists in town for them (%s)", hasNS.reason);
                 } else {
                     s2 = new WithReason<>(factory.noSpace(), "There are non-work items in the inventory but town is full");
                 }

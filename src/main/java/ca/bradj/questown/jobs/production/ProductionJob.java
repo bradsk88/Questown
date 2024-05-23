@@ -565,7 +565,7 @@ public abstract class ProductionJob<STATUS extends IProductionStatus<STATUS>, SN
 
             @Override
             public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
-
+                // TODO: Pull some of this up to the abstract root
                 Map<STATUS, ? extends Collection<? extends Room>> workTargets = roomsNeedingIngredientsOrTools
                         .get(allowCaching)
                         .roomsWhereWorkCanBeDoneByEntity;

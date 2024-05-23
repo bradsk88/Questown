@@ -28,7 +28,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     public WithReason<TOWN> tryWork(
             EXTRA extra,
-            WorkSpot<Integer, POS> ws
+            WorkSpot<Integer, POS> ws,
+            boolean canProgress
     ) {
         POS bp = ws.position();
         Integer curState = ws.action();
@@ -39,7 +40,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             nextStepWork = 0;
         }
         Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
-        WithReason<TOWN> updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
+        WithReason<TOWN> updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime, canProgress);
         boolean didWork = updatedTown.value() != null;
         Function<ITEM, Boolean> itemBooleanFunction = toolsRequiredAtStates.get(curState);
         if (didWork && itemBooleanFunction != null) {
@@ -59,7 +60,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             POS bp,
             int curState,
             int nextStepWork,
-            int nextStepTime
+            int nextStepTime,
+            boolean canProgress
     ) {
         ImmutableWorkStateContainer<POS, TOWN> sl = getWorkStatuses(extra);
         AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
@@ -70,7 +72,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return new WithReason<>(null, "No work done due to mood?");
         }
-        if (bs.workLeft() == 0) {
+        if (bs.workLeft() == 0 && canProgress) {
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }
         if (nextStepTime <= 0) {

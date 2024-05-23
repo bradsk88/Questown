@@ -87,15 +87,15 @@ public abstract class AbstractItemWI<
                 asPred.test(i),
                 "%s is a required ingredient for state %d",
                 "%s is not a required ingredient for state %d"
-                , curState
+                , i, curState
         ), curState);
 
         if (qty > 0) {
             WithReason<Boolean> hasMoreResult = hasMore(extra, check, qty - state.ingredientCount());
             if (!hasMoreResult.value) {
                 return OrReason.reasonOnly(
-                        "There are not enough ingredients. [%s; Found in Block %d]",
-                        hasMoreResult.reason(), state.ingredientCount()
+                        "There are not enough ingredients. [Wanted %s; %s; Found in Block %d]",
+                        qty, hasMoreResult.reason(), state.ingredientCount()
                 );
             }
         }
@@ -181,7 +181,7 @@ public abstract class AbstractItemWI<
             numHeld++;
         }
         if (numHeld >= amountNeeded) {
-            return new WithReason<>(true, "Wanted %d; Found in inventory: %d", amountNeeded, numHeld);
+            return new WithReason<>(true, "Found in inventory: %d", numHeld);
         }
 
         long foundInTown = 0;
@@ -195,21 +195,21 @@ public abstract class AbstractItemWI<
         }
 
         if (foundInTown >= amountNeeded) {
-            return new WithReason<>(true, "Wanted %d; Found in town: %s", amountNeeded, foundInTown);
+            return new WithReason<>(true, "Found in town: %s", foundInTown);
         }
 
         if (foundInTown + numHeld >= amountNeeded) {
             return new WithReason<>(
                     true,
-                    "Wanted %d; Found in town: %d; Found in inventory: %d",
-                    amountNeeded, foundInTown, numHeld
+                    "Found in town: %d; Found in inventory: %d",
+                    foundInTown, numHeld
             );
         }
 
         return new WithReason<>(
                 false,
-                "Wanted %d; Found in town: %d; Found in inventory: %d",
-                amountNeeded, foundInTown, numHeld
+                "Found in town: %d; Found in inventory: %d",
+                foundInTown, numHeld
         );
     }
 

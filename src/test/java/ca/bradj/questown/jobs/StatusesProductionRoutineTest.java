@@ -41,8 +41,8 @@ public class StatusesProductionRoutineTest {
             Map<PTestStatus, Boolean> getSupplyItemStatus
     ) implements EntityInvStateProvider<PTestStatus> {
         @Override
-        public boolean hasNonSupplyItems(boolean allowCaching) {
-            return hasNonSupplyItems;
+        public WithReason<Boolean> hasNonSupplyItems(boolean allowCaching) {
+            return new WithReason<>(hasNonSupplyItems, "mock");
         }
     }
 
