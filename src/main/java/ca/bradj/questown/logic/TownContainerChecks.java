@@ -1,12 +1,15 @@
 package ca.bradj.questown.logic;
 
 import ca.bradj.questown.jobs.Item;
+import ca.bradj.questown.jobs.SpecialRuleIngredientAnyValidWorkOutput;
+import ca.bradj.questown.jobs.SpecialRules;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -18,7 +21,9 @@ public class TownContainerChecks {
             Map<STATUS, ? extends Predicate<ITEM>> ingredientsRequiredAtStates,
             Map<STATUS, Integer> ingredientQtyRequiredAtStates,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInTown,
-            Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInInventory
+            Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInInventory,
+            Function<STATUS, ? extends Collection<String>> specialRules,
+            BiPredicate<STATUS, ITEM> specialRuleAppliesToItem
     ) {
         boolean anyRequirementsExist = false;
         for (STATUS level : statesWithRooms) {
@@ -28,6 +33,9 @@ public class TownContainerChecks {
             }
             anyRequirementsExist = true;
             Predicate<ITEM> isUsableItem = item -> {
+                if (specialRuleAppliesToItem.test(level, item)) {
+                    return true;
+                }
                 Predicate<ITEM> isWorkIngredient = ingredientsRequiredAtStates.get(level);
                 if (isWorkIngredient == null) {
                     return false;
@@ -43,7 +51,7 @@ public class TownContainerChecks {
                     },
                     isUsableItem,
                     quantityRequired,
-                    false
+                    specialRules.apply(level).contains(SpecialRules.INGREDIENTS_MUST_BE_SAME)
             )) {
                 return true;
             }
@@ -133,7 +141,13 @@ public class TownContainerChecks {
                 ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 getItemMatchesInTown,
-                getItemMatchesInInventory
+                getItemMatchesInInventory,
+                specialRules,
+                (lvl, item) -> SpecialRuleIngredientAnyValidWorkOutput.apply(
+                        specialRules.apply(lvl),
+                        i -> false,
+                        isWorkResult
+                ).test(item)
         );
     }
 
@@ -157,7 +171,9 @@ public class TownContainerChecks {
                 toolsRequiredAtStates,
                 oneTool.build(),
                 getItemMatchesInTown,
-                getItemMatchesInInventory
+                getItemMatchesInInventory,
+                specialRules,
+                (lvl, item) -> false
         );
     }
 }
