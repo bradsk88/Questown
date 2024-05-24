@@ -95,6 +95,11 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     @Override
+    public int quantity() {
+        return delegate.quantity();
+    }
+
+    @Override
     public String getShortName() {
         String name = "[unknown]";
         ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(delegate.get());

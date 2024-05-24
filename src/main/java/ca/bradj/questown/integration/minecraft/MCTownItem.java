@@ -70,10 +70,11 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         if (this.isEmpty() && that.isEmpty()) {
             return true;
         }
-        return quantity == that.quantity && Objects.equals(item, that.item) && Objects.equals(
-                nbt,
-                that.nbt
-        );
+        return isSameIgnoringNBT(that) && Objects.equals(nbt, that.nbt);
+    }
+
+    public boolean isSameIgnoringNBT(MCTownItem that) {
+        return quantity == that.quantity && Objects.equals(item, that.item);
     }
 
     @Override
@@ -102,9 +103,18 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
 
     @Override
     public MCTownItem unit() {
+        return withQuantity(1);
+    }
+
+    public MCTownItem withQuantity(int qy) {
         ItemStack stack = toItemStack();
-        stack.setCount(1);
-        return new MCTownItem(stack.getItem(), 1, stack.serializeNBT());
+        stack.setCount(qy);
+        return new MCTownItem(stack.getItem(), qy, stack.serializeNBT());
+    }
+
+    @Override
+    public int quantity() {
+        return quantity;
     }
 
     @Override
@@ -123,4 +133,21 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     public ItemStack toItemStack() {
         return ItemStack.of(nbt);
     }
+
+    public boolean hasEmptyNBT() {
+        CompoundTag copy = nbt.copy();
+        if (copy.contains("id")) {
+            copy.remove("id");
+        }
+        if (copy.contains("Count")) {
+            copy.remove("Count");
+        }
+        if (copy.contains("tag")) {
+            if (copy.getCompound("tag").isEmpty()) {
+                copy.remove("tag");
+            }
+        }
+        return copy.isEmpty();
+    }
+
 }

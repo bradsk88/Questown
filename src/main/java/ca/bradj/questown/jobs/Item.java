@@ -10,4 +10,6 @@ public interface Item<I extends Item<I>> {
     String getShortName();
 
      I unit();
+
+     int quantity();
 }
