@@ -87,8 +87,6 @@ public class ExplorerWork {
         ImmutableList.Builder<MCHeldItem> list = ImmutableList.builder();
         list.add(MCHeldItem.fromTown(map));
 
-        QT.JOB_LOGGER.debug("Presenting items to explorer: {}", list);
-
         List<GathererTools.LootTableParameters> all = NewLeaverWork.getAllParameters();
         if (all.isEmpty()) {
             all = ImmutableList.of(new GathererTools.LootTableParameters(
@@ -110,7 +108,9 @@ public class ExplorerWork {
         );
         list.add(KnowledgeMetaItem.wrap(knowledge.get(0), lootParams.prefix(), biome));
 
-        return list.build();
+        ImmutableList<MCHeldItem> realList = list.build();
+        QT.JOB_LOGGER.debug("Presenting items to explorer: {}", realList);
+        return realList;
     }
 
     public static Work asWork() {

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -82,6 +83,9 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
             }
             String lootPrefix = item.acquiredViaLootTablePrefix();
             if (lootPrefix == null) {
+                if (ItemsInit.GATHERER_MAP.get().equals(item)) {
+                    return;
+                }
                 QT.FLAG_LOGGER.error("Found item has no loot table prefix");
                 return;
             }

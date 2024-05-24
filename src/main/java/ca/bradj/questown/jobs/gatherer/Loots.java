@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import static ca.bradj.questown.jobs.gatherer.GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT;
+
 public class Loots {
 
     public static ResourceLocation fallbackBiome = new ResourceLocation("forest"); // TODO: Something better?
@@ -70,6 +72,10 @@ public class Loots {
         if (!tables.getIds().contains(rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, lt.fallback().path());
+        }
+        if (!tables.getIds().contains(rl)) {
+            QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
+            rl = new ResourceLocation(Questown.MODID, NO_TOOL_LOOT_TABLE_DEFAULT.path());
         }
         if (!tables.getIds().contains(rl)) {
             throw new IllegalStateException(
