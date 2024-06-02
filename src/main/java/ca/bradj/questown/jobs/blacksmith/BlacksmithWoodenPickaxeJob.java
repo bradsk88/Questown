@@ -9,77 +9,73 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Supplier;
+
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
+import static ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeNoMCJob.DEFINITION;
 
 public class BlacksmithWoodenPickaxeJob {
-    public static final JobID ID = new JobID("blacksmith", "wooden_pickaxe");
+    public static JobDefinition DEF = DEFINITION;
 
-    public static final int BLOCK_STATE_NEED_HANDLE = 0;
-    public static final int BLOCK_STATE_NEED_HEAD = 1;
-    public static final int BLOCK_STATE_NEED_WORK = 2;
-    public static final int BLOCK_STATE_DONE = 3;
-
-    public static final int MAX_STATE = BLOCK_STATE_DONE;
-
-    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, Ingredient.of(Items.STICK),
-            BLOCK_STATE_NEED_HEAD, Ingredient.of(ItemTags.PLANKS),
-            BLOCK_STATE_NEED_WORK, Ingredient.of(ItemTags.PLANKS)
-    );
-    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, 2,
-            BLOCK_STATE_NEED_HEAD, 3,
-            BLOCK_STATE_NEED_WORK, 0
-    );
-    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
-    public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, 0,
-            BLOCK_STATE_NEED_HEAD, 0,
-            BLOCK_STATE_NEED_WORK, 10,
-            BLOCK_STATE_DONE, 0
-    );
-    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_HANDLE, 0,
-            BLOCK_STATE_NEED_HEAD, 0,
-            BLOCK_STATE_NEED_WORK, 0,
-            BLOCK_STATE_DONE, 0
-    );
-
-    public static final ItemStack RESULT = Items.WOODEN_PICKAXE.getDefaultInstance();
     public static final int PAUSE_FOR_ACTION = 100;
 
     public static Work asWork() {
         return productionWork(
                 Items.WOODEN_PICKAXE.getDefaultInstance(),
-                ID,
+                DEFINITION.jobId(),
                 null,
                 new WorkDescription(
-                        t -> ImmutableSet.of(MCTownItem.fromMCItemStack(RESULT)),
-                        RESULT
+                        t -> ImmutableSet.of(toItem(DEFINITION.result())),
+                        toItemStack(DEFINITION.result())
                 ),
                 new WorkLocation(
                         (block) -> block instanceof BlacksmithsTableBlock,
                         Questown.ResourceLocation("smithy")
                 ),
                 new WorkStates(
-                        MAX_STATE,
-                        Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
-                        Util.constant(INGREDIENT_QTY_REQUIRED_AT_STATES),
-                        Util.constant(TOOLS_REQUIRED_AT_STATES),
-                        Util.constant(WORK_REQUIRED_AT_STATES),
-                        Util.constant(TIME_REQUIRED_AT_STATES)
+                        DEFINITION.maxState(),
+                        toIngredient(DEFINITION.ingredientsRequiredAtStates()),
+                        Util.constant(DEFINITION.ingredientQtyRequiredAtStates()),
+                        toIngredient(DEFINITION.toolsRequiredAtStates()),
+                        Util.constant(DEFINITION.workRequiredAtStates()),
+                        Util.constant(DEFINITION.timeRequiredAtStates())
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,
-                        WorksBehaviour.singleItemOutput(RESULT::copy)
+                        WorksBehaviour.singleItemOutput(() -> toItemStack(DEFINITION.result()).copy())
                 ),
                 WorksBehaviour.standardProductionRules(),
                 SoundEvents.WOOD_HIT.getLocation()
         );
+    }
+
+    private static ItemStack toItemStack(String result) {
+        Item knownItem = Objects.requireNonNull(KNOWN_ITEMS.get(result));
+        return knownItem.getDefaultInstance();
+    }
+
+    private static MCTownItem toItem(String result) {
+        return MCTownItem.fromMCItemStack(toItemStack(result));
+    }
+
+    private static final ImmutableMap<String, Item> KNOWN_ITEMS = ImmutableMap.of(
+            "minecraft:wooden_pickaxe", Items.WOODEN_PICKAXE
+    );
+    private static final ImmutableMap<String, Supplier<Ingredient>> KNOWN_INGREDIENTS = ImmutableMap.of(
+            "minecraft:stick", () -> Ingredient.of(Items.STICK),
+            "#minecraft:planks", () -> Ingredient.of(ItemTags.PLANKS)
+    );
+
+    private static ImmutableMap<Integer, Supplier<Ingredient>> toIngredient(Map<Integer, String> map) {
+        ImmutableMap.Builder<Integer, Supplier<Ingredient>> b = ImmutableMap.builder();
+        map.forEach((k, v) -> b.put(k, Objects.requireNonNull(KNOWN_INGREDIENTS.get(v))));
+        return b.build();
     }
 }

@@ -61,7 +61,7 @@ public class Works {
         ));
         b.put(BakerBreadWork.ID, BakerBreadWork::asWork);
         b.put(SmelterJob.ID, SmelterJob::asWork);
-        b.put(BlacksmithWoodenPickaxeJob.ID, BlacksmithWoodenPickaxeJob::asWork);
+        b.put(BlacksmithWoodenPickaxeJob.DEF.jobId(), BlacksmithWoodenPickaxeJob::asWork);
         b.put(CrafterBowlWork.ID, CrafterBowlWork::asWork);
         b.put(CrafterStickWork.ID, CrafterStickWork::asWork);
         b.put(CrafterPaperWork.ID, CrafterPaperWork::asWork);

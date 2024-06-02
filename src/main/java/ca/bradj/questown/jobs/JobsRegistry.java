@@ -268,9 +268,9 @@ public class JobsRegistry {
                     ),
                     ImmutableList.of(GathererUnmappedNoToolWorkQtrDay.ID)
             ),
-            BlacksmithWoodenPickaxeJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(BlacksmithWoodenPickaxeJob.ID),
-                    ImmutableList.of(BlacksmithWoodenPickaxeJob.ID)
+            BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
+                    ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
+                    ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())
             ),
             CrafterStickWork.ID.rootId(), new Jerb(
                     CRAFTER_PREFS,

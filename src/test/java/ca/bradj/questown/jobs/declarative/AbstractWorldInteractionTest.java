@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.TestItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
-import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore.State;
 import ca.bradj.questown.town.Claim;
@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -24,204 +23,46 @@ import java.util.function.Supplier;
 
 class AbstractWorldInteractionTest {
 
-    private static class TestWI extends AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
 
-        private final InventoryHandle<GathererJournalTest.TestItem> inventory;
-        private boolean extracted;
-        private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
+    public static TestWorldInteraction noMemoryInventory(
+            int i,
+            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
+            ImmutableMap<Integer, Integer> workRequired,
+            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
+            Supplier<Collection<GathererJournalTest.TestItem>> inventory,
+            Runnable onInventoryChange
+    ) {
+        ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
+        ingredients.forEach((k, v) -> alwaysOneBuilder.put(k, 1));
 
-        public TestWI(
-                int maxState,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
-                ImmutableMap<Integer, Integer> workRequiredAtStates,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
-                ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
-                ImmutableMap<Integer, Integer> timeRequiredAtStates,
-                Supplier<Collection<GathererJournalTest.TestItem>> journal,
-                InventoryHandle<GathererJournalTest.TestItem> inventory,
-                ImmutableWorkStateContainer<Position, Boolean> workStatuses,
-                Supplier<Claim> claim
-        ) {
-            super(
-                    new JobID("test", "test"),
-                    -1, // Not used
-                    0,
-                    maxState,
-                    toolsRequiredAtStates,
-                    workRequiredAtStates,
-                    ingredientsRequiredAtStates,
-                    ingredientQuantityRequiredAtStates,
-                    timeRequiredAtStates,
-                    (v) -> claim.get()
-            );
-            this.workStatuses = workStatuses;
-            this.inventory = inventory;
-        }
-
-        public static TestWI noMemoryInventory(
-                int i,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
-                ImmutableMap<Integer, Integer> workRequired,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
-                Supplier<Collection<GathererJournalTest.TestItem>> inventory,
-                Runnable onInventoryChange
-        ) {
-            ImmutableMap.Builder<Integer, Integer> alwaysOneBuilder = ImmutableMap.builder();
-            ingredients.forEach((k, v) -> alwaysOneBuilder.put(k, 1));
-
-            ImmutableMap.Builder<Integer, Integer> alwaysZeroBuilder = ImmutableMap.builder();
-            ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
+        ImmutableMap.Builder<Integer, Integer> alwaysZeroBuilder = ImmutableMap.builder();
+        ingredients.forEach((k, v) -> alwaysZeroBuilder.put(k, 0));
 
 
-            InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
-                @Override
-                public Collection<GathererJournalTest.TestItem> getItems() {
-                    return inventory.get();
-                }
+        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<GathererJournalTest.TestItem>() {
+            @Override
+            public Collection<GathererJournalTest.TestItem> getItems() {
+                return inventory.get();
+            }
 
-                @Override
-                public void set(
-                        int ii,
-                        GathererJournalTest.TestItem shrink
-                ) {
-                    onInventoryChange.run();
-                }
-            };
+            @Override
+            public void set(
+                    int ii,
+                    GathererJournalTest.TestItem shrink
+            ) {
+                onInventoryChange.run();
+            }
+        };
 
-            ImmutableWorkStateContainer<Position, Boolean> statuses = testWorkStateContainer();
-            return new TestWI(
-                    i, toolsNeeded, workRequired, ingredients,
-                    alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
-                    inventory, inventoryHandle, statuses,
-                    () -> new Claim(UUID.randomUUID(), 100)
-            );
-        }
-
-        @Override
-        protected Boolean tryExtractProduct(
-                Void unused,
-                Position position
-        ) {
-            extracted = true;
-            getWorkStatuses(null).clearState(position);
-            return true;
-        }
-
-        @Override
-        protected Boolean setJobBlockState(
-                @NotNull Void inputs,
-                Boolean ts,
-                Position position,
-                State fresh
-        ) {
-            return null;
-        }
-
-        @Override
-        protected Boolean withEffectApplied(
-                @NotNull Void inputs,
-                Boolean ts,
-                GathererJournalTest.TestItem newItem
-        ) {
-            return null;
-        }
-
-        @Override
-        protected Boolean withKnowledge(
-                @NotNull Void inputs,
-                Boolean ts,
-                GathererJournalTest.TestItem newItem
-        ) {
-            return null;
-        }
-
-        @Override
-        protected boolean isInstanze(
-                GathererJournalTest.TestItem testItem,
-                Class<?> clazz
-        ) {
-            return false;
-        }
-
-        @Override
-        protected boolean isMulti(GathererJournalTest.TestItem testItem) {
-            return false;
-        }
-
-        @Override
-        protected Boolean getTown(Void inputs) {
-            return null;
-        }
-
-        @Override
-        protected Iterable<GathererJournalTest.TestItem> getResults(
-                Void inputs,
-                Collection<GathererJournalTest.TestItem> testItems
-        ) {
-            return null;
-        }
-
-        @Override
-        protected boolean isEntityClose(
-                Void unused,
-                Position position
-        ) {
-            return true;
-        }
-
-        @Override
-        protected boolean isReady(Void unused) {
-            return true;
-        }
-
-        @Override
-        public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-            return null;
-        }
-
-        @Override
-        protected int getWorkSpeedOf10(Void unused) {
-            return 10;
-        }
-
-        @Override
-        protected int getAffectedTime(Void unused, Integer nextStepTime) {
-            return nextStepTime;
-        }
-
-        @Override
-        protected Boolean setHeldItem(Void uxtra, Boolean tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
-            inventory.set(itemIndex, item);
-            return true;
-        }
-
-        @Override
-        protected Boolean degradeTool(
-                Void unused,
-                Boolean tuwn, Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
-        ) {
-            return tuwn;
-        }
-
-        @Override
-        protected boolean canInsertItem(
-                Void unused,
-                GathererJournalTest.TestItem item,
-                Position bp
-        ) {
-            return true;
-        }
-
-        @Override
-        protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
-            return workStatuses;
-        }
-
-        @Override
-        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
-            return inventory.getItems();
-        }
+        ImmutableWorkStateContainer<Position, Boolean> statuses = AbstractWorldInteractionTest.testWorkStateContainer();
+        return new TestWorldInteraction(
+                i, toolsNeeded, workRequired, ingredients,
+                alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
+                inventoryHandle, statuses,
+                () -> new Claim(UUID.randomUUID(), 100)
+        );
     }
+
 
     @NotNull
     private static ImmutableWorkStateContainer<Position, Boolean> testWorkStateContainer() {
@@ -291,7 +132,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldExtractForCompletelyEmptyWork() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(),
                 ImmutableMap.of(),
@@ -315,7 +156,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertForWorklessToollessJob() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(), // No work required
@@ -340,7 +181,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertFirst_IfBlockRequiresIngredientsAndWork() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -371,7 +212,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertThenProcessForToollessJob() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -396,7 +237,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertThenProcessThenExtractForToollessJob() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -421,7 +262,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertAndNotProcess_ForJobWithTwoStages_OnFirstTry() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 3,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -453,7 +294,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldMoveToStage2_AfterFirstTry() {
         final AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 3,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -484,7 +325,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertAndProcess_ForJobWithTwoStages_AfterSecondTry() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -512,7 +353,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertAndProcessAndExtract_ForJobWithThreeStages_AfterThirdTry() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(
@@ -540,7 +381,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldDoNothingIfToolIsRequiredButNotHad() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
                         0, (i) -> false // Villager does not have the needed tool
@@ -566,7 +407,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldAdvanceProgress_IfNoIngredientsAreNeeded_AndToolIsHad() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
                         0, (i) -> true // Villager has the needed tool
@@ -596,7 +437,7 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldInsertAndProcessAndExtract_WhenToolsRequiredAndPossessed_ForJobWithThreeStages_AfterThirdTry() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = TestWI.noMemoryInventory(
+        TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
                         0, (i) -> true, // Villager has the needed tools
@@ -628,16 +469,16 @@ class AbstractWorldInteractionTest {
     @Test
     void Test_ShouldNotSetTimerIfToolIsRequired() {
         AtomicBoolean inserted = new AtomicBoolean(false);
-        TestWI wi = new TestWI(
+        TestWorldInteraction wi = new TestWorldInteraction(
                 2,
                 ImmutableMap.of(
-                        1, (i) -> false // Villager does not have the tool
+                        1, (GathererJournalTest.TestItem i) -> false // Villager does not have the tool
                 ),
                 ImmutableMap.of(
                         // No work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, (GathererJournalTest.TestItem i) -> "grapes".equals(i.value) // Grapes required at stage 0
                 ),
                 ImmutableMap.of(
                         0, 1
@@ -646,7 +487,6 @@ class AbstractWorldInteractionTest {
                         0, 0, // No timer at stage 0
                         1, 100 // Timer applies to stage 1
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 new InventoryHandle<GathererJournalTest.TestItem>() {
                     @Override
                     public Collection<GathererJournalTest.TestItem> getItems() {
