@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +33,7 @@ public abstract class AbstractWorldInteraction<
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates;
+    private WithReason<@Nullable WorkSpot<Integer, POS>> workspot = new WithReason<>(null, "Never set");
 
 
     public AbstractWorldInteraction(
@@ -179,7 +181,7 @@ public abstract class AbstractWorldInteraction<
             // TODO: Gracefully handle when the villager doesn't have enough room to take all items
             QT.VILLAGER_LOGGER.debug("Villager ran out of room before extracting all possible items");
         }
-        ts = setJobBlockState(inputs, ts, sourcePos, AbstractWorkStatusStore.State.fresh());
+        ts = setJobBlockState(inputs, ts, sourcePos, State.fresh());
         getWorkStatuses(inputs).clearClaim(sourcePos);
         return ts;
     }
@@ -241,7 +243,7 @@ public abstract class AbstractWorldInteraction<
         }
 
         ImmutableWorkStateContainer<POS, TOWN> workStatuses = getWorkStatuses(extra);
-        AbstractWorkStatusStore.State jobBlockState = workStatuses.getJobBlockState(workSpot.position());
+        State jobBlockState = workStatuses.getJobBlockState(workSpot.position());
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
@@ -270,7 +272,7 @@ public abstract class AbstractWorldInteraction<
             if (work != null && work > 0) {
                 if (workSpot.action() == 0) {
                     if (jobBlockState == null) {
-                        jobBlockState = AbstractWorkStatusStore.State.fresh();
+                        jobBlockState = State.fresh();
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
@@ -302,7 +304,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             POS position
     ) {
-            AbstractWorkStatusStore.State s = getJobBlockState(inputs, position);
+            State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() == maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
@@ -322,7 +324,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             TOWN ts,
             POS position,
-            AbstractWorkStatusStore.State fresh
+            State fresh
     );
 
     protected abstract TOWN withEffectApplied(
@@ -358,7 +360,8 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract boolean isReady(EXTRA extra);
 
-    public @Nullable AbstractWorkStatusStore.State getJobBlockState(
+    @Nullable
+    State getJobBlockState(
             EXTRA extra,
             POS bp
     ) {
@@ -378,4 +381,16 @@ public abstract class AbstractWorldInteraction<
     public void removeJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.remove(listener);
     };
+
+    public abstract boolean tryGrabbingInsertedSupplies(
+            EXTRA mcExtra
+    );
+
+    public @Nullable WorkSpot<Integer, POS> getWorkSpot() {
+        return workspot.value;
+    }
+
+    public void setWorkSpot(WithReason<@Nullable WorkSpot<Integer, POS>> o) {
+        this.workspot = o;
+    }
 }

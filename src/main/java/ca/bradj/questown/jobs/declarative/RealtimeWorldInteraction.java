@@ -10,11 +10,11 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -28,10 +28,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -197,7 +194,7 @@ public class RealtimeWorldInteraction
             @NotNull MCExtra inputs,
             Boolean ts,
             BlockPos position,
-            AbstractWorkStatusStore.State state
+            State state
     ) {
         inputs.work()
               .setJobBlockState(position, state);
@@ -332,13 +329,11 @@ public class RealtimeWorldInteraction
                                             .getServerLevel() != null;
     }
 
+    @Override
     public boolean tryGrabbingInsertedSupplies(
-            TownInterface town,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            VisitorMobEntity vmEntity
+            MCExtra mcExtra
     ) {
-        MCExtra mcExtra = new MCExtra(town, work, vmEntity);
-        VisitorMobEntity.WorkToUndo wtu = vmEntity.getWorkToUndo();
+        VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
         if (wtu == null) {
             return true;
         }

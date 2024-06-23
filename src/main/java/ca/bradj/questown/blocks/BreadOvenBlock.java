@@ -4,7 +4,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.BakerBreadWork;
 import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -211,7 +211,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     public void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            AbstractWorkStatusStore.State bs
+            State bs
     ) {
         BlockState state = sl.getBlockState(pp);
         switch (bs.processingState()) {

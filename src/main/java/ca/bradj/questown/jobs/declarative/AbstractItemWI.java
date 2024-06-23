@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -52,14 +53,14 @@ public abstract class AbstractItemWI<
     ) {
         POS bp = ws.position();
         int curState = ws.action();
-        AbstractWorkStatusStore.State state = getWorkStatuses(extra).getJobBlockState(ws.position());
+        State state = getWorkStatuses(extra).getJobBlockState(ws.position());
         if (state == null || state.isFresh()) {
             Integer initWork = workRequiredAtStates.get(curState);
             if (initWork == null) {
                 initWork = 0;
             }
-            state = AbstractWorkStatusStore.State.fresh()
-                                                 .setWorkLeft(initWork);
+            state = State.fresh()
+                         .setWorkLeft(initWork);
         }
 
         if (state.processingState() != curState) {
@@ -132,7 +133,7 @@ public abstract class AbstractItemWI<
     private @Nullable TOWN tryInsertItem(
             EXTRA extra,
             AbstractWorkStatusStore.InsertionRules<ITEM> rules,
-            AbstractWorkStatusStore.State oldState,
+            State oldState,
             ITEM item,
             POS bp,
             Integer workInNextStep,
@@ -175,7 +176,7 @@ public abstract class AbstractItemWI<
 
     @Nullable
     private static <POS, TOWN> TOWN maybeUpdateBlockState(
-            AbstractWorkStatusStore.State oldState,
+            State oldState,
             POS bp,
             Integer workInNextStep,
             Integer timeInNextStep,
@@ -185,12 +186,12 @@ public abstract class AbstractItemWI<
             ImmutableWorkStateContainer<POS, TOWN> ws
     ) {
         if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
-            AbstractWorkStatusStore.State blockState = oldState.setCount(count);
+            State blockState = oldState.setCount(count);
             return ws.setJobBlockState(bp, blockState);
         }
 
         if (canDo && count <= qtyRequired) {
-            AbstractWorkStatusStore.State blockState = oldState.setCount(count);
+            State blockState = oldState.setCount(count);
             if (count == qtyRequired) {
                 blockState = blockState.setWorkLeft(workInNextStep)
                                        .setCount(0)

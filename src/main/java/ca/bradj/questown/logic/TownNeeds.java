@@ -2,7 +2,7 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.TownNeedsMap;
-import ca.bradj.questown.town.AbstractWorkStatusStore.State;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;

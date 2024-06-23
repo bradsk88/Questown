@@ -3,9 +3,9 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -89,7 +89,7 @@ public class TestWorldInteraction extends
             @NotNull Void inputs,
             Boolean ts,
             Position position,
-            AbstractWorkStatusStore.State fresh
+            State fresh
     ) {
         return null;
     }

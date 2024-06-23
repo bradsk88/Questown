@@ -1,10 +1,10 @@
-package ca.bradj.questown.jobs.blacksmith;
+package ca.bradj.questown.jobs.blacksmith.nomc;
 
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
 
-public class BlacksmithWoodenPickaxeNoMCJob {
+public class BlacksmithWoodenPickaxeWork {
     public static final int BLOCK_STATE_NEED_HANDLE = 0;
     public static final int BLOCK_STATE_NEED_HEAD = 1;
     public static final int BLOCK_STATE_NEED_WORK = 2;

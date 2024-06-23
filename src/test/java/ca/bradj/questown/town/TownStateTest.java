@@ -2,16 +2,15 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,7 +20,7 @@ class TownStateTest {
     private static class TestTownState extends TownState<Container, TestItem, TestItem, Position, TestTownState> {
 
         public TestTownState(
-                @NotNull List<VillagerData<TestItem>> villagers, @NotNull List<ContainerTarget<Container, TestItem>> containers, @NotNull ImmutableMap<Position, AbstractWorkStatusStore.State> workStates, @NotNull List<Position> gates, long worldTimeAtSleep) {
+                @NotNull List<VillagerData<TestItem>> villagers, @NotNull List<ContainerTarget<Container, TestItem>> containers, @NotNull ImmutableMap<Position, State> workStates, @NotNull List<Position> gates, long worldTimeAtSleep) {
             super(villagers, containers, workStates, ImmutableMap.of(), gates, worldTimeAtSleep);
         }
 
@@ -29,7 +28,7 @@ class TownStateTest {
         protected TestTownState newTownState(
                 ImmutableList<VillagerData<TestItem>> villagers,
                 ImmutableList<ContainerTarget<Container, TestItem>> containers,
-                ImmutableMap<Position, AbstractWorkStatusStore.State> workStates,
+                ImmutableMap<Position, State> workStates,
                 ImmutableMap<Position, Integer> workTimers,
                 ImmutableList<Position> gates,
                 long worldTimeAtSleep

@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,11 +62,11 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             int nextStepTime
     ) {
         ImmutableWorkStateContainer<POS, TOWN> sl = getWorkStatuses(extra);
-        AbstractWorkStatusStore.State oldState = sl.getJobBlockState(bp);
+        State oldState = sl.getJobBlockState(bp);
         if (oldState == null) {
             oldState = initForState(curState);
         }
-        AbstractWorkStatusStore.State bs = oldState.decrWork(getWorkSpeedOf10(extra));
+        State bs = oldState.decrWork(getWorkSpeedOf10(extra));
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return null;
         }
@@ -82,12 +82,12 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
-    private AbstractWorkStatusStore.State initForState(Integer curState) {
+    private State initForState(Integer curState) {
         Integer work = workRequiredAtStates.get(curState);
         if (work == null) {
             work = 0;
         }
-        return AbstractWorkStatusStore.State.fresh().setWorkLeft(work).setProcessing(curState);
+        return State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 
     protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(

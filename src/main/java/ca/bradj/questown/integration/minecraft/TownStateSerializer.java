@@ -5,9 +5,9 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -82,7 +82,7 @@ public class TownStateSerializer {
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
         ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = loadVillagers(tag);
         // TODO[ASAP]: Load work states
-        @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates = ImmutableMap.of();
+        @NotNull ImmutableMap<BlockPos, State> workStates = ImmutableMap.of();
         @NotNull ImmutableMap<BlockPos, Integer> workTimers = ImmutableMap.of();
         @NotNull ImmutableList<MCHeldItem> knowledge = ImmutableList.of();
         List<BlockPos> gates = loadGates(tag, gg);

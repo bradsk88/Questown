@@ -1,7 +1,7 @@
 package ca.bradj.questown.logic;
 
 import ca.bradj.questown.jobs.production.Valued;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -31,7 +31,7 @@ class TownWorkStateTest {
 
     @Test
     void updateForSpecialRooms_shouldSetNullStatesToFresh() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         TownWorkState.updateForSpecialRooms(
                 () -> ImmutableMap.of(
                         new TestStatus(1), ImmutableList.of(arbitraryRoom)
@@ -43,12 +43,12 @@ class TownWorkStateTest {
                 s -> false,
                 ImmutableMap.of()
         );
-        Assertions.assertEquals(AbstractWorkStatusStore.State.fresh(), states.get(new Position(0, 0)));
+        Assertions.assertEquals(State.fresh(), states.get(new Position(0, 0)));
     }
 
     @Test
     void updateForSpecialRooms_shouldSetNullStatesToFresh_AndSetWork() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         TownWorkState.updateForSpecialRooms(
                 () -> ImmutableMap.of(
                         new TestStatus(1), ImmutableList.of(arbitraryRoom)
@@ -65,9 +65,9 @@ class TownWorkStateTest {
 
     @Test
     void updateForSpecialRooms_shouldKeepStates_IfSuppliesPresent() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         int initialValue = 4;
-        AbstractWorkStatusStore.State initialState = AbstractWorkStatusStore.State.freshAtState(initialValue);
+        State initialState = State.freshAtState(initialValue);
         states.put(new Position(0, 0), initialState);
 
         ImmutableMap<TestStatus, Boolean> suppliesRequired = ImmutableMap.of(
@@ -91,9 +91,9 @@ class TownWorkStateTest {
 
     @Test
     void updateForSpecialRooms_shouldZeroStates_IfSuppliesMissing() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         int initialValue = 4;
-        AbstractWorkStatusStore.State initialState = AbstractWorkStatusStore.State.freshAtState(initialValue);
+        State initialState = State.freshAtState(initialValue);
         states.put(new Position(0, 0), initialState);
 
         ImmutableMap<TestStatus, Boolean> suppliesRequired = ImmutableMap.of(
@@ -112,14 +112,14 @@ class TownWorkStateTest {
                 suppliesRequired::get,
                 suppliesMissing
         );
-        Assertions.assertEquals(AbstractWorkStatusStore.State.fresh(), states.get(new Position(0, 0)));
+        Assertions.assertEquals(State.fresh(), states.get(new Position(0, 0)));
     }
 
     @Test
     void updateForSpecialRooms_shouldDropStatesToSuppliedState_IfSuppliesMissingAtCurrentState() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         int initialValue = 4;
-        AbstractWorkStatusStore.State initialState = AbstractWorkStatusStore.State.freshAtState(initialValue);
+        State initialState = State.freshAtState(initialValue);
         states.put(new Position(0, 0), initialState);
 
         ImmutableMap<TestStatus, Boolean> suppliesRequired = ImmutableMap.of(
@@ -142,14 +142,14 @@ class TownWorkStateTest {
                 suppliesRequired::get,
                 supplies
         );
-        Assertions.assertEquals(AbstractWorkStatusStore.State.freshAtState(2), states.get(new Position(0, 0)));
+        Assertions.assertEquals(State.freshAtState(2), states.get(new Position(0, 0)));
     }
 
     @Test
     void updateForSpecialRooms_shouldNotDropStatesToSuppliedState_IfSuppliesMissingAtCurrentStateButNotRequired() {
-        Map<Position, AbstractWorkStatusStore.State> states = new HashMap<>();
+        Map<Position, State> states = new HashMap<>();
         int initialValue = 4;
-        AbstractWorkStatusStore.State initialState = AbstractWorkStatusStore.State.freshAtState(initialValue);
+        State initialState = State.freshAtState(initialValue);
         states.put(new Position(0, 0), initialState);
 
         ImmutableMap<TestStatus, Boolean> suppliesRequired = ImmutableMap.of(
@@ -172,6 +172,6 @@ class TownWorkStateTest {
                 suppliesRequired::get,
                 supplies
         );
-        Assertions.assertEquals(AbstractWorkStatusStore.State.freshAtState(4), states.get(new Position(0, 0)));
+        Assertions.assertEquals(State.freshAtState(4), states.get(new Position(0, 0)));
     }
 }

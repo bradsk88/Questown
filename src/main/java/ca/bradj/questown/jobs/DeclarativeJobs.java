@@ -5,8 +5,8 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,7 +57,7 @@ public class DeclarativeJobs {
             MCTownStateWorldInteraction wi,
             MCTownStateWorldInteraction.Inputs inState,
             ProductionStatus status,
-            AbstractWorkStatusStore.State workBlockState,
+            State workBlockState,
             Integer maxState,
             BlockPos fakePos
     ) {
@@ -154,14 +154,14 @@ public class DeclarativeJobs {
 
                 MCTownState outState = inState;
 
-                AbstractWorkStatusStore.State state = outState.workStates.get(fakePos);
+                State state = outState.workStates.get(fakePos);
                 if (state == null) {
-                    outState = outState.setJobBlockState(fakePos, AbstractWorkStatusStore.State.fresh());
+                    outState = outState.setJobBlockState(fakePos, State.fresh());
                 }
 
                 ProductionStatus status = ProductionStatus.FACTORY.idle();
 
-                final AbstractWorkStatusStore.State ztate = outState.workStates.get(fakePos);
+                final State ztate = outState.workStates.get(fakePos);
 
                 final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(
                         outState,

@@ -6,11 +6,11 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -300,14 +300,14 @@ public abstract class ProductionJob<
 
     protected abstract BlockPos findJobSite(
             RoomsHolder town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     );
 
     protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
     );
 

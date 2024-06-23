@@ -1,7 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,18 +9,19 @@ import java.util.function.Supplier;
 
 public interface ImmutableWorkStateContainer<POS, SELF> {
 
-    @Nullable AbstractWorkStatusStore.State getJobBlockState(POS bp);
+    @Nullable
+    State getJobBlockState(POS bp);
 
-    ImmutableMap<POS, AbstractWorkStatusStore.State> getAll();
+    ImmutableMap<POS, State> getAll();
 
     SELF setJobBlockState(
             POS bp,
-            AbstractWorkStatusStore.State bs
+            State bs
     );
 
     SELF setJobBlockStateWithTimer(
             POS bp,
-            AbstractWorkStatusStore.State bs,
+            State bs,
             int ticksToNextState
     );
 

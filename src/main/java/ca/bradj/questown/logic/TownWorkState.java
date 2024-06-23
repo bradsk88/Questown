@@ -2,7 +2,7 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.jobs.production.Valued;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -21,8 +21,8 @@ public class TownWorkState {
             Supplier<? extends Map<STATUS, ? extends Collection<ROOM>>> roomsWhereSpecialRulesApply,
             BiPredicate<Position, ROOM> isJobBlock,
             Function<STATUS, @NotNull Integer> workRequiredAtStates,
-            BiFunction<Position, ROOM, AbstractWorkStatusStore.State> getState,
-            TriConsumer<Position, ROOM, AbstractWorkStatusStore.State> setState,
+            BiFunction<Position, ROOM, State> getState,
+            TriConsumer<Position, ROOM, State> setState,
             Function<STATUS, Boolean> toolsRequired,
             Map<STATUS, Boolean> invItemStatus
     ) {
@@ -31,7 +31,7 @@ public class TownWorkState {
                         room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
                                 block -> {
                                     if (isJobBlock.test(block, room)) {
-                                        AbstractWorkStatusStore.State jobBlockState = getState.apply(block, room);
+                                        State jobBlockState = getState.apply(block, room);
                                         Boolean toolzRequired = toolsRequired.apply(status);
                                         toolzRequired = toolzRequired != null && toolzRequired;
                                         Boolean hasSupplies = Util.getOrDefault(invItemStatus, status, false);
@@ -45,7 +45,7 @@ public class TownWorkState {
                                         }
                                         if (jobBlockState == null) {
                                             int wl = workRequiredAtStates.apply(status.minusValue(status.value()));
-                                            AbstractWorkStatusStore.State fresh = AbstractWorkStatusStore.State.fresh();
+                                            State fresh = State.fresh();
                                             setState.accept(block, room, fresh.setWorkLeft(wl));
                                         }
                                     }
@@ -56,7 +56,7 @@ public class TownWorkState {
 
     }
 
-    private static <STATUS extends Valued<STATUS>> AbstractWorkStatusStore.State findHighestSuppliedStatus(
+    private static <STATUS extends Valued<STATUS>> State findHighestSuppliedStatus(
             Function<STATUS, @NotNull Integer> workRequiredAtStates,
             Map<STATUS, Boolean> supplyItemStatus,
             STATUS status
@@ -66,9 +66,9 @@ public class TownWorkState {
             Boolean b = supplyItemStatus.get(prev);
             if (b != null && b) {
                 Integer wl = workRequiredAtStates.apply(prev);
-                return AbstractWorkStatusStore.State.freshAtState(prev.value()).setWorkLeft(wl);
+                return State.freshAtState(prev.value()).setWorkLeft(wl);
             }
         }
-        return AbstractWorkStatusStore.State.fresh().setWorkLeft(workRequiredAtStates.apply(status.minusValue(status.value())));
+        return State.fresh().setWorkLeft(workRequiredAtStates.apply(status.minusValue(status.value())));
     }
 }

@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -144,7 +145,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState setJobBlockState(@NotNull Inputs inputs, MCTownState ts, BlockPos position, AbstractWorkStatusStore.State fresh) {
+    protected MCTownState setJobBlockState(@NotNull Inputs inputs, MCTownState ts, BlockPos position, State fresh) {
         return ts.setJobBlockState(position, fresh);
     }
 
@@ -205,7 +206,7 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     public JobTownProvider<MCRoom> asTownJobs(
-            @NotNull AbstractWorkStatusStore.State workStates,
+            @NotNull State workStates,
             MCRoom mcRoom,
             BlockPos roomBlock,
             @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers

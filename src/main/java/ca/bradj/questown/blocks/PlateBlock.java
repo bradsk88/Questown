@@ -4,7 +4,7 @@ import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -98,7 +97,7 @@ public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock, 
     public void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            AbstractWorkStatusStore.State bs
+            State bs
     ) {
         if (bs.processingState() > 1) {
             bs = bs.setProcessing(0);

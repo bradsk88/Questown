@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -45,7 +46,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnValueForSetBlock() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 10);
+        s.setJobBlockStateWithTimer(pos, State.fresh(), 10);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertEquals(10, tl);
     }
@@ -54,7 +55,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnLessValueForSetBlockAfterTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 10);
+        s.setJobBlockStateWithTimer(pos, State.fresh(), 10);
         tick(s);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertEquals(9, tl);
@@ -64,7 +65,7 @@ class WorkStatusStoreTest {
     void Test_GetTimeLeftShouldReturnNullForSetBlockAfterFinalTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 1); // Only one tick left
+        s.setJobBlockStateWithTimer(pos, State.fresh(), 1); // Only one tick left
         tick(s);
         @Nullable Integer tl = s.getTimeToNextState(pos);
         Assertions.assertNull(tl);
@@ -74,9 +75,9 @@ class WorkStatusStoreTest {
     void Test_ShouldMoveToNextStateAfterFinalTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, AbstractWorkStatusStore.State.fresh(), 1); // Only one tick left
+        s.setJobBlockStateWithTimer(pos, State.fresh(), 1); // Only one tick left
         tick(s);
-        AbstractWorkStatusStore.State state = s.getJobBlockState(pos);
+        State state = s.getJobBlockState(pos);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(1, state.processingState());
     }

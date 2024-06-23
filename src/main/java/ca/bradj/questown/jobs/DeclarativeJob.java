@@ -8,16 +8,16 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
@@ -116,6 +116,8 @@ public class DeclarativeJob extends
 
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
+
+    private JobLogic<MCExtra, MCRoom, BlockPos, Block, RealtimeWorldInteraction> logic; // FIXME: Initialize
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
@@ -273,32 +275,23 @@ public class DeclarativeJob extends
             Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        VisitorMobEntity vmEntity = (VisitorMobEntity) entity;
-        if (this.grabbingInsertedSupplies) {
-            if (world.tryGrabbingInsertedSupplies(town, work, vmEntity)) {
-                this.grabbingInsertedSupplies = false;
-                this.grabbedInsertedSupplies = true;
+        MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
+
+        BlockPos entityBlockPos = entity.blockPosition();
+        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
+
+        EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
+            @Override
+            public @Nullable MCRoom getEntityCurrentJobSite() {
+                if (entityCurrentJobSite == null) {
+                    return null;
+                }
+                return entityCurrentJobSite.room;
             }
-            return;
-        }
+        };
 
-        if (this.grabbedInsertedSupplies) {
-            seekFallbackWork(town);
-            return;
-        }
-
-        this.ticksSinceStart++;
-        if (workSpot == null && this.ticksSinceStart > this.expiration.maxTicks()) {
-            JobID apply = expiration.maxTicksFallbackFn()
-                                    .apply(jobId);
-            QT.JOB_LOGGER.debug("Reached max ticks for {}. Falling back to {}.", jobId, apply);
-            town.changeJobForVisitor(ownerUUID, apply);
-            return;
-        }
-        this.workSpot = null;
-        this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         JobTownProvider<MCRoom> jtp = new JobTownProvider<>() {
-            private final Function<BlockPos, AbstractWorkStatusStore.State> getJobBlockState = work::getJobBlockState;
+            private final Function<BlockPos, State> getJobBlockState = work::getJobBlockState;
 
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
@@ -358,44 +351,39 @@ public class DeclarativeJob extends
                 return Jobs.townHasSpace(town);
             }
         };
-        BlockPos entityBlockPos = entity.blockPosition();
-        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
-        EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
-            @Override
-            public @Nullable MCRoom getEntityCurrentJobSite() {
-                if (entityCurrentJobSite == null) {
-                    return null;
-                }
-                return entityCurrentJobSite.room;
-            }
+
+        Supplier<ProductionStatus> computeState = getStateComputer(
+                statusFactory,
+                jtp,
+                elp
+        );
+        this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
+        logic.tick(
+                extra,
+                world,
+                computeState,
+                entityCurrentJobSite,
+                jobId,
+                expiration,
+                jobID -> town.getVillagerHandle().changeJobForVisitor(ownerUUID, jobID, false)
+        );
+    }
+
+    private @NotNull Supplier<ProductionStatus> getStateComputer(
+            IProductionStatusFactory<ProductionStatus> statusFactory,
+            JobTownProvider<MCRoom> jtp,
+            EntityLocStateProvider<MCRoom> elp
+    ) {
+        return () -> {
+            journal.tryUpdateStatus(
+                    jtp,
+                    elp,
+                    defaultEntityInvProvider(),
+                    statusFactory,
+                    specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION)
+            );
+            return journal.getStatus();
         };
-        boolean prioritizeExtraction = this.specialGlobalRules.contains(SpecialRules.PRIORITIZE_EXTRACTION);
-        this.journal.tick(jtp, elp, super.defaultEntityInvProvider(), statusFactory, prioritizeExtraction);
-
-        if (ProductionStatus.NO_SUPPLIES.equals(this.journal.getStatus())) {
-            noSuppliesTicks++;
-        } else {
-            noSuppliesTicks = 0;
-        }
-
-        if (noSuppliesTicks > expiration.maxTicksWithoutSupplies()) {
-            this.grabbingInsertedSupplies = true;
-            return;
-        }
-
-        if (wrappingUp && !hasAnyLootToDrop()) {
-            town.getVillagerHandle()
-                .changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
-            return;
-        }
-
-        if (entityCurrentJobSite != null) {
-            tryWorking(town, work, vmEntity, entityCurrentJobSite);
-        }
-        tryDropLoot(entityBlockPos);
-        if (!wrappingUp) {
-            tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
-        }
     }
 
     private void seekFallbackWork(TownInterface town) {
@@ -503,7 +491,7 @@ public class DeclarativeJob extends
     }
 
     Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
-            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            Function<BlockPos, State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
             Supplier<Direction> randomDirection
@@ -530,7 +518,7 @@ public class DeclarativeJob extends
     }
 
     private static void tryAddSpot(
-            Function<BlockPos, AbstractWorkStatusStore.State> town,
+            Function<BlockPos, State> town,
             BlockPos bp,
             Map<Integer, List<WorkSpot<Integer, BlockPos>>> b,
             Function<BlockPos, BlockPos> is
@@ -659,7 +647,7 @@ public class DeclarativeJob extends
     @Override
     protected BlockPos findJobSite(
             RoomsHolder town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Random rand
     ) {
@@ -700,7 +688,7 @@ public class DeclarativeJob extends
     @Override
     protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
-            Function<BlockPos, AbstractWorkStatusStore.State> work,
+            Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
     ) {
         // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
@@ -718,7 +706,7 @@ public class DeclarativeJob extends
                                         .filter(room -> {
                                             for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
                                                                                     .entrySet()) {
-                                                AbstractWorkStatusStore.State jobBlockState = work.apply(e.getKey());
+                                                State jobBlockState = work.apply(e.getKey());
                                                 if (jobBlockState == null) {
                                                     continue;
                                                 }

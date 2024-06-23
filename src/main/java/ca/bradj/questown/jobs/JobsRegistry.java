@@ -21,10 +21,10 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -118,11 +118,11 @@ public class JobsRegistry {
         throw new IllegalArgumentException("Unexpected job ID format: " + jobID);
     }
 
-    public static AbstractWorkStatusStore.State getDefaultJobBlockState(Block b) {
+    public static State getDefaultJobBlockState(Block b) {
         if (b instanceof JobBoardBlock) {
-            return AbstractWorkStatusStore.State.freshAtState(WorkSeekerJob.MAX_STATE);
+            return State.freshAtState(ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE);
         }
-        return AbstractWorkStatusStore.State.fresh();
+        return State.fresh();
     }
 
     public static Warper<ServerLevel, MCTownState> getWarper(

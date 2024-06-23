@@ -3,9 +3,9 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
@@ -21,7 +21,7 @@ class AbstractWorkWITest {
 
     private static class TestWorkWI extends AbstractWorkWI<Position, Void, GathererJournalTest.TestItem, Void> {
 
-        Map<Position, AbstractWorkStatusStore.State> state = new HashMap<>();
+        Map<Position, State> state = new HashMap<>();
 
         public TestWorkWI(
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
@@ -45,23 +45,23 @@ class AbstractWorkWITest {
         protected ImmutableWorkStateContainer<Position, Void> getWorkStatuses(Void unused) {
             return new ImmutableWorkStateContainer<Position, Void>() {
                 @Override
-                public AbstractWorkStatusStore.@Nullable State getJobBlockState(Position bp) {
+                public @Nullable State getJobBlockState(Position bp) {
                     return state.get(bp);
                 }
 
                 @Override
-                public ImmutableMap<Position, AbstractWorkStatusStore.State> getAll() {
+                public ImmutableMap<Position, State> getAll() {
                     return ImmutableMap.copyOf(state);
                 }
 
                 @Override
-                public Void setJobBlockState(Position bp, AbstractWorkStatusStore.State bs) {
+                public Void setJobBlockState(Position bp, State bs) {
                     state.put(bp, bs);
                     return null;
                 }
 
                 @Override
-                public Void setJobBlockStateWithTimer(Position bp, AbstractWorkStatusStore.State bs, int ticksToNextState) {
+                public Void setJobBlockStateWithTimer(Position bp, State bs, int ticksToNextState) {
                     state.put(bp, bs);
                     throw new UnsupportedOperationException("Timers not supported by this test suite");
                 }
@@ -107,19 +107,19 @@ class AbstractWorkWITest {
         );
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(2),
+                State.freshAtState(1).setWorkLeft(2),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(1).setWorkLeft(1),
+                State.freshAtState(1).setWorkLeft(1),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(2).setWorkLeft(0),
+                State.freshAtState(2).setWorkLeft(0),
                 wi.state.get(new Position(0, 0))
         );
     }
@@ -136,19 +136,19 @@ class AbstractWorkWITest {
         );
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(1),
+                State.freshAtState(1),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(2),
+                State.freshAtState(2),
                 wi.state.get(new Position(0, 0))
         );
 
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 2, 1, new Position(0, 1)));
         Assertions.assertEquals(
-                AbstractWorkStatusStore.State.freshAtState(3),
+                State.freshAtState(3),
                 wi.state.get(new Position(0, 0))
         );
     }

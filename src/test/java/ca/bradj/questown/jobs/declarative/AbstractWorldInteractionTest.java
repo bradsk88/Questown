@@ -1,9 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.TestItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
-import ca.bradj.questown.town.AbstractWorkStatusStore.State;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.roomrecipes.core.space.Position;

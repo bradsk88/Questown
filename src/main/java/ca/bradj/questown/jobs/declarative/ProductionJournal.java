@@ -106,7 +106,7 @@ public class ProductionJournal<
         return capacity;
     }
 
-    public void tick(
+    public void tryUpdateStatus(
             JobTownProvider<MCRoom> townState,
             EntityLocStateProvider<MCRoom> entityState,
             EntityInvStateProvider<Integer> inventory,

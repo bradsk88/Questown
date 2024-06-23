@@ -6,9 +6,9 @@ import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.ProductionTimeWarper;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,13 +30,13 @@ public abstract class TownState<
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<P> gates;
     public final long worldTimeAtSleep;
-    public final ImmutableMap<P, AbstractWorkStatusStore.State> workStates;
+    public final ImmutableMap<P, State> workStates;
     public final ImmutableMap<P, Integer> workTimers;
 
     public TownState(
             @NotNull List<VillagerData<H>> villagers,
             @NotNull List<ContainerTarget<C, I>> containers,
-            @NotNull ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
+            @NotNull ImmutableMap<P, State> workStates,
             @NotNull ImmutableMap<P, Integer> workTimers,
             @NotNull List<P> gates,
             long worldTimeAtSleep
@@ -112,18 +112,18 @@ public abstract class TownState<
     }
 
     @Override
-    public AbstractWorkStatusStore.@Nullable State getJobBlockState(P bp) {
+    public @Nullable State getJobBlockState(P bp) {
         return workStates.get(bp);
     }
 
     @Override
-    public ImmutableMap<P, AbstractWorkStatusStore.State> getAll() {
+    public ImmutableMap<P, State> getAll() {
         return ImmutableMap.copyOf(workStates);
     }
 
     @Override
-    public SELF setJobBlockState(P bp, AbstractWorkStatusStore.State bs) {
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+    public SELF setJobBlockState(P bp, State bs) {
+        HashMap<P, State> m = new HashMap<>(workStates);
         m.put(bp, bs);
         return newTownState(
                 villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
@@ -133,15 +133,15 @@ public abstract class TownState<
     protected abstract SELF newTownState(
             ImmutableList<VillagerData<H>> villagers,
             ImmutableList<ContainerTarget<C, I>> containers,
-            ImmutableMap<P, AbstractWorkStatusStore.State> workStates,
+            ImmutableMap<P, State> workStates,
             ImmutableMap<P, Integer> workTimers,
             ImmutableList<P> gates,
             long worldTimeAtSleep
     );
 
     @Override
-    public SELF setJobBlockStateWithTimer(P bp, AbstractWorkStatusStore.State bs, int ticksToNextState) {
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+    public SELF setJobBlockStateWithTimer(P bp, State bs, int ticksToNextState) {
+        HashMap<P, State> m = new HashMap<>(workStates);
         m.put(bp, bs);
         HashMap<P, Integer> m2 = new HashMap<>(workTimers);
         m2.put(bp, ticksToNextState);
@@ -152,7 +152,7 @@ public abstract class TownState<
 
     @Override
     public SELF clearState(P bp) {
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        HashMap<P, State> m = new HashMap<>(workStates);
         m.remove(bp);
         return newTownState(
                 villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
@@ -197,11 +197,11 @@ public abstract class TownState<
         if (workTimers.get(bp) == null || workTimers.get(bp) == 0) {
             return unchanged();
         }
-        HashMap<P, AbstractWorkStatusStore.State> m = new HashMap<>(workStates);
+        HashMap<P, State> m = new HashMap<>(workStates);
         HashMap<P, Integer> m2 = new HashMap<>(workTimers);
         m2.compute(bp, (k, v) -> v == null ? 0 : Math.max(0, v - stepInterval));
         if (m2.get(bp) <= 0) {
-            m.compute(bp, (k, v) -> (v == null ? AbstractWorkStatusStore.State.fresh() : v).incrProcessing());
+            m.compute(bp, (k, v) -> (v == null ? State.fresh() : v).incrProcessing());
         }
         return newTownState(
                 villagers, containers, ImmutableMap.copyOf(m), ImmutableMap.copyOf(m2), gates, worldTimeAtSleep

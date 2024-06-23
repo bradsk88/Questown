@@ -18,7 +18,7 @@ import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -30,6 +30,7 @@ import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
@@ -721,7 +722,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                                                                   HorizontalDirectionalBlock.FACING, value)
             );
             registerJobsBoard(e.getKey());
-            jobHandle.setJobBlockState(e.getKey(), AbstractWorkStatusStore.State.freshAtState(WorkSeekerJob.MAX_STATE));
+            jobHandle.setJobBlockState(e.getKey(), State.freshAtState(WorkSeekerJob.MAX_STATE));
         }
         return null;
     }

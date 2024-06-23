@@ -3,7 +3,7 @@ package ca.bradj.questown.logic;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.TownNeedsMap;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -90,9 +90,9 @@ class TownNeedsTest {
                 ),
                 ImmutableMap.of(),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(0),
-                        "Position2", AbstractWorkStatusStore.State.freshAtState(1),
-                        "Position3", AbstractWorkStatusStore.State.freshAtState(2)
+                        "Position1", State.freshAtState(0),
+                        "Position2", State.freshAtState(1),
+                        "Position3", State.freshAtState(2)
                 ).get(p),
                 (p) -> true,
                 s -> null, // no tool requirements -> no tool statuses
@@ -203,10 +203,10 @@ class TownNeedsTest {
             matchinRooms = (i) -> ImmutableList.of();
         }
 
-        Function<String, AbstractWorkStatusStore.@Nullable State> jobBlocks = (p) -> ImmutableMap.of(
-                "Position1", AbstractWorkStatusStore.State.freshAtState(0),
-                "Position2", AbstractWorkStatusStore.State.freshAtState(1),
-                "Position3", AbstractWorkStatusStore.State.freshAtState(2)
+        Function<String, @Nullable State> jobBlocks = (p) -> ImmutableMap.of(
+                "Position1", State.freshAtState(0),
+                "Position2", State.freshAtState(1),
+                "Position3", State.freshAtState(2)
         ).get(p);
         if (matchingRoom == null) {
             jobBlocks = p -> null;
@@ -258,9 +258,9 @@ class TownNeedsTest {
                 ),
                 ImmutableMap.of(),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(0),
-                        "Position2", AbstractWorkStatusStore.State.freshAtState(1),
-                        "Position3", AbstractWorkStatusStore.State.freshAtState(2)
+                        "Position1", State.freshAtState(0),
+                        "Position2", State.freshAtState(1),
+                        "Position3", State.freshAtState(2)
                 ).get(p),
                 (p) -> true,
                 s -> true, // We have all the required tools
@@ -298,10 +298,10 @@ class TownNeedsTest {
                 ImmutableMap.of(),
                 (p) -> Util.getOrDefault(
                         ImmutableMap.of(
-                                "Position1", AbstractWorkStatusStore.State.freshAtState(0)
+                                "Position1", State.freshAtState(0)
                         ),
                         p,
-                        AbstractWorkStatusStore.State.fresh()
+                        State.fresh()
                 ),
                 (p) -> true,
                 s -> true, // We have the required tools
@@ -343,10 +343,10 @@ class TownNeedsTest {
                 ImmutableMap.of(),
                 (p) -> Util.getOrDefault(
                         ImmutableMap.of(
-                                "Position1", AbstractWorkStatusStore.State.freshAtState(1)
+                                "Position1", State.freshAtState(1)
                         ),
                         p,
-                        AbstractWorkStatusStore.State.fresh()
+                        State.fresh()
                 ),
                 (p) -> true,
                 s -> ImmutableMap.of(
@@ -395,7 +395,7 @@ class TownNeedsTest {
                 )),
                 ImmutableMap.of(),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(0)
+                        "Position1", State.freshAtState(0)
                 ).get(p),
                 (p) -> true,
                 s -> true, // Tools are in inventory (or town)
@@ -426,7 +426,7 @@ class TownNeedsTest {
                 )),
                 ImmutableMap.of(),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(0)
+                        "Position1", State.freshAtState(0)
                 ).get(p),
                 (p) -> true,
                 s -> true, // Tools are in inventory (or town)
@@ -457,7 +457,7 @@ class TownNeedsTest {
                 ), i, ImmutableList.of()),
                 ImmutableMap.of(),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(1)
+                        "Position1", State.freshAtState(1)
                 ).get(p),
                 (p) -> true,
                 s -> true, // Tools are in inventory (or town)
@@ -490,7 +490,7 @@ class TownNeedsTest {
                         STATUS_1, ImmutableList.of(ROOM_A)
                 ),
                 (p) -> ImmutableMap.of(
-                        "Position1", AbstractWorkStatusStore.State.freshAtState(1)
+                        "Position1", State.freshAtState(1)
                 ).get(p),
                 (p) -> true,
                 s -> true, // Tools are in inventory (or town)

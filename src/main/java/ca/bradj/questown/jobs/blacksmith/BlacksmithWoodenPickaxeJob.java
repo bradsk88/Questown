@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
-import static ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeNoMCJob.DEFINITION;
+import static ca.bradj.questown.jobs.blacksmith.nomc.BlacksmithWoodenPickaxeWork.DEFINITION;
 
 public class BlacksmithWoodenPickaxeJob {
     public static JobDefinition DEF = DEFINITION;

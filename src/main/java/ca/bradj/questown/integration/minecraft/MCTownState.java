@@ -1,8 +1,8 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -19,7 +19,7 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
     public MCTownState(
             @NotNull List<VillagerData<MCHeldItem>> villagers,
             @NotNull List<ContainerTarget<MCContainer, MCTownItem>> containers,
-            @NotNull ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates,
+            @NotNull ImmutableMap<BlockPos, State> workStates,
             @NotNull ImmutableMap<BlockPos, Integer> workTimers,
             @NotNull List<BlockPos> gates,
             @NotNull ImmutableList<MCHeldItem> knowledge,
@@ -33,7 +33,7 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
     protected MCTownState newTownState(
             ImmutableList<VillagerData<MCHeldItem>> villagers,
             ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers,
-            ImmutableMap<BlockPos, AbstractWorkStatusStore.State> workStates,
+            ImmutableMap<BlockPos, State> workStates,
             ImmutableMap<BlockPos, Integer> workTimers,
             ImmutableList<BlockPos> gates,
             long worldTimeAtSleep

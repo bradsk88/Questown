@@ -24,11 +24,6 @@ import java.util.function.Function;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
-    public static final int BLOCK_STATE_NO_JOBS = 0;
-    public static final int BLOCK_STATE_JOBS_AVAIlABLE = 1;
-
-    public static final int MAX_STATE = BLOCK_STATE_JOBS_AVAIlABLE;
-
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -36,14 +31,14 @@ public class WorkSeekerJob extends DeclarativeJob {
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NO_JOBS, 0,
-            BLOCK_STATE_JOBS_AVAIlABLE, 1
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS, 0,
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE, 1
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NO_JOBS, 0,
-            BLOCK_STATE_JOBS_AVAIlABLE, 0
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS, 0,
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE, 0
     );
-    private static final String WORK_ID = "seeking_work";
+    private static final String WORK_ID = ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.WORK_ID;
 
     public WorkSeekerJob(
             UUID ownerUUID,
@@ -55,7 +50,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 inventoryCapacity,
                 new JobID(rootId, WORK_ID),
                 SpecialQuests.JOB_BOARD,
-                MAX_STATE,
+                ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,
                 INGREDIENT_QTY_REQUIRED_AT_STATES,
@@ -68,21 +63,6 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WorksBehaviour.noOutput(),
                 SoundEvents.BOOK_PAGE_TURN.getLocation()
         );
-    }
-
-    public static boolean isSeekingWork(JobID s) {
-        return WORK_ID.equals(s.jobId());
-    }
-
-    public static JobID getIDForRoot(JobID j) {
-        if (Config.JOB_BOARD_ENABLED.get()) {
-            return newIDForRoot(j.rootId());
-        }
-        return j;
-    }
-
-    public static JobID newIDForRoot(String jobName) {
-        return new JobID(jobName, WORK_ID);
     }
 
     @Override
