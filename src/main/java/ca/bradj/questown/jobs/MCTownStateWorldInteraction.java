@@ -197,6 +197,12 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
+    public boolean tryGrabbingInsertedSupplies(Inputs mcExtra) {
+        // TODO: Is this good enough?
+        return true;
+    }
+
+    @Override
     public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
         return ingredientQuantityRequiredAtStates;
     }

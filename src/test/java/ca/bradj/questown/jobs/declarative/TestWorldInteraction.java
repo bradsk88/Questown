@@ -7,6 +7,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +19,8 @@ import java.util.function.Supplier;
 public class TestWorldInteraction extends
         AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
 
-    private final InventoryHandle<GathererJournalTest.TestItem> inventory;
+    private final ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory;
+    private Iterable<GathererJournalTest.TestItem> results = ImmutableList.of();
     boolean extracted;
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
 
@@ -29,7 +31,33 @@ public class TestWorldInteraction extends
             ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            InventoryHandle<GathererJournalTest.TestItem> inventory,
+            Iterable<GathererJournalTest.TestItem> results,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
+            ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+            Supplier<Claim> claim
+    ) {
+        this(
+                maxState,
+                toolsRequiredAtStates,
+                workRequiredAtStates,
+                ingredientsRequiredAtStates,
+                ingredientQuantityRequiredAtStates,
+                timeRequiredAtStates,
+                inventory,
+                workStatuses,
+                claim
+        );
+        this.results = results;
+    }
+
+    public TestWorldInteraction(
+            int maxState,
+            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claim
     ) {
@@ -51,7 +79,7 @@ public class TestWorldInteraction extends
 
     public static TestWorldInteraction forDefinition(
             JobDefinition d,
-            InventoryHandle<GathererJournalTest.TestItem> inv,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inv,
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claims
     ) {
@@ -62,7 +90,9 @@ public class TestWorldInteraction extends
                 itemPred(d.ingredientsRequiredAtStates()),
                 d.ingredientQtyRequiredAtStates(),
                 d.timeRequiredAtStates(),
+                ImmutableList.of(new GathererJournalTest.TestItem(d.result())),
                 inv, workStatuses, claims
+
         );
     }
 
@@ -80,8 +110,7 @@ public class TestWorldInteraction extends
             Position position
     ) {
         extracted = true;
-        getWorkStatuses(null).clearState(position);
-        return true;
+        return super.tryExtractProduct(unused, position);
     }
 
     @Override
@@ -91,7 +120,7 @@ public class TestWorldInteraction extends
             Position position,
             State fresh
     ) {
-        return null;
+        return workStatuses.setJobBlockState(position, fresh);
     }
 
     @Override
@@ -135,7 +164,7 @@ public class TestWorldInteraction extends
             Void inputs,
             Collection<GathererJournalTest.TestItem> testItems
     ) {
-        return null;
+        return results;
     }
 
     @Override
@@ -149,6 +178,11 @@ public class TestWorldInteraction extends
     @Override
     protected boolean isReady(Void unused) {
         return true;
+    }
+
+    @Override
+    public boolean tryGrabbingInsertedSupplies(Void mcExtra) {
+        return false; // Arbitrary
     }
 
     @Override

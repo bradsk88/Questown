@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -139,8 +140,15 @@ public abstract class AbstractWorldInteraction<
             Iterable<HELD_ITEM> newItemsSource,
             POS sourcePos
     ) {
+        Function<TOWN, TOWN> reset = (TOWN ts) -> {
+            ts = setJobBlockState(inputs, ts, sourcePos, State.fresh());
+            getWorkStatuses(inputs).clearClaim(sourcePos);
+            return ts;
+        };
+
         Stack<HELD_ITEM> stack = new Stack<>();
-        newItemsSource.forEach(stack::push); // TODO: This is potentially infinite
+
+        Util.iterate(newItemsSource, stack::push);
 
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
@@ -148,7 +156,7 @@ public abstract class AbstractWorldInteraction<
                     "No results during extraction phase. That's probably a bug. Town State: {}",
                     ts
             );
-            return null;
+            return reset.apply(ts);
         }
 
         boolean gotAll = false;
@@ -181,9 +189,7 @@ public abstract class AbstractWorldInteraction<
             // TODO: Gracefully handle when the villager doesn't have enough room to take all items
             QT.VILLAGER_LOGGER.debug("Villager ran out of room before extracting all possible items");
         }
-        ts = setJobBlockState(inputs, ts, sourcePos, State.fresh());
-        getWorkStatuses(inputs).clearClaim(sourcePos);
-        return ts;
+        return reset.apply(ts);
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -305,7 +311,7 @@ public abstract class AbstractWorldInteraction<
             POS position
     ) {
             State s = getJobBlockState(inputs, position);
-        if (s != null && s.processingState() == maxState) {
+        if (s != null && s.processingState() >= maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
             Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);

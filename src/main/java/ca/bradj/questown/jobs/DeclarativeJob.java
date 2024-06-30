@@ -8,6 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -362,10 +363,25 @@ public class DeclarativeJob extends
                 extra,
                 world,
                 computeState,
-                entityCurrentJobSite,
                 jobId,
                 expiration,
-                jobID -> town.getVillagerHandle().changeJobForVisitor(ownerUUID, jobID, false)
+                jobID -> town.getVillagerHandle().changeJobForVisitor(ownerUUID, jobID, false),
+                () -> {
+                    // TODO: Move "tryWorking" and "wrappingUp" into JobLogic
+                    if (entityCurrentJobSite == null) {
+                        return false;
+                    }
+                    tryWorking(town, work, (VisitorMobEntity) entity, entityCurrentJobSite);
+                    return true;
+                },
+                () -> wrappingUp && !hasAnyLootToDrop(),
+                () -> tryDropLoot(entityBlockPos),
+                () -> {
+                    if (wrappingUp) {
+                        return;
+                    }
+                    tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
+                }
         );
     }
 
@@ -432,7 +448,7 @@ public class DeclarativeJob extends
         );
     }
 
-    private void tryWorking(
+    private WithReason<@Nullable Boolean> tryWorking(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
@@ -447,7 +463,7 @@ public class DeclarativeJob extends
 
         ProductionStatus status = getStatus();
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
-            return;
+            return new WithReason<>(null, "non-work status");
         }
         Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpots.get(maxState);
 
@@ -458,15 +474,15 @@ public class DeclarativeJob extends
         if (allSpots == null) {
             Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
             if (workSpot1 == null) {
-                QT.JOB_LOGGER.error(
-                        "Worker somehow has different status than all existing work spots. This is probably a bug.");
-                return;
+                String problem = "Worker somehow has different status than all existing work spots";
+                QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
+                return new WithReason<>(null, problem);
             }
             allSpots = workSpot1;
         }
 
         if (allSpots.isEmpty()) {
-            return;
+            return new WithReason<>(null, "No workspots");
         }
 
         // TODO: Pass in the previous workspot and keep working it, if it's sill workable
@@ -488,6 +504,7 @@ public class DeclarativeJob extends
                 wrappingUp = true;
             }
         }
+        return new WithReason<>(wrappingUp, "Worked");
     }
 
     Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
@@ -783,6 +800,7 @@ public class DeclarativeJob extends
             return null;
         };
     }
+
     @Override
     public Function<Void, Void> addJobCompletionListener(Runnable listener) {
         this.world.addJobCompletionListener(listener);

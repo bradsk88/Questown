@@ -1,5 +1,6 @@
 package ca.bradj.questown.mc;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
@@ -8,10 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import java.util.*;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 public class Util {
@@ -149,5 +147,20 @@ public class Util {
             ));
         });
         return b.build();
+    }
+
+    /**
+     * Handles potentially infinite iterables, applying the BASE_MAX_LOOP
+     * to make them finite by truncating.
+     */
+    public static <X> void iterate(Iterable<X> source, Consumer<X> sink) {
+        Iterator<X> iter = source.iterator();
+        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+            if (iter.hasNext()) {
+                sink.accept(iter.next());
+            } else {
+                return;
+            }
+        }
     }
 }

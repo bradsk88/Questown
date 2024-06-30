@@ -41,6 +41,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork;
+
 public class JobsRegistry {
 
     private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
@@ -65,7 +67,7 @@ public class JobsRegistry {
 
     public static Set<JobID> getAllJobs() {
         return Works.ids().stream()
-                .filter(v -> !WorkSeekerJob.isSeekingWork(v))
+                .filter(v -> !isSeekingWork(v))
                 .collect(Collectors.toSet());
     }
 
@@ -129,7 +131,7 @@ public class JobsRegistry {
             int villagerIndex,
             JobID jobID
     ) {
-        if (WorkSeekerJob.isSeekingWork(jobID)) {
+        if (isSeekingWork(jobID)) {
             return NoOpWarper.INSTANCE;
         }
         Supplier<Work> w = Works.get(jobID);
@@ -142,7 +144,7 @@ public class JobsRegistry {
             JobID p,
             Ingredient requestedResult
     ) {
-        if (WorkSeekerJob.isSeekingWork(p)) {
+        if (isSeekingWork(p)) {
             return false;
         }
 
@@ -162,7 +164,7 @@ public class JobsRegistry {
     public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
-        if (WorkSeekerJob.isSeekingWork(p)) {
+        if (isSeekingWork(p)) {
             return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get().asItem()));
         }
 
@@ -175,7 +177,7 @@ public class JobsRegistry {
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
-        if (WorkSeekerJob.isSeekingWork(v)) {
+        if (isSeekingWork(v)) {
             return ItemStack.EMPTY;
         }
         Supplier<Work> w = Works.get(v);
@@ -305,7 +307,7 @@ public class JobsRegistry {
     ) {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j;
         Supplier<Work> fn = Works.get(jobName);
-        if (WorkSeekerJob.isSeekingWork(jobName)) {
+        if (isSeekingWork(jobName)) {
             j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
             journal = newWorkSeekerJournal(jobName, journal, heldItems);
         } else if (DinerWork.isDining(jobName)) {
@@ -364,7 +366,7 @@ public class JobsRegistry {
             String status,
             ImmutableList<MCHeldItem> heldItems
     ) {
-        if (WorkSeekerJob.isSeekingWork(job)) {
+        if (isSeekingWork(job)) {
             return new SimpleSnapshot<>(job, ProductionStatus.from(status), heldItems);
         }
 

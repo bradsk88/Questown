@@ -57,7 +57,7 @@ class AbstractWorldInteractionTest {
         return new TestWorldInteraction(
                 i, toolsNeeded, workRequired, ingredients,
                 alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
-                inventoryHandle, statuses,
+                ValidatedInventoryHandle.unvalidated(inventoryHandle), statuses,
                 () -> new Claim(UUID.randomUUID(), 100)
         );
     }
@@ -149,7 +149,7 @@ class AbstractWorldInteractionTest {
         state = wi.getJobBlockState(null, arbitrarySpot(0).position());
         Assertions.assertFalse(inserted.get());
         Assertions.assertTrue(wi.extracted); // Extracted
-        Assertions.assertNull(state);
+        Assertions.assertEquals(State.fresh(), state);
     }
 
     @Test
@@ -254,7 +254,7 @@ class AbstractWorldInteractionTest {
 
         wi.tryWorking(null, arbitrarySpot(0)); // Extract
         @Nullable State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
-        Assertions.assertNull(state);
+        Assertions.assertEquals(State.fresh(), state);
         Assertions.assertTrue(wi.extracted);
     }
 
@@ -372,7 +372,7 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(2));
 
         State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
-        Assertions.assertNull(state);
+        Assertions.assertEquals(State.fresh(), state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
     }
@@ -460,13 +460,13 @@ class AbstractWorldInteractionTest {
         wi.tryWorking(null, arbitrarySpot(2));
 
         State state = wi.getJobBlockState(null, arbitrarySpot(0).position());
-        Assertions.assertNull(state);
+        Assertions.assertEquals(State.fresh(), state);
         Assertions.assertTrue(inserted.get()); // Inserted
         Assertions.assertTrue(wi.extracted); // Extracted
     }
 
     @Test
-    void Test_ShouldNotSetTimerIfToolIsRequired() {
+    void Test_ShouldNotSetTimerIfToolIsRequired() throws ItemCountMismatch {
         AtomicBoolean inserted = new AtomicBoolean(false);
         TestWorldInteraction wi = new TestWorldInteraction(
                 2,
@@ -486,7 +486,7 @@ class AbstractWorldInteractionTest {
                         0, 0, // No timer at stage 0
                         1, 100 // Timer applies to stage 1
                 ),
-                new InventoryHandle<GathererJournalTest.TestItem>() {
+                new ValidatedInventoryHandle<>(new InventoryHandle<GathererJournalTest.TestItem>() {
                     @Override
                     public Collection<GathererJournalTest.TestItem> getItems() {
                         return ImmutableList.of(new GathererJournalTest.TestItem("grapes"));
@@ -499,7 +499,7 @@ class AbstractWorldInteractionTest {
                     ) {
                         inserted.set(true);
                     }
-                },
+                }, 1),
                 testWorkStateContainer(),
                 () -> new Claim(UUID.randomUUID(), 100)
         );

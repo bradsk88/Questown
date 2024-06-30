@@ -5,13 +5,12 @@ import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 
-import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD extends AbstractWorldInteraction<EXTRA, POS, ?, ?, ?>> {
+public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD
+        extends AbstractWorldInteraction<EXTRA, POS, ?, ?, ?>> {
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
     private int ticksSinceStart;
@@ -21,10 +20,13 @@ public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD extends AbstractWo
             EXTRA extra,
             WORLD world,
             Supplier<ProductionStatus> computeState,
-            RoomWithBlocks<ROOM, POS, BLOCK> entityCurrentJobSite,
             JobID entityCurrentJob,
             ExpirationRules expiration,
-            Consumer<JobID> changeJob
+            Consumer<JobID> changeJob,
+            Supplier<Boolean> tryWorking,
+            Supplier<Boolean> canDropLoot,
+            Runnable tryDropLoot,
+            Runnable tryGetSupplies
     ) {
         if (this.grabbingInsertedSupplies) {
             if (world.tryGrabbingInsertedSupplies(extra)) {
@@ -44,7 +46,10 @@ public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD extends AbstractWo
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
             JobID apply = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
-            QT.JOB_LOGGER.debug("Reached max ticks for {}. Falling back to {}.", entityCurrentJob, apply);
+            QT.JOB_LOGGER.debug(
+                    "Reached max ticks for {}. Falling back to {}.",
+                    entityCurrentJob, apply
+            );
             changeJob.accept(apply);
             return;
         }
@@ -64,20 +69,16 @@ public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD extends AbstractWo
             return;
         }
 
-        if (wrappingUp && !hasAnyLootToDrop()) {
-            changeJob.accept();
-            town.getVillagerHandle()
-                .changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(jobId), false);
+        if (canDropLoot.get()) {
+            changeJob.accept(WorkSeekerJob.getIDForRoot(entityCurrentJob));
             return;
         }
 
-        if (entityCurrentJobSite != null) {
-            tryWorking(town, work, vmEntity, entityCurrentJobSite);
+        if (tryWorking.get()) {
+            return;
         }
-        tryDropLoot(entityBlockPos);
-        if (!wrappingUp) {
-            tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
-        }
+        tryDropLoot.run();
+        tryGetSupplies.run();
     }
 
     protected abstract void seekFallbackWork(EXTRA extra);
