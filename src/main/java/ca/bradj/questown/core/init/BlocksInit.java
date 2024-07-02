@@ -43,4 +43,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> PLATE_BLOCK = BLOCKS.register(
             PlateBlock.ITEM_ID, PlateBlock::new
     );
+    public static final RegistryObject<Block> SOUP_POT = BLOCKS.register(
+            SoupPotBlock.ITEM_ID, SoupPotBlock::new
+    );
 }

@@ -74,6 +74,14 @@ public class ItemsInit {
             )
     );
 
+    public static final RegistryObject<Item> SOUP_POT_BLOCK = ITEMS.register(
+            SoupPotBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.SOUP_POT.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
             TownDoorItem.ITEM_ID,
             TownDoorItem::new

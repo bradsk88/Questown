@@ -118,7 +118,7 @@ public class DeclarativeJob extends
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
 
-    private JobLogic<MCExtra, MCRoom, BlockPos, Block, RealtimeWorldInteraction> logic; // FIXME: Initialize
+    private JobLogic<MCExtra, MCRoom, BlockPos, Block, RealtimeWorldInteraction> logic;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
@@ -198,6 +198,13 @@ public class DeclarativeJob extends
         this.workRequiredAtStates = workRequiredAtStates;
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
+        this.logic = new JobLogic<>() {
+            @Override
+            protected void seekFallbackWork(MCExtra mcExtra) {
+                JobID id = WorkSeekerJob.getIDForRoot(jobId);
+                mcExtra.town().getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
+            }
+        };
     }
 
     @NotNull
