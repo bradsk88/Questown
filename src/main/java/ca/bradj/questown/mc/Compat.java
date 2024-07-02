@@ -20,7 +20,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -102,7 +102,7 @@ public class Compat {
         return DeferredRegister.create(ForgeRegistries.CONTAINERS, modid);
     }
 
-    public static void enqueueOrLog(FMLCommonSetupEvent event, Runnable staticInitialize) {
+    public static void enqueueOrLog(ParallelDispatchEvent event, Runnable staticInitialize) {
         event.enqueueWork(staticInitialize).exceptionally(
                 ex -> {
                     QT.INIT_LOGGER.error("Enqueued work failed", ex);

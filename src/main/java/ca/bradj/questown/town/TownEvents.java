@@ -6,6 +6,7 @@ import ca.bradj.questown.mc.Compat;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class TownEvents {
@@ -14,6 +15,10 @@ public final class TownEvents {
     public static void register(FMLCommonSetupEvent event) {
         Compat.enqueueOrLog(event, TownFlagBlockEntity::staticInitialize);
         Compat.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
+    }
+
+    @SubscribeEvent()
+    public static void register(FMLLoadCompleteEvent event) {
         Compat.enqueueOrLog(event, Works::staticInitialize);
     }
 }

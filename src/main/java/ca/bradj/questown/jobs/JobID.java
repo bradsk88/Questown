@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -9,6 +10,18 @@ public record JobID(
         String rootId,
         String jobId
 ) {
+    public static @Nullable JobID fromJSON(@Nullable String val) {
+        if (val == null) {
+            return null;
+        }
+        String[] split = val.split("/");
+        if (split.length != 2) {
+            String msg = String.format("Invalid JobID %s. Format should match \"<job_id>/<work_id>\"", val);
+            throw new IllegalArgumentException(msg);
+        }
+        return new JobID(split[0], split[1]);
+    }
+
     @Override
     public String toString() {
         return "JobID{" +

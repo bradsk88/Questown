@@ -83,6 +83,7 @@ public class Works {
         b.put(GathererUnmappedRodWorkQtrDay.ID, GathererUnmappedRodWorkQtrDay::asWork);
         b.put(GathererUnmappedRodWorkHalfDay.ID, GathererUnmappedRodWorkHalfDay::asWork);
         b.put(GathererUnmappedRodWorkFullDay.ID, GathererUnmappedRodWorkFullDay::asWork);
+
         works = b.build();
 
         works.forEach((id, work) -> {

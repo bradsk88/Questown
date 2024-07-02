@@ -5,6 +5,8 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
@@ -162,5 +164,17 @@ public class Util {
                 return;
             }
         }
+    }
+
+    public static <X> X getOrDefault(
+            JsonObject object,
+            String key,
+            Function<JsonElement, X> puller,
+            X fallback
+    ) {
+        if (!object.has(key)) {
+            return fallback;
+        }
+        return puller.apply(object.get(key));
     }
 }
