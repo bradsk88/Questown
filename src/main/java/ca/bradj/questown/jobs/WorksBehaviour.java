@@ -168,6 +168,7 @@ public class WorksBehaviour {
             ExpirationRules expiration
             ) {
         return new Work(
+                jobId,
                 parentID,
                 icon,
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(

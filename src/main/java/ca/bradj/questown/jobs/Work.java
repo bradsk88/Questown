@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public record Work(
+        JobID id,
         @Nullable JobID parentID,
         ItemStack icon,
         WorksBehaviour.JobFunc jobFunc,

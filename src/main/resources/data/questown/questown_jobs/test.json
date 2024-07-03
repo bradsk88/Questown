@@ -1,0 +1,19 @@
+{
+  "icon": "minecraft:mushroom_stew",
+  "result": "minecraft:mushroom_stew",
+  "block": "questown:soup_pot",
+  "id": "soup_cook/one_mushroom_stew",
+  "room": "questown:basic_soup_kitchen",
+  "work_states": [
+    {
+      "ingredients": "#forge:mushrooms",
+      "quantity": 1
+    },
+    {
+      "tools": "#questown:shovels",
+      "work": 100
+    }
+  ],
+  "cooldown_ticks": 10,
+  "sound": "minecraft:block.lava.ambient"
+}

@@ -16,9 +16,4 @@ public final class TownEvents {
         Compat.enqueueOrLog(event, TownFlagBlockEntity::staticInitialize);
         Compat.enqueueOrLog(event, TownVillagerMoods::staticInitialize);
     }
-
-    @SubscribeEvent()
-    public static void register(FMLLoadCompleteEvent event) {
-        Compat.enqueueOrLog(event, Works::staticInitialize);
-    }
 }

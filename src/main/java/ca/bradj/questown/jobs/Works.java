@@ -40,10 +40,14 @@ public class Works {
         return works.keySet();
     }
 
-    public static void staticInitialize() {
+    public static void staticInitialize(
+            Map<JobID, Work> dataPackJobs
+    ) {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
+        dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
         // TODO: Replace with production job
         b.put(FarmerJob.ID, () -> new Work(
+                FarmerJob.ID,
                 null,
                 Items.WHEAT.getDefaultInstance(),
                 (town, uuid) -> new FarmerJob(uuid, 6),

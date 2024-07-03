@@ -1,10 +1,14 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.Registry;
@@ -12,43 +16,64 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class ResourceJobLoader {
 
     // FIXME: We probably need to register this listener somewhere
     //  https://github.com/CodeeToasty/Create/blob/42763b4480e059be5c6cd23f8cb4e9031296fc0c/src/main/java/com/simibubi/create/content/curiosities/weapons/PotatoProjectileTypeManager.java#L109
 
+    public static final ReloadListener LISTENER = new ReloadListener();
+
     public static class ReloadListener extends SimpleJsonResourceReloadListener {
 
         private static final Gson GSON = new Gson();
 
-        public static final ReloadListener INSTANCE = new ReloadListener();
+        public ImmutableMap<JobID, Work> getJobs() {
+            return jobs;
+        }
+
+        private ImmutableMap<JobID, Work> jobs;
 
         protected ReloadListener() {
-            super(GSON, "questown.jobs");
+            super(GSON, "questown_jobs");
         }
 
         @Override
         protected void apply(Map<ResourceLocation, JsonElement> map, ResourceManager resourceManager, ProfilerFiller profiler) {
+            ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
             for (Map.Entry<ResourceLocation, JsonElement> entry : map.entrySet()) {
                 JsonElement element = entry.getValue();
                 if (element.isJsonObject()) {
                     ResourceLocation id = entry.getKey();
                     JsonObject object = element.getAsJsonObject();
-                    Work type = workFromJson(object);
-                    // TOOD: Register with "Works"
+                    try {
+                        Work type = workFromJson(object);
+                        QT.INIT_LOGGER.debug("Work found in filesystem: {}", type);
+                        b.put(type.id(), type);
+                    } catch (Exception e) {
+                        QT.INIT_LOGGER.error("Failed to load work {}", id, e);
+                    }
                 }
             }
+            this.jobs = b.build();
+        }
+
+        public void loadFromFiles(ResourceManager man) {
+            Map<ResourceLocation, JsonElement> map = prepare(man, InactiveProfiler.INSTANCE);
+            apply(map, man, InactiveProfiler.INSTANCE);
         }
 
         private Work workFromJson(JsonObject object) {
@@ -68,7 +93,7 @@ public class ResourceJobLoader {
                     JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
                     WorksBehaviour.standardDescription(resultItem::getDefaultInstance),
                     new WorkLocation(isJobBlock, required(object, "room")),
-                    ResourceJobLoader.workStates(required(object, "work_states")),
+                    ResourceJobLoader.workStates(object),
                     WorksBehaviour.standardWorldInteractions(
                             requiredInt(object, "cooldown_ticks"),
                             resultItem::getDefaultInstance
@@ -107,37 +132,48 @@ public class ResourceJobLoader {
         }
     }
 
-    private static WorkStates workStates(ResourceLocation workStates) {
-        // FIXME: Read array of states from JSON (infer maxstate)
-        return null;
+    private static WorkStates workStates(JsonObject object) {
+
+        ImmutableMap.Builder<Integer, Supplier<Ingredient>> ing = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Supplier<Integer>> qty = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Supplier<Ingredient>> tools = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Supplier<Integer>> work = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, Supplier<Integer>> time = ImmutableMap.builder();
+
+        JsonArray states = object.get("work_states").getAsJsonArray();
+        for (int i = 0; i < states.size(); i++) {
+            JsonObject v = states.get(i).getAsJsonObject();
+            if (v.has("ingredients")) {
+                ing.put(i, () -> getIngredient(v.get("ingredients").getAsString()));
+            }
+            if (v.has("quantity")) {
+                qty.put(i, () -> v.get("quantity").getAsInt());
+            }
+            if (v.has("tools")) {
+                tools.put(i, () -> getIngredient(v.get("tools").getAsString()));
+            }
+            if (v.has("work")) {
+                work.put(i, () -> v.get("work").getAsInt());
+            }
+            if (v.has("time")) {
+                time.put(i, () -> v.get("time").getAsInt());
+            }
+        }
+        return new WorkStates(states.size() + 1, ing.build(), qty.build(), tools.build(), work.build(), time.build());
     }
 
     private static Predicate<Block> isJobBlock(String block) {
+        Ingredient ing = getIngredient(block);
+        return b -> ing.test(b.asItem().getDefaultInstance());
+    }
+
+    private static @NotNull Ingredient getIngredient(String block) {
         if (block.startsWith("#")) {
-            Ingredient ing = Ingredient.of(new TagKey<>(
+            return Ingredient.of(TagKey.create(
                     Registry.ITEM_REGISTRY,
-                    new ResourceLocation(block.split("#")[1])
+                    new ResourceLocation(block.replace("#", ""))
             ));
-            return (Block b) -> ing.test(b.asItem().getDefaultInstance());
         }
-        return b -> Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block))).test(b.asItem().getDefaultInstance());
-    }
-
-    private static ImmutableSnapshot<MCHeldItem, ?> snapshot(
-            JobID jobID,
-            String s,
-            ImmutableList<MCHeldItem> mcHeldItems
-    ) {
-        // FIXME: Implement
-        return null;
-    }
-
-    private static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> jobFunc(
-            TownInterface townInterface,
-            UUID uuid,
-            JsonObject object
-    ) {
-        // FIXME: Implement
-        return null;
+        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
     }
 }

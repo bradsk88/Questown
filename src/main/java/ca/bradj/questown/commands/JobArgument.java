@@ -12,17 +12,19 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.synchronization.ArgumentSerializer;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.common.util.Lazy;
+import net.minecraftforge.common.util.LazyOptional;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 public class JobArgument implements ArgumentType<JobID> {
-    private Collection<JobID> jobIDs;
+    private Lazy<Collection<JobID>> jobIDs = Lazy.of(Works::ids);
 
     public JobArgument() {
-        jobIDs = Works.ids();
     }
 
     public static @NotNull ArgumentType<JobID> job() {
@@ -48,7 +50,7 @@ public class JobArgument implements ArgumentType<JobID> {
             CommandContext<S> context,
             SuggestionsBuilder builder
     ) {
-        jobIDs.forEach(
+        jobIDs.get().forEach(
                 v -> builder.suggest(String.format("%s:%s", v.rootId(), v.jobId()))
         );
         return builder.buildFuture();
@@ -57,7 +59,7 @@ public class JobArgument implements ArgumentType<JobID> {
     public static class Serializer implements ArgumentSerializer<JobArgument> {
         @Override
         public void serializeToNetwork(JobArgument p_235375_, FriendlyByteBuf p_235376_) {
-            p_235376_.writeCollection(p_235375_.jobIDs, (buf, j) -> {
+            p_235376_.writeCollection(p_235375_.jobIDs.get(), (buf, j) -> {
                 buf.writeUtf(j.rootId());
                 buf.writeUtf(j.jobId());
             });
@@ -66,10 +68,11 @@ public class JobArgument implements ArgumentType<JobID> {
         @Override
         public JobArgument deserializeFromNetwork(FriendlyByteBuf p_235377_) {
             JobArgument jobArgument = new JobArgument();
-            jobArgument.jobIDs = p_235377_.readCollection(
+            ArrayList<JobID> readNow = p_235377_.readCollection(
                     ArrayList::new,
                     buf -> new JobID(buf.readUtf(), buf.readUtf())
             );
+            jobArgument.jobIDs = Lazy.of(() -> readNow);
             return jobArgument;
         }
 
