@@ -9,10 +9,6 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
-import ca.bradj.questown.jobs.crafter.CrafterBowlWork;
-import ca.bradj.questown.jobs.crafter.CrafterPaperWork;
-import ca.bradj.questown.jobs.crafter.CrafterPlanksWork;
-import ca.bradj.questown.jobs.crafter.CrafterStickWork;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
@@ -235,17 +231,6 @@ public class JobsRegistry {
 
     }
 
-    public static final ImmutableList<JobID> CRAFTER_PREFS = ImmutableList.of(
-            CrafterPlanksWork.ID,
-            CrafterBowlWork.ID,
-            CrafterStickWork.ID,
-            CrafterPaperWork.ID
-    );
-
-    public static final ImmutableList<JobID> CRAFTER_DEFAULT_WORK = ImmutableList.of(
-            CrafterPlanksWork.ID
-    );
-
     private static final ImmutableMap<String, Jerb> jobs = ImmutableMap.of(
             FarmerJob.ID.rootId(), new Jerb(
                     ImmutableList.of(FarmerJob.ID),
@@ -273,11 +258,8 @@ public class JobsRegistry {
             BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
                     ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
                     ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())
-            ),
-            CrafterStickWork.ID.rootId(), new Jerb(
-                    CRAFTER_PREFS,
-                    CRAFTER_DEFAULT_WORK
             )
+            // FIXME: Handle jobs from files
     );
 
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(

@@ -175,6 +175,9 @@ public class Util {
         if (!object.has(key)) {
             return fallback;
         }
+        if (object.get(key).isJsonNull()) {
+            return fallback;
+        }
         return puller.apply(object.get(key));
     }
 }

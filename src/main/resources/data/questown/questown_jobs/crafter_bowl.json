@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "crafter/bowl",
+  "priority": "2000",
+  "parent": "crafter/stick",
+  "icon": "minecraft:bowl",
+  "initial_request": "minecraft:bowl",
+  "result": {
+    "type": "item",
+    "value": "minecraft:bowl",
+    "quantity": 3
+  },
+  "block": "minecaraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "#minecraft:planks",
+      "quantity": 2
+    },
+    {
+      "work": 10
+    }
+  ],
+  "cooldown_ticks": 100,
+  "sound": "minecraft:block.wood.hit"
+}

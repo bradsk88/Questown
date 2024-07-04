@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "crafter/paper",
+  "priority": "4000",
+  "parent": "crafter/stick",
+  "icon": "minecraft:paper",
+  "initial_request": "minecraft:paper",
+  "result": {
+    "type": "item",
+    "value": "minecraft:paper",
+    "quantity": 3
+  },
+  "block": "minecaraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "minecraft:sugar_cane",
+      "quantity": 2
+    },
+    {
+      "work": 10
+    }
+  ],
+  "cooldown_ticks": 100,
+  "sound": "minecraft:block.wood.hit"
+}
