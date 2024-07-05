@@ -17,6 +17,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -224,43 +225,72 @@ public class JobsRegistry {
         ).contains(nextSegment);
     }
 
+    public static void staticInitialize(ImmutableMap<JobID, Work> js) {
+        ImmutableMap<String, Jerb> hc = ImmutableMap.of(
+                FarmerJob.ID.rootId(), new Jerb(
+                        ImmutableList.of(FarmerJob.ID),
+                        ImmutableList.of(FarmerJob.ID)
+                ),
+                BakerBreadWork.ID.rootId(), new Jerb(
+                        ImmutableList.of(BakerBreadWork.ID),
+                        ImmutableList.of(BakerBreadWork.ID)
+                ),
+                SmelterJob.ID.rootId(), new Jerb(
+                        ImmutableList.of(SmelterJob.ID),
+                        ImmutableList.of(SmelterJob.ID)
+                ),
+                GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
+                        ImmutableList.of(
+                                ExplorerWork.ID,
+                                GathererUnmappedNoToolWorkQtrDay.ID,
+                                GathererUnmappedPickaxeWorkQtrDay.ID,
+                                GathererUnmappedShovelWorkQtrDay.ID,
+                                GathererUnmappedAxeWorkQtrDay.ID,
+                                GathererMappedAxeWork.ID
+                        ),
+                        ImmutableList.of(GathererUnmappedNoToolWorkQtrDay.ID)
+                ),
+                BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
+                        ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
+                        ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())
+                )
+        );
+        ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
+        b.putAll(hc);
+
+        HashMap<String, ArrayList<Work>> ps = new HashMap<>();
+        js.forEach((id, job) -> {
+            ArrayList<Work> rL = Util.getOrDefault(ps, id.rootId(), new ArrayList<>());
+            rL.add(job);
+            rL.sort(Comparator.comparingInt(Work::priority));
+            ps.put(id.rootId(), rL);
+        });
+
+        ps.forEach((rootId, w) -> {
+            b.put(rootId, new Jerb(
+                    w.stream().map(Work::id).toList(),
+                    ImmutableList.of()
+            ));
+        });
+        jobs = b.build();
+    }
+
     private record Jerb(
             ImmutableList<JobID> preferredWork,
             ImmutableList<JobID> defaultWork
     ) {
-
+        public Jerb(
+                List<JobID> preferredWork,
+                List<JobID> defaultWork
+        ) {
+            this(
+                    ImmutableList.copyOf(preferredWork),
+                    ImmutableList.copyOf(defaultWork)
+            );
+        }
     }
 
-    private static final ImmutableMap<String, Jerb> jobs = ImmutableMap.of(
-            FarmerJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(FarmerJob.ID),
-                    ImmutableList.of(FarmerJob.ID)
-            ),
-            BakerBreadWork.ID.rootId(), new Jerb(
-                    ImmutableList.of(BakerBreadWork.ID),
-                    ImmutableList.of(BakerBreadWork.ID)
-            ),
-            SmelterJob.ID.rootId(), new Jerb(
-                    ImmutableList.of(SmelterJob.ID),
-                    ImmutableList.of(SmelterJob.ID)
-            ),
-            GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
-                    ImmutableList.of(
-                            ExplorerWork.ID,
-                            GathererUnmappedNoToolWorkQtrDay.ID,
-                            GathererUnmappedPickaxeWorkQtrDay.ID,
-                            GathererUnmappedShovelWorkQtrDay.ID,
-                            GathererUnmappedAxeWorkQtrDay.ID,
-                            GathererMappedAxeWork.ID
-                    ),
-                    ImmutableList.of(GathererUnmappedNoToolWorkQtrDay.ID)
-            ),
-            BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
-                    ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
-                    ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())
-            )
-            // FIXME: Handle jobs from files
-    );
+    private static ImmutableMap<String, Jerb> jobs;
 
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(
             TownInterface town,

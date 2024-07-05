@@ -57,7 +57,8 @@ public class Works {
                 ),
                 Items.WHEAT.getDefaultInstance(),
                 s -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS.getDefaultInstance())),
-                FarmerJob.SimpleWarper::new
+                FarmerJob.SimpleWarper::new,
+                1
         ));
         b.put(BakerBreadWork.ID, BakerBreadWork::asWork);
         b.put(SmelterJob.ID, SmelterJob::asWork);

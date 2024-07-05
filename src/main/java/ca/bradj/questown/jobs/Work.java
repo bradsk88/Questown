@@ -27,6 +27,14 @@ public record Work(
         Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
         ItemStack initialRequest,
         Function<IStatus<?>, Collection<Ingredient>> needs,
-        Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper
+        Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
+        int priority
 ) {
+    public Work withPriority(int priority) {
+        return new Work(
+                id, parentID, icon, jobFunc, snapshotFunc,
+                isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
+                priority
+        );
+    }
 }

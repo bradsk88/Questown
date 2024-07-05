@@ -206,7 +206,8 @@ public class WorksBehaviour {
                         world.actionDuration(),
                         states,
                         world.resultGenerator()
-                )
+                ),
+                1
         );
     }
 

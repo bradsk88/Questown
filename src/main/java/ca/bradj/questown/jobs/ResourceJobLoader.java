@@ -110,7 +110,7 @@ public class ResourceJobLoader {
                     wwi,
                     WorksBehaviour.standardProductionRules(),
                     optional(object, "sound")
-            );
+            ).withPriority(requiredInt(object, "priority"));
         }
 
         private WorkWorldInteractions worldWorkInt(
