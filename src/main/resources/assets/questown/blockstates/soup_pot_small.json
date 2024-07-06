@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "level=0": {
+      "model": "questown:block/soup_pot_small_empty"
+    },
+    "level=1": {
+      "model": "questown:block/soup_pot_small_full"
+    }
+  }
+}

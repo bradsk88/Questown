@@ -10,7 +10,7 @@
     "value": "minecraft:bowl",
     "quantity": 3
   },
-  "block": "minecaraft:crafting_table",
+  "block": "minecraft:crafting_table",
   "room": "questown:crafting_room",
   "work_states": [
     {

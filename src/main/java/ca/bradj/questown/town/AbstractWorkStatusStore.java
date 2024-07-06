@@ -65,7 +65,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             POS pos,
             BiFunction<POS, State, State> mutator
     ) {
-        State newV = jobStatuses.compute(pos, mutator);
+        State newV = jobStatuses.compute(pos, (p, s) -> mutator.apply(p, s));
         QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             cascading.get(pos).accept(newV);

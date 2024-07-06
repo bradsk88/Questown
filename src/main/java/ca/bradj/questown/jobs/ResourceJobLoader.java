@@ -210,6 +210,14 @@ public class ResourceJobLoader {
     }
 
     private static @NotNull Ingredient getIngredient(String block) {
+        Ingredient ingredient = doGetIngredient(block);
+        if (ingredient.isEmpty()) {
+            throw new IllegalArgumentException(block + " is an unknown or empty ingredient");
+        }
+        return ingredient;
+    }
+
+    private static @NotNull Ingredient doGetIngredient(String block) {
         if (block.startsWith("#")) {
             return Ingredient.of(TagKey.create(
                     Registry.ITEM_REGISTRY,

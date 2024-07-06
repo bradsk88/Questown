@@ -81,6 +81,13 @@ public class ItemsInit {
                     Questown.DEFAULT_ITEM_PROPS
             )
     );
+    public static final RegistryObject<Item> SMALL_SOUP_POT_BLOCK = ITEMS.register(
+            SmallSoupPotBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.SOUP_POT_SMALL.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
 
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
             TownDoorItem.ITEM_ID,

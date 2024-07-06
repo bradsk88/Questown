@@ -1,13 +1,15 @@
 {
   "version": 1,
+  "id": "soup_cook/one_mushroom_stew",
+  "priority": 1000,
   "icon": "minecraft:mushroom_stew",
   "result": {
     "type": "item",
     "item": "minecraft:mushroom_stew",
     "quantity": 1
   },
-  "block": "questown:soup_pot",
-  "id": "soup_cook/one_mushroom_stew",
+  "initial_request": "minecraft:mushroom_stew",
+  "block": "questown:soup_pot_small",
   "room": "questown:basic_soup_kitchen",
   "work_states": [
     {
