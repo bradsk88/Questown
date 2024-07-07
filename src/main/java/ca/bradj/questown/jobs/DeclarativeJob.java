@@ -118,7 +118,7 @@ public class DeclarativeJob extends
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
 
-    private JobLogic<MCExtra, MCRoom, BlockPos, Block, RealtimeWorldInteraction> logic;
+    private final JobLogic logic;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
@@ -198,13 +198,7 @@ public class DeclarativeJob extends
         this.workRequiredAtStates = workRequiredAtStates;
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
-        this.logic = new JobLogic<>() {
-            @Override
-            protected void seekFallbackWork(MCExtra mcExtra) {
-                JobID id = WorkSeekerJob.getIDForRoot(jobId);
-                mcExtra.town().getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
-            }
-        };
+        this.logic = new JobLogic();
     }
 
     @NotNull
@@ -285,8 +279,11 @@ public class DeclarativeJob extends
     ) {
         MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
 
-        BlockPos entityBlockPos = entity.blockPosition();
-        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(town, workRoomId, entityBlockPos);
+        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
+                town,
+                workRoomId,
+                entity.blockPosition()
+        );
 
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
             @Override
@@ -367,29 +364,82 @@ public class DeclarativeJob extends
         );
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         logic.tick(
-                extra,
-                world,
                 computeState,
                 jobId,
                 expiration,
-                jobID -> town.getVillagerHandle().changeJobForVisitor(ownerUUID, jobID, false),
-                () -> {
-                    // TODO: Move "tryWorking" and "wrappingUp" into JobLogic
-                    if (entityCurrentJobSite == null) {
-                        return false;
-                    }
-                    tryWorking(town, work, (VisitorMobEntity) entity, entityCurrentJobSite);
-                    return true;
-                },
-                () -> wrappingUp && !hasAnyLootToDrop(),
-                () -> tryDropLoot(entityBlockPos),
-                () -> {
-                    if (wrappingUp) {
-                        return;
-                    }
-                    tryGetSupplies(roomsNeedingIngredientsOrTools, entityBlockPos);
-                }
+                this.asLogicWorld(
+                        extra, town, work,
+                        (VisitorMobEntity) entity, entityCurrentJobSite,
+                        roomsNeedingIngredientsOrTools
+                )
         );
+    }
+
+    private JobLogic.JLWorld<BlockPos> asLogicWorld(
+            MCExtra extra,
+            TownInterface town,
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
+            VisitorMobEntity entity,
+            RoomRecipeMatch<MCRoom> entityCurrentJobSite,
+            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools
+    ) {
+        DeclarativeJob self = this;
+        return new JobLogic.JLWorld<>() {
+            @Override
+            public void changeJob(JobID id) {
+
+            }
+
+            @Override
+            public WorkSpot<Integer, BlockPos> getWorkSpot() {
+                return world.getWorkSpot();
+            }
+
+            @Override
+            public void clearWorkSpot(String reason) {
+                world.setWorkSpot(new WithReason<>(null, reason));
+            }
+
+            @Override
+            public boolean tryGrabbingInsertedSupplies() {
+                return world.tryGrabbingInsertedSupplies(extra);
+            }
+
+            @Override
+            public boolean tryWorking() {
+                // TODO: Move "tryWorking" and "wrappingUp" into JobLogic
+                if (entityCurrentJobSite == null) {
+                    return false;
+                }
+                self.tryWorking(town, work, entity, entityCurrentJobSite);
+                return true;
+
+            }
+
+            @Override
+            public boolean canDropLoot() {
+                return wrappingUp && !hasAnyLootToDrop();
+            }
+
+            @Override
+            public void tryDropLoot() {
+                self.tryDropLoot(entity.blockPosition());
+            }
+
+            @Override
+            public void tryGetSupplies() {
+                if (wrappingUp) {
+                    return;
+                }
+                self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());
+            }
+
+            @Override
+            public void seekFallbackWork() {
+                JobID id = WorkSeekerJob.getIDForRoot(jobId);
+                extra.town().getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
+            }
+        };
     }
 
     private @NotNull Supplier<ProductionStatus> getStateComputer(

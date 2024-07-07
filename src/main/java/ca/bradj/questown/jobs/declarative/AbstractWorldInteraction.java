@@ -270,6 +270,8 @@ public abstract class AbstractWorldInteraction<
             TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
             if (o != null) {
                 return new WorkOutput<>(o, workSpot);
+            } else {
+                return vNull;
             }
         }
 

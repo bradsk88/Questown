@@ -1,35 +1,46 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD
-        extends AbstractWorldInteraction<EXTRA, POS, ?, ?, ?>> {
+public class JobLogic {
+
+    public interface JLWorld<POS> {
+        void changeJob(JobID id);
+
+        WorkSpot<Integer, POS> getWorkSpot();
+
+        void clearWorkSpot(String reason);
+
+        boolean tryGrabbingInsertedSupplies();
+
+        boolean tryWorking();
+
+        boolean canDropLoot();
+
+        void tryDropLoot();
+
+        void tryGetSupplies();
+
+        void seekFallbackWork();
+    }
+
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
     private int ticksSinceStart;
     private int noSuppliesTicks;
 
     public void tick(
-            EXTRA extra,
-            WORLD world,
             Supplier<ProductionStatus> computeState,
             JobID entityCurrentJob,
             ExpirationRules expiration,
-            Consumer<JobID> changeJob,
-            Supplier<Boolean> tryWorking,
-            Supplier<Boolean> canDropLoot,
-            Runnable tryDropLoot,
-            Runnable tryGetSupplies
+            JLWorld<?> world
     ) {
         if (this.grabbingInsertedSupplies) {
-            if (world.tryGrabbingInsertedSupplies(extra)) {
+            if (world.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
             }
@@ -37,23 +48,23 @@ public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD
         }
 
         if (this.grabbedInsertedSupplies) {
-            seekFallbackWork(extra);
+            world.seekFallbackWork();
             return;
         }
 
         this.ticksSinceStart++;
-        WorkSpot<Integer, POS> workSpot = world.getWorkSpot();
+        WorkSpot<Integer, ?> workSpot = world.getWorkSpot();
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
-            JobID apply = expiration.maxTicksFallbackFn()
+            JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
             QT.JOB_LOGGER.debug(
                     "Reached max ticks for {}. Falling back to {}.",
-                    entityCurrentJob, apply
+                    entityCurrentJob, fbJov
             );
-            changeJob.accept(apply);
+            world.changeJob(fbJov);
             return;
         }
-        world.setWorkSpot(new WithReason<>(null, "Cleared before trying work"));
+        world.clearWorkSpot("Cleared before trying work");
 
 
         ProductionStatus status = computeState.get();
@@ -69,17 +80,15 @@ public abstract class JobLogic<EXTRA, ROOM, POS, BLOCK, WORLD
             return;
         }
 
-        if (canDropLoot.get()) {
-            changeJob.accept(WorkSeekerJob.getIDForRoot(entityCurrentJob));
+        if (world.canDropLoot()) {
+            world.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
             return;
         }
 
-        if (tryWorking.get()) {
+        if (world.tryWorking()) {
             return;
         }
-        tryDropLoot.run();
-        tryGetSupplies.run();
+        world.tryDropLoot();
+        world.tryGetSupplies();
     }
-
-    protected abstract void seekFallbackWork(EXTRA extra);
 }

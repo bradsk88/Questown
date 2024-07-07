@@ -10,6 +10,7 @@ import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,64 @@ import static ca.bradj.questown.jobs.blacksmith.nomc.BlacksmithWoodenPickaxeWork
 
 public class BlacksmithWoodenPickaxeJobTest {
 
-    private static final Position ArbitraryWorkSpot = new Position(1, 2);
+    private static final Position ArbitraryWorkSpotPos = new Position(1, 2);
 
     @Test
     public void testExtractResult() throws ItemCountMismatch {
+        // 3-slot empty inventory
+        ValidatedInventoryHandle<GathererJournalTest.TestItem> inv = testInventory();
+        ImmutableWorkStateContainer<Position, Boolean> ws = new MapBackedWSC();
+        State bs = State.freshAtState(BLOCK_STATE_DONE);
+        ws.setJobBlockState(ArbitraryWorkSpotPos, bs);
+
+        TestWorldInteraction wi = TestWorldInteraction.forDefinition(
+                DEFINITION, inv, ws, () -> null
+        );
+        WorkSpot<Integer, Position> spot = getArbitrarySpot(BLOCK_STATE_DONE);
+        @Nullable WorkOutput<Boolean, WorkSpot<Integer, Position>> op =
+                wi.tryWorking(
+                        null,
+                        spot
+                );
+
+        Assertions.assertEquals(State.fresh(), ws.getJobBlockState(ArbitraryWorkSpotPos));
+    }
+
+    @Test
+    public void testInsertIngredientsShouldIncrementState() throws ItemCountMismatch {
+        @Nullable WorkOutput<Boolean, WorkSpot<Integer, Position>> op; // Used for debugging
+        ValidatedInventoryHandle<GathererJournalTest.TestItem> inv = testInventory();
+
+        // Definition requires two sticks
+        inv.set(0, new GathererJournalTest.TestItem("minecraft:stick"));
+        inv.set(1, new GathererJournalTest.TestItem("minecraft:stick"));
+
+        ImmutableWorkStateContainer<Position, Boolean> ws = new MapBackedWSC();
+        State bs = State.freshAtState(BLOCK_STATE_NEED_HANDLE);
+        ws.setJobBlockState(ArbitraryWorkSpotPos, bs);
+
+        TestWorldInteraction wi = TestWorldInteraction.forDefinition(
+                DEFINITION, inv, ws, () -> null
+        );
+        WorkSpot<Integer, Position> spot = getArbitrarySpot(BLOCK_STATE_NEED_HANDLE);
+        op = wi.tryWorking(null, spot);
+
+        Assertions.assertEquals(State.fresh().incrIngredientCount(), ws.getJobBlockState(ArbitraryWorkSpotPos));
+        op = wi.tryWorking(null, spot);
+
+        Assertions.assertEquals(State.fresh().incrProcessing(), ws.getJobBlockState(ArbitraryWorkSpotPos));
+    }
+
+    private static @NotNull WorkSpot<Integer, Position> getArbitrarySpot(int blockStateNeedHandle) {
+        return new WorkSpot<>(
+                ArbitraryWorkSpotPos,
+                blockStateNeedHandle,
+                0,
+                ArbitraryWorkSpotPos
+        );
+    }
+
+    private static @NotNull ValidatedInventoryHandle<GathererJournalTest.TestItem> testInventory() throws ItemCountMismatch {
         // 3-slot empty inventory
         ArrayList<GathererJournalTest.TestItem> villagerInventory = new ArrayList<>();
         villagerInventory.add(new GathererJournalTest.TestItem(""));
@@ -45,26 +100,7 @@ public class BlacksmithWoodenPickaxeJobTest {
                 villagerInventory.set(ii, shrink);
             }
         };
-        ImmutableWorkStateContainer<Position, Boolean> ws = new MapBackedWSC();
-        State bs = State.freshAtState(BLOCK_STATE_DONE);
-        ws.setJobBlockState(ArbitraryWorkSpot, bs);
-
-        TestWorldInteraction wi = TestWorldInteraction.forDefinition(
-                DEFINITION, new ValidatedInventoryHandle<>(inv, 3), ws, () -> null
-        );
-        WorkSpot<Integer, Position> spot = new WorkSpot<>(
-                ArbitraryWorkSpot,
-                BLOCK_STATE_DONE,
-                0,
-                ArbitraryWorkSpot
-        );
-        @Nullable WorkOutput<Boolean, WorkSpot<Integer, Position>> op =
-                wi.tryWorking(
-                        null,
-                        spot
-                );
-
-        Assertions.assertEquals(State.fresh(), ws.getJobBlockState(ArbitraryWorkSpot));
+        return new ValidatedInventoryHandle<>(inv, 3);
     }
 
 }
