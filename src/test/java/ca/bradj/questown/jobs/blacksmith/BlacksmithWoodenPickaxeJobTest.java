@@ -55,12 +55,13 @@ public class BlacksmithWoodenPickaxeJobTest {
         inv.set(1, new GathererJournalTest.TestItem("minecraft:stick"));
 
         ImmutableWorkStateContainer<Position, Boolean> ws = new MapBackedWSC();
-        State bs = State.freshAtState(BLOCK_STATE_NEED_HANDLE);
-        ws.setJobBlockState(ArbitraryWorkSpotPos, bs);
-
         TestWorldInteraction wi = TestWorldInteraction.forDefinition(
                 DEFINITION, inv, ws, () -> null
         );
+
+        State bs = State.freshAtState(BLOCK_STATE_NEED_HANDLE);
+        ws.setJobBlockState(ArbitraryWorkSpotPos, bs);
+
         WorkSpot<Integer, Position> spot = getArbitrarySpot(BLOCK_STATE_NEED_HANDLE);
         op = wi.tryWorking(null, spot);
 

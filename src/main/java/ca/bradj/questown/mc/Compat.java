@@ -29,6 +29,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -64,11 +65,13 @@ public class Compat {
         return new TextComponent(x);
     }
 
-    public static void shuffle(ArrayList<WorkSpot<Integer, BlockPos>> list, ServerLevel serverLevel) {
+    public static ArrayList<WorkSpot<Integer, BlockPos>> shuffle(Collection<WorkSpot<Integer, BlockPos>> c, ServerLevel serverLevel) {
+        ArrayList<WorkSpot<Integer, BlockPos>> list = new ArrayList<>(c);
         int size = list.size();
         for (int i = size; i > 1; --i) {
             Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
         }
+        return list;
     }
 
     public static int nextInt(@Nullable ServerLevel server, int i) {

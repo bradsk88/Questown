@@ -8,6 +8,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -22,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -134,6 +136,14 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             Inputs mcTownState
     ) {
         return mcTownState.town();
+    }
+
+    @Override
+    protected ArrayList<WorkSpot<Integer, BlockPos>> shuffle(
+            Inputs inputs,
+            Collection<WorkSpot<Integer, BlockPos>> workSpots
+    ) {
+        return Compat.shuffle(workSpots, inputs.level);
     }
 
     @Override

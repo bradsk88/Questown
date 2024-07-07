@@ -5,10 +5,7 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.MCExtra;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.RealtimeWorldInteraction;
-import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -118,21 +115,15 @@ public class DeclarativeJob extends
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
 
-    private final JobLogic logic;
+    private final JobLogic<MCExtra, BlockPos> logic;
     private final ResourceLocation workRoomId;
     private final @NotNull Integer maxState;
     private final JobID jobId;
     private final ExpirationRules expiration;
     private final long totalDuration;
     private Signals signal;
-    private @Nullable WorkSpot<Integer, BlockPos> workSpot;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
-    private boolean wrappingUp;
-    private int noSuppliesTicks;
-    private int ticksSinceStart;
-    private boolean grabbingInsertedSupplies;
-    private boolean grabbedInsertedSupplies;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -213,7 +204,7 @@ public class DeclarativeJob extends
 
     @Override
     public boolean shouldStandStill() {
-        return this.workSpot != null;
+        return this.logic.hasWorkSpot();
     }
 
     @NotNull
@@ -364,9 +355,13 @@ public class DeclarativeJob extends
         );
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         logic.tick(
+                extra,
                 computeState,
                 jobId,
+                entityCurrentJobSite != null,
+                WorkSeekerJob.isSeekingWork(jobId),
                 expiration,
+                maxState,
                 this.asLogicWorld(
                         extra, town, work,
                         (VisitorMobEntity) entity, entityCurrentJobSite,
@@ -375,7 +370,7 @@ public class DeclarativeJob extends
         );
     }
 
-    private JobLogic.JLWorld<BlockPos> asLogicWorld(
+    private JobLogic.JLWorld<MCExtra, BlockPos> asLogicWorld(
             MCExtra extra,
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
@@ -387,12 +382,22 @@ public class DeclarativeJob extends
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
-
+                town.getVillagerHandle().changeJobForVisitor(ownerUUID, id, true);
             }
 
             @Override
             public WorkSpot<Integer, BlockPos> getWorkSpot() {
                 return world.getWorkSpot();
+            }
+
+            @Override
+            public Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots() {
+                ServerLevel sl = town.getServerLevel();
+                return self.listAllWorkSpots(
+                        work::getJobBlockState, entityCurrentJobSite.room,
+                        sl::isEmptyBlock,
+                        () -> Direction.getRandom(sl.random)
+                );
             }
 
             @Override
@@ -406,19 +411,13 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public boolean tryWorking() {
-                // TODO: Move "tryWorking" and "wrappingUp" into JobLogic
-                if (entityCurrentJobSite == null) {
-                    return false;
-                }
-                self.tryWorking(town, work, entity, entityCurrentJobSite);
-                return true;
-
+            public boolean canDropLoot() {
+                return logic.isWrappingUp() && !hasAnyLootToDrop();
             }
 
             @Override
-            public boolean canDropLoot() {
-                return wrappingUp && !hasAnyLootToDrop();
+            public AbstractWorldInteraction<MCExtra, BlockPos, ?, ?, ?> getHandle() {
+                return world;
             }
 
             @Override
@@ -428,7 +427,7 @@ public class DeclarativeJob extends
 
             @Override
             public void tryGetSupplies() {
-                if (wrappingUp) {
+                if (logic.isWrappingUp()) {
                     return;
                 }
                 self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());
@@ -438,6 +437,16 @@ public class DeclarativeJob extends
             public void seekFallbackWork() {
                 JobID id = WorkSeekerJob.getIDForRoot(jobId);
                 extra.town().getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
+            }
+
+            @Override
+            public void setLookTarget(BlockPos position) {
+                self.setLookTarget(position);
+            }
+
+            @Override
+            public void registerHeldItemsAsFoundLoot() {
+                town.getKnowledgeHandle().registerFoundLoots(journal.getItems());
             }
         };
     }
@@ -457,12 +466,6 @@ public class DeclarativeJob extends
             );
             return journal.getStatus();
         };
-    }
-
-    private void seekFallbackWork(TownInterface town) {
-        town.changeJobForVisitor(
-                ownerUUID, expiration.noSuppliesFallbackFn()
-                                     .apply(jobId));
     }
 
     private void tryGetSupplies(
@@ -503,65 +506,6 @@ public class DeclarativeJob extends
                 st, recipe::getRecipe, journal.getItems(),
                 (item) -> this.journal.addItem(MCHeldItem.fromTown(item))
         );
-    }
-
-    private WithReason<@Nullable Boolean> tryWorking(
-            TownInterface town,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            VisitorMobEntity entity,
-            @NotNull RoomRecipeMatch<MCRoom> entityCurrentJobSite
-    ) {
-        ServerLevel sl = town.getServerLevel();
-        Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> workSpots = listAllWorkSpots(
-                work::getJobBlockState, entityCurrentJobSite.room,
-                sl::isEmptyBlock,
-                () -> Direction.getRandom(sl.random)
-        );
-
-        ProductionStatus status = getStatus();
-        if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
-            return new WithReason<>(null, "non-work status");
-        }
-        Collection<WorkSpot<Integer, BlockPos>> allSpots = workSpots.get(maxState);
-
-        if (status.isExtractingProduct()) {
-            allSpots = workSpots.get(maxState);
-        }
-
-        if (allSpots == null) {
-            Collection<WorkSpot<Integer, BlockPos>> workSpot1 = workSpots.get(status.getProductionState());
-            if (workSpot1 == null) {
-                String problem = "Worker somehow has different status than all existing work spots";
-                QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
-                return new WithReason<>(null, problem);
-            }
-            allSpots = workSpot1;
-        }
-
-        if (allSpots.isEmpty()) {
-            return new WithReason<>(null, "No workspots");
-        }
-
-        // TODO: Pass in the previous workspot and keep working it, if it's sill workable
-        WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> worked = this.world.tryWorking(
-                town, work, entity, allSpots
-        );
-        this.workSpot = worked.spot();
-        if (worked.town() != null && worked.town()) {
-            this.setLookTarget(worked.spot().position());
-            boolean hasWork = !WorkSeekerJob.isSeekingWork(jobId);
-            boolean finishedWork = worked.spot()
-                                         .action()
-                                         .equals(maxState); // TODO: Check all workspots before seeking workRequired
-            if (hasWork && finishedWork) {
-                if (!wrappingUp) {
-                    town.getKnowledgeHandle()
-                        .registerFoundLoots(journal.getItems()); // TODO: Is this okay for every job to do?
-                }
-                wrappingUp = true;
-            }
-        }
-        return new WithReason<>(wrappingUp, "Worked");
     }
 
     Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
@@ -715,7 +659,7 @@ public class DeclarativeJob extends
 
     @Override
     protected @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel sl) {
-        return workSpot;
+        return logic.workSpot();
     }
 
     @Override

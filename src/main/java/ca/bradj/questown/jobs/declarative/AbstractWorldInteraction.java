@@ -9,6 +9,7 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -194,7 +195,10 @@ public abstract class AbstractWorldInteraction<
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
-    protected abstract int getAffectedTime(EXTRA extra, Integer nextStepTime);
+    protected abstract int getAffectedTime(
+            EXTRA extra,
+            Integer nextStepTime
+    );
 
     protected abstract TOWN setHeldItem(
             EXTRA uxtra,
@@ -220,6 +224,30 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra
     );
 
+
+    public WorkOutput<TOWN, WorkSpot<Integer, POS>> tryWorking(
+            EXTRA extra,
+            Collection<WorkSpot<Integer, POS>> workSpots
+    ) {
+        ArrayList<WorkSpot<Integer, POS>> shuffled = shuffle(extra, workSpots);
+        for (WorkSpot<Integer, POS> workSpot : shuffled) {
+            WorkOutput<TOWN, WorkSpot<Integer, POS>> v = tryWorking(extra, workSpot);
+            if (v != null) {
+                return v;
+            }
+        }
+        return new WorkOutput<>(
+                false,
+                null,
+                ImmutableList.copyOf(shuffled).get(0)
+        );
+    }
+
+    protected abstract ArrayList<WorkSpot<Integer, POS>> shuffle(
+            EXTRA extra,
+            Collection<WorkSpot<Integer, POS>> workSpots
+    );
+
     public @Nullable WorkOutput<@Nullable TOWN, WorkSpot<Integer, POS>> tryWorking(
             EXTRA extra,
             WorkSpot<Integer, POS> workSpot
@@ -232,7 +260,7 @@ public abstract class AbstractWorldInteraction<
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
             if (canClaim) {
-                return new WorkOutput<>(null, workSpot);
+                return new WorkOutput<>(false, null, workSpot);
             }
             return null;
         }
@@ -242,7 +270,7 @@ public abstract class AbstractWorldInteraction<
             return null;
         }
 
-        WorkOutput<TOWN, WorkSpot<Integer, POS>> vNull = new WorkOutput<>(null, workSpot);
+        WorkOutput<TOWN, WorkSpot<Integer, POS>> vNull = new WorkOutput<>(false, null, workSpot);
 
         if (!isEntityClose(extra, workSpot.position())) {
             return vNull;
@@ -253,7 +281,7 @@ public abstract class AbstractWorldInteraction<
 
         if (workSpot.action() == maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(tryExtractProduct(extra, workSpot.position()), workSpot);
+                return new WorkOutput<>(true, tryExtractProduct(extra, workSpot.position()), workSpot);
             }
         }
 
@@ -269,7 +297,7 @@ public abstract class AbstractWorldInteraction<
         if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
             TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
             if (o != null) {
-                return new WorkOutput<>(o, workSpot);
+                return new WorkOutput<>(true, o, workSpot);
             } else {
                 return vNull;
             }
@@ -284,7 +312,7 @@ public abstract class AbstractWorldInteraction<
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
-                        return new WorkOutput<>(town, workSpot);
+                        return new WorkOutput<>(false, town, workSpot);
                     }
                 }
             }
@@ -292,10 +320,8 @@ public abstract class AbstractWorldInteraction<
 
         // TODO: If workspot is waiting for time, return  null
 
-        return new WorkOutput<>(
-                workWI.tryWork(extra, workSpot),
-                workSpot
-        );
+        TOWN town = workWI.tryWork(extra, workSpot);
+        return new WorkOutput<>(town != null, town, workSpot);
     }
 
     protected abstract Collection<HELD_ITEM> getHeldItems(
@@ -312,7 +338,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull EXTRA inputs,
             POS position
     ) {
-            State s = getJobBlockState(inputs, position);
+        State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() >= maxState) {
 
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
@@ -378,17 +404,27 @@ public abstract class AbstractWorldInteraction<
 
     public void addItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.addItemInsertionListener(listener);
-    };
+    }
+
+    ;
+
     public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.removeItemInsertionListener(listener);
-    };
+    }
+
+    ;
 
     public void addJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.add(listener);
-    };
+    }
+
+    ;
+
     public void removeJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.remove(listener);
-    };
+    }
+
+    ;
 
     public abstract boolean tryGrabbingInsertedSupplies(
             EXTRA mcExtra

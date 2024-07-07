@@ -37,25 +37,6 @@ public class RealtimeWorldInteraction
 
     private int soundTicksLeft;
 
-    public WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
-            TownInterface town,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            VisitorMobEntity entity,
-            Collection<WorkSpot<Integer, BlockPos>> workSpots
-    ) {
-        ArrayList<WorkSpot<Integer, BlockPos>> shuffled = new ArrayList<>(workSpots);
-        Compat.shuffle(shuffled, town.getServerLevel());
-        for (WorkSpot<Integer, BlockPos> workSpot : shuffled) {
-            WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> v = tryWorking(new MCExtra(town, work, entity), workSpot);
-            if (v != null) {
-                return v;
-            }
-        }
-        return new WorkOutput<>(
-                null, ImmutableList.copyOf(shuffled)
-                                   .get(0));
-    }
-
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
@@ -179,6 +160,14 @@ public class RealtimeWorldInteraction
             MCExtra extra
     ) {
         return extra.work();
+    }
+
+    @Override
+    protected ArrayList<WorkSpot<Integer, BlockPos>> shuffle(
+            MCExtra mcExtra,
+            Collection<WorkSpot<Integer, BlockPos>> workSpots
+    ) {
+        return Compat.shuffle(workSpots, mcExtra.town().getServerLevel());
     }
 
     @Override

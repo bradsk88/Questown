@@ -1,8 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
@@ -11,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
@@ -236,6 +239,15 @@ public class TestWorldInteraction extends
     @Override
     protected ImmutableWorkStateContainer<Position, Boolean> getWorkStatuses(Void unused) {
         return workStatuses;
+    }
+
+    @Override
+    protected ArrayList<WorkSpot<Integer, Position>> shuffle(
+            Void unused,
+            Collection<WorkSpot<Integer, Position>> workSpots
+    ) {
+        QT.JOB_LOGGER.error("Shuffling has no effect in unit tests");
+        return new ArrayList<>(workSpots);
     }
 
     @Override

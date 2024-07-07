@@ -1,15 +1,63 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
+import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class JobLogicTest {
 
+    static Position ARBITRARY_WORKSPOT_POS = new Position(0, 0);
+    static WorkSpot<Integer, Position> ARBITRARY_WORKSPOT = new WorkSpot<>(
+            ARBITRARY_WORKSPOT_POS,
+            0,
+            1,
+            ARBITRARY_WORKSPOT_POS
+    );
 
-    private static class TestLogicWorld implements JobLogic.JLWorld<Position> {
+    static int STATE_NEED_WIDGET = 0;
+
+    static JobDefinition DEFINITION = new JobDefinition(
+            new JobID("tester", "test"),
+            3,
+            ImmutableMap.of(
+                    STATE_NEED_WIDGET, "widget"
+            ),
+            ImmutableMap.of(
+                    STATE_NEED_WIDGET, 1
+            ),
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            "test report"
+    );
+
+    private static class TestLogicWorld implements JobLogic.JLWorld<Void, Position> {
 
         private WorkSpot<Integer, Position> workspot;
+        MapBackedWSC states = new MapBackedWSC();
+        ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(3);
+
+        private TestWorldInteraction wi = TestWorldInteraction.forDefinition(
+                JobLogicTest.DEFINITION, inventory, states, () -> null
+        );
+        private Map<Integer, Collection<WorkSpot<Integer, Position>>> allWorkSpots = ImmutableMap.of();
+
+        @Override
+        public AbstractWorldInteraction<Void, Position, ?, ?, ?> getHandle() {
+            return wi;
+        }
 
         @Override
         public void changeJob(JobID id) {
@@ -27,11 +75,6 @@ class JobLogicTest {
 
         @Override
         public boolean tryGrabbingInsertedSupplies() {
-            return false;
-        }
-
-        @Override
-        public boolean tryWorking() {
             return false;
         }
 
@@ -54,15 +97,94 @@ class JobLogicTest {
         public void seekFallbackWork() {
 
         }
+
+        @Override
+        public Map<Integer, Collection<WorkSpot<Integer, Position>>> listAllWorkSpots() {
+            return allWorkSpots;
+        }
+
+        @Override
+        public void setLookTarget(Position position) {
+
+        }
+
+        @Override
+        public void registerHeldItemsAsFoundLoot() {
+
+        }
     }
 
     @Test
     void tick_ShouldShouldWorkIfIngredientsNeededAndHad() {
-        new JobLogic().tick(
+        JobLogic<Void, Position> logic = new JobLogic<>();
+        TestLogicWorld world = new TestLogicWorld();
+
+        world.workspot = ARBITRARY_WORKSPOT;
+        world.allWorkSpots = ImmutableMap.of(
+                STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Assertions.assertNull(
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("widget"));
+
+        logic.tick(
+                null,
                 () -> ProductionStatus.fromJobBlockStatus(0),
                 new JobID("test", "tester"),
+                true,
+                false,
                 ExpirationRules.never(),
-                new TestLogicWorld()
+                DEFINITION.maxState(),
+                world
         );
+
+        Assertions.assertEquals(
+                State.fresh().incrProcessing(),
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+    }
+    @Test
+    void tick_ShouldCollectSuppliesIfTargetExists() {
+        JobLogic<Void, Position> logic = new JobLogic<>();
+
+        final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
+
+        TestLogicWorld world = new TestLogicWorld() {
+            @Override
+            public void tryGetSupplies() {
+                super.tryGetSupplies();
+                triedToGetSupplies.set(true);
+            }
+        };
+
+        world.allWorkSpots = ImmutableMap.of(
+                STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Assertions.assertNull(
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("widget"));
+
+        logic.tick(
+                null,
+                () -> ProductionStatus.COLLECTING_SUPPLIES,
+                new JobID("test", "tester"),
+                true,
+                false,
+                ExpirationRules.never(),
+                DEFINITION.maxState(),
+                world
+        );
+
+        Assertions.assertNull(
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+
+        Assertions.assertTrue(triedToGetSupplies.get());
     }
 }
