@@ -231,7 +231,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = "knowledge";
     private static final String NBT_VILLAGERS = "villagers";
-    private static boolean stopped;
+    private boolean stopped = true;
     final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     private final TownPois pois = new TownPois(subBlocks);
@@ -295,17 +295,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         double distToPlayer = nearestPlayer.blockPosition()
                                            .distSqr(e.worldPosition);
         if (distToPlayer > Config.TOWN_TICK_RADIUS.get()) {
-            if (!stopped) {
+            if (!e.stopped) {
                 QT.FLAG_LOGGER.info(
                         "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
                         blockEntityPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
                 );
             }
-            stopped = true;
+            e.stopped = true;
             return;
         }
 
-        stopped = false;
+        e.stopped = false;
 
         long start = System.currentTimeMillis();
 
