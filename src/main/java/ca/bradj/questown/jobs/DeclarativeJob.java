@@ -360,6 +360,7 @@ public class DeclarativeJob extends
                 jobId,
                 entityCurrentJobSite != null,
                 WorkSeekerJob.isSeekingWork(jobId),
+                hasInsertedAtLeastOneIngredient(computeState.)
                 expiration,
                 maxState,
                 this.asLogicWorld(

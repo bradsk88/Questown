@@ -518,4 +518,9 @@ class AbstractWorldInteractionTest {
         return new WorkSpot<>(new Position(1, 2), state, 0, new Position(0, 1));
     }
 
+
+    @Test
+    void Test_ShouldNotResetWorkStates_WhenGrabbingInsertedSupplies() {
+
+    }
 }

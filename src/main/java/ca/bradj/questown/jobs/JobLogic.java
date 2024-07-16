@@ -64,6 +64,7 @@ public class JobLogic<EXTRA, POS> {
             JobID entityCurrentJob,
             boolean isEntityInJobSite,
             boolean isSeekingWork,
+            boolean hasInsertedAtLeastOneIngredient,
             ExpirationRules expiration,
             int maxState,
             JLWorld<EXTRA, POS> world
@@ -95,7 +96,6 @@ public class JobLogic<EXTRA, POS> {
         }
         world.clearWorkSpot("Cleared before trying work");
 
-
         ProductionStatus status = computeState.get();
 
         if (ProductionStatus.NO_SUPPLIES.equals(status)) {
@@ -104,7 +104,12 @@ public class JobLogic<EXTRA, POS> {
             noSuppliesTicks = 0;
         }
 
-        if (noSuppliesTicks > expiration.maxTicksWithoutSupplies()) {
+        long maxNoSupplyTicks = expiration.maxInitialTicksWithoutSupplies();
+        if (hasInsertedAtLeastOneIngredient) {
+            maxNoSupplyTicks =  expiration.maxTicksWithoutSupplies();
+        }
+
+        if (noSuppliesTicks > maxNoSupplyTicks) {
             this.grabbingInsertedSupplies = true;
             return;
         }
@@ -114,23 +119,22 @@ public class JobLogic<EXTRA, POS> {
             return;
         }
 
-        if (!isEntityInJobSite) {
-            return;
+        if (isEntityInJobSite) {
+            doTryWorking(extra, maxState, computeState, isSeekingWork, world);
         }
-        doTryWorking(extra, maxState, computeState, isSeekingWork, world);
 
         world.tryDropLoot();
         world.tryGetSupplies();
     }
 
-    private WithReason<Boolean> doTryWorking(
+    private WithReason<Boolean> doTryWorking( // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
             EXTRA extra,
             int maxState,
             Supplier<ProductionStatus> statusGetter,
             boolean isSeekingWork,
             JLWorld<EXTRA, POS> world
     ) {
-        Map<Integer, Collection<WorkSpot<Integer, POS>>> workSpots = world.listAllWorkSpots();
+        Map<Integer, Collection<WorkSpot<Integer, POS>>> workSpots = world.listAllWorkSpots(); // TODO: Update listAllWorkSpots to actually find "rich" workspots (an implemntation of WorkSpot) which have the block name to help with debugging
 
         ProductionStatus status = statusGetter.get();
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {

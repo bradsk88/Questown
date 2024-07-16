@@ -11,10 +11,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 class JobLogicTest {
 
@@ -146,8 +150,18 @@ class JobLogicTest {
                 world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
         );
     }
-    @Test
-    void tick_ShouldCollectSuppliesIfTargetExists() {
+
+
+    static Stream<Arguments> provideCollectSuppliesArgs() {
+        return Stream.of(
+                Arguments.of(true, true), // Collect supplies if in job site
+                Arguments.of(false, true) // Collect supplies if out of job site
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideCollectSuppliesArgs")
+    void tick_ShouldCollectSuppliesIfTargetExists(boolean entityInJobSite, boolean expectCollect) {
         JobLogic<Void, Position> logic = new JobLogic<>();
 
         final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
@@ -174,7 +188,7 @@ class JobLogicTest {
                 null,
                 () -> ProductionStatus.COLLECTING_SUPPLIES,
                 new JobID("test", "tester"),
-                true,
+                entityInJobSite,
                 false,
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
@@ -185,6 +199,6 @@ class JobLogicTest {
                 world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
         );
 
-        Assertions.assertTrue(triedToGetSupplies.get());
+        Assertions.assertEquals(expectCollect, triedToGetSupplies.get());
     }
 }

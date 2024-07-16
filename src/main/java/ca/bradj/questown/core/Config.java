@@ -61,6 +61,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_INITIAL_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_SUPPLIES;
     public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
@@ -136,9 +137,12 @@ public class Config {
 
         // Jobs Config
         BUILDER.push("Jobs");
-        MAX_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
+        MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
-        ).defineInRange("MaxTicksWithoutSupplies", 100L, 1L, 24000L);
+        ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);
+        MAX_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
+                "See MaxInitialTicksWithoutSupplies. But this timer applies after at least one ingredient have been added."
+        ).defineInRange("MaxTicksWithoutSupplies", 1000L, 1L, 24000L);
         FARM_ACTION_INTERVAL = BUILDER.comment(
                 "The number of ticks that farmers will wait between actions"
         ).define("FarmActionInterval", 100);

@@ -6,19 +6,23 @@ import java.util.function.Supplier;
 
 public class ExpirationRules {
 
+    private final Supplier<Long> maxInitialTicksWithoutSupplies;
     private final Supplier<Long> maxTicksWithoutSupplies;
     private final Function<JobID, JobID> noSuppliesFallbackFn;
     private final Supplier<Long> maxTicks;
     private final Function<JobID, JobID> maxTicksFallbackFn;
+    private @Nullable Long realizedInitTicks;
     private @Nullable Long realizedTicks;
     private @Nullable Long realizedSupplyTicks;
 
     public ExpirationRules(
+            Supplier<Long> maxInitialTicksWithoutSupplies,
             Supplier<Long> maxTicksWithoutSupplies,
             Function<JobID, JobID> noSuppliesFallbackFn,
             Supplier<Long> maxTicks,
             Function<JobID, JobID> maxTicksFallbackFn
     ) {
+        this.maxInitialTicksWithoutSupplies = maxInitialTicksWithoutSupplies;
         this.maxTicksWithoutSupplies = maxTicksWithoutSupplies;
         this.noSuppliesFallbackFn = noSuppliesFallbackFn;
         this.maxTicks = maxTicks;
@@ -50,6 +54,13 @@ public class ExpirationRules {
             this.realizedSupplyTicks = this.maxTicksWithoutSupplies.get();
         }
         return this.realizedSupplyTicks;
+    }
+
+    public long maxInitialTicksWithoutSupplies() {
+        if (this.realizedInitTicks == null) {
+            this.realizedInitTicks = this.maxInitialTicksWithoutSupplies.get();
+        }
+        return this.realizedInitTicks;
     }
 
     public Function<JobID, JobID> noSuppliesFallbackFn() {
