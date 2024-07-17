@@ -140,6 +140,7 @@ class JobLogicTest {
                 new JobID("test", "tester"),
                 true,
                 false,
+                false,
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
                 world
@@ -190,6 +191,7 @@ class JobLogicTest {
                 new JobID("test", "tester"),
                 entityInJobSite,
                 false,
+                false,
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
                 world
@@ -200,5 +202,92 @@ class JobLogicTest {
         );
 
         Assertions.assertEquals(expectCollect, triedToGetSupplies.get());
+    }
+
+    @Test()
+    void tick_shouldGiveUpAfterInitialTicks_IfNeverInserted() {
+        JobLogic<Void, Position> logic = new JobLogic<>();
+
+        final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
+
+        TestLogicWorld world = new TestLogicWorld() {
+            @Override
+            public void tryGetSupplies() {
+                super.tryGetSupplies();
+                triedToGetSupplies.set(true);
+            }
+        };
+
+        world.allWorkSpots = ImmutableMap.of(
+                STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Assertions.assertNull(
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("widget"));
+
+        Runnable tickFn = () -> logic.tick(
+                null,
+                () -> ProductionStatus.NO_SUPPLIES,
+                new JobID("test", "tester"),
+                true,
+                false,
+                false,
+                ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                DEFINITION.maxState(),
+                world
+        );
+
+        Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
+        tickFn.run();
+        Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
+        tickFn.run();
+        Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+    @Test()
+    void tick_shouldGiveUpAfterInitialTicks_IfInsertedAtLeastOnce() {
+        JobLogic<Void, Position> logic = new JobLogic<>();
+
+        final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
+
+        TestLogicWorld world = new TestLogicWorld() {
+            @Override
+            public void tryGetSupplies() {
+                super.tryGetSupplies();
+                triedToGetSupplies.set(true);
+            }
+        };
+
+        world.allWorkSpots = ImmutableMap.of(
+                STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Assertions.assertNull(
+                world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
+        );
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("widget"));
+
+        Runnable tickFn = () -> logic.tick(
+                null,
+                () -> ProductionStatus.NO_SUPPLIES,
+                new JobID("test", "tester"),
+                true,
+                false,
+                true,
+                ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                DEFINITION.maxState(),
+                world
+        );
+
+        Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
+        tickFn.run();
+        Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
+        tickFn.run();
+        Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
+        tickFn.run();
+        Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
     }
 }

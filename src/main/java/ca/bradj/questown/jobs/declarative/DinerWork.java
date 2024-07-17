@@ -89,6 +89,7 @@ public class DinerWork {
                 SoundEvents.GENERIC_EAT.getLocation(),
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
+                        () -> Long.MAX_VALUE,
                         jobId -> jobId,
                         Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())

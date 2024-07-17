@@ -89,6 +89,7 @@ public class DinerNoTableWork {
                 SoundEvents.GENERIC_EAT.getLocation(),
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
+                        () -> Long.MAX_VALUE,
                         jobId -> jobId,
                         // TODO: Change this to "max ticks without food" and switch to "town abandoner" job
                         () -> Long.MAX_VALUE,

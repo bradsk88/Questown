@@ -52,6 +52,11 @@ public class JobLogic<EXTRA, POS> {
     }
 
     private WorkSpot<Integer, POS> workSpot;
+
+    public boolean isGrabbingInsertedSupplies() {
+        return grabbingInsertedSupplies;
+    }
+
     private boolean grabbingInsertedSupplies;
     private boolean grabbedInsertedSupplies;
     private boolean wrappingUp;

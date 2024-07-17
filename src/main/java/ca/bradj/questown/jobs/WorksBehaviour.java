@@ -214,6 +214,7 @@ public class WorksBehaviour {
     @NotNull
     public static ExpirationRules productionExpiration() {
         return new ExpirationRules(
+                Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES::get,
                 Config.MAX_TICKS_WITHOUT_SUPPLIES::get,
                 WorkSeekerJob::getIDForRoot,
                 () -> Long.MAX_VALUE,

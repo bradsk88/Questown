@@ -32,6 +32,7 @@ public class ExpirationRules {
     public static ExpirationRules never() {
         return new ExpirationRules(
                 () -> Long.MAX_VALUE,
+                () -> Long.MAX_VALUE,
                 jobID -> jobID,
                 () -> Long.MAX_VALUE,
                 jobID -> jobID
@@ -65,5 +66,25 @@ public class ExpirationRules {
 
     public Function<JobID, JobID> noSuppliesFallbackFn() {
         return this.noSuppliesFallbackFn;
+    }
+
+    public ExpirationRules withInitialNoSupplyTickLimit(long i) {
+        return new ExpirationRules(
+                () -> i,
+                maxTicksWithoutSupplies,
+                noSuppliesFallbackFn,
+                maxTicks,
+                maxTicksFallbackFn
+        );
+    }
+
+    public ExpirationRules withNoSupplyTickLimit(long i) {
+        return new ExpirationRules(
+                maxInitialTicksWithoutSupplies,
+                () -> i,
+                noSuppliesFallbackFn,
+                maxTicks,
+                maxTicksFallbackFn
+        );
     }
 }

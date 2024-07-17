@@ -354,13 +354,14 @@ public class DeclarativeJob extends
                 elp
         );
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
+        WorkSpot<Integer, BlockPos> workSpot = world.getWorkSpot();
         logic.tick(
                 extra,
                 computeState,
                 jobId,
                 entityCurrentJobSite != null,
                 WorkSeekerJob.isSeekingWork(jobId),
-                hasInsertedAtLeastOneIngredient(computeState.)
+                workSpot != null && hasInserted(workSpot.action()),
                 expiration,
                 maxState,
                 this.asLogicWorld(
@@ -369,6 +370,15 @@ public class DeclarativeJob extends
                         roomsNeedingIngredientsOrTools
                 )
         );
+    }
+
+    private boolean hasInserted(Integer action) {
+        for (int i = 1; i < action; i++) {
+            if (Util.getOrDefault(ingredientQtyRequiredAtStates, i, 0) > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private JobLogic.JLWorld<MCExtra, BlockPos> asLogicWorld(
