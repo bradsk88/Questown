@@ -15,8 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -289,5 +288,47 @@ class JobLogicTest {
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+
+
+    static Stream<Arguments> provideNotProductionStatuses() {
+        return Stream.of(
+                Arguments.of(ProductionStatus.COLLECTING_SUPPLIES)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideNotProductionStatuses")
+    void tick_shouldClearWorkSpotIfStatusIsNotProduction(ProductionStatus status) {
+        List<WorkSpot<Integer, Position>> workSpotHistory = new ArrayList<>();
+
+        JobLogic<Void, Position> logic = new JobLogic<>() {
+            @Override
+            protected void setWorkSpot(WorkSpot<Integer, Position> spot) {
+                super.setWorkSpot(spot);
+                workSpotHistory.add(spot);
+            }
+        };
+
+        TestLogicWorld world = new TestLogicWorld();
+        WorkSpot<Integer, Position> arbitraryWorkSpot = new WorkSpot<>(new Position(1, 2), 1, 1, new Position(1, 2));
+        world.workspot = arbitraryWorkSpot;
+
+        logic.tick(
+                null,
+                () -> ProductionStatus.NO_SUPPLIES,
+                new JobID("test", "tester"),
+                true,
+                false,
+                new Random().nextBoolean(),
+                ExpirationRules.never(),
+                DEFINITION.maxState(),
+                world
+        );
+
+        Assertions.assertNull(logic.workSpot());
+        Assertions.assertEquals(2, workSpotHistory.size());
+        Assertions.assertNotNull(workSpotHistory.get(0));
+        Assertions.assertNull(workSpotHistory.get(1));
     }
 }

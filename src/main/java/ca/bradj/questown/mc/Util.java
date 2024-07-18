@@ -3,12 +3,16 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 import java.util.*;
 import java.util.function.*;
@@ -179,5 +183,16 @@ public class Util {
             return fallback;
         }
         return puller.apply(object.get(key));
+    }
+
+    public static void setProcessingStateOnProperty(
+            ServerLevel level,
+            IntegerProperty prop,
+            State state,
+            BlockPos pos
+    ) {
+        Integer maxPropVal = prop.getPossibleValues().stream().max(Integer::compare).orElse(0);
+        int limited = Math.min(state.processingState(), maxPropVal);
+        level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(prop, limited));
     }
 }

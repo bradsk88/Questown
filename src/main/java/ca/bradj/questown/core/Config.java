@@ -142,7 +142,7 @@ public class Config {
         ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);
         MAX_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "See MaxInitialTicksWithoutSupplies. But this timer applies after at least one ingredient have been added."
-        ).defineInRange("MaxTicksWithoutSupplies", 1000L, 1L, 24000L);
+        ).defineInRange("MaxTicksWithoutSuppliesV2", 1000L, 1L, 24000L);
         FARM_ACTION_INTERVAL = BUILDER.comment(
                 "The number of ticks that farmers will wait between actions"
         ).define("FarmActionInterval", 100);

@@ -374,7 +374,7 @@ public class DeclarativeJob extends
 
     private boolean hasInserted(Integer action) {
         for (int i = 1; i < action; i++) {
-            if (Util.getOrDefault(ingredientQtyRequiredAtStates, i, 0) > 0) {
+            if (Util.getOrDefault(ingredientQtyRequiredAtStates, i - 1, 0) > 0) {
                 return true;
             }
         }
@@ -393,7 +393,7 @@ public class DeclarativeJob extends
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
-                town.getVillagerHandle().changeJobForVisitor(ownerUUID, id, true);
+                town.getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
             }
 
             @Override
@@ -439,6 +439,11 @@ public class DeclarativeJob extends
             @Override
             public void tryGetSupplies() {
                 if (logic.isWrappingUp()) {
+                    // TODO: Remove this line and add regression test
+                    //  Without this line, the worker never goes back to the
+                    //  sign, so they never clear "wrapping up" and can never
+                    //  grab more supplies
+                    changeJob(WorkSeekerJob.getIDForRoot(jobId));
                     return;
                 }
                 self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());

@@ -74,6 +74,8 @@ public class JobLogic<EXTRA, POS> {
             int maxState,
             JLWorld<EXTRA, POS> world
     ) {
+        this.setWorkSpot(world.getWorkSpot());
+
         if (this.grabbingInsertedSupplies) {
             if (world.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
@@ -115,6 +117,7 @@ public class JobLogic<EXTRA, POS> {
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
+            QT.JOB_LOGGER.debug("{} gave up waiting for ingredients after {} ticks ({})", entityCurrentJob.rootId(), noSuppliesTicks, entityCurrentJob.jobId());
             this.grabbingInsertedSupplies = true;
             return;
         }
@@ -143,6 +146,7 @@ public class JobLogic<EXTRA, POS> {
 
         ProductionStatus status = statusGetter.get();
         if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
+            setWorkSpot(null);
             return new WithReason<>(null, "non-work status");
         }
         Collection<WorkSpot<Integer, POS>> allSpots = workSpots.get(maxState);
@@ -167,7 +171,7 @@ public class JobLogic<EXTRA, POS> {
 
         // TODO: Pass in the previous workspot and keep working it, if it's sill workable
         WorkOutput<?, WorkSpot<Integer, POS>> worked = world.getHandle().tryWorking(extra, allSpots);
-        this.workSpot = worked.spot();
+        this.setWorkSpot(worked.spot());
         if (worked.worked()) {
             world.setLookTarget(worked.spot().position());
             boolean hasWork = !isSeekingWork;
@@ -182,5 +186,9 @@ public class JobLogic<EXTRA, POS> {
             }
         }
         return new WithReason<>(wrappingUp, "Worked");
+    }
+
+    protected void setWorkSpot(WorkSpot<Integer, POS> spot) {
+        this.workSpot = spot;
     }
 }

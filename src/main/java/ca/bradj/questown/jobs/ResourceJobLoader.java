@@ -183,25 +183,31 @@ public class ResourceJobLoader {
         ImmutableMap.Builder<Integer, Supplier<Integer>> time = ImmutableMap.builder();
 
         JsonArray states = object.get("work_states").getAsJsonArray();
+        int maxState = 0;
         for (int i = 0; i < states.size(); i++) {
             JsonObject v = states.get(i).getAsJsonObject();
             if (v.has("ingredients")) {
                 ing.put(i, () -> getIngredient(v.get("ingredients").getAsString()));
+                maxState = Math.max(maxState, i + 1);
             }
             if (v.has("quantity")) {
                 qty.put(i, () -> v.get("quantity").getAsInt());
+                maxState = Math.max(maxState, i + 1);
             }
             if (v.has("tools")) {
                 tools.put(i, () -> getIngredient(v.get("tools").getAsString()));
+                maxState = Math.max(maxState, i + 1);
             }
             if (v.has("work")) {
                 work.put(i, () -> v.get("work").getAsInt());
+                maxState = Math.max(maxState, i + 1);
             }
             if (v.has("time")) {
                 time.put(i, () -> v.get("time").getAsInt());
+                maxState = Math.max(maxState, i + 1);
             }
         }
-        return new WorkStates(states.size() + 1, ing.build(), qty.build(), tools.build(), work.build(), time.build());
+        return new WorkStates(maxState, ing.build(), qty.build(), tools.build(), work.build(), time.build());
     }
 
     private static Predicate<Block> isJobBlock(String block) {

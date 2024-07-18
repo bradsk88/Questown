@@ -4,8 +4,11 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +26,7 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
 
-public class SmallSoupPotBlock extends Block implements InsertedItemAware {
+public class SmallSoupPotBlock extends Block implements InsertedItemAware, StatefulJobBlock {
     public static final String ITEM_ID = "soup_pot_small";
 
     private static final IntegerProperty LEVEL = IntegerProperty.create(
@@ -87,5 +90,14 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware {
         p_60504_.setBlockAndUpdate(p_60505_, p);
         QT.BLOCK_LOGGER.debug("New level {}", p61126);
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public void setProcessingState(
+            ServerLevel sl,
+            BlockPos pp,
+            State bs
+    ) {
+        Util.setProcessingStateOnProperty(sl, LEVEL, bs, pp);
     }
 }
