@@ -49,7 +49,7 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     ) {
         BlockState s = sl.getBlockState(pp);
         s = s.setValue(PROCESSING_STATE, bs.processingState());
-        s = s.setValue(WORK_LEFT, bs.workLeft());
+        s = s.setValue(WORK_LEFT, bs.workLeft() / 2);
         sl.setBlockAndUpdate(pp, s);
     }
 

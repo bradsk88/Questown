@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "smelter/process_ore",
+  "priority": "1000",
+  "parent": null,
+  "icon": "questown:ore_processing_block",
+  "initial_request": "minecraft:raw_iron",
+  "result": {
+    "type": "item",
+    "item": "minecraft:raw_iron",
+    "quantity": 2
+  },
+  "block": "questown:ore_processing_block",
+  "room": "questown:smeltery",
+  "work_states": [
+    {
+      "ingredients": "minecraft:iron_ore",
+      "quantity": 1
+    },
+    {
+      "tools": "#questown:pickaxes",
+      "work": 20
+    }
+  ],
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:block.gravel.hit",
+    "chance": "100",
+    "duration": 5
+  }
+}

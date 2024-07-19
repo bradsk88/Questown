@@ -15,7 +15,6 @@ import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.jobs.smelter.SmelterJob;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.NoOpWarper;
@@ -110,7 +109,6 @@ public class JobsRegistry {
             return switch (parts[0]) {
                 case "gatherer" -> GathererUnmappedNoToolWorkQtrDay.ID;
                 case "baker" -> BakerBreadWork.ID;
-                case "smelter" -> SmelterJob.ID;
                 default -> throw new IllegalArgumentException("Unknown single-part job ID: " + parts[0]);
             };
         }
@@ -234,10 +232,6 @@ public class JobsRegistry {
                 BakerBreadWork.ID.rootId(), new Jerb(
                         ImmutableList.of(BakerBreadWork.ID),
                         ImmutableList.of(BakerBreadWork.ID)
-                ),
-                SmelterJob.ID.rootId(), new Jerb(
-                        ImmutableList.of(SmelterJob.ID),
-                        ImmutableList.of(SmelterJob.ID)
                 ),
                 GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
                         ImmutableList.of(
