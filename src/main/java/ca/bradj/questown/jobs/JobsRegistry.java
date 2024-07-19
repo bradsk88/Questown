@@ -228,17 +228,6 @@ public class JobsRegistry {
                         ImmutableList.of(FarmerJob.ID),
                         ImmutableList.of(FarmerJob.ID)
                 ),
-                GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
-                        ImmutableList.of(
-                                ExplorerWork.ID,
-                                GathererUnmappedNoToolWorkQtrDay.ID,
-                                GathererUnmappedPickaxeWorkQtrDay.ID,
-                                GathererUnmappedShovelWorkQtrDay.ID,
-                                GathererUnmappedAxeWorkQtrDay.ID,
-                                GathererMappedAxeWork.ID
-                        ),
-                        ImmutableList.of(GathererUnmappedNoToolWorkQtrDay.ID)
-                ),
                 BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
                         ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
                         ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())

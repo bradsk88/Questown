@@ -108,7 +108,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
             return WAITING_FOR_TIMED_STATE;
         }
     };
-    private final String name;
+    public final String name;
 
     public static ProductionStatus fromJobBlockStatus(int s) {
         if (s >= firstNonCustomIndex) {

@@ -29,7 +29,7 @@ public class Loots {
     public static ResourceLocation fallbackBiome = new ResourceLocation("forest"); // TODO: Something better?
 
     @NotNull
-    static List<MCHeldItem> getFromLootTables(
+    public static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Collection<MCHeldItem> items,
             GathererTools.LootTableParameters lt
@@ -40,7 +40,7 @@ public class Loots {
     }
 
     @NotNull
-    static List<MCHeldItem> getFromLootTables(
+    public static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             Collection<MCHeldItem> items,
             int maxAmount,
@@ -50,7 +50,7 @@ public class Loots {
     }
 
     @NotNull
-    static List<MCHeldItem> getFromLootTables(
+    public static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             int maxAmount,
             GathererTools.LootTableParameters lt,
@@ -60,7 +60,7 @@ public class Loots {
     }
 
     @NotNull
-    static List<MCHeldItem> getFromLootTables(
+    public static List<MCHeldItem> getFromLootTables(
             ServerLevel level,
             int minAmount, int maxAmount,
             GathererTools.LootTableParameters lt,

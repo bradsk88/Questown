@@ -180,7 +180,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                     @Nullable Consumer<State> cas = cascadingBlockRevealer.apply(tickSource, pp);
                     if (cas != null) {
                         cascading.put(pp, cas);
-                        cas.accept(def);
+                        cas.accept(def == null ? State.fresh() : def);
                     }
                 });
             }

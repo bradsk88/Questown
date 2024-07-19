@@ -3,9 +3,13 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.gatherer.GathererTools;
+import ca.bradj.questown.jobs.gatherer.Loots;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -29,13 +33,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class ResourceJobLoader {
-
-    // FIXME: We probably need to register this listener somewhere
-    //  https://github.com/CodeeToasty/Create/blob/42763b4480e059be5c6cd23f8cb4e9031296fc0c/src/main/java/com/simibubi/create/content/curiosities/weapons/PotatoProjectileTypeManager.java#L109
 
     public static final ReloadListener LISTENER = new ReloadListener();
 
@@ -98,7 +100,6 @@ public class ResourceJobLoader {
                 throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                    .getAsString());
             }
-            // TODO: Result quantity
             Predicate<Block> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
@@ -110,9 +111,37 @@ public class ResourceJobLoader {
                     new WorkLocation(isJobBlock, required(object, "room")),
                     ResourceJobLoader.workStates(object),
                     wwi,
-                    WorksBehaviour.standardProductionRules(),
+                    loadRulesV1(object),
                     loadSoundV1(object)
             ).withPriority(requiredInt(object, "priority"));
+        }
+
+        private WorkSpecialRules loadRulesV1(JsonObject object) {
+            ImmutableList.Builder<String> globals = ImmutableList.builder();
+            globals.add(
+                    SpecialRules.PRIORITIZE_EXTRACTION,
+                    SpecialRules.SHARED_WORK_STATUS
+            );
+
+            if (!object.has("special")) {
+                return new WorkSpecialRules(
+                        ImmutableMap.of(),
+                        globals.build()
+                );
+            }
+
+            ImmutableMap.Builder<ProductionStatus, String> stages = ImmutableMap.builder();
+            object.get("special").getAsJsonArray().forEach(row -> {
+                JsonObject rowObj = row.getAsJsonObject();
+                JsonArray rules = rowObj.get("rules").getAsJsonArray();
+                rules.forEach(rule -> registerRule(rule, rowObj, globals, stages));
+            });
+
+
+            return new WorkSpecialRules(
+                    stages.build(),
+                    globals.build()
+            );
         }
 
         private @Nullable SoundInfo loadSoundV1(JsonObject object) {
@@ -142,60 +171,83 @@ public class ResourceJobLoader {
             }
             JsonObject rizz = object.get("result").getAsJsonObject();
             String type = rizz.get("type").getAsString();
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g;
-            switch (type) {
-                case "item" -> {
-                    Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
-                    g = (l, i) -> {
-                        if (resultItem == null) {
-                            throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
-                                                                                                      .getAsString());
-                        }
-                        ItemStack s = resultItem.getDefaultInstance();
-                        int qty = 1;
-                        if (rizz.has("quantity")) {
-                            qty = rizz.get("quantity").getAsInt();
-                        }
-                        s.setCount(qty);
-                        MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
-                        return ImmutableList.of(mci);
-                    };
-                }
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g = switch (type) {
+                case "item" -> itemResult(object, rizz);
+                case "biome_loot" -> biomeLootResult(rizz);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
-            }
+            };
             return new WorkWorldInteractions(cooldownTicks, g);
         }
 
-        private @Nullable ResourceLocation optional(
-                JsonObject object,
-                String k
-        ) {
-            if (!object.has(k)) {
-                return null;
-            }
-            return new ResourceLocation(object.get(k).getAsString());
-        }
+    }
 
-        private int requiredInt(
-                JsonObject object,
-                String k
-        ) {
-            if (!object.has(k)) {
-                throw new IllegalArgumentException(k + " is required");
+    private static void registerRule(
+            JsonElement rule,
+            JsonObject rowObj,
+            ImmutableList.Builder<String> globals,
+            ImmutableMap.Builder<ProductionStatus, String> stages
+    ) throws NotValidCoreStatus {
+        String type = rowObj.get("type").getAsString();
+        switch (type) {
+            case "global": {
+                globals.add(rule.getAsString());
+                break;
             }
-            return object.get(k).getAsInt();
+            case "processing_state": {
+                int state = requiredInt(rowObj, "state");
+                stages.put(ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
+                break;
+            }
+            case "core_state": {
+                String name = required(rowObj, "state", JsonElement::getAsString);
+                ImmutableSet<ProductionStatus> all = ProductionStatus.allStatuses();
+                ProductionStatus productionStatus = all.stream()
+                                                       .filter(v -> v.name.equals(name))
+                                                       .findFirst()
+                                                       .orElseThrow(() -> new NotValidCoreStatus(name, all));
+                stages.put(productionStatus, rule.getAsString());
+                break;
+            }
+            default: throw new IllegalArgumentException("Unexpected special type " + type);
         }
+    }
 
-        private ResourceLocation required(
-                JsonObject object,
-                String k
-        ) {
-            if (!object.has(k)) {
-                throw new IllegalArgumentException(k + " is required");
+    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> itemResult(
+            JsonObject object,
+            JsonObject rizz
+    ) {
+        Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
+        return (l, i) -> {
+            if (resultItem == null) {
+                throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
+                                                                                          .getAsString());
             }
-            String iconName = object.get(k).getAsString();
-            return new ResourceLocation(iconName);
-        }
+            ItemStack s = resultItem.getDefaultInstance();
+            int qty = 1;
+            if (rizz.has("quantity")) {
+                qty = rizz.get("quantity").getAsInt();
+            }
+            s.setCount(qty);
+            MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
+            return ImmutableList.of(mci);
+        };
+    }
+
+    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> biomeLootResult(
+            JsonObject rizz
+    ) {
+        String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
+        String resultDefault = required(rizz, "default", JsonElement::getAsString);
+        int resultAttempts = requiredInt(rizz, "attempts");
+        return (l, i) -> Loots.getFromLootTables(
+                l,
+                i,
+                resultAttempts,
+                new GathererTools.LootTableParameters(
+                        new GathererTools.LootTablePrefix(resultPrefix),
+                        new GathererTools.LootTablePath(resultDefault)
+                )
+        );
     }
 
     private static WorkStates workStates(JsonObject object) {
@@ -211,23 +263,28 @@ public class ResourceJobLoader {
         for (int i = 0; i < states.size(); i++) {
             JsonObject v = states.get(i).getAsJsonObject();
             if (v.has("ingredients")) {
-                ing.put(i, () -> getIngredient(v.get("ingredients").getAsString()));
+                Ingredient ingredients = getIngredient(v.get("ingredients").getAsString());
+                ing.put(i, () -> ingredients);
                 maxState = Math.max(maxState, i + 1);
             }
             if (v.has("quantity")) {
-                qty.put(i, () -> v.get("quantity").getAsInt());
+                int quantity = v.get("quantity").getAsInt();
+                qty.put(i, () -> quantity);
                 maxState = Math.max(maxState, i + 1);
             }
             if (v.has("tools")) {
-                tools.put(i, () -> getIngredient(v.get("tools").getAsString()));
+                Ingredient tools1 = getIngredient(v.get("tools").getAsString());
+                tools.put(i, () -> tools1);
                 maxState = Math.max(maxState, i + 1);
             }
             if (v.has("work")) {
-                work.put(i, () -> v.get("work").getAsInt());
+                int work1 = v.get("work").getAsInt();
+                work.put(i, () -> work1);
                 maxState = Math.max(maxState, i + 1);
             }
             if (v.has("time")) {
-                time.put(i, () -> v.get("time").getAsInt());
+                int time1 = v.get("time").getAsInt();
+                time.put(i, () -> time1);
                 maxState = Math.max(maxState, i + 1);
             }
         }
@@ -255,5 +312,44 @@ public class ResourceJobLoader {
             ));
         }
         return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+    }
+
+    private @Nullable ResourceLocation optional(
+            JsonObject object,
+            String k
+    ) {
+        if (!object.has(k)) {
+            return null;
+        }
+        return new ResourceLocation(object.get(k).getAsString());
+    }
+
+    private static int requiredInt(
+            JsonObject object,
+            String k
+    ) {
+        return required(object, k, JsonElement::getAsInt);
+    }
+
+    private static <X> X required(
+            JsonObject object,
+            String k,
+            Function<JsonElement, X> puller
+    ) {
+        if (!object.has(k)) {
+            throw new IllegalArgumentException(k + " is required");
+        }
+        return puller.apply(object.get(k));
+    }
+
+    private static ResourceLocation required(
+            JsonObject object,
+            String k
+    ) {
+        if (!object.has(k)) {
+            throw new IllegalArgumentException(k + " is required");
+        }
+        String iconName = object.get(k).getAsString();
+        return new ResourceLocation(iconName);
     }
 }

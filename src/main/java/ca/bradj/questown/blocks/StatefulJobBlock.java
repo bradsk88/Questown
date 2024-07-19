@@ -8,5 +8,6 @@ public interface StatefulJobBlock {
     void setProcessingState(
             ServerLevel sl,
             BlockPos pp,
-            State bs);
+            State bs
+    );
 }
