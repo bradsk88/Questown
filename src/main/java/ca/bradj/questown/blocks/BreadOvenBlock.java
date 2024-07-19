@@ -2,7 +2,6 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.BakerBreadWork;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -215,14 +214,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     ) {
         BlockState state = sl.getBlockState(pp);
         switch (bs.processingState()) {
-            case (BakerBreadWork.BLOCK_STATE_NEED_COAL) -> {
-                if (bs.ingredientCount() < 1) {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
-                } else {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
-                }
-            }
-            case (BakerBreadWork.BLOCK_STATE_NEED_WHEAT) -> {
+            case (0) -> {
                 if (bs.ingredientCount() <= 0) {
                     state = state.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
                 } else if (bs.ingredientCount() < 2) {
@@ -231,8 +223,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                     state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
                 }
             }
-            case (BakerBreadWork.BLOCK_STATE_NEED_TIME) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
-            case (BakerBreadWork.BLOCK_STATE_DONE) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKED);
+            case (1) -> {
+                if (bs.ingredientCount() < 1) {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
+                } else {
+                    state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+                }
+            }
+            case (2) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
+            case (3) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKED);
         }
         sl.setBlockAndUpdate(pp, state);
     }

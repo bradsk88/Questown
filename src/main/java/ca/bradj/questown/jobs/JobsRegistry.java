@@ -108,7 +108,6 @@ public class JobsRegistry {
         if (parts.length == 1) {
             return switch (parts[0]) {
                 case "gatherer" -> GathererUnmappedNoToolWorkQtrDay.ID;
-                case "baker" -> BakerBreadWork.ID;
                 default -> throw new IllegalArgumentException("Unknown single-part job ID: " + parts[0]);
             };
         }
@@ -228,10 +227,6 @@ public class JobsRegistry {
                 FarmerJob.ID.rootId(), new Jerb(
                         ImmutableList.of(FarmerJob.ID),
                         ImmutableList.of(FarmerJob.ID)
-                ),
-                BakerBreadWork.ID.rootId(), new Jerb(
-                        ImmutableList.of(BakerBreadWork.ID),
-                        ImmutableList.of(BakerBreadWork.ID)
                 ),
                 GathererUnmappedNoToolWorkQtrDay.ID.rootId(), new Jerb(
                         ImmutableList.of(

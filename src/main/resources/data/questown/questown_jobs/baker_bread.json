@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "baker/bread",
+  "priority": "1000",
+  "parent": null,
+  "icon": "minecraft:bread",
+  "initial_request": "minecraft:bread",
+  "result": {
+    "type": "item",
+    "item": "minecraft:bread",
+    "quantity": 1
+  },
+  "block": "questown:bread_oven_block",
+  "room": "questown:bakery",
+  "work_states": [
+    {
+      "ingredients": "minecraft:wheat",
+      "quantity": 2
+    },
+    {
+      "tools": "#minecraft:coals"
+    },
+    {
+      "time": 1000
+    }
+  ],
+  "cooldown_ticks": 100
+}

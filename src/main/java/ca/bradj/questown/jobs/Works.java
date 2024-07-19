@@ -59,7 +59,6 @@ public class Works {
                 FarmerJob.SimpleWarper::new,
                 1
         ));
-        b.put(BakerBreadWork.ID, BakerBreadWork::asWork);
         b.put(BlacksmithWoodenPickaxeJob.DEF.jobId(), BlacksmithWoodenPickaxeJob::asWork);
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
