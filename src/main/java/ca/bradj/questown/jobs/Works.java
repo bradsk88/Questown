@@ -68,8 +68,6 @@ public class Works {
         b.put(GathererUnmappedPickaxeWorkQtrDay.ID, GathererUnmappedPickaxeWorkQtrDay::asWork);
         b.put(GathererUnmappedPickaxeWorkHalfDay.ID, GathererUnmappedPickaxeWorkHalfDay::asWork);
         b.put(GathererUnmappedPickaxeWorkFullDay.ID, GathererUnmappedPickaxeWorkFullDay::asWork);
-        b.put(GathererUnmappedNoToolWorkHalfDay.ID, GathererUnmappedNoToolWorkHalfDay::asWork);
-        b.put(GathererUnmappedNoToolWorkFullDay.ID, GathererUnmappedNoToolWorkFullDay::asWork);
         b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
         b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
         b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);

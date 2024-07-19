@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "id": "gatherer/gather",
-  "priority": "3000",
+  "id": "gatherer/gather_full_day",
+  "priority": "1000",
   "parent": null,
-  "icon": "minecraft:leather_boots",
+  "icon": "minecraft:golden_boots",
   "initial_request": "minecraft:wheat_seeds",
   "result": {
     "type": "biome_loot",
     "prefix": "jobs/gatherer_notool",
     "default": "jobs/gatherer_notool/default",
-    "attempts": 1
+    "attempts": 6
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
       "ingredients": "#questown:villager_food",
-      "quantity": 1
+      "quantity": 2
     },
     {
-      "time": 2000
+      "time": 6000
     }
   ],
   "cooldown_ticks": 0,
