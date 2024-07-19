@@ -6,7 +6,6 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -71,7 +70,7 @@ public class BakerBreadWork {
                 ),
                 WorksBehaviour.standardWorldInteractions(ACTION_DURATION, () -> RESULT),
                 WorksBehaviour.standardProductionRules(),
-                SoundEvents.VILLAGER_WORK_BUTCHER.getLocation()
+                null // Since baker doesn't do "work" (they wait instead) there is no work sound
         );
     }
 }

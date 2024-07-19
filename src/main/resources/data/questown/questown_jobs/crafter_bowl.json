@@ -7,7 +7,7 @@
   "initial_request": "minecraft:bowl",
   "result": {
     "type": "item",
-    "value": "minecraft:bowl",
+    "item": "minecraft:bowl",
     "quantity": 3
   },
   "block": "minecraft:crafting_table",
@@ -22,5 +22,9 @@
     }
   ],
   "cooldown_ticks": 100,
-  "sound": "minecraft:block.wood.hit"
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
 }

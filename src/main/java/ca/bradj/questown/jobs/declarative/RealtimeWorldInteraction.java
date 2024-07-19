@@ -12,8 +12,6 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
-import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -21,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -40,7 +39,7 @@ public class RealtimeWorldInteraction
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
-    private final @Nullable ResourceLocation sound;
+    private final @Nullable SoundInfo sound;
 
     public RealtimeWorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
@@ -53,7 +52,7 @@ public class RealtimeWorldInteraction
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             int interval,
-            @Nullable ResourceLocation sound
+            @Nullable SoundInfo sound
     ) {
         super(
                 journal.getJobId(),
@@ -281,6 +280,7 @@ public class RealtimeWorldInteraction
             playSound(
                     mcExtra, o.spot()
                               .interactionSpot());
+            mcExtra.entity().swing(InteractionHand.MAIN_HAND, true);
         }
         return o;
     }
@@ -289,13 +289,14 @@ public class RealtimeWorldInteraction
             MCExtra mcExtra,
             BlockPos pos
     ) {
-        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound);
-        int soundChance = 10; // TODO[ASAP]: Get from job
-        if (mcExtra.town()
-                   .getServerLevel()
-                   .getRandom()
-                   .nextInt(soundChance) == 0) {
-            this.soundTicksLeft = 5;
+        if (sound == null) {
+            return;
+        }
+        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound.sound());
+        int dieRoll = mcExtra.town().getServerLevel().getRandom().nextInt(100);
+        int chance = sound.chance() == null ? 10 : sound.chance();
+        if (dieRoll < chance) {
+            this.soundTicksLeft = (sound.duration() == null ? 5 : sound.duration());
         }
         if (Math.max(this.soundTicksLeft--, 0) > 0) {
             Compat.playNeutralSound(mcExtra.town()

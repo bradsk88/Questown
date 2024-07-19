@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlacksmithsTableBlock;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -52,7 +53,7 @@ public class BlacksmithWoodenPickaxeJob {
                         WorksBehaviour.singleItemOutput(() -> toItemStack(DEFINITION.result()).copy())
                 ),
                 WorksBehaviour.standardProductionRules(),
-                SoundEvents.WOOD_HIT.getLocation()
+                SoundInfo.everyInterval(SoundEvents.WOOD_HIT.getLocation())
         );
     }
 

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.gatherer;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -87,7 +88,11 @@ public class NewLeaverWork {
                         specialRules,
                         standardRules()
                 ),
-                SoundEvents.ARMOR_EQUIP_LEATHER.getLocation()
+                new SoundInfo(
+                        SoundEvents.ARMOR_EQUIP_LEATHER.getLocation(),
+                        100,
+                        100
+                )
         );
     }
 }

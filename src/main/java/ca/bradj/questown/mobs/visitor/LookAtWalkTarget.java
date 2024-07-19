@@ -23,7 +23,7 @@ public class LookAtWalkTarget extends Behavior<VisitorMobEntity> {
         this.look = e.getLookTarget();
         if (look != null) {
             e.getLookControl()
-             .setLookAt(look.getX(), look.getY(), look.getZ());
+             .setLookAt(look.getX() + 0.5f, look.getY(), look.getZ() + 0.5f);
         }
     }
 }

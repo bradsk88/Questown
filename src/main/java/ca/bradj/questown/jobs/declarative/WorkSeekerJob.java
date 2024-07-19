@@ -61,7 +61,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 WorksBehaviour.standardProductionRules().specialGlobalRules(),
                 ExpirationRules.never(),
                 WorksBehaviour.noOutput(),
-                SoundEvents.BOOK_PAGE_TURN.getLocation()
+                SoundInfo.guaranteed(SoundEvents.BOOK_PAGE_TURN.getLocation(), 100)
         );
     }
 
@@ -76,7 +76,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             int interval,
-            @Nullable ResourceLocation sound
+            @Nullable SoundInfo sound
             ) {
         return new RealtimeWorldInteraction(
                 journal,

@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -94,7 +95,8 @@ public class ResourceJobLoader {
             }
             Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
             if (initReq == null) {
-                throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon").getAsString());
+                throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
+                                                                                                   .getAsString());
             }
             // TODO: Result quantity
             Predicate<Block> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
@@ -109,8 +111,26 @@ public class ResourceJobLoader {
                     ResourceJobLoader.workStates(object),
                     wwi,
                     WorksBehaviour.standardProductionRules(),
-                    optional(object, "sound")
+                    loadSoundV1(object)
             ).withPriority(requiredInt(object, "priority"));
+        }
+
+        private @Nullable SoundInfo loadSoundV1(JsonObject object) {
+            if (!object.has("sound")) {
+                return null;
+            }
+            JsonObject info = object.getAsJsonObject("sound");
+            ResourceLocation rl = new ResourceLocation(info.get("id").getAsString());
+            @Nullable Integer chance = null;
+            if (info.has("chance")) {
+                chance = info.get("chance").getAsInt();
+            }
+            @Nullable Integer duration = null;
+            if (info.has("duration")) {
+                duration = info.get("duration").getAsInt();
+            }
+
+            return new SoundInfo(rl, chance, duration);
         }
 
         private WorkWorldInteractions worldWorkInt(
@@ -122,23 +142,27 @@ public class ResourceJobLoader {
             }
             JsonObject rizz = object.get("result").getAsJsonObject();
             String type = rizz.get("type").getAsString();
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g = switch (type) {
-                case "item" -> (l, i) -> {
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g;
+            switch (type) {
+                case "item" -> {
                     Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
-                    if (resultItem == null) {
-                        throw new IllegalArgumentException("Result item does not exist: " + object.get("icon").getAsString());
-                    }
-                    ItemStack s = resultItem.getDefaultInstance();
-                    int qty = 1;
-                    if (rizz.has("quantity")) {
-                        qty = rizz.get("quantity").getAsInt();
-                    }
-                    s.setCount(qty);
-                    MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
-                    return ImmutableList.of(mci);
-                };
+                    g = (l, i) -> {
+                        if (resultItem == null) {
+                            throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
+                                                                                                      .getAsString());
+                        }
+                        ItemStack s = resultItem.getDefaultInstance();
+                        int qty = 1;
+                        if (rizz.has("quantity")) {
+                            qty = rizz.get("quantity").getAsInt();
+                        }
+                        s.setCount(qty);
+                        MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
+                        return ImmutableList.of(mci);
+                    };
+                }
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
-            };
+            }
             return new WorkWorldInteractions(cooldownTicks, g);
         }
 

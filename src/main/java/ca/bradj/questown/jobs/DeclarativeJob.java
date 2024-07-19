@@ -141,7 +141,7 @@ public class DeclarativeJob extends
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            @Nullable ResourceLocation sound
+            @Nullable SoundInfo sound
     ) {
         super(
                 ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
@@ -218,7 +218,7 @@ public class DeclarativeJob extends
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             int interval,
-            @Nullable ResourceLocation sound
+            @Nullable SoundInfo sound
     ) {
         return new RealtimeWorldInteraction(
                 journal,

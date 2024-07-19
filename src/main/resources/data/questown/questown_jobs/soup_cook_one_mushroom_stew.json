@@ -22,5 +22,9 @@
     }
   ],
   "cooldown_ticks": 10,
-  "sound": "minecraft:block.lava.ambient"
+  "sound": {
+    "id": "minecraft:block.lava.ambient",
+    "chance": 80,
+    "duration": 5
+  }
 }

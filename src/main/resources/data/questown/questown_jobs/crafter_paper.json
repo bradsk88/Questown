@@ -7,7 +7,7 @@
   "initial_request": "minecraft:paper",
   "result": {
     "type": "item",
-    "value": "minecraft:paper",
+    "item": "minecraft:paper",
     "quantity": 3
   },
   "block": "minecraft:crafting_table",
@@ -22,5 +22,9 @@
     }
   ],
   "cooldown_ticks": 100,
-  "sound": "minecraft:block.wood.hit"
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
 }

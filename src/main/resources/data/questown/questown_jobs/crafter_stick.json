@@ -7,7 +7,7 @@
   "initial_request": "minecraft:stick",
   "result": {
     "type": "item",
-    "value": "minecraft:stick",
+    "item": "minecraft:stick",
     "quantity": 1
   },
   "block": "minecraft:crafting_table",
@@ -22,5 +22,9 @@
     }
   ],
   "cooldown_ticks": 100,
-  "sound": "minecraft:block.wood.hit"
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
 }

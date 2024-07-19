@@ -6,6 +6,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -71,7 +72,7 @@ public class SmelterJob {
                         WorksBehaviour.singleItemOutput(RESULT::copy)
                 ),
                 WorksBehaviour.standardProductionRules(),
-                SoundEvents.GRAVEL_HIT.getLocation()
+                SoundInfo.everyInterval(SoundEvents.GRAVEL_HIT.getLocation())
         );
     }
 }
