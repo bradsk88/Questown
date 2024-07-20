@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "id": "gatherer/gather_full_day",
-  "priority": "1000",
-  "parent": "gatherer/gather_half_day",
-  "icon": "minecraft:golden_boots",
-  "initial_request": "minecraft:wheat_seeds",
+  "id": "gatherer/rod_half_day",
+  "priority": "5000",
+  "parent": "gatherer/rod_quarter_day",
+  "icon": "minecraft:cod",
+  "initial_request": "minecraft:cod",
   "result": {
     "type": "biome_loot",
-    "prefix": "jobs/gatherer_notool",
-    "default": "jobs/gatherer_notool/default",
-    "attempts": 6
+    "prefix": "jobs/gatherer_fishing",
+    "default": "jobs/gatherer_fishing/default",
+    "attempts": 3
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
@@ -19,7 +19,7 @@
       "quantity": 2
     },
     {
-      "time": 6000
+      "time": 4000
     }
   ],
   "cooldown_ticks": 0,

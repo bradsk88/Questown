@@ -44,7 +44,7 @@ public class Works {
         b.put(FarmerJob.ID, () -> new Work(
                 FarmerJob.ID,
                 null,
-                Items.WHEAT.getDefaultInstance(),
+                Items.IRON_HOE.getDefaultInstance(),
                 (town, uuid) -> new FarmerJob(uuid, 6),
                 (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
                 NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
@@ -62,7 +62,6 @@ public class Works {
         b.put(BlacksmithWoodenPickaxeJob.DEF.jobId(), BlacksmithWoodenPickaxeJob::asWork);
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedAxeWorkQtrDay.ID, GathererUnmappedAxeWorkQtrDay::asWork);
         b.put(GathererUnmappedAxeWorkHalfDay.ID, GathererUnmappedAxeWorkHalfDay::asWork);
         b.put(GathererUnmappedAxeWorkFullDay.ID, GathererUnmappedAxeWorkFullDay::asWork);
         b.put(GathererUnmappedPickaxeWorkQtrDay.ID, GathererUnmappedPickaxeWorkQtrDay::asWork);
@@ -72,8 +71,6 @@ public class Works {
         b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
         b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);
         b.put(GathererUnmappedRodWorkQtrDay.ID, GathererUnmappedRodWorkQtrDay::asWork);
-        b.put(GathererUnmappedRodWorkHalfDay.ID, GathererUnmappedRodWorkHalfDay::asWork);
-        b.put(GathererUnmappedRodWorkFullDay.ID, GathererUnmappedRodWorkFullDay::asWork);
 
         works = b.build();
 

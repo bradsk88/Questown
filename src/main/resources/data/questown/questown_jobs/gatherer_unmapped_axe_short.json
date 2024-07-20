@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "id": "gatherer/gather_full_day",
-  "priority": "1000",
-  "parent": "gatherer/gather_half_day",
-  "icon": "minecraft:golden_boots",
-  "initial_request": "minecraft:wheat_seeds",
+  "id": "gatherer/axe",
+  "priority": "3000",
+  "parent": null,
+  "icon": "minecraft:stone_axe",
+  "initial_request": "minecraft:oak_wood",
   "result": {
     "type": "biome_loot",
-    "prefix": "jobs/gatherer_notool",
-    "default": "jobs/gatherer_notool/default",
-    "attempts": 6
+    "prefix": "jobs/gatherer_axe",
+    "default": "jobs/gatherer_axe/default",
+    "attempts": 1
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "quantity": 1
     },
     {
-      "time": 6000
+      "time": 2000
     }
   ],
   "cooldown_ticks": 0,

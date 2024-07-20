@@ -2,7 +2,7 @@
   "version": 1,
   "id": "gatherer/gather_half_day",
   "priority": "2000",
-  "parent": null,
+  "parent": "gatherer/gather",
   "icon": "minecraft:iron_boots",
   "initial_request": "minecraft:wheat_seeds",
   "result": {
