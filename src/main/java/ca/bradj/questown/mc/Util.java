@@ -11,7 +11,6 @@ import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 import java.util.*;
@@ -194,5 +193,15 @@ public class Util {
         Integer maxPropVal = prop.getPossibleValues().stream().max(Integer::compare).orElse(0);
         int limited = Math.min(state.processingState(), maxPropVal);
         level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(prop, limited));
+    }
+
+    public static <X, Y> void addOrInitialize(
+            Map<X, Collection<Y>> map,
+            X key,
+            Y value
+    ) {
+        Collection<Y> cur = Util.getOrDefault(map, key, new ArrayList<>());
+        cur.add(value);
+        map.put(key, cur);
     }
 }

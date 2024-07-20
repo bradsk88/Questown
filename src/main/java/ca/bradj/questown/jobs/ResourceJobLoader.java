@@ -25,12 +25,13 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -71,6 +72,7 @@ public class ResourceJobLoader {
                         int version = requiredInt(object, "version");
                         Work type = switch (version) {
                             case 1 -> workFromJsonV1(object);
+                            case 2 -> workFromJsonV2(object);
                             default -> throw new IllegalArgumentException(String.format(
                                     "Unknown job file version \"%s\"", version
                             ));
@@ -78,7 +80,10 @@ public class ResourceJobLoader {
                         QT.INIT_LOGGER.debug("Work found in filesystem: {}", type);
                         b.put(type.id(), type);
                     } catch (Exception e) {
-                        QT.INIT_LOGGER.error("Failed to load work {}", id, e);
+                        QT.INIT_LOGGER.error(
+                                "Failed to load work {} using version {}",
+                                id, optional(object, "version", JsonElement::getAsInt), e
+                        );
                     }
                 }
             }
@@ -100,7 +105,33 @@ public class ResourceJobLoader {
                 throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                    .getAsString());
             }
-            Predicate<Block> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
+            Predicate<BlockState> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
+            int cooldownTicks = requiredInt(object, "cooldown_ticks");
+            WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
+            return WorksBehaviour.productionWork(
+                    iconItem.getDefaultInstance(),
+                    JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
+                    JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
+                    WorksBehaviour.standardDescription(initReq::getDefaultInstance),
+                    new WorkLocation(isJobBlock, required(object, "room")),
+                    ResourceJobLoader.workStates(object),
+                    wwi,
+                    loadRulesV1(object),
+                    loadSoundV1(object)
+            ).withPriority(requiredInt(object, "priority"));
+        }
+
+        private Work workFromJsonV2(JsonObject object) {
+            Item iconItem = ForgeRegistries.ITEMS.getValue(required(object, "icon"));
+            if (iconItem == null) {
+                throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
+            }
+            Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
+            if (initReq == null) {
+                throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
+                                                                                                   .getAsString());
+            }
+            Predicate<BlockState> isJobBlock = ResourceJobLoader.isJobBlockV2(object.getAsJsonObject("block"));
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
             return WorksBehaviour.productionWork(
@@ -130,7 +161,7 @@ public class ResourceJobLoader {
                 );
             }
 
-            ImmutableMap.Builder<ProductionStatus, String> stages = ImmutableMap.builder();
+            Map<ProductionStatus, Collection<String>> stages = new HashMap<>();
             object.get("special").getAsJsonArray().forEach(row -> {
                 JsonObject rowObj = row.getAsJsonObject();
                 JsonArray rules = rowObj.get("rules").getAsJsonArray();
@@ -139,7 +170,7 @@ public class ResourceJobLoader {
 
 
             return new WorkSpecialRules(
-                    stages.build(),
+                    ImmutableMap.copyOf(stages),
                     globals.build()
             );
         }
@@ -185,7 +216,7 @@ public class ResourceJobLoader {
             JsonElement rule,
             JsonObject rowObj,
             ImmutableList.Builder<String> globals,
-            ImmutableMap.Builder<ProductionStatus, String> stages
+            Map<ProductionStatus, Collection<String>> writeableStages
     ) throws NotValidCoreStatus {
         String type = rowObj.get("type").getAsString();
         switch (type) {
@@ -195,7 +226,7 @@ public class ResourceJobLoader {
             }
             case "processing_state": {
                 int state = requiredInt(rowObj, "state");
-                stages.put(ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
+                Util.addOrInitialize(writeableStages, ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
                 break;
             }
             case "core_state": {
@@ -205,10 +236,11 @@ public class ResourceJobLoader {
                                                        .filter(v -> v.name.equals(name))
                                                        .findFirst()
                                                        .orElseThrow(() -> new NotValidCoreStatus(name, all));
-                stages.put(productionStatus, rule.getAsString());
+                Util.addOrInitialize(writeableStages, productionStatus, rule.getAsString());
                 break;
             }
-            default: throw new IllegalArgumentException("Unexpected special type " + type);
+            default:
+                throw new IllegalArgumentException("Unexpected special type " + type);
         }
     }
 
@@ -291,9 +323,31 @@ public class ResourceJobLoader {
         return new WorkStates(maxState, ing.build(), qty.build(), tools.build(), work.build(), time.build());
     }
 
-    private static Predicate<Block> isJobBlock(String block) {
+    private static Predicate<BlockState> isJobBlock(String block) {
         Ingredient ing = getIngredient(block);
-        return b -> ing.test(b.asItem().getDefaultInstance());
+        return b -> ing.test(b.getBlock().asItem().getDefaultInstance());
+    }
+
+    private static Predicate<BlockState> isJobBlockV2(JsonObject block) {
+        Ingredient ing = getIngredient(required(block, "id", JsonElement::getAsString));
+        Predicate<BlockState> baseTest = b -> ing.test(b.getBlock().asItem().getDefaultInstance());
+        @Nullable String state = optional(block, "int_state", JsonElement::getAsString);
+        if (state != null) {
+            String name = state.split("=")[0];
+            Integer value = Integer.parseInt(state.split("=")[1]);
+            return b -> {
+                if (!baseTest.test(b)) {
+                    return false;
+                }
+                Comparable<Integer> foundValue = b.getValues().entrySet().stream()
+                                         .filter(v -> v.getKey().getName().equals(name))
+                                         .filter(v -> v.getKey().getValueClass().isInstance(Integer.class))
+                                         .map(v -> (Comparable<Integer>) (Comparable) v.getValue())
+                                         .findFirst().orElseThrow();
+                return foundValue.compareTo(value) == 0;
+            };
+        }
+        return baseTest;
     }
 
     private static @NotNull Ingredient getIngredient(String block) {
@@ -314,14 +368,15 @@ public class ResourceJobLoader {
         return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
     }
 
-    private @Nullable ResourceLocation optional(
+    private static @Nullable <X> X optional(
             JsonObject object,
-            String k
+            String k,
+            Function<JsonElement, X> puller
     ) {
         if (!object.has(k)) {
             return null;
         }
-        return new ResourceLocation(object.get(k).getAsString());
+        return puller.apply(object.get(k));
     }
 
     private static int requiredInt(

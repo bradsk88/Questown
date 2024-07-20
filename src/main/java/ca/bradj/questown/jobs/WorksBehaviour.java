@@ -20,12 +20,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -34,7 +36,7 @@ import java.util.function.Supplier;
 
 public class WorksBehaviour {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
-    static final Predicate<Block> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
+    static final Predicate<BlockState> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
     private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static Warper<ServerLevel, MCTownState> productionWarper(
@@ -44,7 +46,8 @@ public class WorksBehaviour {
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
+            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Map<ProductionStatus, Collection<String>> specialRules
     ) {
         MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
                 id,
@@ -52,7 +55,8 @@ public class WorksBehaviour {
                 pauseForAction,
                 states,
                 resultGenerator,
-                claimSpots
+                claimSpots,
+                specialRules
         );
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
@@ -206,7 +210,8 @@ public class WorksBehaviour {
                         },
                         world.actionDuration(),
                         states,
-                        world.resultGenerator()
+                        world.resultGenerator(),
+                        special.specialStatusRules()
                 ),
                 1
         );

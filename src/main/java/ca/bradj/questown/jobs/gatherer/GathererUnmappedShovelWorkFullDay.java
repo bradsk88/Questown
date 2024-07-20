@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.Work;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
@@ -47,9 +48,9 @@ public class GathererUnmappedShovelWorkFullDay extends NewLeaverWork {
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
     );
-    public static final ImmutableMap<ProductionStatus, String> SPECIAL_RULES = ImmutableMap.of(
-            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), SpecialRules.REMOVE_FROM_WORLD,
-            ProductionStatus.FACTORY.waitingForTimedState(), SpecialRules.REMOVE_FROM_WORLD
+    public static final ImmutableMap<ProductionStatus, Collection<String>> SPECIAL_RULES = ImmutableMap.of(
+            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
+            ProductionStatus.FACTORY.waitingForTimedState(), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
     );
 
     public GathererUnmappedShovelWorkFullDay() {

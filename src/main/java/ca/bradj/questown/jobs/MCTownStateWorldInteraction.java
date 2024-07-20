@@ -1,5 +1,8 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.SpecialRules;
+import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
+import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -10,7 +13,10 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.Effect;
+import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.TownVillagerMoods;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -50,12 +56,13 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             int interval,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots
+            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Map<ProductionStatus, Collection<String>> specialRules
     ) {
         super(
                 jobId, villagerIndex, interval, states.maxState(), Jobs.unMC(states.toolsRequired()),
                 states.workRequired(), Jobs.unMCHeld(states.ingredientsRequired()),
-                states.ingredientQtyRequired(), states.timeRequired(), claimSpots
+                states.ingredientQtyRequired(), states.timeRequired(), claimSpots, specialRules
         );
         this.resultGenerator = resultGenerator;
         this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
@@ -152,6 +159,26 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             int villagerIndex
     ) {
         return ProductionTimeWarper.getHeldItems(mcTownState.town(), villagerIndex);
+    }
+
+    @Override
+    protected @Nullable MCTownState preExtractHook(
+            MCTownState town,
+            Collection<String> rules,
+            Inputs inputs,
+            BlockPos position
+    ) {
+        ImmutableList<JobPhaseModifier> appliers = SpecialRules.getRuleAppliers(rules);
+        BeforeExtractEvent<MCTownState> bxEvent = new BeforeExtractEvent<>(
+                inputs.level(), (inState, mcHeldItem, inventoryFullStrategy) -> {
+                    Inputs i = new Inputs(inState, inputs.level(), inputs.uuid());
+                    return tryGiveItems(i, ImmutableList.of(mcHeldItem), position);
+                }, position
+        );
+
+        return super.processMulti(
+                town, appliers, (o, a) -> a.beforeExtract(o, bxEvent)
+        );
     }
 
     @Override

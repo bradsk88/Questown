@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -16,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -37,6 +39,8 @@ public abstract class AbstractWorldInteraction<
     private final ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates;
     private WithReason<@Nullable WorkSpot<Integer, POS>> workspot = new WithReason<>(null, "Never set");
 
+    private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
+
 
     public AbstractWorldInteraction(
             JobID jobId,
@@ -48,7 +52,8 @@ public abstract class AbstractWorldInteraction<
             ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Function<EXTRA, Claim> claimSpots
+            Function<EXTRA, Claim> claimSpots,
+            Map<ProductionStatus, Collection<String>> specialRules
     ) {
         if (toolsRequiredAtStates.isEmpty() && workRequiredAtStates.isEmpty() && ingredientQuantityRequiredAtStates.isEmpty() && timeRequiredAtStates.isEmpty()) {
             QT.JOB_LOGGER.error(
@@ -62,6 +67,8 @@ public abstract class AbstractWorldInteraction<
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
+        this.specialRules = ImmutableMap.copyOf(specialRules);
+
         AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM, TOWN> self = this;
         this.itemWI = new AbstractItemWI<>(
                 villagerIndex,
@@ -341,10 +348,15 @@ public abstract class AbstractWorldInteraction<
         State s = getJobBlockState(inputs, position);
         if (s != null && s.processingState() >= maxState) {
 
+            TOWN town = preExtractHook(inputs, position);
+            if (town != null) {
+                return town;
+            }
+
             Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
             Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
-            TOWN town = tryGiveItems(inputs, generatedResult, position);
+            town = tryGiveItems(inputs, generatedResult, position);
             if (town != null) {
                 jobCompletedListeners.forEach(Runnable::run);
             }
@@ -353,6 +365,24 @@ public abstract class AbstractWorldInteraction<
         }
         return null;
     }
+
+    private @Nullable TOWN preExtractHook(
+            EXTRA inputs,
+            POS position
+    ) {
+        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        if (rules == null || rules.isEmpty()) {
+            return null;
+        }
+        return preExtractHook(getTown(inputs), rules, inputs, position);
+    }
+
+    protected abstract @Nullable TOWN preExtractHook(
+            TOWN town,
+            Collection<String> rules,
+            EXTRA inputs,
+            POS position
+    );
 
     protected abstract TOWN setJobBlockState(
             @NotNull EXTRA inputs,
@@ -436,5 +466,27 @@ public abstract class AbstractWorldInteraction<
 
     public void setWorkSpot(WithReason<@Nullable WorkSpot<Integer, POS>> o) {
         this.workspot = o;
+    }
+
+    protected <X> TOWN processMulti(
+            TOWN initialTown,
+            ImmutableList<X> appliers,
+            BiFunction<TOWN, X, TOWN> fn
+    ) {
+
+        TOWN out = initialTown;
+        boolean nothingDone = true;
+        for (X m : appliers) {
+            @Nullable TOWN o = fn.apply(out, m);
+            if (o == null) {
+                continue;
+            }
+            nothingDone = false;
+            out = o;
+        }
+        if (nothingDone) {
+            return null;
+        }
+        return out;
     }
 }

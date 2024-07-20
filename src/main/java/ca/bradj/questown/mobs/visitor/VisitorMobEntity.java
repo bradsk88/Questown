@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
@@ -304,11 +305,27 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.getLook();
     }
 
+    public void tryGiveItem(
+            MCHeldItem v,
+            InventoryFullStrategy inventoryFullStrategy
+    ) {
+        if (job.addToEmptySlot(v)) {
+            return;
+        }
+        // TODO: Remember the location of the drop and come back to pick them up
+        if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
+            return;
+        }
+        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toItemStack());
+        level.addFreshEntity(item);
+    }
+
     public record WorkToUndo(
             JobID jobID,
             BlockPos pos,
             MCHeldItem item
-    ) {}
+    ) {
+    }
 
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
@@ -1007,28 +1024,29 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void pickUpItem(ItemEntity p_21471_) {
-        ItemStack itemstack = p_21471_.getItem();
-        int taken = 0;
-        for (int i = 0; i < itemstack.getCount(); i++) {
-            if (this.job.addToEmptySlot(MCHeldItem.fromTown(itemstack))) {
-                taken++;
-                continue;
-            }
-            break;
-        }
-        if (taken == 0) {
-            return;
-        }
-        if (taken < itemstack.getCount()) {
-            itemstack.shrink(taken);
-            this.spawnAtLocation(itemstack);
-            p_21471_.discard();
-        }
-        if (taken > 0) {
-            this.onItemPickup(p_21471_);
-            this.take(p_21471_, itemstack.getCount());
-            p_21471_.discard();
-        }
+        // TODO: Implement picking up work-related items
+//        ItemStack itemstack = p_21471_.getItem();
+//        int taken = 0;
+//        for (int i = 0; i < itemstack.getCount(); i++) {
+//            if (this.job.addToEmptySlot(MCHeldItem.fromTown(itemstack))) {
+//                taken++;
+//                continue;
+//            }
+//            break;
+//        }
+//        if (taken == 0) {
+//            return;
+//        }
+//        if (taken < itemstack.getCount()) {
+//            itemstack.shrink(taken);
+//            this.spawnAtLocation(itemstack);
+//            p_21471_.discard();
+//        }
+//        if (taken > 0) {
+//            this.onItemPickup(p_21471_);
+//            this.take(p_21471_, itemstack.getCount());
+//            p_21471_.discard();
+//        }
     }
 
     @Override

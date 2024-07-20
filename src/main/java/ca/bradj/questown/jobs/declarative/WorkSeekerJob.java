@@ -6,11 +6,11 @@ import ca.bradj.questown.jobs.DeclarativeJob;
 import ca.bradj.questown.jobs.ExpirationRules;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -74,10 +75,11 @@ public class WorkSeekerJob extends DeclarativeJob {
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
             int interval,
             @Nullable SoundInfo sound
-            ) {
+    ) {
         return new RealtimeWorldInteraction(
                 journal,
                 maxState,
@@ -86,6 +88,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
+                specialRules,
                 resultGenerator,
                 claimSpots,
                 interval,

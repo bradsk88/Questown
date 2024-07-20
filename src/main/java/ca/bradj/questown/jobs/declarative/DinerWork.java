@@ -63,7 +63,7 @@ public class DinerWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        (block) -> block instanceof PlateBlock,
+                        (block) -> block.getBlock() instanceof PlateBlock,
                         SpecialQuests.DINING_ROOM
                 ),
                 new WorkStates(

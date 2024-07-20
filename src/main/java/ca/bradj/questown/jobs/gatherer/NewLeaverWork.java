@@ -57,7 +57,7 @@ public class NewLeaverWork {
             ImmutableMap<Integer, Supplier<Ingredient>> toolsRequiredAtStates,
             ImmutableMap<Integer, Supplier<Integer>> workRequiredAtStates,
             ImmutableMap<Integer, Supplier<Integer>> timeRequiredAtStates,
-            ImmutableMap<ProductionStatus, String> specialRules,
+            ImmutableMap<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator
     ) {
         return productionWork(
@@ -69,7 +69,7 @@ public class NewLeaverWork {
                         initialRequest
                 ),
                 new WorkLocation(
-                        block -> block instanceof WelcomeMatBlock,
+                        block -> block.getBlock() instanceof WelcomeMatBlock,
                         SpecialQuests.TOWN_GATE
                 ),
                 new WorkStates(

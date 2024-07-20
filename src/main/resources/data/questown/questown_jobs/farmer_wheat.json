@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "id": "farmer/harvest_wheat",
+  "priority": "1000",
+  "parent": null,
+  "icon": "minecraft:wheat",
+  "initial_request": "minecraft:wheat",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": {
+    "id": "minecraft:wheat",
+    "int_state": "age=7"
+  },
+  "room": "questown:bakery",
+  "work_states": [
+    {
+      "tools": "#questown:hoes",
+      "work": 10
+    }
+  ],
+  "cooldown_ticks": 100,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown:harvest_crop"]
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -21,7 +21,7 @@ public record Work(
         ItemStack icon,
         WorksBehaviour.JobFunc jobFunc,
         WorksBehaviour.SnapshotFunc snapshotFunc,
-        Predicate<Block> isJobBlock,
+        Predicate<BlockState> isJobBlock,
         ResourceLocation baseRoom,
         IStatus<?> initialStatus,
         Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,

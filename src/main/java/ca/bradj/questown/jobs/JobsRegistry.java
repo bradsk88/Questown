@@ -29,6 +29,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,11 +45,12 @@ public class JobsRegistry {
     private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
-    public static boolean isJobBlock(Block b) {
+    public static boolean isJobBlock(BlockState bs) {
+        Block b = bs.getBlock();
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
-        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(b));
+        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(bs));
         // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
             return true;
@@ -224,10 +226,6 @@ public class JobsRegistry {
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {
         ImmutableMap<String, Jerb> hc = ImmutableMap.of(
-                FarmerJob.ID.rootId(), new Jerb(
-                        ImmutableList.of(FarmerJob.ID),
-                        ImmutableList.of(FarmerJob.ID)
-                ),
                 BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
                         ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
                         ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())

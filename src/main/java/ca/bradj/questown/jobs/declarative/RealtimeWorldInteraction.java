@@ -1,14 +1,20 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.blocks.InsertedItemAware;
+import ca.bradj.questown.integration.SpecialRules;
+import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
+import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.WorkOutput;
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.visitor.ItemAcceptor;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -49,6 +55,7 @@ public class RealtimeWorldInteraction
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             int interval,
@@ -64,7 +71,8 @@ public class RealtimeWorldInteraction
                 stripMC(ingredientsRequiredAtStates),
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates,
-                claimSpots
+                claimSpots,
+                specialRules
         );
         this.journal = journal;
         this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
@@ -328,5 +336,31 @@ public class RealtimeWorldInteraction
             return true;
         }
         return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
+    }
+
+    @Override
+    protected @Nullable Boolean preExtractHook(
+            Boolean didAnything,
+            Collection<String> rules,
+            MCExtra inputs,
+            BlockPos position
+    ) {
+        ImmutableList<JobPhaseModifier> appliers = SpecialRules.getRuleAppliers(rules);
+        BeforeExtractEvent<Boolean> bxEvent = new BeforeExtractEvent<>(
+                inputs.town().getServerLevel(), new ItemAcceptor<>() {
+            @Override
+            public @Nullable Boolean tryGiveItem(
+                    Boolean aBoolean,
+                    MCHeldItem item,
+                    InventoryFullStrategy inventoryFullStrategy
+            ) {
+                inputs.entity().tryGiveItem(item, inventoryFullStrategy);
+                return aBoolean;
+            }
+        }, position
+        );
+        return super.processMulti(
+                didAnything, appliers, (o, a) -> a.beforeExtract(o, bxEvent)
+        );
     }
 }

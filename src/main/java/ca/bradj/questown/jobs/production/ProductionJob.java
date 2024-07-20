@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -65,12 +66,11 @@ public abstract class ProductionJob<
 
     // TODO: Support more recipes
     protected final RecipeProvider recipe;
-    private final ImmutableList<MCTownItem> allowedToPickUp;
 
     protected final UUID ownerUUID;
     private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
 
-    public final ImmutableMap<STATUS, String> specialRules;
+    public final ImmutableMap<STATUS, Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
 
@@ -101,12 +101,11 @@ public abstract class ProductionJob<
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            ImmutableList<MCTownItem> allowedToPickUp,
             RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
-            ImmutableMap<STATUS, String> specialRules,
+            ImmutableMap<STATUS, Collection<String>> specialRules,
             ImmutableList<String> specialGlobalRules,
             Supplier<Claim> claimSupplier
     ) {
@@ -119,7 +118,6 @@ public abstract class ProductionJob<
         };
         this.ownerUUID = ownerUUID;
         this.specialGlobalRules = specialGlobalRules;
-        this.allowedToPickUp = allowedToPickUp;
         this.marker = logMarker;
         this.recipe = recipe;
         this.inventory = sc;
@@ -369,11 +367,14 @@ public abstract class ProductionJob<
             TownInterface town,
             Vec3 entityPosition
     ) {
-        String rule = specialRules.get(getStatus());
-        if (rule == null) {
-            return false;
+        Collection<String> rules = Util.getOrDefault(specialRules, getStatus(), ImmutableList.of());
+        for (String rule : rules) {
+            if (rule == null) {
+                continue;
+            }
+            return SpecialRules.REMOVE_FROM_WORLD.equals(rule);
         }
-        return SpecialRules.REMOVE_FROM_WORLD.equals(rule);
+        return false;
     }
 
     @Override
@@ -431,10 +432,10 @@ public abstract class ProductionJob<
 
     @Override
     public boolean addToEmptySlot(MCHeldItem i) {
-        boolean isAllowedToPickUp = allowedToPickUp.contains(i.get());
-        if (!isAllowedToPickUp) {
-            return false;
-        }
+//        boolean isAllowedToPickUp = allowedToPickUp.contains(i.get());
+//        if (!isAllowedToPickUp) {
+//            return false;
+//        }
         return journal.addItemIfSlotAvailable(i);
     }
 

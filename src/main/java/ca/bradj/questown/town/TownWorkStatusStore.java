@@ -23,7 +23,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                 (level, pos) -> {
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
-                    if (JobsRegistry.isJobBlock(b)) {
+                    if (JobsRegistry.isJobBlock(mbs)) {
                         return JobsRegistry.getDefaultJobBlockState(b);
                     }
                     return null;

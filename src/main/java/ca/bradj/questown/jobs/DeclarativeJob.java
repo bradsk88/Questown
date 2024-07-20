@@ -106,12 +106,6 @@ public class DeclarativeJob extends
     private final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
 
-    private static final ImmutableList<MCTownItem> allowedToPickUp = ImmutableList.of(
-            MCTownItem.fromMCItemStack(Items.COAL.getDefaultInstance()),
-            MCTownItem.fromMCItemStack(Items.IRON_ORE.getDefaultInstance()),
-            MCTownItem.fromMCItemStack(Items.RAW_IRON.getDefaultInstance())
-    );
-
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
 
@@ -137,14 +131,14 @@ public class DeclarativeJob extends
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<ProductionStatus, String> specialStatusRules,
+            ImmutableMap<ProductionStatus, Collection<String>> specialStatusRules,
             ImmutableList<String> specialGlobalRules,
             ExpirationRules expiration,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             @Nullable SoundInfo sound
     ) {
         super(
-                ownerUUID, inventoryCapacity, allowedToPickUp, buildRecipe(
+                ownerUUID, inventoryCapacity, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
                 (capacity, signalSource) -> new ProductionJournal<>(
@@ -172,6 +166,7 @@ public class DeclarativeJob extends
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 resultGenerator,
+                specialStatusRules,
                 extra -> {
                     if (specialGlobalRules.contains(SpecialRules.CLAIM_SPOT)) {
                         return makeClaim(ownerUUID);
@@ -216,6 +211,7 @@ public class DeclarativeJob extends
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
+            Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
             int interval,
             @Nullable SoundInfo sound
@@ -228,6 +224,7 @@ public class DeclarativeJob extends
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 toolsRequiredAtStates,
+                specialRules,
                 resultGenerator,
                 claimSpots,
                 interval,
