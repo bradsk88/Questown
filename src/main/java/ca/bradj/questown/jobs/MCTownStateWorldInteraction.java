@@ -1,14 +1,12 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.integration.SpecialRules;
-import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
-import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.declarative.PreExtractHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
@@ -168,17 +166,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
             Inputs inputs,
             BlockPos position
     ) {
-        ImmutableList<JobPhaseModifier> appliers = SpecialRules.getRuleAppliers(rules);
-        BeforeExtractEvent<MCTownState> bxEvent = new BeforeExtractEvent<>(
-                inputs.level(), (inState, mcHeldItem, inventoryFullStrategy) -> {
-                    Inputs i = new Inputs(inState, inputs.level(), inputs.uuid());
-                    return tryGiveItems(i, ImmutableList.of(mcHeldItem), position);
-                }, position
-        );
-
-        return super.processMulti(
-                town, appliers, (o, a) -> a.beforeExtract(o, bxEvent)
-        );
+        return PreExtractHook.run(town, rules, inputs.level(), (ctx, i, s) -> {
+            Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
+            return tryGiveItems(in, ImmutableList.of(i), position);
+        }, position);
     }
 
     @Override

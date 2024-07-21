@@ -345,22 +345,15 @@ public class RealtimeWorldInteraction
             MCExtra inputs,
             BlockPos position
     ) {
-        ImmutableList<JobPhaseModifier> appliers = SpecialRules.getRuleAppliers(rules);
-        BeforeExtractEvent<Boolean> bxEvent = new BeforeExtractEvent<>(
-                inputs.town().getServerLevel(), new ItemAcceptor<>() {
-            @Override
-            public @Nullable Boolean tryGiveItem(
-                    Boolean aBoolean,
-                    MCHeldItem item,
-                    InventoryFullStrategy inventoryFullStrategy
-            ) {
-                inputs.entity().tryGiveItem(item, inventoryFullStrategy);
-                return aBoolean;
-            }
-        }, position
-        );
-        return super.processMulti(
-                didAnything, appliers, (o, a) -> a.beforeExtract(o, bxEvent)
+        return PreExtractHook.run(
+                didAnything,
+                rules,
+                inputs.town().getServerLevel(),
+                (in, i, s) -> {
+                    inputs.entity().tryGiveItem(i, s);
+                    return in;
+                },
+                position
         );
     }
 }

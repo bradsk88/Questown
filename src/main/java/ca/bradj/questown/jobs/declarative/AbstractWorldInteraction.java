@@ -477,26 +477,4 @@ public abstract class AbstractWorldInteraction<
     public void setWorkSpot(WithReason<@Nullable WorkSpot<Integer, POS>> o) {
         this.workspot = o;
     }
-
-    protected <X> TOWN processMulti(
-            TOWN initialTown,
-            ImmutableList<X> appliers,
-            BiFunction<TOWN, X, TOWN> fn
-    ) {
-
-        TOWN out = initialTown;
-        boolean nothingDone = true;
-        for (X m : appliers) {
-            @Nullable TOWN o = fn.apply(out, m);
-            if (o == null) {
-                continue;
-            }
-            nothingDone = false;
-            out = o;
-        }
-        if (nothingDone) {
-            return null;
-        }
-        return out;
-    }
 }
