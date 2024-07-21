@@ -12,7 +12,7 @@ import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.*;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
@@ -46,6 +46,9 @@ public class JobsRegistry {
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
     public static boolean isJobBlock(BlockState bs) {
+        if (bs.isAir()) {
+            return false;
+        }
         Block b = bs.getBlock();
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
@@ -65,8 +68,8 @@ public class JobsRegistry {
 
     public static Set<JobID> getAllJobs() {
         return Works.ids().stream()
-                .filter(v -> !isSeekingWork(v))
-                .collect(Collectors.toSet());
+                    .filter(v -> !isSeekingWork(v))
+                    .collect(Collectors.toSet());
     }
 
     public static ResourceLocation getRoomForJobRootId(
@@ -74,9 +77,9 @@ public class JobsRegistry {
             String rootId
     ) {
         List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
-                .stream()
-                .filter(v -> v.getKey().rootId().equals(rootId))
-                .toList();
+                                                        .stream()
+                                                        .filter(v -> v.getKey().rootId().equals(rootId))
+                                                        .toList();
         return x.get(Compat.nextInt(rand, x.size())).getValue().get().baseRoom();
     }
 
@@ -186,15 +189,15 @@ public class JobsRegistry {
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
         List<Ingredient> list = Works.values().stream()
-                .map(v -> v.get().results().apply(t))
-                .flatMap(Collection::stream)
-                .map(MCTownItem::toItemStack)
-                .map(Ingredient::of)
-                .map(Ingredients::asWorkRequest)
-                .collect(Collectors.toSet())
-                .stream()
-                .map(WorkRequest::asIngredient)
-                .toList();
+                                     .map(v -> v.get().results().apply(t))
+                                     .flatMap(Collection::stream)
+                                     .map(MCTownItem::toItemStack)
+                                     .map(Ingredient::of)
+                                     .map(Ingredients::asWorkRequest)
+                                     .collect(Collectors.toSet())
+                                     .stream()
+                                     .map(WorkRequest::asIngredient)
+                                     .toList();
         return ImmutableSet.copyOf(list);
     }
 
@@ -210,8 +213,8 @@ public class JobsRegistry {
     ) {
         Work w = Works.get(p).get();
         long jobDuration = w.jobFunc()
-                              .apply(town, villagerID)
-                              .getTotalDuration();
+                            .apply(town, villagerID)
+                            .getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
         Signals currentSegment = Signals.fromDayTime(currentTick);

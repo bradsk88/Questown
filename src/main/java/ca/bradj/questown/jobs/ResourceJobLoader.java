@@ -19,12 +19,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -329,8 +331,7 @@ public class ResourceJobLoader {
     }
 
     private static Predicate<BlockState> isJobBlockV2(JsonObject block) {
-        Ingredient ing = getIngredient(required(block, "id", JsonElement::getAsString));
-        Predicate<BlockState> baseTest = b -> ing.test(b.getBlock().asItem().getDefaultInstance());
+        Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
         @Nullable String state = optional(block, "int_state", JsonElement::getAsString);
         if (state != null) {
             String name = state.split("=")[0];
@@ -339,12 +340,12 @@ public class ResourceJobLoader {
                 if (!baseTest.test(b)) {
                     return false;
                 }
-                Comparable<Integer> foundValue = b.getValues().entrySet().stream()
+                Integer foundValue = b.getValues().entrySet().stream()
                                          .filter(v -> v.getKey().getName().equals(name))
-                                         .filter(v -> v.getKey().getValueClass().isInstance(Integer.class))
-                                         .map(v -> (Comparable<Integer>) (Comparable) v.getValue())
+                                         .filter(v -> v.getKey().getValueClass().equals(Integer.class))
+                                         .map(v -> (Integer) v.getValue())
                                          .findFirst().orElseThrow();
-                return foundValue.compareTo(value) == 0;
+                return value.equals(foundValue);
             };
         }
         return baseTest;
@@ -366,6 +367,17 @@ public class ResourceJobLoader {
             ));
         }
         return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+    }
+
+    private static @NotNull Predicate<BlockState> getBlockCheck(String block) {
+        if (block.startsWith("#")) {
+            TagKey<Block> tag = BlockTags.create(new ResourceLocation(block.replace("#", "")));
+            return bs -> ForgeRegistries.BLOCKS.tags().getTag(tag).contains(bs.getBlock());
+        }
+        return (BlockState bs) -> {
+            ResourceLocation resourceLocation = new ResourceLocation(block);
+            return resourceLocation.equals(bs.getBlock().getRegistryName());
+        };
     }
 
     private static @Nullable <X> X optional(

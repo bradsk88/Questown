@@ -178,7 +178,7 @@ public class WorksBehaviour {
                 icon,
                 (TownInterface job, UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
-                        jobId, location.baseRoom(), states.maxState(),
+                        jobId, location, states.maxState(),
                         world.actionDuration(),
                         states.ingredientsRequired(),
                         states.ingredientQtyRequired(),

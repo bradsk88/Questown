@@ -58,7 +58,7 @@ public class Util {
     }
 
     public static <K, X> Collection<X> getOrDefaultCollection(
-            ImmutableMap<K, ? extends Collection<? extends X>> map,
+            Map<K, ? extends Collection<? extends X>> map,
             K key,
             Collection<X> fallback
     ) {
@@ -196,12 +196,13 @@ public class Util {
     }
 
     public static <X, Y> void addOrInitialize(
-            Map<X, Collection<Y>> map,
+            Map<X, ? extends Collection<Y>> map,
             X key,
             Y value
     ) {
-        Collection<Y> cur = Util.getOrDefault(map, key, new ArrayList<>());
+        Map unsafe = map;
+        Collection cur = Util.getOrDefaultCollection(map, key, (Collection) new ArrayList<>());
         cur.add(value);
-        map.put(key, cur);
+        unsafe.put(key, cur);
     }
 }

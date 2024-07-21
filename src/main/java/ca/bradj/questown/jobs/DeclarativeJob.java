@@ -28,12 +28,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
@@ -110,7 +108,7 @@ public class DeclarativeJob extends
     private final RealtimeWorldInteraction world;
 
     private final JobLogic<MCExtra, BlockPos> logic;
-    private final ResourceLocation workRoomId;
+    private final WorkLocation location;
     private final @NotNull Integer maxState;
     private final JobID jobId;
     private final ExpirationRules expiration;
@@ -123,7 +121,7 @@ public class DeclarativeJob extends
             UUID ownerUUID,
             int inventoryCapacity,
             @NotNull JobID jobId,
-            ResourceLocation workRoomId,
+            WorkLocation location,
             int maxState,
             int workInterval,
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
@@ -155,7 +153,8 @@ public class DeclarativeJob extends
                         return makeClaim(ownerUUID);
                     }
                     return null;
-                }
+                },
+                location
         );
         this.jobId = jobId;
         this.world = initWorldInteraction(
@@ -177,7 +176,7 @@ public class DeclarativeJob extends
                 sound
         );
         this.maxState = maxState;
-        this.workRoomId = workRoomId;
+        this.location = location;
         this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
@@ -269,7 +268,7 @@ public class DeclarativeJob extends
 
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
                 town,
-                workRoomId,
+                location.baseRoom(),
                 entity.blockPosition()
         );
 
@@ -289,7 +288,7 @@ public class DeclarativeJob extends
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
                 return Jobs.roomsWithState(
-                                   town, workRoomId,
+                                   town, location.baseRoom(),
                                    (sl, bp) -> maxState.equals(JobBlock.getState(getJobBlockState, bp))
                            )
                            .stream()
@@ -305,7 +304,7 @@ public class DeclarativeJob extends
             @Override
             public boolean isUnfinishedTimeWorkPresent() {
                 return Jobs.isUnfinishedTimeWorkPresent(
-                        town.getRoomHandle(), workRoomId,
+                        town.getRoomHandle(), location.baseRoom(),
                         work::getTimeToNextState
                 );
             }
@@ -314,7 +313,7 @@ public class DeclarativeJob extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> town.getRoomHandle()
-                                  .getRoomsMatching(workRoomId)
+                                  .getRoomsMatching(location.baseRoom())
                                   .stream()
                                   .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
                                                                                     .keySet())
@@ -404,6 +403,7 @@ public class DeclarativeJob extends
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
                         sl::isEmptyBlock,
+                        bp -> location.isJobBlock().test(sl.getBlockState(bp)),
                         () -> Direction.getRandom(sl.random)
                 );
             }
@@ -525,6 +525,7 @@ public class DeclarativeJob extends
             Function<BlockPos, State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isJobBlock,
             Supplier<Direction> randomDirection
     ) {
         if (jobSite == null) {
@@ -534,17 +535,23 @@ public class DeclarativeJob extends
         Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
 
         Map<Integer, List<WorkSpot<Integer, BlockPos>>> b = new HashMap<>();
+        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
+
         jobSite.getSpaces()
                .stream()
                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
                                                 .stream())
                .forEach(v -> {
-                   tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord), b, is);
+                   tryAdd.accept(Positions.ToBlock(v, jobSite.yCoord));
                    // TODO: Depend on job and/or villager?
                    //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
                    //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
-                   tryAddSpot(town, Positions.ToBlock(v, jobSite.yCoord + 1), b, is);
+                   tryAdd.accept(Positions.ToBlock(v, jobSite.yCoord + 1));
                });
+        if (b.isEmpty()) {
+            // TODO: We need an "isJobBlock" AND "isJobBlockReady" predicate
+            // QT.JOB_LOGGER.warn("No work spots found in job site. This is probably an issue with the job's JSON definition.");
+        }
         return ImmutableMap.copyOf(b);
     }
 
@@ -552,16 +559,14 @@ public class DeclarativeJob extends
             Function<BlockPos, State> town,
             BlockPos bp,
             Map<Integer, List<WorkSpot<Integer, BlockPos>>> b,
-            Function<BlockPos, BlockPos> is
+            Function<BlockPos, BlockPos> is,
+            Predicate<BlockPos> isJobBlock
     ) {
         @Nullable Integer blockAction = JobBlock.getState(town, bp);
-        List<WorkSpot<Integer, BlockPos>> curSpots = b.get(blockAction);
         if (blockAction != null) {
-            if (curSpots == null) {
-                curSpots = new ArrayList<>();
+            if (isJobBlock.test(bp)) {
+                Util.addOrInitialize(b, blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
             }
-            curSpots.add(new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
-            b.put(blockAction, curSpots);
         }
     }
 
@@ -676,14 +681,15 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected BlockPos findJobSite(
+    protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
             RoomsHolder town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isJobBlock,
             Random rand
     ) {
         // TODO: Use tags to support more tiers of work rooms
-        List<RoomRecipeMatch<MCRoom>> rooms = new ArrayList<>(town.getRoomsMatching(workRoomId));
+        List<RoomRecipeMatch<MCRoom>> rooms = new ArrayList<>(town.getRoomsMatching(location.baseRoom()));
 
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
 
@@ -691,6 +697,8 @@ public class DeclarativeJob extends
         //  with other workers who need the same type of job site)
         // For now, we use randomization
         Collections.shuffle(rooms);
+
+        boolean roomFoundButNotBlock = false;
 
         for (RoomRecipeMatch<MCRoom> match : rooms) {
             for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks()
@@ -700,20 +708,28 @@ public class DeclarativeJob extends
                 if (blockState == null) {
                     continue;
                 }
+                if (!isJobBlock.test(blockPos)) {
+                    roomFoundButNotBlock = true;
+                    continue;
+                }
                 if (maxState.equals(blockState)) {
-                    return blockPos;
+                    return new WithReason<>(blockPos, "Found extractable product");
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
-                    return findInteractionSpot(
+                    return new WithReason<>(findInteractionSpot(
                             blockPos, match.room, isEmpty,
                             () -> Direction.getRandom(rand)
-                    );
+                    ), "Found a spot where a held item can be used");
                 }
             }
         }
 
-        return null;
+        if (roomFoundButNotBlock) {
+            return new WithReason<>(null, "Job site found, but no usable job blocks");
+        }
+
+        return new WithReason<>(null, "No job sites");
     }
 
     @Override
@@ -730,7 +746,7 @@ public class DeclarativeJob extends
                 return;
             }
             Collection<RoomRecipeMatch<MCRoom>> matches = Jobs.roomsWithState(
-                    town, workRoomId,
+                    town, location.baseRoom(),
                     (sl, bp) -> state.equals(JobBlock.getState(work, bp))
             );
             List<MCRoom> roomz = matches.stream()
@@ -772,7 +788,7 @@ public class DeclarativeJob extends
                 final Integer ii = i;
                 b.get(state)
                  .addAll((Jobs.roomsWithState(
-                                      town, workRoomId,
+                                      town, location.baseRoom(),
                                       (sl, bp) -> ii.equals(JobBlock.getState(work, bp))
                               )
                               .stream()

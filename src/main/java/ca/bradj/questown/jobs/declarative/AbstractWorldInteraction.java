@@ -148,11 +148,7 @@ public abstract class AbstractWorldInteraction<
             Iterable<HELD_ITEM> newItemsSource,
             POS sourcePos
     ) {
-        Function<TOWN, TOWN> reset = (TOWN ts) -> {
-            ts = setJobBlockState(inputs, ts, sourcePos, State.fresh());
-            getWorkStatuses(inputs).clearClaim(sourcePos);
-            return ts;
-        };
+        Function<TOWN, TOWN> reset = getResetFunc(inputs, sourcePos);
 
         Stack<HELD_ITEM> stack = new Stack<>();
 
@@ -198,6 +194,18 @@ public abstract class AbstractWorldInteraction<
             QT.VILLAGER_LOGGER.debug("Villager ran out of room before extracting all possible items");
         }
         return reset.apply(ts);
+    }
+
+    private @NotNull Function<TOWN, TOWN> getResetFunc(
+            EXTRA inputs,
+            POS workSpot
+    ) {
+        Function<TOWN, TOWN> reset = (TOWN ts) -> {
+            ts = setJobBlockState(inputs, ts, workSpot, State.fresh());
+            getWorkStatuses(inputs).clearClaim(workSpot);
+            return ts;
+        };
+        return reset;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -350,13 +358,15 @@ public abstract class AbstractWorldInteraction<
 
             TOWN town = preExtractHook(inputs, position);
             if (town != null) {
-                return town;
+                Function<TOWN, TOWN> resetFunc = getResetFunc(inputs, position);
+                town = resetFunc.apply(town);
             }
+            if (town == null) {
+                Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
+                Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
-            Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
-            Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
-
-            town = tryGiveItems(inputs, generatedResult, position);
+                town = tryGiveItems(inputs, generatedResult, position);
+            }
             if (town != null) {
                 jobCompletedListeners.forEach(Runnable::run);
             }

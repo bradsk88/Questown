@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.town.Claim;
@@ -29,7 +28,8 @@ abstract class DeclarativeProductionJob<
             IProductionStatusFactory<STATUS> sFac,
             ImmutableMap<STATUS, Collection<String>> specialRules,
             ImmutableList<String> specialGlobalRules,
-            Supplier<Claim> claimSupplier
+            Supplier<Claim> claimSupplier,
+            WorkLocation location
     ) {
         super(
                 ownerUUID,
@@ -40,7 +40,8 @@ abstract class DeclarativeProductionJob<
                 sFac,
                 specialRules,
                 specialGlobalRules,
-                claimSupplier
+                claimSupplier,
+                location
         );
     }
 }

@@ -2,10 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.DeclarativeJob;
-import ca.bradj.questown.jobs.ExpirationRules;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -50,7 +47,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 new JobID(rootId, WORK_ID),
-                SpecialQuests.JOB_BOARD,
+                new WorkLocation((bs) -> true, SpecialQuests.JOB_BOARD),
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,

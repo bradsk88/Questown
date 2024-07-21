@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
@@ -60,6 +61,7 @@ public abstract class ProductionJob<
     protected final JOURNAL journal;
     private final IProductionStatusFactory<STATUS> statusFactory;
     private final Supplier<Claim> claimSupplier;
+    private final WorkLocation location;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
@@ -79,12 +81,14 @@ public abstract class ProductionJob<
     ) {
         if (this.jobSite == null) {
             ServerLevel sl = town.getServerLevel();
-            this.jobSite = findJobSite(
+            WithReason<@Nullable BlockPos> js = findJobSite(
                     town.getRoomHandle(),
                     getWorkStatusHandle(town)::getJobBlockState,
                     sl::isEmptyBlock,
+                    bp -> location.isJobBlock().test(sl.getBlockState(bp)),
                     sl.getRandom()
             );
+            this.jobSite = js.value();
         }
         return jobSite;
     }
@@ -107,7 +111,8 @@ public abstract class ProductionJob<
             IProductionStatusFactory<STATUS> sFac,
             ImmutableMap<STATUS, Collection<String>> specialRules,
             ImmutableList<String> specialGlobalRules,
-            Supplier<Claim> claimSupplier
+            Supplier<Claim> claimSupplier,
+            WorkLocation location
     ) {
         // TODO: This is copy pasted. Reduce duplication.
         SimpleContainer sc = new SimpleContainer(inventoryCapacity) {
@@ -134,6 +139,7 @@ public abstract class ProductionJob<
 
         this.specialRules = specialRules;
         this.claimSupplier = claimSupplier;
+        this.location = location;
     }
 
     @Override
@@ -296,10 +302,11 @@ public abstract class ProductionJob<
 
     protected abstract @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel level);
 
-    protected abstract BlockPos findJobSite(
+    protected abstract WithReason<@Nullable BlockPos> findJobSite(
             RoomsHolder town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isJobBlock,
             Random rand
     );
 
