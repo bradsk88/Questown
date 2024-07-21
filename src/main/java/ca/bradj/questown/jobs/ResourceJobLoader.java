@@ -287,7 +287,7 @@ public class ResourceJobLoader {
     private static WorkStates workStates(JsonObject object) {
 
         ImmutableMap.Builder<Integer, Supplier<Ingredient>> ing = ImmutableMap.builder();
-        ImmutableMap.Builder<Integer, Supplier<Integer>> qty = ImmutableMap.builder();
+        Map<Integer, Supplier<Integer>> qty = new HashMap<>();
         ImmutableMap.Builder<Integer, Supplier<Ingredient>> tools = ImmutableMap.builder();
         ImmutableMap.Builder<Integer, Supplier<Integer>> work = ImmutableMap.builder();
         ImmutableMap.Builder<Integer, Supplier<Integer>> time = ImmutableMap.builder();
@@ -300,6 +300,7 @@ public class ResourceJobLoader {
                 Ingredient ingredients = getIngredient(v.get("ingredients").getAsString());
                 ing.put(i, () -> ingredients);
                 maxState = Math.max(maxState, i + 1);
+                Util.putIfAbsent(qty, i, () -> 1);
             }
             if (v.has("quantity")) {
                 int quantity = v.get("quantity").getAsInt();
@@ -322,7 +323,14 @@ public class ResourceJobLoader {
                 maxState = Math.max(maxState, i + 1);
             }
         }
-        return new WorkStates(maxState, ing.build(), qty.build(), tools.build(), work.build(), time.build());
+        return new WorkStates(
+                maxState,
+                ing.build(),
+                ImmutableMap.copyOf(qty),
+                tools.build(),
+                work.build(),
+                time.build()
+        );
     }
 
     private static Predicate<BlockState> isJobBlock(String block) {
@@ -341,10 +349,10 @@ public class ResourceJobLoader {
                     return false;
                 }
                 Integer foundValue = b.getValues().entrySet().stream()
-                                         .filter(v -> v.getKey().getName().equals(name))
-                                         .filter(v -> v.getKey().getValueClass().equals(Integer.class))
-                                         .map(v -> (Integer) v.getValue())
-                                         .findFirst().orElseThrow();
+                                      .filter(v -> v.getKey().getName().equals(name))
+                                      .filter(v -> v.getKey().getValueClass().equals(Integer.class))
+                                      .map(v -> (Integer) v.getValue())
+                                      .findFirst().orElseThrow();
                 return value.equals(foundValue);
             };
         }

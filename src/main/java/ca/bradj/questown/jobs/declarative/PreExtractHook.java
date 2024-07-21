@@ -13,7 +13,8 @@ import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
+
+import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
 public class PreExtractHook {
 
@@ -38,28 +39,5 @@ public class PreExtractHook {
         };
         BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(level, itemAcceptor, position);
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
-    }
-
-
-    private static <X, TOWN> TOWN processMulti(
-            TOWN initialTown,
-            ImmutableList<X> appliers,
-            BiFunction<TOWN, X, TOWN> fn
-    ) {
-
-        TOWN out = initialTown;
-        boolean nothingDone = true;
-        for (X m : appliers) {
-            @Nullable TOWN o = fn.apply(out, m);
-            if (o == null) {
-                continue;
-            }
-            nothingDone = false;
-            out = o;
-        }
-        if (nothingDone) {
-            return null;
-        }
-        return out;
     }
 }

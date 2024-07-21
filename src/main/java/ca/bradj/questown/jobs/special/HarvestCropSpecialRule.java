@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
+import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -49,5 +50,13 @@ public class HarvestCropSpecialRule implements
         level.setBlock(cropBlock, bs, 10);
         Compat.playNeutralSound(level, cropBlock, SoundEvents.CROP_BREAK);
         return outContext;
+    }
+
+    @Override
+    public <CONTEXT> @Nullable CONTEXT afterInsertItem(
+            CONTEXT ctxInput,
+            AfterInsertItemEvent event
+    ) {
+        return null;
     }
 }

@@ -310,9 +310,12 @@ public abstract class AbstractWorldInteraction<
         }
 
         if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
-            TOWN o = itemWI.tryInsertIngredients(extra, workSpot);
+            InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(extra, workSpot);
             if (o != null) {
-                return new WorkOutput<>(true, o, workSpot);
+                TOWN ctx = o.contextAfterInsert();
+                HELD_ITEM item = o.itemBeforeInsert();
+                TOWN out = postInsertHook(ctx, extra, workSpot, item);
+                return new WorkOutput<>(true, out, workSpot);
             } else {
                 return vNull;
             }
@@ -375,6 +378,27 @@ public abstract class AbstractWorldInteraction<
         }
         return null;
     }
+
+    private @NotNull TOWN postInsertHook(
+            @NotNull TOWN ctx,
+            EXTRA inputs,
+            WorkSpot<Integer, POS> position,
+            HELD_ITEM item
+    ) {
+        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        if (rules == null || rules.isEmpty()) {
+            return ctx;
+        }
+        return postInsertHook(getTown(inputs), rules, inputs, position, item);
+    }
+
+    protected abstract @NotNull TOWN postInsertHook(
+            @NotNull TOWN town,
+            Collection<String> rules,
+            EXTRA inputs,
+            WorkSpot<Integer, POS> position,
+            HELD_ITEM item
+    );
 
     private @Nullable TOWN preExtractHook(
             EXTRA inputs,

@@ -37,8 +37,8 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class RealtimeWorldInteraction
-        extends AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
+public class RealtimeWorldInteraction extends
+        AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
     private int soundTicksLeft;
 
@@ -61,9 +61,9 @@ public class RealtimeWorldInteraction
             int interval,
             @Nullable SoundInfo sound
     ) {
-        super(
-                journal.getJobId(),
-                -1, // Not used by this implementation
+        super(journal.getJobId(),
+                -1,
+                // Not used by this implementation
                 interval,
                 maxState,
                 stripMC2(toolsRequiredAtStates),
@@ -79,10 +79,7 @@ public class RealtimeWorldInteraction
         this.resultGenerator = resultGenerator;
         this.sound = sound;
         super.addItemInsertionListener((extra, bp, item) -> {
-            Block block = extra.town()
-                               .getServerLevel()
-                               .getBlockState(bp)
-                               .getBlock();
+            Block block = extra.town().getServerLevel().getBlockState(bp).getBlock();
             if (block instanceof InsertedItemAware iia) {
                 iia.handleInsertedItem(extra, bp, item);
             }
@@ -99,20 +96,13 @@ public class RealtimeWorldInteraction
 
     private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
         ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get()
-                                                                            .toItemStack())));
+        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toItemStack())));
         return b.build();
     }
 
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
-        return Math.max(
-                mcExtra.town()
-                       .getVillagerHandle()
-                       .getWorkSpeed(mcExtra.entity()
-                                            .getUUID()),
-                1
-        );
+        return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
     }
 
     @Override
@@ -120,10 +110,7 @@ public class RealtimeWorldInteraction
             MCExtra mcExtra,
             Integer timeToAugment
     ) {
-        return mcExtra.town()
-                      .getVillagerHandle()
-                      .getAffectedTime(mcExtra.entity()
-                                              .getUUID(), timeToAugment);
+        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
     }
 
     @Override
@@ -144,16 +131,10 @@ public class RealtimeWorldInteraction
             Boolean tuwn,
             Function<MCTownItem, Boolean> toolCheck
     ) {
-        Optional<MCHeldItem> foundTool = journal.getItems()
-                                                .stream()
-                                                .filter(v -> toolCheck.apply(v.get()))
-                                                .findFirst();
+        Optional<MCHeldItem> foundTool = journal.getItems().stream().filter(v -> toolCheck.apply(v.get())).findFirst();
         if (foundTool.isPresent()) {
-            int idx = journal.getItems()
-                             .indexOf(foundTool.get());
-            ItemStack is = foundTool.get()
-                                    .get()
-                                    .toItemStack();
+            int idx = journal.getItems().indexOf(foundTool.get());
+            ItemStack is = foundTool.get().get().toItemStack();
             is.hurtAndBreak(1, mcExtra.entity(), (x) -> {
             });
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
@@ -192,8 +173,7 @@ public class RealtimeWorldInteraction
             BlockPos position,
             State state
     ) {
-        inputs.work()
-              .setJobBlockState(position, state);
+        inputs.work().setJobBlockState(position, state);
         return true;
     }
 
@@ -203,20 +183,10 @@ public class RealtimeWorldInteraction
             Boolean ts,
             MCHeldItem newItem
     ) {
-        ItemStack stack = newItem.get()
-                                 .toItemStack();
+        ItemStack stack = newItem.get().toItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(stack);
-        Long effectExpiry = EffectMetaItem.getEffectExpiry(
-                stack, Util.getTick(inputs.town()
-                                          .getServerLevel()));
-        inputs.town()
-              .getVillagerHandle()
-              .applyEffect(
-                      effect,
-                      effectExpiry,
-                      inputs.entity()
-                            .getUUID()
-              );
+        Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
+        inputs.town().getVillagerHandle().applyEffect(effect, effectExpiry, inputs.entity().getUUID());
         return null;
     }
 
@@ -226,9 +196,7 @@ public class RealtimeWorldInteraction
             Boolean ts,
             MCHeldItem newItem
     ) {
-        inputs.town()
-              .getKnowledgeHandle()
-              .registerFoundLoots(ImmutableList.of(newItem));
+        inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(newItem));
         return null;
     }
 
@@ -242,8 +210,7 @@ public class RealtimeWorldInteraction
 
     @Override
     protected boolean isMulti(MCTownItem mcTownItem) {
-        return mcTownItem.toItemStack()
-                         .getCount() > 1;
+        return mcTownItem.toItemStack().getCount() > 1;
     }
 
     @Override
@@ -256,8 +223,7 @@ public class RealtimeWorldInteraction
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.town()
-                                           .getServerLevel(), mcHeldItems);
+        return resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
     }
 
     @Override
@@ -266,8 +232,7 @@ public class RealtimeWorldInteraction
             MCHeldItem item,
             BlockPos bp
     ) {
-        return mcExtra.work()
-                      .canInsertItem(item, bp);
+        return mcExtra.work().canInsertItem(item, bp);
     }
 
     @Override
@@ -280,14 +245,9 @@ public class RealtimeWorldInteraction
             MCExtra mcExtra,
             WorkSpot<Integer, BlockPos> workSpot
     ) {
-        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = super.tryWorking(
-                mcExtra,
-                workSpot
-        );
+        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = super.tryWorking(mcExtra, workSpot);
         if (o != null && o.town() != null && o.town()) {
-            playSound(
-                    mcExtra, o.spot()
-                              .interactionSpot());
+            playSound(mcExtra, o.spot().interactionSpot());
             mcExtra.entity().swing(InteractionHand.MAIN_HAND, true);
         }
         return o;
@@ -307,8 +267,7 @@ public class RealtimeWorldInteraction
             this.soundTicksLeft = (sound.duration() == null ? 5 : sound.duration());
         }
         if (Math.max(this.soundTicksLeft--, 0) > 0) {
-            Compat.playNeutralSound(mcExtra.town()
-                                           .getServerLevel(), pos, s);
+            Compat.playNeutralSound(mcExtra.town().getServerLevel(), pos, s);
         }
     }
 
@@ -317,14 +276,12 @@ public class RealtimeWorldInteraction
             MCExtra extra,
             BlockPos position
     ) {
-        return Jobs.isCloseTo(extra.entity()
-                                   .blockPosition(), position);
+        return Jobs.isCloseTo(extra.entity().blockPosition(), position);
     }
 
     @Override
     protected boolean isReady(MCExtra extra) {
-        return extra.town() != null && extra.town()
-                                            .getServerLevel() != null;
+        return extra.town() != null && extra.town().getServerLevel() != null;
     }
 
     @Override
@@ -345,15 +302,20 @@ public class RealtimeWorldInteraction
             MCExtra inputs,
             BlockPos position
     ) {
-        return PreExtractHook.run(
-                didAnything,
-                rules,
-                inputs.town().getServerLevel(),
-                (in, i, s) -> {
-                    inputs.entity().tryGiveItem(i, s);
-                    return in;
-                },
-                position
-        );
+        return PreExtractHook.run(didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
+            inputs.entity().tryGiveItem(i, s);
+            return in;
+        }, position);
+    }
+
+    @Override
+    protected @NotNull Boolean postInsertHook(
+            @NotNull Boolean aBoolean,
+            Collection<String> rules,
+            MCExtra inputs,
+            WorkSpot<Integer, BlockPos> position,
+            MCHeldItem item
+    ) {
+        return PostInsertHook.run(aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toItemStack());
     }
 }

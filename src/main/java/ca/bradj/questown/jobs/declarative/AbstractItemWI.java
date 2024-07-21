@@ -21,7 +21,7 @@ import java.util.function.Function;
 
 public abstract class AbstractItemWI<
         POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN
-        > implements ItemWI<POS, EXTRA, TOWN>, AbstractWorkStatusStore.InsertionRules<ITEM> {
+        > implements ItemWI<POS, EXTRA, TOWN, ITEM>, AbstractWorkStatusStore.InsertionRules<ITEM> {
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
@@ -47,7 +47,7 @@ public abstract class AbstractItemWI<
     }
 
     @Override
-    public TOWN tryInsertIngredients(
+    public InsertResult<TOWN, ITEM> tryInsertIngredients(
             EXTRA extra,
             WorkSpot<Integer, POS> ws
     ) {
@@ -99,6 +99,7 @@ public abstract class AbstractItemWI<
                     (uxtra, tuwn) -> setHeldItem(uxtra, tuwn, villagerIndex, ii, item.shrink())
             );
             if (town != null) {
+                InsertResult<TOWN, ITEM> res = new InsertResult<>(town, item);
                 QT.JOB_LOGGER.debug("Villager removed {} from their inventory {}", name, invBefore);
 
                 itemInsertedListener.forEach(v -> v.accept(extra, bp, item));
@@ -106,11 +107,11 @@ public abstract class AbstractItemWI<
                 Claim claim = claimSpots.apply(extra);
                 if (claim != null) {
                     if (getWorkStatuses(extra).claimSpot(bp, claim)) {
-                        return town;
+                        return res;
                     }
                     return null;
                 } else {
-                    return town;
+                    return res;
                 }
             }
         }

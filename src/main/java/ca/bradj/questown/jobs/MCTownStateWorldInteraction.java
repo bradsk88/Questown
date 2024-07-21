@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.declarative.PostInsertHook;
 import ca.bradj.questown.jobs.declarative.PreExtractHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -36,7 +37,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
+public class MCTownStateWorldInteraction extends
+        AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
     public record Inputs(
             MCTownState town,
@@ -75,7 +77,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected int getAffectedTime(Inputs inputs, Integer nextStepTime) {
+    protected int getAffectedTime(
+            Inputs inputs,
+            Integer nextStepTime
+    ) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
     }
 
@@ -160,6 +165,23 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
+    protected @NotNull MCTownState postInsertHook(
+            @NotNull MCTownState mcTownState,
+            Collection<String> rules,
+            Inputs inputs,
+            WorkSpot<Integer, BlockPos> position,
+            MCHeldItem item
+    ) {
+        return PostInsertHook.run(
+                mcTownState,
+                rules,
+                inputs.level(),
+                position,
+                item.get().toItemStack()
+        );
+    }
+
+    @Override
     protected @Nullable MCTownState preExtractHook(
             MCTownState town,
             Collection<String> rules,
@@ -173,12 +195,21 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState setJobBlockState(@NotNull Inputs inputs, MCTownState ts, BlockPos position, State fresh) {
+    protected MCTownState setJobBlockState(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            BlockPos position,
+            State fresh
+    ) {
         return ts.setJobBlockState(position, fresh);
     }
 
     @Override
-    protected MCTownState withEffectApplied(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+    protected MCTownState withEffectApplied(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            MCHeldItem newItem
+    ) {
         ItemStack s = newItem.get().toItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(s);
         return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(
@@ -187,12 +218,19 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected MCTownState withKnowledge(@NotNull Inputs inputs, MCTownState ts, MCHeldItem newItem) {
+    protected MCTownState withKnowledge(
+            @NotNull Inputs inputs,
+            MCTownState ts,
+            MCHeldItem newItem
+    ) {
         return ts.withKnowledge(newItem);
     }
 
     @Override
-    protected boolean isInstanze(MCTownItem mcTownItem, Class<?> clazz) {
+    protected boolean isInstanze(
+            MCTownItem mcTownItem,
+            Class<?> clazz
+    ) {
         return clazz.isInstance(mcTownItem.get().asItem());
     }
 
@@ -207,7 +245,10 @@ public class MCTownStateWorldInteraction extends AbstractWorldInteraction<MCTown
     }
 
     @Override
-    protected Iterable<MCHeldItem> getResults(Inputs inputs, Collection<MCHeldItem> mcHeldItems) {
+    protected Iterable<MCHeldItem> getResults(
+            Inputs inputs,
+            Collection<MCHeldItem> mcHeldItems
+    ) {
         return resultGenerator.apply(inputs.level, mcHeldItems);
     }
 

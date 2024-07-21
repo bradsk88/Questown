@@ -12,10 +12,23 @@ public interface JobPhaseModifier {
         ) {
             return null;
         }
+
+        @Override
+        public <CONTEXT> @Nullable CONTEXT afterInsertItem(
+                CONTEXT ctxInput,
+                AfterInsertItemEvent event
+        ) {
+            return null;
+        }
     };
 
     <CONTEXT> @Nullable CONTEXT beforeExtract(
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
+    );
+
+    <CONTEXT> @Nullable CONTEXT afterInsertItem(
+            CONTEXT ctxInput,
+            AfterInsertItemEvent event
     );
 }

@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "id": "farmer/plant_wheat",
+  "priority": "2000",
+  "parent": "farmer/harvest_wheat",
+  "icon": "minecraft:wheat_seeds",
+  "initial_request": "minecraft:wheat",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": {
+    "id": "minecraft:wheat",
+    "int_state": "age=7"
+  },
+  "room": "questown:bakery",
+  "work_states": [
+    {
+      "ingredients": "minecraft:wheat_seeds"
+    }
+  ],
+  "cooldown_ticks": 100,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "processing_state",
+      "state": "0",
+      "rules": ["questown:plant_crop"]
+    }
+  ]
+}

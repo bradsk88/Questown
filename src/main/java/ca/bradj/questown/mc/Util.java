@@ -205,4 +205,15 @@ public class Util {
         cur.add(value);
         unsafe.put(key, cur);
     }
+
+    public static <K, V> void putIfAbsent(
+            Map<K, V> qty,
+            K k,
+            V v
+    ) {
+        if (qty.get(k) != null) {
+            return;
+        }
+        qty.put(k, v);
+    }
 }

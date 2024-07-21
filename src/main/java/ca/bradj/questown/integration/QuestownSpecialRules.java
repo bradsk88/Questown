@@ -2,12 +2,13 @@ package ca.bradj.questown.integration;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.special.HarvestCropSpecialRule;
+import ca.bradj.questown.jobs.special.PlantSeedsSpecialRule;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
-public final class IntegrationModEvents {
+public final class QuestownSpecialRules {
 
     @SubscribeEvent()
     public static void register(FMLCommonSetupEvent event) {
@@ -15,6 +16,10 @@ public final class IntegrationModEvents {
         SpecialRules.registerSpecialRule(
                 Questown.ResourceLocation("harvest_crop"),
                 new HarvestCropSpecialRule()
+        );
+        SpecialRules.registerSpecialRule(
+                Questown.ResourceLocation("plant_crop"),
+                new PlantSeedsSpecialRule()
         );
     }
 }
