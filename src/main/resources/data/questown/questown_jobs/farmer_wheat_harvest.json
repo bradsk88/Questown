@@ -13,7 +13,7 @@
     "id": "minecraft:wheat",
     "int_state": "age=7"
   },
-  "room": "questown:bakery",
+  "room": "questown:special_quest.farm",
   "work_states": [
     {
       "tools": "#questown:hoes",

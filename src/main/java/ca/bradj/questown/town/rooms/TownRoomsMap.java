@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,16 +68,19 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         ImmutableMap<Position, Optional<Room>> rooms = LevelRoomDetection.findRooms(
                 registeredDoors, 20, (Position p) -> isFence(level, Positions.ToBlock(p, scanY))
         );
-        List<AbstractMap.SimpleEntry<Position, Optional<MCRoom>>> array = rooms.entrySet()
-                                                                               .stream()
-                                                                               .map(v -> new AbstractMap.SimpleEntry<>(
-                                                                                       v.getKey(), v.getValue()
-                                                                                                    .map(z -> new MCRoom(
-                                                                                                            z.getDoorPos(),
-                                                                                                            z.getSpaces(),
-                                                                                                            scanY
-                                                                                                    ))))
-                                                                               .toList();
+        Function<Room, MCRoom> fn = z -> new MCRoom(
+                z.getDoorPos(),
+                z.getSpaces(),
+                scanY - 1
+        );
+        List<AbstractMap.SimpleEntry<Position, Optional<MCRoom>>> array = rooms
+                .entrySet()
+                .stream()
+                .map(v -> new AbstractMap.SimpleEntry<>(
+                        v.getKey(),
+                        v.getValue().map(fn)
+                ))
+                .toList();
         ImmutableMap<Position, Optional<MCRoom>> mcRooms = ImmutableMap.copyOf(array);
         ars.update(mcRooms);
     }

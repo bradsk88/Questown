@@ -361,7 +361,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMeta();
+        Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMetaAndFarms();
         e.jobHandle.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get());
         e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get()));
 
@@ -997,7 +997,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!isInitialized()) {
             return null;
         }
-        ImmutableList<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMeta();
+        ImmutableList<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
         return pois.getWanderTarget(getServerLevel(), allRooms, (p, r) -> {
             BlockPos pos = Positions.ToBlock(p, r.yCoord);
             double dist = pos.distSqr(avoiding);

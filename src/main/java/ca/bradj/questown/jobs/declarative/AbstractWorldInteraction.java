@@ -385,7 +385,7 @@ public abstract class AbstractWorldInteraction<
             WorkSpot<Integer, POS> position,
             HELD_ITEM item
     ) {
-        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        Collection<String> rules = specialRules.get(ProductionStatus.fromJobBlockStatus(position.action()));
         if (rules == null || rules.isEmpty()) {
             return ctx;
         }

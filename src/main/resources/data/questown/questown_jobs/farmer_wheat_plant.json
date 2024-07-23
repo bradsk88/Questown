@@ -10,10 +10,9 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:wheat",
-    "int_state": "age=7"
+    "id": "minecraft:farmland"
   },
-  "room": "questown:bakery",
+  "room": "questown:special_quest.farm",
   "work_states": [
     {
       "ingredients": "minecraft:wheat_seeds"
@@ -23,7 +22,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["claim_workspot", "include_ground"]
     },
     {
       "type": "processing_state",

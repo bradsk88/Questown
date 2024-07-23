@@ -14,11 +14,15 @@ import net.minecraft.world.level.block.state.BlockState;
 public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> {
     public TownWorkStatusStore() {
         super(
-                (room, pos) -> ImmutableList.of(
-                        new BlockPos(pos.x, room.yCoord, pos.z),
-                        // TODO: See TODO in listAllWorkspots
-                        new BlockPos(pos.x, room.yCoord + 1, pos.z)
-                ),
+                (room, pos) -> {
+                    ImmutableList.Builder<BlockPos> builder = ImmutableList.builder();
+                    builder.add(
+                            new BlockPos(pos.x, room.yCoord, pos.z),
+                            new BlockPos(pos.x, room.yCoord + 1, pos.z),
+                            new BlockPos(pos.x, room.yCoord - 1, pos.z)
+                    );
+                    return builder.build();
+                },
                 LevelReader::isEmptyBlock,
                 (level, pos) -> {
                     BlockState mbs = level.getBlockState(pos);

@@ -542,11 +542,13 @@ public class DeclarativeJob extends
                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
                                                 .stream())
                .forEach(v -> {
-                   tryAdd.accept(Positions.ToBlock(v, jobSite.yCoord));
-                   // TODO: Depend on job and/or villager?
-                   //  E.g. a farmer probably needs to consider yCoord and yCoord MINUS 1 (dirt)
-                   //  E.g. Maybe villagers can only use blocks on the ground until they unlock a perk?
-                   tryAdd.accept(Positions.ToBlock(v, jobSite.yCoord + 1));
+                   BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
+                   tryAdd.accept(pos);
+                   tryAdd.accept(pos.above());
+                   // TODO: Can/should this be registered as an event handler instead?
+                   if (specialGlobalRules.contains(SpecialRules.IncludeGround)) {
+                        tryAdd.accept(pos.below());
+                   }
                });
         if (b.isEmpty()) {
             // TODO: We need an "isJobBlock" AND "isJobBlockReady" predicate

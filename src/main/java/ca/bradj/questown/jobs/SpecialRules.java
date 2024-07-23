@@ -43,4 +43,8 @@ public class SpecialRules {
     // it is time for them to go to bed. If this rule is disabled, villagers will become
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
+
+    // If this rule is enabled, the villager will also scan the ground inside
+    // the job site for job blocks.
+    public static String IncludeGround = "include_ground";
 }

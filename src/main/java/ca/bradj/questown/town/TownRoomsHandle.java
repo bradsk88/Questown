@@ -27,6 +27,7 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,6 +70,17 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         }
         if (SpecialQuests.TOWN_FLAG.equals(recipeId)) {
             return ImmutableList.of(getFlagMetaRoom(t));
+        }
+        if (SpecialQuests.FARM.equals(recipeId)) {
+            return roomsMap.getFarms().stream().map(v -> {
+                Function<BlockPos, BlockState> getBs = bp -> unsafeGetTown().getServerLevel().getBlockState(bp);
+                ImmutableMap<BlockPos, Block> b = RecipeDetection.getBlocksInRoomV2(
+                        bp -> getBs.apply(bp).getBlock(),
+                        new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord - 1),
+                        false
+                );
+                return new RoomRecipeMatch<>(v, recipeId, b.entrySet());
+            }).toList();
         }
 
         return roomsMap.getRoomsMatching(recipeId);
@@ -143,9 +155,10 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         roomsMap.tick(sl, flagPos);
     }
 
-    public ImmutableList<MCRoom> getAllRoomsIncludingMeta() {
+    public ImmutableList<MCRoom> getAllRoomsIncludingMetaAndFarms() {
         ImmutableList.Builder<MCRoom> b = ImmutableList.builder();
         b.addAll(roomsMap.getAllRooms());
+        b.addAll(roomsMap.getFarms());
         assert flagMetaRoom != null;
         b.add(flagMetaRoom);
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
