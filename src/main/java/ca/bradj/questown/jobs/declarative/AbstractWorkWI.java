@@ -4,9 +4,12 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang3.function.TriFunction;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -15,15 +18,18 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
     private final ImmutableMap<Integer, Function<ITEM, Boolean>> toolsRequiredAtStates;
+    private final BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback;
 
     public AbstractWorkWI(
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             BiFunction<EXTRA, Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<Integer, @NotNull Function<ITEM, Boolean>> toolsRequiredAtStates
+            ImmutableMap<Integer, @NotNull Function<ITEM, Boolean>> toolsRequiredAtStates,
+            BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback
     ) {
         this.workRequiredAtStates = workRequiredAtStates;
         this.timeRequiredAtStates = timeRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
+        this.preStateChangeCallback = preStateChangeCallback;
     }
 
     public TOWN tryWork(
@@ -61,8 +67,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             int nextStepWork,
             int nextStepTime
     ) {
-        ImmutableWorkStateContainer<POS, TOWN> sl = getWorkStatuses(extra);
-        State oldState = sl.getJobBlockState(bp);
+        State oldState = getJobBlockState(extra, bp);
         if (oldState == null) {
             oldState = initForState(curState);
         }
@@ -70,15 +75,24 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         if (oldState.workLeft() > 0 && oldState.equals(bs)) {
             return null;
         }
+
+
         if (bs.workLeft() == 0) {
+            this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }
         if (nextStepTime <= 0) {
-            return sl.setJobBlockState(bp, bs);
+            return setJobBlockState(extra, bp, bs);
         } else {
-            return sl.setJobBlockStateWithTimer(bp, bs, nextStepTime);
+            return setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
         }
     }
+
+    protected abstract TOWN setJobBlockStateWithTimer(EXTRA extra, POS bp, State bs, int nextStepTime);
+
+    protected abstract TOWN setJobBlockState(EXTRA extra, POS bp, State bs);
+
+    protected abstract State getJobBlockState(EXTRA extra, POS bp);
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
@@ -89,9 +103,4 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
         return State.fresh().setWorkLeft(work).setProcessing(curState);
     }
-
-    protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(
-            EXTRA extra
-    );
 }
-

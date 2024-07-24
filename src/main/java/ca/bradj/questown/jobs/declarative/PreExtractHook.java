@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.InventoryFullStrategy;
-import ca.bradj.questown.integration.SpecialRules;
+import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -25,7 +25,7 @@ public class PreExtractHook {
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
             BlockPos position
     ) {
-        ImmutableList<JobPhaseModifier> appliers = SpecialRules.getRuleAppliers(rules);
+        ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         ItemAcceptor<TOWN> itemAcceptor = new ItemAcceptor<>() {
 
             @Override

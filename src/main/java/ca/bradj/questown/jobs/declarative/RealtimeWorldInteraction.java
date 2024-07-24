@@ -1,10 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.blocks.InsertedItemAware;
-import ca.bradj.questown.integration.SpecialRules;
-import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
-import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -14,7 +10,6 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.ItemAcceptor;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -317,5 +312,15 @@ public class RealtimeWorldInteraction extends
             MCHeldItem item
     ) {
         return PostInsertHook.run(aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toItemStack());
+    }
+
+    @Override
+    protected void preStateChangeHooks(
+            @NotNull Boolean ctx,
+            Collection<String> rules,
+            MCExtra inputs,
+            WorkSpot<Integer, BlockPos> position
+    ) {
+        PreStateChangeHook.run(rules, inputs.town().getServerLevel(), position);
     }
 }

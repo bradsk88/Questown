@@ -117,7 +117,8 @@ public abstract class AbstractWorldInteraction<
         this.workWI = new AbstractWorkWI<>(
                 workRequiredAtStates,
                 (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
-                toolsRequiredAtStates
+                toolsRequiredAtStates,
+                this::preStateChangeHooks
         ) {
             @Override
             protected TOWN degradeTool(
@@ -129,15 +130,23 @@ public abstract class AbstractWorldInteraction<
             }
 
             @Override
-            protected int getWorkSpeedOf10(EXTRA extra) {
-                return self.getWorkSpeedOf10(extra);
+            protected TOWN setJobBlockStateWithTimer(EXTRA extra, POS bp, State bs, int nextStepTime) {
+                return getWorkStatuses(extra).setJobBlockStateWithTimer(bp, bs, nextStepTime);
             }
 
             @Override
-            protected ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(
-                    EXTRA extra
-            ) {
-                return self.getWorkStatuses(extra);
+            protected TOWN setJobBlockState(EXTRA extra, POS bp, State bs) {
+                return getWorkStatuses(extra).setJobBlockState(bp, bs);
+            }
+
+            @Override
+            protected State getJobBlockState(EXTRA extra, POS bp) {
+                return self.getWorkStatuses(extra).getJobBlockState(bp);
+            }
+
+            @Override
+            protected int getWorkSpeedOf10(EXTRA extra) {
+                return self.getWorkSpeedOf10(extra);
             }
         };
         this.claimSpots = claimSpots;
@@ -378,6 +387,24 @@ public abstract class AbstractWorldInteraction<
         }
         return null;
     }
+
+    private void preStateChangeHooks(
+            EXTRA inputs,
+            WorkSpot<Integer, POS> position
+    ) {
+        Collection<String> rules = specialRules.get(ProductionStatus.fromJobBlockStatus(position.action()));
+        if (rules == null || rules.isEmpty()) {
+            return;
+        }
+        preStateChangeHooks(getTown(inputs), rules, inputs, position);
+    }
+
+    protected abstract void preStateChangeHooks(
+            @NotNull TOWN ctx,
+            Collection<String> rules,
+            EXTRA inputs,
+            WorkSpot<Integer, POS> position
+    );
 
     private @NotNull TOWN postInsertHook(
             @NotNull TOWN ctx,

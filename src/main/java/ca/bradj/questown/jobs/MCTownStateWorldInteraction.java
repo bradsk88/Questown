@@ -8,6 +8,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.PostInsertHook;
 import ca.bradj.questown.jobs.declarative.PreExtractHook;
+import ca.bradj.questown.jobs.declarative.PreStateChangeHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
@@ -162,6 +163,11 @@ public class MCTownStateWorldInteraction extends
             int villagerIndex
     ) {
         return ProductionTimeWarper.getHeldItems(mcTownState.town(), villagerIndex);
+    }
+
+    @Override
+    protected void preStateChangeHooks(@NotNull MCTownState ctx, Collection<String> rules, Inputs inputs, WorkSpot<Integer, BlockPos> position) {
+        PreStateChangeHook.run(rules, inputs.level(), position);
     }
 
     @Override

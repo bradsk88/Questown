@@ -1,29 +1,29 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.SpecialRulesRegistry;
-import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
+import ca.bradj.questown.integration.jobs.BeforeStateChangeEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.jobs.WorkSpot;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
-public class PostInsertHook {
+public class PreStateChangeHook {
 
-    public static <TOWN> TOWN run(
-            TOWN town,
+    public static void run(
             Collection<String> rules,
             ServerLevel level,
-            WorkSpot<Integer, BlockPos> position,
-            ItemStack item
+            WorkSpot<Integer, BlockPos> position
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        AfterInsertItemEvent bxEvent = new AfterInsertItemEvent(level, item, position);
-        return processMulti(town, appliers, (o, a) -> a.afterInsertItem(o, bxEvent));
+        BeforeStateChangeEvent bxEvent = new BeforeStateChangeEvent(level, position);
+        processMulti(false, appliers, (o, a) -> {
+            a.beforeStateChange(bxEvent);
+            return true;
+        });
     }
 }

@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.special;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.BeforeStateChangeEvent;
@@ -9,21 +8,23 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
-public class PlantSeedsSpecialRule implements
+public class TillWorkspotSpecialRule implements
         JobPhaseModifier {
     @Override
     public <X> X beforeExtract(
             X context,
             BeforeExtractEvent<X> event
     ) {
-        return null;
+        return context;
     }
 
     @Override
@@ -31,28 +32,43 @@ public class PlantSeedsSpecialRule implements
             CONTEXT ctxInput,
             AfterInsertItemEvent event
     ) {
-        BlockPos groundPos = event.workSpot().position();
-        ServerLevel level = event.level();
-
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
-        InteractionResult result = Items.WHEAT_SEEDS.useOn(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                Items.WHEAT_SEEDS.getDefaultInstance(), bhr
-        ));
-        if (!result.consumesAction()) {
-            QT.JOB_LOGGER.error(
-                    "Failed to plant seed {} at {}",
-                    event.inserted(), groundPos
-            );
-        }
         return null;
     }
 
     @Override
     public Void beforeStateChange(BeforeStateChangeEvent event) {
+        ServerLevel level = event.level();
+        BlockPos groundPos = event.workSpot().position();
+        BlockState bs = getTilledState(level, groundPos);
+        if (bs == null) return null;
+        level.setBlockAndUpdate(groundPos, bs);
+        return null;
+    }
+
+
+    @Nullable
+    public static BlockState getTilledState(
+            ServerLevel level,
+            BlockPos groundPos
+    ) {
+        BlockState bs = level.getBlockState(groundPos);
+        BlockHitResult bhr = new BlockHitResult(
+                Vec3.atCenterOf(groundPos), Direction.UP,
+                groundPos, false
+        );
+        bs = bs.getToolModifiedState(new UseOnContext(
+                level, null, InteractionHand.MAIN_HAND,
+                // TODO: Determine tool from held item
+                Items.WOODEN_HOE.getDefaultInstance(), bhr
+        ), ToolActions.HOE_TILL, false);
+
+        if (bs != null) {
+            BlockState moistened = bs.setValue(FarmBlock.MOISTURE, 2);
+            if (!moistened.equals(bs)) {
+                return moistened;
+            }
+        }
+
         return null;
     }
 }

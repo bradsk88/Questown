@@ -4,6 +4,7 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
+import ca.bradj.questown.integration.jobs.BeforeStateChangeEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mc.Compat;
@@ -57,6 +58,11 @@ public class HarvestCropSpecialRule implements
             CONTEXT ctxInput,
             AfterInsertItemEvent event
     ) {
+        return null;
+    }
+
+    @Override
+    public Void beforeStateChange(BeforeStateChangeEvent event) {
         return null;
     }
 }

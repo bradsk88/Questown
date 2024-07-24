@@ -10,7 +10,6 @@ public final class IntegrationForgeEvents {
 
     @SubscribeEvent()
     public static void register(ServerAboutToStartEvent event) {
-        SpecialRules.finalizeForServer();
+        SpecialRulesRegistry.finalizeForServer();
     }
 }
-

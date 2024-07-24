@@ -10,10 +10,14 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:farmland"
+    "id": "minecraft:dirt"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
+    {
+      "tool": "#questown:hoes",
+      "work": "2"
+    },
     {
       "ingredients": "minecraft:wheat_seeds"
     }
@@ -27,6 +31,11 @@
     {
       "type": "processing_state",
       "state": "0",
+      "rules": ["questown:till_workspot"]
+    }
+    {
+      "type": "processing_state",
+      "state": "1",
       "rules": ["questown:plant_crop"]
     }
   ]

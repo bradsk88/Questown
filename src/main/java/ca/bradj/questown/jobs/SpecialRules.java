@@ -44,6 +44,20 @@ public class SpecialRules {
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
+    // If this rule is enabled for a processing state where an item is used and
+    // the workspot is farmland, the item will be planted in the block - if possible.
+    public static final String PLANT_CROP = "plant_crop";
+
+    // If this rule is enabled for the "extract product" step and the workspot
+    // is a full grown crop, the crop will be harvested (using its loot table)
+    // and replaced with an age=0 version of the same crop.
+    public static final String HARVEST_CROP = "harvest_crop";
+
+    // If this rule is enabled for a processing state and the workspot is a
+    // tillable block, then the block will be tilled before moving to the next
+    // processing state.
+    public static final String TILL_WORKSPOT = "till_workspot";
+
     // If this rule is enabled, the villager will also scan the ground inside
     // the job site for job blocks.
     public static String IncludeGround = "include_ground";

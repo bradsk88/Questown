@@ -10,13 +10,13 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Collection;
 import java.util.List;
 
-public class SpecialRules {
+public class SpecialRulesRegistry {
 
     private static ImmutableMap.Builder<ResourceLocation, JobPhaseModifier> registry = ImmutableMap.builder();
     private static ImmutableMap<ResourceLocation, JobPhaseModifier> listeners = ImmutableMap.of();
 
     public static void finalizeForServer() {
-        SpecialRules.listeners = SpecialRules.registry.build();
+        SpecialRulesRegistry.listeners = SpecialRulesRegistry.registry.build();
     }
 
     public static void registerSpecialRule(
