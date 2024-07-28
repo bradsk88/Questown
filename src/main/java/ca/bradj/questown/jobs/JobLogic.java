@@ -127,7 +127,7 @@ public class JobLogic<EXTRA, POS> {
             return;
         }
 
-        if (isEntityInJobSite) {
+        if (isEntityInJobSite && computeState.get().isWorkingOnProduction()) {
             doTryWorking(extra, maxState, computeState, isSeekingWork, world);
         }
 
@@ -149,7 +149,7 @@ public class JobLogic<EXTRA, POS> {
             setWorkSpot(null);
             return new WithReason<>(null, "non-work status");
         }
-        Collection<WorkSpot<Integer, POS>> allSpots = workSpots.get(maxState);
+        Collection<WorkSpot<Integer, POS>> allSpots = null;
 
         if (status.isExtractingProduct()) {
             allSpots = workSpots.get(maxState);

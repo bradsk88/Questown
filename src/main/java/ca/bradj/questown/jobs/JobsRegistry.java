@@ -24,6 +24,7 @@ import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -45,15 +46,16 @@ public class JobsRegistry {
     private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
-    public static boolean isJobBlock(BlockState bs) {
-        if (bs.isAir()) {
+    public static boolean isJobBlock(Function<BlockPos, BlockState> sl, BlockPos bp) {
+        if (sl.apply(bp).isAir()) {
             return false;
         }
+        BlockState bs = sl.apply(bp);
         Block b = bs.getBlock();
         if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
             return true;
         }
-        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(bs));
+        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(sl, bp));
         // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
             return true;

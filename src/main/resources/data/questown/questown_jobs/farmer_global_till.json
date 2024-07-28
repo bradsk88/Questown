@@ -1,33 +1,34 @@
 {
   "version": 2,
-  "id": "farmer/plant_wheat",
+  "id": "farmer/till",
   "priority": "2000",
   "parent": "farmer/harvest_wheat",
-  "icon": "minecraft:wheat_seeds",
+  "icon": "minecraft:wooden_hoe",
   "initial_request": "minecraft:wheat",
   "result": {
     "type": "item",
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:farmland"
+    "id": "#questown:tillables"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
     {
-      "ingredients": "minecraft:wheat_seeds"
+      "tools": "#questown:hoes",
+      "work": "2"
     }
   ],
   "cooldown_ticks": 100,
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["require_air_above"]
     },
     {
       "type": "processing_state",
       "state": "0",
-      "rules": ["questown:plant_crop"]
+      "rules": ["questown:till_workspot"]
     }
   ]
 }

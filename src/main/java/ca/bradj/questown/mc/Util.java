@@ -62,9 +62,25 @@ public class Util {
             K key,
             Collection<X> fallback
     ) {
+        return getOrDefaultCollection(map, key, fallback, false);
+    }
+
+    /**
+     * @deprecated Use other signature of getOrDefaultCollection so contract of
+     * mutability is obvious.
+     */
+    public static <K, X> Collection<X> getOrDefaultCollection(
+            Map<K, ? extends Collection<? extends X>> map,
+            K key,
+            Collection<X> fallback,
+            boolean mutable
+    ) {
         Collection<? extends X> x = map.get(key);
         if (x == null) {
             return fallback;
+        }
+        if (mutable) {
+            return new ArrayList<>(x);
         }
         ImmutableList.Builder<X> b = ImmutableList.builder();
         x.forEach(b::add);
@@ -201,7 +217,7 @@ public class Util {
             Y value
     ) {
         Map unsafe = map;
-        Collection cur = Util.getOrDefaultCollection(map, key, (Collection) new ArrayList<>());
+        Collection cur = Util.getOrDefaultCollection(map, key, (Collection) new ArrayList<>(), true);
         cur.add(value);
         unsafe.put(key, cur);
     }

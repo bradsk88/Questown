@@ -4,6 +4,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.town.Warper;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -12,8 +13,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 public record Work(
         JobID id,
@@ -21,7 +22,7 @@ public record Work(
         ItemStack icon,
         WorksBehaviour.JobFunc jobFunc,
         WorksBehaviour.SnapshotFunc snapshotFunc,
-        Predicate<BlockState> isJobBlock,
+        BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock,
         ResourceLocation baseRoom,
         IStatus<?> initialStatus,
         Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,

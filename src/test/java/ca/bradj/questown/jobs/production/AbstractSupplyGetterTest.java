@@ -69,7 +69,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                roomsNeedingIngOrTool,
+                () -> roomsNeedingIngOrTool,
                 suppliesTarget,
                 (state) -> ImmutableList.of(recipe.get(state)),
                 ImmutableList.of(
@@ -133,7 +133,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                roomsNeedingIngOrTool,
+                () -> roomsNeedingIngOrTool,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(
@@ -196,7 +196,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                roomsNeedingIngOrTool,
+                () -> roomsNeedingIngOrTool,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(
@@ -213,7 +213,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                roomsNeedingIngOrTool,
+                () -> roomsNeedingIngOrTool,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(

@@ -77,7 +77,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
 
 
-        if (bs.workLeft() == 0) {
+        if (bs.workLeftV2() == 0f) {
             this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }

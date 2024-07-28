@@ -12,6 +12,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -74,7 +75,8 @@ public class TestWorldInteraction extends
                 ingredientsRequiredAtStates,
                 ingredientQuantityRequiredAtStates,
                 timeRequiredAtStates,
-                (v) -> claim.get()
+                (v) -> claim.get(),
+                ImmutableMap.of()
         );
         this.workStatuses = workStatuses;
         this.inventory = inventory;
@@ -114,6 +116,21 @@ public class TestWorldInteraction extends
     ) {
         extracted = true;
         return super.tryExtractProduct(unused, position);
+    }
+
+    @Override
+    protected void preStateChangeHooks(@NotNull Boolean ctx, Collection<String> rules, Void inputs, WorkSpot<Integer, Position> position) {
+
+    }
+
+    @Override
+    protected @Nullable Boolean postInsertHook(@NotNull Boolean aBoolean, Collection<String> rules, Void inputs, WorkSpot<Integer, Position> position, GathererJournalTest.TestItem item) {
+        return null;
+    }
+
+    @Override
+    protected @Nullable Boolean preExtractHook(Boolean aBoolean, Collection<String> rules, Void inputs, Position position) {
+        return null;
     }
 
     @Override

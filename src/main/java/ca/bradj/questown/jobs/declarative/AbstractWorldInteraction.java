@@ -323,10 +323,11 @@ public abstract class AbstractWorldInteraction<
             if (o != null) {
                 TOWN ctx = o.contextAfterInsert();
                 HELD_ITEM item = o.itemBeforeInsert();
-                TOWN out = postInsertHook(ctx, extra, workSpot, item);
+                @Nullable TOWN out = postInsertHook(ctx, extra, workSpot, item);
+                if (out == null) {
+                    out = ctx;
+                }
                 return new WorkOutput<>(true, out, workSpot);
-            } else {
-                return vNull;
             }
         }
 
@@ -406,7 +407,7 @@ public abstract class AbstractWorldInteraction<
             WorkSpot<Integer, POS> position
     );
 
-    private @NotNull TOWN postInsertHook(
+    private @Nullable TOWN postInsertHook(
             @NotNull TOWN ctx,
             EXTRA inputs,
             WorkSpot<Integer, POS> position,
@@ -419,7 +420,7 @@ public abstract class AbstractWorldInteraction<
         return postInsertHook(getTown(inputs), rules, inputs, position, item);
     }
 
-    protected abstract @NotNull TOWN postInsertHook(
+    protected abstract @Nullable TOWN postInsertHook(
             @NotNull TOWN town,
             Collection<String> rules,
             EXTRA inputs,

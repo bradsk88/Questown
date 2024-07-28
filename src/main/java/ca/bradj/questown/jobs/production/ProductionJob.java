@@ -70,6 +70,8 @@ public abstract class ProductionJob<
     protected final RecipeProvider recipe;
 
     protected final UUID ownerUUID;
+
+    // FIXME: Stop using this - use a cached supplier instead
     private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
@@ -85,7 +87,7 @@ public abstract class ProductionJob<
                     town.getRoomHandle(),
                     getWorkStatusHandle(town)::getJobBlockState,
                     sl::isEmptyBlock,
-                    bp -> location.isJobBlock().test(sl.getBlockState(bp)),
+                    bp -> location.isJobBlock().test(sl::getBlockState, bp),
                     sl.getRandom()
             );
             this.jobSite = js.value();
@@ -323,11 +325,13 @@ public abstract class ProductionJob<
             Direction facingPos
     ) {
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
-        this.roomsNeedingIngredientsOrTools = roomsNeedingIngredientsOrTools(
+        Supplier<Map<Integer, Collection<MCRoom>>> rniot = () -> roomsNeedingIngredientsOrTools(
                 town, work::getJobBlockState, (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
         );
 
-        this.tick(town, work, entity, facingPos, roomsNeedingIngredientsOrTools, statusFactory);
+        this.roomsNeedingIngredientsOrTools = rniot.get();
+
+        this.tick(town, work, entity, facingPos, rniot, statusFactory);
     }
 
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
@@ -345,7 +349,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 

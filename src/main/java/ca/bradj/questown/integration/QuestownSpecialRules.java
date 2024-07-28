@@ -8,7 +8,7 @@ import ca.bradj.questown.jobs.special.TillWorkspotSpecialRule;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-l
+
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class QuestownSpecialRules {
 

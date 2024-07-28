@@ -12,13 +12,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>, ROOM extends Room> {
 
     public void tryGetSupplies(
             STATUS status,
             int upToAmount,
-            Map<Integer, Collection<ROOM>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, Collection<ROOM>>> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<JobsClean.TestFn<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
@@ -28,7 +29,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             return;
         }
 
-        Optional<Integer> first = roomsNeedingIngredientsOrTools.entrySet()
+        Optional<Integer> first = roomsNeedingIngredientsOrTools.get().entrySet()
                 .stream()
                 .filter(v -> !v.getValue().isEmpty())
                 .map(Map.Entry::getKey)

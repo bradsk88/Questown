@@ -10,12 +10,16 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK;

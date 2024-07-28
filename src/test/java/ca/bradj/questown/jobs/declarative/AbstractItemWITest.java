@@ -398,9 +398,9 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        TestTownState res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
+        InsertResult<TestTownState, GathererJournalTest.TestItem> res = wi.tryInsertIngredients(null, new WorkSpot<>(arbitraryPosition, 0, 0, new Position(0, 1)));
         Assertions.assertNotNull(res);
-        Assertions.assertTrue(res.updatedHeldItems);
+        Assertions.assertTrue(res.contextAfterInsert().updatedHeldItems);
     }
 
     @Test

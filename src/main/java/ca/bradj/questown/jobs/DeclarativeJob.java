@@ -43,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.Stream;
 
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends
@@ -261,7 +262,8 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            // Change this to a supplier whose value is cached for one tick
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
@@ -298,7 +300,7 @@ public class DeclarativeJob extends
 
             @Override
             public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
-                return roomsNeedingIngredientsOrTools;
+                return roomsNeedingIngredientsOrTools.get();
             }
 
             @Override
@@ -383,7 +385,7 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
             RoomRecipeMatch<MCRoom> entityCurrentJobSite,
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools
     ) {
         DeclarativeJob self = this;
         return new JobLogic.JLWorld<>() {
@@ -403,7 +405,7 @@ public class DeclarativeJob extends
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
                         sl::isEmptyBlock,
-                        bp -> location.isJobBlock().test(sl.getBlockState(bp)),
+                        bp -> location.isJobBlock().test(sl::getBlockState, bp),
                         () -> Direction.getRandom(sl.random)
                 );
             }
@@ -482,7 +484,7 @@ public class DeclarativeJob extends
     }
 
     private void tryGetSupplies(
-            Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos
     ) {
         if (suppliesTarget == null) {
@@ -545,10 +547,6 @@ public class DeclarativeJob extends
                    BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
                    tryAdd.accept(pos);
                    tryAdd.accept(pos.above());
-                   // TODO: Can/should this be registered as an event handler instead?
-                   if (specialGlobalRules.contains(SpecialRules.IncludeGround)) {
-                        tryAdd.accept(pos.below());
-                   }
                });
         if (b.isEmpty()) {
             // TODO: We need an "isJobBlock" AND "isJobBlockReady" predicate
@@ -751,7 +749,9 @@ public class DeclarativeJob extends
                     town, location.baseRoom(),
                     (sl, bp) -> state.equals(JobBlock.getState(work, bp))
             );
-            List<MCRoom> roomz = matches.stream()
+
+            Integer stateQty = ingredientQtyRequiredAtStates.get(state);
+            Stream<MCRoom> roomz = matches.stream()
                                         .filter(room -> {
                                             for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
                                                                                     .entrySet()) {
@@ -762,16 +762,14 @@ public class DeclarativeJob extends
                                                 if (!canClaim.test(e.getKey())) {
                                                     continue;
                                                 }
-                                                if (jobBlockState.ingredientCount() < ingredientQtyRequiredAtStates.get(
-                                                        state)) {
+                                                if (jobBlockState.ingredientCount() < stateQty) {
                                                     return true;
                                                 }
                                             }
                                             return false;
                                         })
-                                        .map(v -> v.room)
-                                        .toList();
-            b.put(state, Lists.newArrayList(roomz));
+                                        .map(v -> v.room);
+            b.put(state, Lists.newArrayList(roomz.toList()));
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values()

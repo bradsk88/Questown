@@ -18,7 +18,8 @@
       "quantity": 2
     },
     {
-      "tools": "#minecraft:coals"
+      "ingredients": "#minecraft:coals",
+      "quantity": 1
     },
     {
       "time": 1000

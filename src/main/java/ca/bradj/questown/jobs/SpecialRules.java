@@ -58,7 +58,7 @@ public class SpecialRules {
     // processing state.
     public static final String TILL_WORKSPOT = "till_workspot";
 
-    // If this rule is enabled, the villager will also scan the ground inside
-    // the job site for job blocks.
-    public static String IncludeGround = "include_ground";
+    // If this rule is active (globally) then blocks will only be considered
+    // valid for use as workspots if they have empty air above them.
+    public static final String REQUIRE_AIR_ABOVE = "require_air_above";
 }

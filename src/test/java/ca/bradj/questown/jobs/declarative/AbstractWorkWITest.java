@@ -3,19 +3,19 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 class AbstractWorkWITest {
 
@@ -26,9 +26,10 @@ class AbstractWorkWITest {
         public TestWorkWI(
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates
+                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+                BiConsumer<Void, WorkSpot<Integer, Position>> scCallback
         ) {
-            super(workRequiredAtStates, (x, s) -> Util.getOrDefault(timeRequiredAtStates, s, 0), toolsRequiredAtStates);
+            super(workRequiredAtStates, (x, s) -> Util.getOrDefault(timeRequiredAtStates, s, 0), toolsRequiredAtStates, scCallback);
         }
 
         @Override
@@ -37,63 +38,27 @@ class AbstractWorkWITest {
         }
 
         @Override
+        protected Void setJobBlockStateWithTimer(Void unused, Position bp, State bs, int nextStepTime) {
+            state.put(bp, bs);
+            throw new UnsupportedOperationException("Timers not supported by this test suite");
+        }
+
+        @Override
+        protected Void setJobBlockState(Void unused, Position bp, State bs) {
+            state.put(bp, bs);
+            return null;
+        }
+
+        @Override
+        protected State getJobBlockState(Void unused, Position bp) {
+            return state.get(bp);
+        }
+
+        @Override
         protected int getWorkSpeedOf10(Void unused) {
             return 10;
         }
 
-        @Override
-        protected ImmutableWorkStateContainer<Position, Void> getWorkStatuses(Void unused) {
-            return new ImmutableWorkStateContainer<Position, Void>() {
-                @Override
-                public @Nullable State getJobBlockState(Position bp) {
-                    return state.get(bp);
-                }
-
-                @Override
-                public ImmutableMap<Position, State> getAll() {
-                    return ImmutableMap.copyOf(state);
-                }
-
-                @Override
-                public Void setJobBlockState(Position bp, State bs) {
-                    state.put(bp, bs);
-                    return null;
-                }
-
-                @Override
-                public Void setJobBlockStateWithTimer(Position bp, State bs, int ticksToNextState) {
-                    state.put(bp, bs);
-                    throw new UnsupportedOperationException("Timers not supported by this test suite");
-                }
-
-                @Override
-                public Void clearState(Position bp) {
-                    state.clear();
-                    return null;
-                }
-
-                @Override
-                public boolean claimSpot(
-                        Position bp,
-                        Claim claim
-                ) {
-                    return true;
-                }
-
-                @Override
-                public void clearClaim(Position position) {
-
-                }
-
-                @Override
-                public boolean canClaim(
-                        Position position,
-                        Supplier<Claim> makeClaim
-                ) {
-                    return true;
-                }
-            };
-        }
     }
 
     @Test
@@ -103,7 +68,8 @@ class AbstractWorkWITest {
                         1, 2
                 ),
                 ImmutableMap.of(),
-                ImmutableMap.of()
+                ImmutableMap.of(),
+                (a, b) -> {}
         );
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
@@ -125,6 +91,44 @@ class AbstractWorkWITest {
     }
 
     @Test
+    void tryWork_shouldCallStateChangeListener_AfterWorkDone() {
+        ArrayList<WorkSpot<Integer, Position>> calledBack = new ArrayList<>();
+        TestWorkWI wi = new TestWorkWI(
+                ImmutableMap.of(
+                        1, 2
+                ),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                (a, b) -> calledBack.add(b));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 1, 1, new Position(0, 1)));
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new WorkSpot<>(new Position(0, 0), 0, 0, new Position(0, 0)),
+                new WorkSpot<>(new Position(0, 0), 1, 0, new Position(0, 0))
+        ), calledBack);
+    }
+
+    @Test
+    void tryWork_shouldNotCallStateChangeListener_IfFractionalWorkLeft() {
+        ArrayList<WorkSpot<Integer, Position>> calledBack = new ArrayList<>();
+        TestWorkWI wi = new TestWorkWI(
+                ImmutableMap.of(
+                        0, 1
+                ),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                (a, b) -> calledBack.add(b)) {
+            @Override
+            protected int getWorkSpeedOf10(Void unused) {
+                return 5; // Makes work degrade in steps less than integer
+            }
+        };
+        wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
+        Assertions.assertEquals(0, calledBack.size());
+    }
+
+    @Test
     void tryWork_shouldMoveToNextState_AfterToolPresented() {
         TestWorkWI wi = new TestWorkWI(
                 ImmutableMap.of(),
@@ -132,8 +136,8 @@ class AbstractWorkWITest {
                 ImmutableMap.of(
                         1, (GathererJournalTest.TestItem t) -> true,
                         2, (GathererJournalTest.TestItem t) -> true
-                )
-        );
+                ),
+                (a, b) -> {});
         wi.tryWork(null, new WorkSpot<>(new Position(0, 0), 0, 1, new Position(0, 1)));
         Assertions.assertEquals(
                 State.freshAtState(1),

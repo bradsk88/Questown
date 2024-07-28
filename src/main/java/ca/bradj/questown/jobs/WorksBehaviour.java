@@ -14,6 +14,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -29,14 +30,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 public class WorksBehaviour {
     private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
-    static final Predicate<BlockState> NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (block) -> false;
+    static final BiPredicate NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (sl, bp) -> false;
     private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static Warper<ServerLevel, MCTownState> productionWarper(

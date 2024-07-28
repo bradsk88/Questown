@@ -1,7 +1,5 @@
 package ca.bradj.questown.town.workstatus;
 
-import ca.bradj.questown.town.AbstractWorkStatusStore;
-
 import java.util.Objects;
 
 public class State {
@@ -88,8 +86,15 @@ public class State {
         return processingState;
     }
 
+    /**
+     * @deprecated Use workLeftV2
+     */
     public int workLeft() {
-        return (int) (0.1f * workLeft);
+        return (int) Math.ceil(0.1f * workLeft);
+    }
+
+    public int workLeftV2() {
+        return workLeft;
     }
 
     public int ingredientCount() {

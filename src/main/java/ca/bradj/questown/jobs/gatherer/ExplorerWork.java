@@ -121,7 +121,7 @@ public class ExplorerWork {
                 GathererUnmappedNoToolWorkQtrDay.ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
-                        block -> block.getBlock() instanceof WelcomeMatBlock,
+                        WorkLocation.isBlock(WelcomeMatBlock.class),
                         JOB_SITE
                 ),
                 new WorkStates(

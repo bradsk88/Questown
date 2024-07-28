@@ -37,7 +37,7 @@ public class BlacksmithWoodenPickaxeJob {
                         toItemStack(DEFINITION.result())
                 ),
                 new WorkLocation(
-                        (block) -> block.getBlock() instanceof BlacksmithsTableBlock,
+                        WorkLocation.isBlock(BlacksmithsTableBlock.class),
                         Questown.ResourceLocation("smithy")
                 ),
                 new WorkStates(

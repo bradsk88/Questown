@@ -14,6 +14,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -35,10 +36,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 public class ResourceJobLoader {
 
@@ -105,9 +103,9 @@ public class ResourceJobLoader {
             Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
             if (initReq == null) {
                 throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
-                                                                                                   .getAsString());
+                        .getAsString());
             }
-            Predicate<BlockState> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
+            BiPredicate<Function<BlockPos,BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block").getAsString());
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
             return WorksBehaviour.productionWork(
@@ -131,9 +129,14 @@ public class ResourceJobLoader {
             Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
             if (initReq == null) {
                 throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
-                                                                                                   .getAsString());
+                        .getAsString());
             }
-            Predicate<BlockState> isJobBlock = ResourceJobLoader.isJobBlockV2(object.getAsJsonObject("block"));
+            WorkSpecialRules special = loadRulesV1(object);
+            boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
+            BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlockV2(
+                    object.getAsJsonObject("block"),
+                    requireAirAbove
+            );
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
             return WorksBehaviour.productionWork(
@@ -144,7 +147,7 @@ public class ResourceJobLoader {
                     new WorkLocation(isJobBlock, required(object, "room")),
                     ResourceJobLoader.workStates(object),
                     wwi,
-                    loadRulesV1(object),
+                    special,
                     loadSoundV1(object)
             ).withPriority(requiredInt(object, "priority"));
         }
@@ -235,9 +238,9 @@ public class ResourceJobLoader {
                 String name = required(rowObj, "state", JsonElement::getAsString);
                 ImmutableSet<ProductionStatus> all = ProductionStatus.allStatuses();
                 ProductionStatus productionStatus = all.stream()
-                                                       .filter(v -> v.name.equals(name))
-                                                       .findFirst()
-                                                       .orElseThrow(() -> new NotValidCoreStatus(name, all));
+                        .filter(v -> v.name.equals(name))
+                        .findFirst()
+                        .orElseThrow(() -> new NotValidCoreStatus(name, all));
                 Util.addOrInitialize(writeableStages, productionStatus, rule.getAsString());
                 break;
             }
@@ -254,7 +257,7 @@ public class ResourceJobLoader {
         return (l, i) -> {
             if (resultItem == null) {
                 throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
-                                                                                          .getAsString());
+                        .getAsString());
             }
             ItemStack s = resultItem.getDefaultInstance();
             int qty = 1;
@@ -333,30 +336,36 @@ public class ResourceJobLoader {
         );
     }
 
-    private static Predicate<BlockState> isJobBlock(String block) {
+    private static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock(String block) {
         Ingredient ing = getIngredient(block);
-        return b -> ing.test(b.getBlock().asItem().getDefaultInstance());
+        return (sl, bp) -> ing.test(sl.apply(bp).getBlock().asItem().getDefaultInstance());
     }
 
-    private static Predicate<BlockState> isJobBlockV2(JsonObject block) {
+    private static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlockV2(JsonObject block, boolean requireAirAbove) {
         Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
         @Nullable String state = optional(block, "int_state", JsonElement::getAsString);
         if (state != null) {
             String name = state.split("=")[0];
             Integer value = Integer.parseInt(state.split("=")[1]);
-            return b -> {
+            return (sl, bp) -> {
+                if (requireAirAbove) {
+                    if (!sl.apply(bp.above()).isAir()) {
+                        return false;
+                    }
+                }
+                BlockState b = sl.apply(bp);
                 if (!baseTest.test(b)) {
                     return false;
                 }
                 Integer foundValue = b.getValues().entrySet().stream()
-                                      .filter(v -> v.getKey().getName().equals(name))
-                                      .filter(v -> v.getKey().getValueClass().equals(Integer.class))
-                                      .map(v -> (Integer) v.getValue())
-                                      .findFirst().orElseThrow();
+                        .filter(v -> v.getKey().getName().equals(name))
+                        .filter(v -> v.getKey().getValueClass().equals(Integer.class))
+                        .map(v -> (Integer) v.getValue())
+                        .findFirst().orElseThrow();
                 return value.equals(foundValue);
             };
         }
-        return baseTest;
+        return (sl, bp) -> baseTest.test(sl.apply(bp));
     }
 
     private static @NotNull Ingredient getIngredient(String block) {
