@@ -76,7 +76,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                 Function<BlockPos, BlockState> getBs = bp -> unsafeGetTown().getServerLevel().getBlockState(bp);
                 ImmutableMap<BlockPos, Block> b = RecipeDetection.getBlocksInRoomV2(
                         bp -> getBs.apply(bp).getBlock(),
-                        new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord - 1),
+                        new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord),
                         false
                 );
                 return new RoomRecipeMatch<>(v, recipeId, b.entrySet());

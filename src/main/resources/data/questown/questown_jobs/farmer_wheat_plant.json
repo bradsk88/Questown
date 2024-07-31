@@ -22,7 +22,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["claim_workspot", "require_air_above"]
     },
     {
       "type": "processing_state",

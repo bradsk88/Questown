@@ -701,8 +701,8 @@ public class DeclarativeJob extends
         boolean roomFoundButNotBlock = false;
 
         for (RoomRecipeMatch<MCRoom> match : rooms) {
-            for (Map.Entry<BlockPos, Block> blocks : match.getContainedBlocks()
-                                                          .entrySet()) {
+            for (Map.Entry<BlockPos, Block> blocks : match.containedBlocks.entrySet()
+            ) {
                 BlockPos blockPos = blocks.getKey();
                 @Nullable Integer blockState = JobBlock.getState(work, blockPos);
                 if (blockState == null) {
