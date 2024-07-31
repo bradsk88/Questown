@@ -44,9 +44,9 @@ public class SpecialRules {
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
-    // If this rule is enabled for a processing state where an item is used and
-    // the workspot is farmland, the item will be planted in the block - if possible.
-    public static final String PLANT_CROP = "plant_crop";
+    // If this rule is enabled for a processing state where an item is used, the
+    // item will be used in the block - if possible. (E.g. planting seeds)
+    public static final String USE_ITEM_ON_BLOCK = "use_item_on_block";
 
     // If this rule is enabled for the "extract product" step and the workspot
     // is a full grown crop, the crop will be harvested (using its loot table)

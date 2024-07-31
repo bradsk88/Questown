@@ -1,29 +1,29 @@
 {
   "version": 2,
-  "id": "farmer/plant_wheat",
+  "id": "farmer/bone_meal",
   "priority": "2000",
-  "parent": "farmer/harvest_wheat",
-  "icon": "minecraft:wheat_seeds",
+  "parent": "farmer/plant_wheat",
+  "icon": "minecraft:bone_meal",
   "initial_request": "minecraft:wheat",
   "result": {
     "type": "item",
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:farmland",
-    "int_state": "age<7"
+    "id": "#questown:crops"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
     {
-      "ingredients": "minecraft:wheat_seeds"
+      "ingredients": "minecraft:bone_meal",
+      "work": 2
     }
   ],
   "cooldown_ticks": 100,
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot", "require_air_above"]
+      "rules": ["claim_workspot"]
     },
     {
       "type": "processing_state",

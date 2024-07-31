@@ -39,6 +39,8 @@ public interface JobPhaseModifier {
             AfterInsertItemEvent event
     );
 
+    // TOOD: Potentially phase out. Was used for farmer_till but changed that to
+    // run beforeExtract for better state management.
     Void beforeStateChange(
             BeforeStateChangeEvent event
     );

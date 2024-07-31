@@ -13,13 +13,11 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.synchronization.ArgumentSerializer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.common.util.Lazy;
-import net.minecraftforge.common.util.LazyOptional;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 public class JobArgument implements ArgumentType<JobID> {
     private Lazy<Collection<JobID>> jobIDs = Lazy.of(Works::ids);

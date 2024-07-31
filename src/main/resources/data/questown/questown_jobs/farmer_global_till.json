@@ -26,8 +26,8 @@
       "rules": ["require_air_above"]
     },
     {
-      "type": "processing_state",
-      "state": "0",
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
       "rules": ["questown:till_workspot"]
     }
   ]

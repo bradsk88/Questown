@@ -20,10 +20,15 @@ import org.jetbrains.annotations.Nullable;
 public class TillWorkspotSpecialRule implements
         JobPhaseModifier {
     @Override
-    public <X> X beforeExtract(
+    public <X> @Nullable X beforeExtract(
             X context,
             BeforeExtractEvent<X> event
     ) {
+        ServerLevel level = event.level();
+        BlockPos groundPos = event.workSpot();
+        BlockState bs = getTilledState(level, groundPos);
+        if (bs == null) return null;
+        level.setBlockAndUpdate(groundPos, bs);
         return context;
     }
 
@@ -37,11 +42,6 @@ public class TillWorkspotSpecialRule implements
 
     @Override
     public Void beforeStateChange(BeforeStateChangeEvent event) {
-        ServerLevel level = event.level();
-        BlockPos groundPos = event.workSpot().position();
-        BlockState bs = getTilledState(level, groundPos);
-        if (bs == null) return null;
-        level.setBlockAndUpdate(groundPos, bs);
         return null;
     }
 

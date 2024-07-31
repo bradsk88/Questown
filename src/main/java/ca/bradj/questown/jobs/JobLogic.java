@@ -42,7 +42,7 @@ public class JobLogic<EXTRA, POS> {
 
         void seekFallbackWork();
 
-        Map<Integer, Collection<WorkSpot<Integer,POS>>> listAllWorkSpots();
+        Map<Integer, Collection<WorkSpot<Integer, POS>>> listAllWorkSpots();
 
         void setLookTarget(POS position);
 
@@ -93,7 +93,7 @@ public class JobLogic<EXTRA, POS> {
         WorkSpot<Integer, ?> workSpot = world.getWorkSpot();
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
-                                    .apply(entityCurrentJob);
+                    .apply(entityCurrentJob);
             QT.JOB_LOGGER.debug(
                     "Reached max ticks for {}. Falling back to {}.",
                     entityCurrentJob, fbJov
@@ -113,7 +113,7 @@ public class JobLogic<EXTRA, POS> {
 
         long maxNoSupplyTicks = expiration.maxInitialTicksWithoutSupplies();
         if (hasInsertedAtLeastOneIngredient) {
-            maxNoSupplyTicks =  expiration.maxTicksWithoutSupplies();
+            maxNoSupplyTicks = expiration.maxTicksWithoutSupplies();
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
@@ -127,43 +127,33 @@ public class JobLogic<EXTRA, POS> {
             return;
         }
 
-        if (isEntityInJobSite && computeState.get().isWorkingOnProduction()) {
-            doTryWorking(extra, maxState, computeState, isSeekingWork, world);
+        if (isEntityInJobSite && status.isWorkingOnProduction()) {
+            doTryWorking(extra, maxState, status.getProductionState(maxState), isSeekingWork, world);
         }
 
         world.tryDropLoot();
         world.tryGetSupplies();
     }
 
-    private WithReason<Boolean> doTryWorking( // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
+    // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
+    private WithReason<Boolean> doTryWorking(
             EXTRA extra,
             int maxState,
-            Supplier<ProductionStatus> statusGetter,
+            int productionState,
             boolean isSeekingWork,
             JLWorld<EXTRA, POS> world
     ) {
         Map<Integer, Collection<WorkSpot<Integer, POS>>> workSpots = world.listAllWorkSpots(); // TODO: Update listAllWorkSpots to actually find "rich" workspots (an implemntation of WorkSpot) which have the block name to help with debugging
 
-        ProductionStatus status = statusGetter.get();
-        if (status == null || status.isUnset() || !status.isWorkingOnProduction()) {
-            setWorkSpot(null);
-            return new WithReason<>(null, "non-work status");
-        }
         Collection<WorkSpot<Integer, POS>> allSpots = null;
 
-        if (status.isExtractingProduct()) {
-            allSpots = workSpots.get(maxState);
+        Collection<WorkSpot<Integer, POS>> workSpot1 = workSpots.get(productionState);
+        if (workSpot1 == null) {
+            String problem = "Worker somehow has different status than all existing work spots";
+            QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
+            return new WithReason<>(null, problem);
         }
-
-        if (allSpots == null) {
-            Collection<WorkSpot<Integer, POS>> workSpot1 = workSpots.get(status.getProductionState());
-            if (workSpot1 == null) {
-                String problem = "Worker somehow has different status than all existing work spots";
-                QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
-                return new WithReason<>(null, problem);
-            }
-            allSpots = workSpot1;
-        }
+        allSpots = workSpot1;
 
         if (allSpots.isEmpty()) {
             return new WithReason<>(null, "No workspots");
@@ -176,8 +166,8 @@ public class JobLogic<EXTRA, POS> {
             world.setLookTarget(worked.spot().position());
             boolean hasWork = !isSeekingWork;
             boolean finishedWork = worked.spot()
-                                         .action()
-                                         .equals(maxState); // TODO: Check all workspots before seeking workRequired
+                    .action()
+                    .equals(maxState); // TODO: Check all workspots before seeking workRequired
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     world.registerHeldItemsAsFoundLoot(); // TODO: Is this okay for every job to do?

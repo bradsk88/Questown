@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.*;
 
 public class ResourceJobLoader {
@@ -77,7 +78,8 @@ public class ResourceJobLoader {
                                     "Unknown job file version \"%s\"", version
                             ));
                         };
-                        QT.INIT_LOGGER.debug("Work found in filesystem: {}", type);
+                        QT.INIT_LOGGER.info("Work found in filesystem: {}", type.id());
+                        QT.INIT_LOGGER.debug("{}: {}", type.id().toNiceString() ,type);
                         b.put(type.id(), type);
                     } catch (Exception e) {
                         QT.INIT_LOGGER.error(
@@ -341,31 +343,61 @@ public class ResourceJobLoader {
         return (sl, bp) -> ing.test(sl.apply(bp).getBlock().asItem().getDefaultInstance());
     }
 
+
+    private static Optional<Integer> getStateValue(BlockState state, String name) {
+        return state.getValues().entrySet().stream()
+                .filter(v -> v.getKey().getName().equals(name))
+                .filter(v -> v.getKey().getValueClass().equals(Integer.class))
+                .map(v -> (Integer) v.getValue())
+                .findFirst();
+    }
+
     private static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlockV2(JsonObject block, boolean requireAirAbove) {
         Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
-        @Nullable String state = optional(block, "int_state", JsonElement::getAsString);
-        if (state != null) {
-            String name = state.split("=")[0];
-            Integer value = Integer.parseInt(state.split("=")[1]);
-            return (sl, bp) -> {
-                if (requireAirAbove) {
-                    if (!sl.apply(bp.above()).isAir()) {
-                        return false;
-                    }
-                }
-                BlockState b = sl.apply(bp);
-                if (!baseTest.test(b)) {
-                    return false;
-                }
-                Integer foundValue = b.getValues().entrySet().stream()
-                        .filter(v -> v.getKey().getName().equals(name))
-                        .filter(v -> v.getKey().getValueClass().equals(Integer.class))
-                        .map(v -> (Integer) v.getValue())
-                        .findFirst().orElseThrow();
-                return value.equals(foundValue);
-            };
+
+        Optional<BlockStateComparator> stateComparator = getStateComparator(block);
+
+        return (sl, bp) -> {
+            if (requireAirAbove && !sl.apply(bp.above()).isAir()) {
+                return false;
+            }
+            BlockState state = sl.apply(bp);
+            if (!baseTest.test(state)) {
+                return false;
+            }
+            return stateComparator.map(comparator -> comparator.test(state)).orElse(true);
+        };
+    }
+
+    private static Optional<BlockStateComparator> getStateComparator(JsonObject block) {
+        String stateStr = optional(block, "int_state", JsonElement::getAsString);
+        return stateStr == null ? Optional.empty() : BlockStateComparator.parse(stateStr);
+    }
+
+    private static class BlockStateComparator {
+        private final String name;
+        private final Function<Integer, Boolean> compare;
+
+        public BlockStateComparator(String name, Function<Integer, Boolean> compare) {
+            this.name = name;
+            this.compare = compare;
         }
-        return (sl, bp) -> baseTest.test(sl.apply(bp));
+
+        public boolean test(BlockState state) {
+            return getStateValue(state, name)
+                    .map(compare)
+                    .orElse(false);
+        }
+
+        public static Optional<BlockStateComparator> parse(String stateStr) {
+            String[] eq = stateStr.split("=");
+            if (eq.length > 1) {
+                return Optional.of(new BlockStateComparator(eq[0], value -> value.equals(Integer.parseInt(eq[1]))));
+            } else {
+                String[] lt = stateStr.split("<");
+                return Optional.of(new BlockStateComparator(lt[0], value -> value.compareTo(Integer.parseInt(lt[1])) < 0));
+            }
+        }
     }
 
     private static @NotNull Ingredient getIngredient(String block) {

@@ -217,7 +217,10 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return Objects.hash(value);
     }
 
-    public int getProductionState() {
+    public int getProductionState(int maxState) {
+        if (value == EXTRACTING_PRODUCT.value) {
+            return maxState;
+        }
         if (value >= firstNonCustomIndex) {
             throw new IllegalStateException("Invalid production status: " + value);
         }
