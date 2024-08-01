@@ -14,8 +14,10 @@ import java.util.function.Supplier;
 
 public class JobLogic<EXTRA, POS> {
 
-    public boolean hasWorkSpot() {
-        return workSpot != null;
+    private boolean worked;
+
+    public boolean hasWorked() {
+        return worked;
     }
 
     public boolean isWrappingUp() {
@@ -164,12 +166,13 @@ public class JobLogic<EXTRA, POS> {
         }
 
         // TODO: Pass in the previous workspot and keep working it, if it's sill workable
-        WorkOutput<?, WorkSpot<Integer, POS>> worked = world.getHandle().tryWorking(extra, allSpots);
-        this.setWorkSpot(worked.spot());
-        if (worked.worked()) {
-            world.setLookTarget(worked.spot().position());
+        WorkOutput<?, WorkSpot<Integer, POS>> work = world.getHandle().tryWorking(extra, allSpots);
+        this.setWorkSpot(work.spot());
+        if (work.worked()) {
+            this.worked = true;
+            world.setLookTarget(work.spot().position());
             boolean hasWork = !isSeekingWork;
-            boolean finishedWork = worked.spot()
+            boolean finishedWork = work.spot()
                     .action()
                     .equals(maxState); // TODO: Check all workspots before seeking workRequired
             if (hasWork && finishedWork) {
@@ -177,9 +180,10 @@ public class JobLogic<EXTRA, POS> {
                     world.registerHeldItemsAsFoundLoot(); // TODO: Is this okay for every job to do?
                 }
                 wrappingUp = true;
+                this.worked = false;
             }
         }
-        return new WithReason<>(wrappingUp, "Worked");
+        return new WithReason<>(wrappingUp, "If worked");
     }
 
     protected void setWorkSpot(WorkSpot<Integer, POS> spot) {

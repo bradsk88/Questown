@@ -10,8 +10,7 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:farmland",
-    "int_state": "age<7"
+    "id": "minecraft:farmland"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
