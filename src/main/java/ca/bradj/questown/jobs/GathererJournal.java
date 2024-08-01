@@ -287,7 +287,7 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
     public enum Status implements IStatus<Status> {
         UNSET, IDLE, NO_SPACE, NO_FOOD, STAYING, GATHERING, GATHERING_HUNGRY, GATHERING_EATING, RETURNING, RETURNING_AT_NIGHT, // TODO: Rename to "in evening" for accuracy?
         RETURNED_SUCCESS, DROPPING_LOOT, RETURNED_FAILURE, CAPTURED, RELAXING, NO_GATE,
-        GOING_TO_JOBSITE,
+        GOING_TO_JOBSITE, NO_JOBSITE,
         // TODO: Move to farmer-specific status
         FARMING_HARVESTING, FARMING_RANDOM_TEND, FARMING_TILLING, FARMING_PLANTING, FARMING_BONING, FARMING_COMPOSTING,
         // TODO: Move to baker-specific status
@@ -313,6 +313,11 @@ public class GathererJournal<I extends Item<I>, H extends HeldItem<H, I> & Item<
             @Override
             public Status goingToJobSite() {
                 return GOING_TO_JOBSITE;
+            }
+
+            @Override
+            public Status noJobSite() {
+                return NO_JOBSITE;
             }
 
             @Override

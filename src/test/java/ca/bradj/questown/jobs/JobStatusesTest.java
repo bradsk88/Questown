@@ -21,6 +21,7 @@ class JobStatusesTest {
 
         static final TestStatus NO_SPACE = new TestStatus("no_space");
         static final TestStatus GOING_TO_JOB = new TestStatus("going_to_job");
+        static final TestStatus NO_JOBSITE = new TestStatus("no_jobsite");
         static final TestStatus NO_SUPPLIES = new TestStatus("no_supplies");
         static final TestStatus COLLECTING_SUPPLIES = new TestStatus("collecting_supplies");
         static final TestStatus IDLE = new TestStatus("idle");
@@ -44,6 +45,11 @@ class JobStatusesTest {
             @Override
             public TestStatus goingToJobSite() {
                 return GOING_TO_JOB;
+            }
+
+            @Override
+            public TestStatus noJobSite() {
+                return NO_JOBSITE;
             }
 
             @Override
@@ -164,8 +170,13 @@ class JobStatusesTest {
     record ConstTown(
             boolean hasSupplies,
             boolean hasSpace,
-            boolean canUseMoreSupplies
+            boolean canUseMoreSupplies,
+            boolean isTimerActive
     ) implements TownStateProvider {
+
+        ConstTown(boolean hasSupplies, boolean hasSpace, boolean canUseMoreSupplies) {
+            this(hasSupplies, hasSpace, canUseMoreSupplies, false);
+        }
     }
 
     static class NoOpJob implements JobStatuses.Job<TestStatus, TestStatus> {
@@ -399,25 +410,6 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_Idle_WhenInvHasNoItems_AndTownHasNoSupplies_AndCannotDoWork() {
-        boolean canDoWork = false;
-        boolean hasSupplies = false;
-        boolean suppliesInInventory = false;
-
-        TestStatus s = JobStatuses.usualRoutine(
-                TestStatus.IDLE,
-                true,
-                new ConstInventory(false, false, ImmutableMap.of(
-                        TestStatus.ITEM_WORK, suppliesInInventory,
-                        TestStatus.ITEM_WORK_2, suppliesInInventory
-                )),
-                new ConstTown(hasSupplies, true, canDoWork),
-                new NoOpJob(),
-                TestStatus.FACTORY
-        );
-        Assertions.assertEquals(TestStatus.IDLE, s);
-    }
-    @Test
     void StatusShouldBe_NoSpace_WhenInvHasSomeItemsButNotFull_AndTownHasNoSpace_AndCannotDoWork() {
         boolean canDoWork = false;
         boolean hasSupplies = false;
@@ -444,8 +436,8 @@ class JobStatusesTest {
     void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfBothAreNeeded() {
         Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
         Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-            0, ImmutableList.of(sameRoom),
-            1, ImmutableList.of(sameRoom)
+                0, ImmutableList.of(sameRoom),
+                1, ImmutableList.of(sameRoom)
         ));
 
         Assertions.assertEquals(1, s.size());
@@ -456,12 +448,57 @@ class JobStatusesTest {
     void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfAllAreNeeded() {
         Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
         Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-            0, ImmutableList.of(sameRoom),
-            1, ImmutableList.of(sameRoom),
-            2, ImmutableList.of(sameRoom)
+                0, ImmutableList.of(sameRoom),
+                1, ImmutableList.of(sameRoom),
+                2, ImmutableList.of(sameRoom)
         ));
 
         Assertions.assertEquals(1, s.size());
         Assertions.assertNotNull(s.get(0));
+    }
+
+    @Test
+    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork() {
+        boolean canDoWork = false;
+        boolean hasSupplies = true;
+        boolean suppliesInInventory = true;
+
+        boolean hasNonSupplyItems = false;
+        boolean townHasSpace = true;
+
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, suppliesInInventory,
+                        TestStatus.ITEM_WORK_2, suppliesInInventory
+                )),
+                new ConstTown(hasSupplies, townHasSpace, canDoWork),
+                new NoOpJob(),
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
+    }
+    @Test
+    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndNoSuppliesAvailable() {
+        boolean canDoWork = false;
+        boolean hasSupplies = false;
+        boolean suppliesInInventory = false;
+
+        boolean hasNonSupplyItems = false;
+        boolean townHasSpace = true;
+
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, suppliesInInventory,
+                        TestStatus.ITEM_WORK_2, suppliesInInventory
+                )),
+                new ConstTown(hasSupplies, townHasSpace, canDoWork),
+                new NoOpJob(),
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
 }

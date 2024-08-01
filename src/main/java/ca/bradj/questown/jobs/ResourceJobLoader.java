@@ -386,7 +386,7 @@ public class ResourceJobLoader {
         public boolean test(BlockState state) {
             return getStateValue(state, name)
                     .map(compare)
-                    .orElse(false);
+                    .orElse(true);
         }
 
         public static Optional<BlockStateComparator> parse(String stateStr) {

@@ -5,5 +5,7 @@ public interface TownStateProvider {
 
     boolean hasSpace();
 
+    boolean isTimerActive();
+
     boolean canUseMoreSupplies();
 }

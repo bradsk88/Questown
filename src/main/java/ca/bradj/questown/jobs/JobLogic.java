@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -105,7 +106,10 @@ public class JobLogic<EXTRA, POS> {
 
         ProductionStatus status = computeState.get();
 
-        if (ProductionStatus.NO_SUPPLIES.equals(status)) {
+        if (ImmutableList.of(
+                ProductionStatus.NO_SUPPLIES,
+                ProductionStatus.NO_JOBSITE
+        ).contains(status)) {
             noSuppliesTicks++;
         } else {
             noSuppliesTicks = 0;

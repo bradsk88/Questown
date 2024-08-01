@@ -7,6 +7,8 @@ public interface IStatusFactory<STATUS extends IStatus<STATUS>> {
 
     STATUS goingToJobSite();
 
+    STATUS noJobSite();
+
     STATUS noSupplies();
 
     STATUS collectingSupplies();

@@ -20,6 +20,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -307,12 +309,17 @@ public class Jobs {
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town,
             ResourceLocation roomType,
+            BiPredicate<ServerLevel, BlockPos> blockCheck,
             StateCheck check
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {
-                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                    List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream().filter(
+                            z -> blockCheck.test(town.getServerLevel(), z.getKey())
+                    ).toList();
+                    ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
+                    for (Map.Entry<BlockPos, Block> e : blocks) {
                         if (check.Check(town.getServerLevel(), e.getKey())) {
                             return true;
                         }

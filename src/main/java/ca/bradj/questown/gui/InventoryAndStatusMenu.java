@@ -77,7 +77,10 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
-        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(gatherer.getStatusForServer()));
+        if (!gatherer.level.isClientSide()) {
+            IStatus<?> statusForServer = gatherer.getStatusForServer();
+            this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(statusForServer));
+        }
 
         int i = 0;
         for (boolean locked : gatherer.getSlotLocks()) {

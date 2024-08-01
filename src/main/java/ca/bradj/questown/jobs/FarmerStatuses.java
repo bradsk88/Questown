@@ -81,6 +81,11 @@ public class FarmerStatuses {
                     }
 
                     @Override
+                    public boolean isTimerActive() {
+                        return false;
+                    }
+
+                    @Override
                     public boolean canUseMoreSupplies() {
                         return ITEM_WORK.keySet().stream().anyMatch(farm::isWorkPossible);
                     }

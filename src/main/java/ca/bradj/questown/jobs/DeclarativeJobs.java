@@ -51,7 +51,7 @@ public class DeclarativeJobs {
         return ImmutableMap.copyOf(b);
     }
 
-    private static final ImmutableMap<ProductionStatus, Function<HandlerInputs, MCTownState>> handler;
+    private static ImmutableMap<ProductionStatus, Function<HandlerInputs, MCTownState>> handler;
 
     private record HandlerInputs(
             MCTownStateWorldInteraction wi,
@@ -63,7 +63,7 @@ public class DeclarativeJobs {
     ) {
     }
 
-    static {
+    public static void staticInitialize() {
         ImmutableMap.Builder<ProductionStatus, Function<
                 HandlerInputs,
                 @Nullable MCTownState
@@ -123,6 +123,10 @@ public class DeclarativeJobs {
         );
         b.put(
                 ProductionStatus.IDLE,
+                i -> null
+        );
+        b.put(
+                ProductionStatus.NO_JOBSITE,
                 i -> null
         );
         handler = b.build();

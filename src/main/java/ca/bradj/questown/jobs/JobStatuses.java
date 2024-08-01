@@ -23,9 +23,11 @@ public class JobStatuses {
     }
 
     public interface Job<STATUS, SUP_CAT> {
-        @Nullable STATUS tryChoosingItemlessWork();
+        @Nullable
+        STATUS tryChoosingItemlessWork();
 
-        @Nullable STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus);
+        @Nullable
+        STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus);
     }
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutine(
@@ -85,15 +87,17 @@ public class JobStatuses {
             } else if (hasItems) {
                 s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
             } else {
-                s2 = factory.idle();
+                s2 = nullIfUnchanged(currentStatus, factory.noJobSite());
             }
         } else {
             if (hasItems && !hasWorkItems) {
                 s2 = nullIfUnchanged(currentStatus, factory.droppingLoot());
             } else if (town.canUseMoreSupplies()) {
                 s2 = nullIfUnchanged(currentStatus, factory.collectingSupplies());
+            } else if (town.isTimerActive()) {
+                return nullIfUnchanged(currentStatus, factory.waitingForTimedState());
             } else {
-                return factory.idle();
+                return nullIfUnchanged(currentStatus, factory.noJobSite());
             }
         }
 
@@ -108,13 +112,14 @@ public class JobStatuses {
      * A standard daily routine for mobs who insert materials into a block in
      * their job-related room(s) and then remove a product from the room once
      * it's ready.
+     *
      * @param prioritizeExtraction: If set to true, the entity will remove
-     *                            finished products from blocks even if they
-     *                            don't have space in their inventory. This
-     *                            will cause the item to be spawned into the
-     *                            world for collection by whomever walks by.
+     *                              finished products from blocks even if they
+     *                              don't have space in their inventory. This
+     *                              will cause the item to be spawned into the
+     *                              world for collection by whomever walks by.
      */
-            public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             STATUS currentStatus,
             boolean prioritizeExtraction,
             EntityInvStateProvider<Integer> inventory,
@@ -123,101 +128,107 @@ public class JobStatuses {
             IProductionJob<STATUS> job,
             IProductionStatusFactory<STATUS> factory
     ) {
-                if (factory.waitingForTimedState().equals(currentStatus)) {
-                    if (town.isUnfinishedTimeWorkPresent()) {
-                        return null;
+        if (factory.waitingForTimedState().equals(currentStatus)) {
+            if (town.isUnfinishedTimeWorkPresent()) {
+                return null;
+            }
+        }
+        STATUS status = usualRoutine(
+                currentStatus, prioritizeExtraction, inventory,
+                new TownStateProvider() {
+                    @Override
+                    public boolean hasSupplies() {
+                        return town.hasSupplies();
                     }
-                }
-                STATUS status = usualRoutine(
-                        currentStatus, prioritizeExtraction, inventory,
-                        new TownStateProvider() {
-                            @Override
-                            public boolean hasSupplies() {
-                                return town.hasSupplies();
+
+                    @Override
+                    public boolean hasSpace() {
+                        return town.hasSpace();
+                    }
+
+
+                    @Override
+                    public boolean isTimerActive() {
+                        return town.isUnfinishedTimeWorkPresent();
+                    }
+
+                    @Override
+                    public boolean canUseMoreSupplies() {
+                        return !town.roomsNeedingIngredientsByState()
+                                .entrySet()
+                                .stream()
+                                .allMatch(v -> v.getValue().isEmpty());
+                    }
+                },
+                new Job<>() {
+                    @Override
+                    public @Nullable STATUS tryChoosingItemlessWork() {
+                        Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
+                        for (Integer state : states) {
+                            return factory.fromJobBlockState(state);
+                        }
+
+                        Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                        if (rooms.isEmpty()) {
+                            return null;
+                        }
+
+                        ROOM location = entity.getEntityCurrentJobSite();
+                        if (location != null) {
+                            if (rooms.contains(location)) {
+                                return factory.extractingProduct();
                             }
+                        }
 
-                            @Override
-                            public boolean hasSpace() {
-                                return town.hasSpace();
-                            }
+                        return factory.goingToJobSite();
+                    }
 
-                            @Override
-                            public boolean canUseMoreSupplies() {
-                                return !town.roomsNeedingIngredientsByState()
-                                        .entrySet()
-                                        .stream()
-                                        .allMatch(v -> v.getValue().isEmpty());
-                            }
-                        },
-                        new Job<>() {
-                            @Override
-                            public @Nullable STATUS tryChoosingItemlessWork() {
-                                Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
-                                for (Integer state : states) {
-                                    return factory.fromJobBlockState(state);
-                                }
+                    @Override
+                    public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+                        if (supplyItemStatus.isEmpty()) {
+                            return null;
+                        }
+                        ROOM location = entity.getEntityCurrentJobSite();
+                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
 
-                                Collection<ROOM> rooms = town.roomsWithCompletedProduct();
-                                if (rooms.isEmpty()) {
-                                    return null;
-                                }
+                        roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
 
-                                ROOM location = entity.getEntityCurrentJobSite();
+                        boolean foundWork = false;
+
+                        List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
+                                .stream()
+                                .filter(work -> supplyItemStatus.getOrDefault(work, false))
+                                .toList();
+
+                        for (Integer s : orderedWithSupplies) {
+                            if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
+                                    .isEmpty()) { // TODO: Unit test the second leg of this condition
+                                foundWork = true;
                                 if (location != null) {
-                                    if (rooms.contains(location)) {
-                                        return factory.extractingProduct();
+                                    if (roomNeedsMap.get(s).contains(location)) {
+                                        return factory.fromJobBlockState(s);
                                     }
                                 }
-
-                                return factory.goingToJobSite();
                             }
+                        }
 
-                            @Override
-                            public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
-                                if (supplyItemStatus.isEmpty()) {
-                                    return null;
-                                }
-                                ROOM location = entity.getEntityCurrentJobSite();
-                                Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
-
-                                roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
-
-                                boolean foundWork = false;
-
-                                List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
-                                        .stream()
-                                        .filter(work -> supplyItemStatus.getOrDefault(work, false))
-                                        .toList();
-
-                                for (Integer s : orderedWithSupplies) {
-                                    if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
-                                            .isEmpty()) { // TODO: Unit test the second leg of this condition
-                                        foundWork = true;
-                                        if (location != null) {
-                                            if (roomNeedsMap.get(s).contains(location)) {
-                                                return factory.fromJobBlockState(s);
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (foundWork) {
-                                    return factory.goingToJobSite();
-                                }
-                                // TODO: Return null here. This call to `try` might be needed for the farmer job.
-                                //  Let's convert that into a production job.
-                                return job.tryUsingSupplies(supplyItemStatus);
-                            }
-                        }, factory
-                );
-                // TODO: For "no supplies" status, ignore rooms that only need tools
-                // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
-                if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {
-                    if (town.isUnfinishedTimeWorkPresent()) {
-                        return factory.waitingForTimedState();
+                        if (foundWork) {
+                            return factory.goingToJobSite();
+                        }
+                        // TODO: Return null here. This call to `try` might be needed for the farmer job.
+                        //  Let's convert that into a production job.
+                        return job.tryUsingSupplies(supplyItemStatus);
                     }
-                }
-                return status;
+                }, factory
+        );
+        // TODO: For "no supplies" status, ignore rooms that only need tools
+        // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
+        if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {
+            if (town.isUnfinishedTimeWorkPresent()) {
+                return factory.waitingForTimedState();
+            }
+        }
+        return status;
     }
 
     public static <ROOM extends Room> Map<Integer, ? extends Collection<ROOM>> sanitizeRoomNeeds(
@@ -262,4 +273,3 @@ public class JobStatuses {
         return newStatus;
     }
 }
-

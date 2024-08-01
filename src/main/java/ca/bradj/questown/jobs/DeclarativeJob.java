@@ -76,6 +76,11 @@ public class DeclarativeJob extends
         }
 
         @Override
+        public ProductionStatus noJobSite() {
+            return ProductionStatus.FACTORY.noJobSite();
+        }
+
+        @Override
         public ProductionStatus noSupplies() {
             return ProductionStatus.FACTORY.noSupplies();
         }
@@ -289,13 +294,10 @@ public class DeclarativeJob extends
 
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return Jobs.roomsWithState(
-                                   town, location.baseRoom(),
-                                   (sl, bp) -> maxState.equals(JobBlock.getState(getJobBlockState, bp))
-                           )
-                           .stream()
-                           .map(v -> v.room)
-                           .toList();
+                return roomsWithState(town, getJobBlockState, maxState)
+                        .stream()
+                        .map(v -> v.room)
+                        .toList();
             }
 
             @Override
@@ -315,11 +317,11 @@ public class DeclarativeJob extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> town.getRoomHandle()
-                                  .getRoomsMatching(location.baseRoom())
-                                  .stream()
-                                  .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
-                                                                                    .keySet())
-                                  .toList(),
+                                .getRoomsMatching(location.baseRoom())
+                                .stream()
+                                .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
+                                        .keySet())
+                                .toList(),
                         getJobBlockState,
                         (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
@@ -367,6 +369,15 @@ public class DeclarativeJob extends
                         (VisitorMobEntity) entity, entityCurrentJobSite,
                         roomsNeedingIngredientsOrTools
                 )
+        );
+    }
+
+    private Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
+            TownInterface town, Function<BlockPos, State> getJobBlockState, Integer state) {
+        return Jobs.roomsWithState(
+                town, location.baseRoom(),
+                (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp),
+                (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
         );
     }
 
@@ -512,7 +523,7 @@ public class DeclarativeJob extends
                     int quantity
             ) {
                 suppliesTarget.getContainer()
-                              .removeItem(i, quantity);
+                        .removeItem(i, quantity);
             }
         };
         getter.tryGetSupplies(
@@ -540,14 +551,14 @@ public class DeclarativeJob extends
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
         jobSite.getSpaces()
-               .stream()
-               .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
-                                                .stream())
-               .forEach(v -> {
-                   BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
-                   tryAdd.accept(pos);
-                   tryAdd.accept(pos.above());
-               });
+                .stream()
+                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
+                        .stream())
+                .forEach(v -> {
+                    BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
+                    tryAdd.accept(pos);
+                    tryAdd.accept(pos.above());
+                });
         if (b.isEmpty()) {
             // TODO: We need an "isJobBlock" AND "isJobBlockReady" predicate
             // QT.JOB_LOGGER.warn("No work spots found in job site. This is probably an issue with the job's JSON definition.");
@@ -618,7 +629,7 @@ public class DeclarativeJob extends
     private Direction getDoorDirectionFromCenter(Room jobSite) {
         Optional<XWall> backXWall = jobSite.getBackXWall();
         if (backXWall.isPresent() && backXWall.get()
-                                              .getZ() > jobSite.doorPos.z) {
+                .getZ() > jobSite.doorPos.z) {
             return Direction.NORTH;
         }
         if (backXWall.isPresent()) {
@@ -628,7 +639,7 @@ public class DeclarativeJob extends
 
         Optional<ZWall> backZWall = jobSite.getBackZWall();
         if (backZWall.isPresent() && backZWall.get()
-                                              .getX() > jobSite.doorPos.x) {
+                .getX() > jobSite.doorPos.x) {
             return Direction.WEST;
         }
         if (backZWall.isPresent()) {
@@ -663,7 +674,7 @@ public class DeclarativeJob extends
     @Override
     public String getStatusToSyncToClient() {
         return journal.getStatus()
-                      .name();
+                .name();
     }
 
     @Override
@@ -745,36 +756,33 @@ public class DeclarativeJob extends
                 b.put(state, new ArrayList<>());
                 return;
             }
-            Collection<RoomRecipeMatch<MCRoom>> matches = Jobs.roomsWithState(
-                    town, location.baseRoom(),
-                    (sl, bp) -> state.equals(JobBlock.getState(work, bp))
-            );
+            Collection<RoomRecipeMatch<MCRoom>> matches = roomsWithState(town, work, state);
 
             Integer stateQty = ingredientQtyRequiredAtStates.get(state);
             Stream<MCRoom> roomz = matches.stream()
-                                        .filter(room -> {
-                                            for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
-                                                                                    .entrySet()) {
-                                                State jobBlockState = work.apply(e.getKey());
-                                                if (jobBlockState == null) {
-                                                    continue;
-                                                }
-                                                if (!canClaim.test(e.getKey())) {
-                                                    continue;
-                                                }
-                                                if (jobBlockState.ingredientCount() < stateQty) {
-                                                    return true;
-                                                }
-                                            }
-                                            return false;
-                                        })
-                                        .map(v -> v.room);
+                    .filter(room -> {
+                        for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
+                                .entrySet()) {
+                            State jobBlockState = work.apply(e.getKey());
+                            if (jobBlockState == null) {
+                                continue;
+                            }
+                            if (!canClaim.test(e.getKey())) {
+                                continue;
+                            }
+                            if (jobBlockState.ingredientCount() < stateQty) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    })
+                    .map(v -> v.room);
             b.put(state, Lists.newArrayList(roomz.toList()));
         });
         HashMap<Integer, Ingredient> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values()
-                                 .stream()
-                                 .anyMatch(v -> !v.isEmpty())) {
+                .stream()
+                .anyMatch(v -> !v.isEmpty())) {
             for (int i = 0; i < maxState; i++) {
                 stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, Ingredient.EMPTY));
             }
@@ -786,14 +794,12 @@ public class DeclarativeJob extends
             // Hold on to tools that are required at this state and any previous states
             for (int i = 0; i <= state; i++) {
                 final Integer ii = i;
-                b.get(state)
-                 .addAll((Jobs.roomsWithState(
-                                      town, location.baseRoom(),
-                                      (sl, bp) -> ii.equals(JobBlock.getState(work, bp))
-                              )
-                              .stream()
-                              .map(v -> v.room)
-                              .toList()));
+                b.get(state).addAll(
+                        roomsWithState(town, work, state)
+                                .stream()
+                                .map(v -> v.room)
+                                .toList()
+                );
             }
         });
         return ImmutableMap.copyOf(b);

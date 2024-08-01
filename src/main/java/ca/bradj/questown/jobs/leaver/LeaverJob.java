@@ -214,7 +214,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
         BlockPos enterExitPos = town.getEnterExitPos(); // TODO: Smarter logic? Town gate?
         return switch (journal.getStatus()) {
             case NO_FOOD -> handleNoFoodStatus(entityBlockPos, town);
-            case NO_GATE -> handleNoGateStatus(entityBlockPos, town);
+            case NO_GATE, NO_JOBSITE -> handleNoGateStatus(entityBlockPos, town);
             case UNSET, IDLE, STAYING, RELAXING -> null;
             case GATHERING, GATHERING_EATING, GATHERING_HUNGRY, RETURNING, RETURNING_AT_NIGHT, CAPTURED -> enterExitPos;
             case DROPPING_LOOT, RETURNED_SUCCESS, NO_SPACE -> setupForDropLoot(entityBlockPos, town);

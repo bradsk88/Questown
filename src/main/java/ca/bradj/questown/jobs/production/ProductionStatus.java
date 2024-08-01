@@ -61,6 +61,9 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus WAITING_FOR_TIMED_STATE = register(
             new ProductionStatus("WAITING_FOR_TIMED_STATE", nextIndex++)
     );
+    public static final ProductionStatus NO_JOBSITE = register(
+            new ProductionStatus("NO_JOBSITE", nextIndex++)
+    );
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -76,6 +79,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         @Override
         public ProductionStatus goingToJobSite() {
             return GOING_TO_JOB;
+        }
+
+        @Override
+        public ProductionStatus noJobSite() {
+            return NO_JOBSITE;
         }
 
         @Override

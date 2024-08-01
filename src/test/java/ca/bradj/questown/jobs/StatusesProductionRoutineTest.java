@@ -69,6 +69,7 @@ public class StatusesProductionRoutineTest {
         static final PTestStatus DROPPING_LOOT = new PTestStatus("dropping_loot");
         static final PTestStatus NO_SPACE = new PTestStatus("no_space");
         static final PTestStatus GOING_TO_JOB = new PTestStatus("going_to_job");
+        static final PTestStatus NO_JOBSITE = new PTestStatus("no_jobsite");
         static final PTestStatus NO_SUPPLIES = new PTestStatus("no_supplies");
         static final PTestStatus COLLECTING_SUPPLIES = new PTestStatus("collecting_supplies");
         static final PTestStatus IDLE = new PTestStatus("idle");
@@ -107,6 +108,11 @@ public class StatusesProductionRoutineTest {
             @Override
             public PTestStatus goingToJobSite() {
                 return GOING_TO_JOB;
+            }
+
+            @Override
+            public PTestStatus noJobSite() {
+                return NO_JOBSITE;
             }
 
             @Override
@@ -349,7 +355,7 @@ public class StatusesProductionRoutineTest {
     }
 
     @Test
-    void InMorning_StatusShouldBe_Idle_WhenAllSitesFull_AndInJobSite() {
+    void InMorning_StatusShouldBe_NoJobSite_WhenAllSitesFull_AndInJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
@@ -369,11 +375,11 @@ public class StatusesProductionRoutineTest {
                 new FailProductionJob(), // Shouldn't do any non-standard work
                 PTestStatus.FACTORY
         );
-        Assertions.assertEquals(PTestStatus.IDLE, s);
+        Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
     }
 
     @Test
-    void InMorning_StatusShouldBe_Idle_WhenAllSitesFull_AndOutOfJobSite() {
+    void InMorning_StatusShouldBe_NoJobSite_WhenAllSitesFull_AndOutOfJobSite() {
         boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
@@ -393,7 +399,7 @@ public class StatusesProductionRoutineTest {
                 new FailProductionJob(), // Shouldn't do any non-standard work
                 PTestStatus.FACTORY
         );
-        Assertions.assertEquals(PTestStatus.IDLE, s);
+        Assertions.assertEquals(PTestStatus.NO_JOBSITE, s);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.GathererJournal;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -17,6 +18,8 @@ public class StatusArt {
         b.put(ProductionStatus.IDLE, "menu/gatherer/idle.png");
         b.put(ProductionStatus.NO_SPACE, "menu/gatherer/no_space.png");
         b.put(ProductionStatus.RELAXING, "menu/gatherer/relaxing.png");
+        b.put(ProductionStatus.NO_JOBSITE, "menu/gatherer/no_jobsite.png");
+        b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/leaving.png");
         pArt = b.build();
     }
 
@@ -32,7 +35,8 @@ public class StatusArt {
                     // TODO: Icon for this
                         new ResourceLocation("questown", "textures/menu/gatherer/idle.png");
                 case GATHERING -> new ResourceLocation("questown", "textures/menu/gatherer/leaving.png");
-                case RETURNED_SUCCESS -> new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
+                case RETURNED_SUCCESS ->
+                        new ResourceLocation("questown", "textures/menu/gatherer/returned_success.png");
                 case RETURNED_FAILURE ->
                     // TODO: Icon for this
                         new ResourceLocation("questown", "textures/error.png");
@@ -48,19 +52,19 @@ public class StatusArt {
                 case DROPPING_LOOT, GATHERING_EATING, GATHERING_HUNGRY, RETURNING_AT_NIGHT ->
                     // TODO: Icon for this
                         new ResourceLocation("questown", "textures/error.png");
-                case GOING_TO_JOBSITE, FARMING_HARVESTING, FARMING_RANDOM_TEND, LEAVING_FARM,
+                case GOING_TO_JOBSITE, NO_JOBSITE, FARMING_HARVESTING, FARMING_RANDOM_TEND, LEAVING_FARM,
                         FARMING_PLANTING, FARMING_TILLING, FARMING_BONING,
                         FARMING_COMPOSTING, FARMING_WEEDING,
                         COLLECTING_SUPPLIES,
                         NO_SUPPLIES, BAKING, BAKING_FUELING, COLLECTING_BREAD ->
                     // TODO: Icon for this
-                        new ResourceLocation("questown", "textures/error.png");  
+                        new ResourceLocation("questown", "textures/error.png");
             };
         }
         if (status instanceof ProductionStatus ps) {
             String art = pArt.get(ps);
             if (art != null) {
-                return new ResourceLocation("questown", "textures/" + art);
+                return Questown.ResourceLocation( "textures/" + art);
             }
         }
 

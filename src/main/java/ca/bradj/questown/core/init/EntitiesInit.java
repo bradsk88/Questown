@@ -20,6 +20,7 @@ public class EntitiesInit {
 
     public static final RegistryObject<EntityType<VisitorMobEntity>> VISITOR = ENTITY_TYPES.register(
             "visitor",
+            // FIXME: This is called from static context before world init.
             () -> EntityType.Builder.of(
                             (EntityType<VisitorMobEntity> a, Level b) -> new VisitorMobEntity(a, b, null),
                             MobCategory.CREATURE

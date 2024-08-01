@@ -10,7 +10,7 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "#questown:crops"
+    "id": "#minecraft:crops"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
