@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -49,11 +49,11 @@ public abstract class AbstractItemWI<
     @Override
     public InsertResult<TOWN, ITEM> tryInsertIngredients(
             EXTRA extra,
-            WorkSpot<Integer, POS> ws
+            WorkedSpot<POS> ws
     ) {
-        POS bp = ws.position();
-        int curState = ws.action();
-        State state = getWorkStatuses(extra).getJobBlockState(ws.position());
+        POS bp = ws.workPosition();
+        int curState = ws.stateAfterWork();
+        State state = getWorkStatuses(extra).getJobBlockState(bp);
         if (state == null || state.isFresh()) {
             Integer initWork = workRequiredAtStates.get(curState);
             if (initWork == null) {

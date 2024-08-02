@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
@@ -231,5 +232,26 @@ public class Util {
             return;
         }
         qty.put(k, v);
+    }
+
+    public static <X, Y> @Nullable Y orNull(@Nullable X input, Function<X, Y> fn) {
+        if (input == null) {
+            return null;
+        }
+        return fn.apply(input);
+    }
+
+    public static <X> void ifNotNull(X input, Consumer<X> fn) {
+        if (input == null) {
+            return;
+        }
+        fn.accept(input);
+    }
+
+    public static <X, Y> Y withNullFallback(X input, Function<X, Y> fn, Y fallback) {
+        if (input == null) {
+            return fallback;
+        }
+        return fn.apply(input);
     }
 }

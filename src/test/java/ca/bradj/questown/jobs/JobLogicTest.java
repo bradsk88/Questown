@@ -22,10 +22,8 @@ import java.util.stream.Stream;
 class JobLogicTest {
 
     static Position ARBITRARY_WORKSPOT_POS = new Position(0, 0);
-    static WorkSpot<Integer, Position> ARBITRARY_WORKSPOT = new WorkSpot<>(
+    static WorkPosition<Position> ARBITRARY_WORKSPOT = new WorkPosition<>(
             ARBITRARY_WORKSPOT_POS,
-            0,
-            1,
             ARBITRARY_WORKSPOT_POS
     );
 
@@ -46,19 +44,19 @@ class JobLogicTest {
             "test report"
     );
 
-    private static class TestLogicWorld implements JobLogic.JLWorld<Void, Position> {
+    private static class TestLogicWorld implements JobLogic.JLWorld<Void, Boolean, Position> {
 
-        private WorkSpot<Integer, Position> workspot;
+        private WorkPosition<Position> workspot;
         MapBackedWSC states = new MapBackedWSC();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(3);
 
         private TestWorldInteraction wi = TestWorldInteraction.forDefinition(
                 JobLogicTest.DEFINITION, inventory, states, () -> null
         );
-        private Map<Integer, Collection<WorkSpot<Integer, Position>>> allWorkSpots = ImmutableMap.of();
+        private Map<Integer, Collection<WorkPosition<Position>>> allWorkSpots = ImmutableMap.of();
 
         @Override
-        public AbstractWorldInteraction<Void, Position, ?, ?, ?> getHandle() {
+        public AbstractWorldInteraction<Void, Position, ?, ?, Boolean> getHandle() {
             return wi;
         }
 
@@ -67,7 +65,7 @@ class JobLogicTest {
         }
 
         @Override
-        public WorkSpot<Integer, Position> getWorkSpot() {
+        public WorkPosition<Position> getWorkSpot() {
             return this.workspot;
         }
 
@@ -102,7 +100,7 @@ class JobLogicTest {
         }
 
         @Override
-        public Map<Integer, Collection<WorkSpot<Integer, Position>>> listAllWorkSpots() {
+        public Map<Integer, Collection<WorkPosition<Position>>> listAllWorkSpots() {
             return allWorkSpots;
         }
 
@@ -119,7 +117,7 @@ class JobLogicTest {
 
     @Test
     void tick_ShouldShouldWorkIfIngredientsNeededAndHad() {
-        JobLogic<Void, Position> logic = new JobLogic<>();
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
         TestLogicWorld world = new TestLogicWorld();
 
         world.workspot = ARBITRARY_WORKSPOT;
@@ -142,7 +140,8 @@ class JobLogicTest {
                 false,
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
-                world
+                world,
+                (a, b) -> 0
         );
 
         Assertions.assertEquals(
@@ -162,7 +161,7 @@ class JobLogicTest {
     @ParameterizedTest
     @MethodSource("provideCollectSuppliesArgs")
     void tick_ShouldCollectSuppliesIfTargetExists(boolean entityInJobSite, boolean expectCollect) {
-        JobLogic<Void, Position> logic = new JobLogic<>();
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
 
         final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
 
@@ -193,7 +192,8 @@ class JobLogicTest {
                 false,
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
-                world
+                world,
+                (a, b) -> 0
         );
 
         Assertions.assertNull(
@@ -205,7 +205,7 @@ class JobLogicTest {
 
     @Test()
     void tick_shouldGiveUpAfterInitialTicks_IfNeverInserted() {
-        JobLogic<Void, Position> logic = new JobLogic<>();
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
 
         final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
 
@@ -236,7 +236,8 @@ class JobLogicTest {
                 false,
                 ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFINITION.maxState(),
-                world
+                world,
+                (a, b) -> 0
         );
 
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
@@ -245,9 +246,10 @@ class JobLogicTest {
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
     }
+
     @Test()
     void tick_shouldGiveUpAfterInitialTicks_IfInsertedAtLeastOnce() {
-        JobLogic<Void, Position> logic = new JobLogic<>();
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
 
         final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
 
@@ -278,7 +280,8 @@ class JobLogicTest {
                 true,
                 ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFINITION.maxState(),
-                world
+                world,
+                (a, b) -> 0
         );
 
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
@@ -300,18 +303,18 @@ class JobLogicTest {
     @ParameterizedTest
     @MethodSource("provideNotProductionStatuses")
     void tick_shouldClearWorkSpotIfStatusIsNotProduction(ProductionStatus status) {
-        List<WorkSpot<Integer, Position>> workSpotHistory = new ArrayList<>();
+        List<WorkPosition<Position>> workSpotHistory = new ArrayList<>();
 
-        JobLogic<Void, Position> logic = new JobLogic<>() {
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>() {
             @Override
-            protected void setWorkSpot(WorkSpot<Integer, Position> spot) {
+            protected void setWorkSpot(WorkPosition<Position> spot) {
                 super.setWorkSpot(spot);
                 workSpotHistory.add(spot);
             }
         };
 
         TestLogicWorld world = new TestLogicWorld();
-        WorkSpot<Integer, Position> arbitraryWorkSpot = new WorkSpot<>(new Position(1, 2), 1, 1, new Position(1, 2));
+        WorkPosition<Position> arbitraryWorkSpot = new WorkPosition<>(new Position(1, 2), new Position(1, 2));
         world.workspot = arbitraryWorkSpot;
 
         logic.tick(
@@ -323,12 +326,49 @@ class JobLogicTest {
                 new Random().nextBoolean(),
                 ExpirationRules.never(),
                 DEFINITION.maxState(),
-                world
+                world,
+                (a, b) -> 0
         );
 
         Assertions.assertNull(logic.workSpot());
         Assertions.assertEquals(2, workSpotHistory.size());
         Assertions.assertNotNull(workSpotHistory.get(0));
         Assertions.assertNull(workSpotHistory.get(1));
+    }
+
+    @Test
+    void tick_shouldUpdateWorkSpotActionAfterFinishingWork() {
+        List<WorkPosition<Position>> workSpotHistory = new ArrayList<>();
+
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>() {
+            @Override
+            protected void setWorkSpot(WorkPosition<Position> spot) {
+                super.setWorkSpot(spot);
+                workSpotHistory.add(spot);
+            }
+        };
+
+        TestLogicWorld world = new TestLogicWorld();
+        world.allWorkSpots = ImmutableMap.of(
+                STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        logic.tick(
+                null,
+                () -> ProductionStatus.fromJobBlockStatus(0),
+                new JobID("test", "tester"),
+                true,
+                false,
+                new Random().nextBoolean(),
+                ExpirationRules.never(),
+                DEFINITION.maxState(),
+                world,
+                (a, b) -> 0
+        );
+
+        Assertions.assertEquals(1, workSpotHistory.size());
+        Assertions.assertNotNull(workSpotHistory.get(0));
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+
     }
 }

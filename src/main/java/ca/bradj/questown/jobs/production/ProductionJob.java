@@ -160,6 +160,11 @@ public abstract class ProductionJob<
     }
 
     @Override
+    public boolean isWorking() {
+        return getStatus().isWorkingOnProduction();
+    }
+
+    @Override
     public String getStatusToSyncToClient() {
         return this.journal.getStatus()
                            .name();
@@ -259,10 +264,10 @@ public abstract class ProductionJob<
         }
 
         if (status.isWorkingOnProduction()) {
-            WorkSpot<?, BlockPos> productionSpot = findProductionSpot(sl);
+            WorkPosition<BlockPos> productionSpot = findProductionSpot(sl);
             if (productionSpot != null) {
-                this.setLookTarget(productionSpot.position());
-                return productionSpot.interactionSpot();
+                this.setLookTarget(productionSpot.jobBlock());
+                return productionSpot.groundBelowEntity();
             }
             QT.JOB_LOGGER.error("Production spot was null somehow");
             return null;
@@ -302,7 +307,7 @@ public abstract class ProductionJob<
             TownInterface town
     );
 
-    protected abstract @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel level);
+    protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
             RoomsHolder town,
@@ -334,7 +339,7 @@ public abstract class ProductionJob<
         this.tick(town, work, entity, facingPos, rniot, statusFactory);
     }
 
-    private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
+    protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
         WorkStatusHandle<BlockPos, MCHeldItem> work;
         if (this.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
             work = town.getWorkStatusHandle(null);

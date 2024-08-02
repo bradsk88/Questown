@@ -2,7 +2,7 @@ package ca.bradj.questown.integration;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.special.HarvestCropSpecialRule;
-import ca.bradj.questown.jobs.special.UseItemOnBlockSpecialRule;
+import ca.bradj.questown.jobs.special.UseLastInsertedItemOnBlockSpecialRule;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.TillWorkspotSpecialRule;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -20,8 +20,8 @@ public final class QuestownSpecialRules {
                 new HarvestCropSpecialRule()
         );
         SpecialRulesRegistry.registerSpecialRule(
-                Questown.ResourceLocation(SpecialRules.USE_ITEM_ON_BLOCK),
-                new UseItemOnBlockSpecialRule()
+                Questown.ResourceLocation(SpecialRules.USE_LAST_INSERTED_ITEM_ON_BLOCK),
+                new UseLastInsertedItemOnBlockSpecialRule()
         );
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.TILL_WORKSPOT),

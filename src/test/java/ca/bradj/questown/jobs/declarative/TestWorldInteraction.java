@@ -1,10 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.GathererJournalTest;
-import ca.bradj.questown.jobs.JobDefinition;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
@@ -124,7 +122,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected @Nullable Boolean postInsertHook(@NotNull Boolean aBoolean, Collection<String> rules, Void inputs, WorkSpot<Integer, Position> position, GathererJournalTest.TestItem item) {
+    protected @Nullable Boolean postInsertHook(@NotNull Boolean aBoolean, Collection<String> rules, Void inputs, WorkedSpot<Position> position, GathererJournalTest.TestItem item) {
         return null;
     }
 
@@ -259,12 +257,18 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkSpot<Integer, Position>> shuffle(
+    protected ArrayList<WorkPosition<Position>> shuffle(
             Void unused,
-            Collection<WorkSpot<Integer, Position>> workSpots
+            Collection<WorkPosition<Position>> workSpots
     ) {
         QT.JOB_LOGGER.error("Shuffling has no effect in unit tests");
         return new ArrayList<>(workSpots);
+    }
+
+    @Override
+    protected WorkedSpot<Position> getCurWorkedSpot(Void unused, Boolean stateSource, Position workSpot) {
+        State stateAfterWork = getJobBlockState(null, workSpot);
+        return new WorkedSpot<>(workSpot, Util.withNullFallback(stateAfterWork, State::processingState, 0));
     }
 
     @Override

@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -10,9 +11,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-public class JobLogic<EXTRA, POS> {
+public class JobLogic<EXTRA, TOWN, POS> {
 
     private boolean worked;
 
@@ -24,14 +26,14 @@ public class JobLogic<EXTRA, POS> {
         return wrappingUp;
     }
 
-    public @Nullable WorkSpot<?, POS> workSpot() {
+    public @Nullable WorkPosition<POS> workSpot() {
         return workSpot;
     }
 
-    public interface JLWorld<EXTRA, POS> {
+    public interface JLWorld<EXTRA, TOWN, POS> {
         void changeJob(JobID id);
 
-        WorkSpot<Integer, POS> getWorkSpot();
+        WorkPosition<POS> getWorkSpot();
 
         void clearWorkSpot(String reason);
 
@@ -45,16 +47,16 @@ public class JobLogic<EXTRA, POS> {
 
         void seekFallbackWork();
 
-        Map<Integer, Collection<WorkSpot<Integer, POS>>> listAllWorkSpots();
+        Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
 
         void setLookTarget(POS position);
 
         void registerHeldItemsAsFoundLoot();
 
-        AbstractWorldInteraction<EXTRA, POS, ?, ?, ?> getHandle();
+        AbstractWorldInteraction<EXTRA, POS, ?, ?, TOWN> getHandle();
     }
 
-    private WorkSpot<Integer, POS> workSpot;
+    private WorkPosition<POS> workSpot;
 
     public boolean isGrabbingInsertedSupplies() {
         return grabbingInsertedSupplies;
@@ -75,12 +77,11 @@ public class JobLogic<EXTRA, POS> {
             boolean hasInsertedAtLeastOneIngredient,
             ExpirationRules expiration,
             int maxState,
-            JLWorld<EXTRA, POS> world
+            JLWorld<EXTRA, TOWN, POS> worldBeforeTick,
+            BiFunction<TOWN, POS, Integer> getState
     ) {
-        this.setWorkSpot(world.getWorkSpot());
-
         if (this.grabbingInsertedSupplies) {
-            if (world.tryGrabbingInsertedSupplies()) {
+            if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
             }
@@ -88,12 +89,12 @@ public class JobLogic<EXTRA, POS> {
         }
 
         if (this.grabbedInsertedSupplies) {
-            world.seekFallbackWork();
+            worldBeforeTick.seekFallbackWork();
             return;
         }
 
         this.ticksSinceStart++;
-        WorkSpot<Integer, ?> workSpot = world.getWorkSpot();
+        WorkPosition<?> workSpot = worldBeforeTick.getWorkSpot();
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                     .apply(entityCurrentJob);
@@ -101,10 +102,10 @@ public class JobLogic<EXTRA, POS> {
                     "Reached max ticks for {}. Falling back to {}.",
                     entityCurrentJob, fbJov
             );
-            world.changeJob(fbJov);
+            worldBeforeTick.changeJob(fbJov);
             return;
         }
-        world.clearWorkSpot("Cleared before trying work");
+//        world.clearWorkSpot("Cleared before trying work");
 
         ProductionStatus status = computeState.get();
 
@@ -128,17 +129,17 @@ public class JobLogic<EXTRA, POS> {
             return;
         }
 
-        if (world.canDropLoot()) {
-            world.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
+        if (worldBeforeTick.canDropLoot()) {
+            worldBeforeTick.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
             return;
         }
 
         if (isEntityInJobSite && status.isWorkingOnProduction()) {
-            doTryWorking(extra, maxState, status.getProductionState(maxState), isSeekingWork, world);
+            doTryWorking(extra, maxState, status.getProductionState(maxState), isSeekingWork, worldBeforeTick, getState);
         }
 
-        world.tryDropLoot();
-        world.tryGetSupplies();
+        worldBeforeTick.tryDropLoot();
+        worldBeforeTick.tryGetSupplies();
     }
 
     // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
@@ -147,34 +148,33 @@ public class JobLogic<EXTRA, POS> {
             int maxState,
             int productionState,
             boolean isSeekingWork,
-            JLWorld<EXTRA, POS> world
+            JLWorld<EXTRA, TOWN, POS> world,
+            BiFunction<TOWN, POS, Integer> getState
     ) {
-        Map<Integer, Collection<WorkSpot<Integer, POS>>> workSpots = world.listAllWorkSpots(); // TODO: Update listAllWorkSpots to actually find "rich" workspots (an implemntation of WorkSpot) which have the block name to help with debugging
+        // TODO: Update listAllWorkSpots to actually find "rich" workspots (an
+        //  implemntation of WorkSpot) which have the block name to help with debugging
+        Map<Integer, Collection<WorkPosition<POS>>> workSpots = world.listAllWorkSpots();
 
-        Collection<WorkSpot<Integer, POS>> allSpots = null;
-
-        Collection<WorkSpot<Integer, POS>> workSpot1 = workSpots.get(productionState);
+        Collection<WorkPosition<POS>> workSpot1 = workSpots.get(productionState);
         if (workSpot1 == null) {
             String problem = "Worker somehow has different status than all existing work spots";
             QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
-            return new WithReason<>(null, problem);
+            return WithReason.unformatted(null, problem);
         }
-        allSpots = workSpot1;
+        Preferred<WorkPosition<POS>> allSpots = new Preferred<>(this.workSpot, workSpot1);
 
         if (allSpots.isEmpty()) {
-            return new WithReason<>(null, "No workspots");
+            return WithReason.unformatted(null, "No workspots");
         }
 
-        // TODO: Pass in the previous workspot and keep working it, if it's sill workable
-        WorkOutput<?, WorkSpot<Integer, POS>> work = world.getHandle().tryWorking(extra, allSpots);
+        WorkOutput<TOWN, WorkPosition<POS>> work = world.getHandle().tryWorking(extra, allSpots);
         this.setWorkSpot(work.spot());
         if (work.worked()) {
             this.worked = true;
-            world.setLookTarget(work.spot().position());
+            world.setLookTarget(work.spot().jobBlock());
             boolean hasWork = !isSeekingWork;
-            boolean finishedWork = work.spot()
-                    .action()
-                    .equals(maxState); // TODO: Check all workspots before seeking workRequired
+            Integer stateAfterWork = getState.apply(work.town(), work.spot().jobBlock());
+            boolean finishedWork = stateAfterWork.equals(maxState);
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     world.registerHeldItemsAsFoundLoot(); // TODO: Is this okay for every job to do?
@@ -183,10 +183,10 @@ public class JobLogic<EXTRA, POS> {
                 this.worked = false;
             }
         }
-        return new WithReason<>(wrappingUp, "If worked");
+        return WithReason.unformatted(wrappingUp, "If worked");
     }
 
-    protected void setWorkSpot(WorkSpot<Integer, POS> spot) {
+    protected void setWorkSpot(WorkPosition<POS> spot) {
         this.workSpot = spot;
     }
 }

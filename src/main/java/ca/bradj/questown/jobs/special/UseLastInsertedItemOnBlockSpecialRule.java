@@ -16,13 +16,29 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class UseItemOnBlockSpecialRule implements
+public class UseLastInsertedItemOnBlockSpecialRule implements
         JobPhaseModifier {
     @Override
     public <X> X beforeExtract(
             X context,
             BeforeExtractEvent<X> event
     ) {
+        BlockPos groundPos = event.workSpot();
+        ServerLevel level = event.level();
+
+        BlockHitResult bhr = new BlockHitResult(
+                Vec3.atCenterOf(groundPos), Direction.UP,
+                groundPos, false
+        );
+        Item item = event.lastInsertedItem();
+        InteractionResult result = item.useOn(new UseOnContext(
+                level, null, InteractionHand.MAIN_HAND,
+                item.getDefaultInstance(), bhr
+        ));
+        if (!result.consumesAction()) {
+            String msg = "Failed to use item {} on block at {}";
+            QT.JOB_LOGGER.error(msg, item, groundPos);
+        }
         return null;
     }
 
@@ -31,28 +47,6 @@ public class UseItemOnBlockSpecialRule implements
             CONTEXT ctxInput,
             AfterInsertItemEvent event
     ) {
-        // TODO: Should this actually go in beforeStateChange (so we can ensure
-        //  that any work or timers are complete)?
-        //  If so, beforeStateChange will need to know which item has been
-        //  inserted (or items).
-        BlockPos groundPos = event.workSpot().position();
-        ServerLevel level = event.level();
-
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
-        Item item = event.inserted().getItem();
-        InteractionResult result = item.useOn(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                item.getDefaultInstance(), bhr
-        ));
-        if (!result.consumesAction()) {
-            QT.JOB_LOGGER.error(
-                    "Failed to use item {} on block at {}",
-                    event.inserted(), groundPos
-            );
-        }
         return null;
     }
 

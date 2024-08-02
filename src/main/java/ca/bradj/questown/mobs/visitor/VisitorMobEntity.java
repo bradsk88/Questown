@@ -445,7 +445,17 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         .getItem(0));
             }
         }
-
+        if (job.get().isWorking()) {
+            BlockPos target = job.get().getTarget(blockPosition(), position(), town);
+            if (target != null) {
+                Vec3 center = Vec3.atBottomCenterOf(target);
+                double distToTarget = position().distanceTo(center);
+                if (distToTarget > 0.1 && distToTarget <= 1) {
+                    QT.VILLAGER_LOGGER.debug("Moving to {}", target);
+                    this.moveTo(center);
+                }
+            }
+        }
         this.useNearbyGates();
     }
 

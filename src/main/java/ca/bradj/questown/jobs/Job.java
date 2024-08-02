@@ -84,4 +84,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     long getTotalDuration();
 
     BlockPos getLook();
+
+    boolean isWorking();
 }

@@ -44,25 +44,6 @@ public class Works {
     ) {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
-        // TODO: Replace with production job
-        b.put(FarmerJob.ID, () -> new Work(
-                FarmerJob.ID,
-                null,
-                Items.IRON_HOE.getDefaultInstance(),
-                (town, uuid) -> new FarmerJob(uuid, 6),
-                (jobId, status, items) -> new FarmerJournal.Snapshot<>(GathererJournal.Status.from(status), items),
-                NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK,
-                SpecialQuests.FARM,
-                GathererJournal.Status.IDLE,
-                t -> ImmutableSet.of(
-                        MCTownItem.fromMCItemStack(Items.WHEAT.getDefaultInstance()),
-                        MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
-                ),
-                Items.WHEAT.getDefaultInstance(),
-                s -> ImmutableList.of(Ingredient.of(Items.WHEAT_SEEDS.getDefaultInstance())),
-                FarmerJob.SimpleWarper::new,
-                1
-        ));
         b.put(BlacksmithWoodenPickaxeJob.DEF.jobId(), BlacksmithWoodenPickaxeJob::asWork);
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);

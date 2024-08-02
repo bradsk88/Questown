@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableMap;
@@ -34,10 +35,10 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     public TOWN tryWork(
             EXTRA extra,
-            WorkSpot<Integer, POS> ws
+            WorkedSpot<POS> ws
     ) {
-        POS bp = ws.position();
-        Integer curState = ws.action();
+        POS bp = ws.workPosition();
+        Integer curState = ws.stateAfterWork();
         Integer nextStepWork = workRequiredAtStates.getOrDefault(
                 curState + 1, 0
         );
@@ -72,7 +73,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             oldState = initForState(curState);
         }
         State bs = oldState.decrWork(getWorkSpeedOf10(extra));
-        if (oldState.workLeft() > 0 && oldState.equals(bs)) {
+        if (oldState.workLeftV2() > 0 && oldState.equals(bs)) {
             return null;
         }
 

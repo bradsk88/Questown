@@ -9,6 +9,7 @@ import ca.bradj.questown.mobs.visitor.ItemAcceptor;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,7 +24,8 @@ public class PreExtractHook {
             Collection<String> rules,
             ServerLevel level,
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
-            BlockPos position
+            BlockPos position,
+            Item lastInsertedItem
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         ItemAcceptor<TOWN> itemAcceptor = new ItemAcceptor<>() {
@@ -37,7 +39,7 @@ public class PreExtractHook {
                 return tryGiveItem.apply(ctx, item, inventoryFullStrategy);
             }
         };
-        BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(level, itemAcceptor, position);
+        BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(level, itemAcceptor, position, lastInsertedItem);
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
     }
 }

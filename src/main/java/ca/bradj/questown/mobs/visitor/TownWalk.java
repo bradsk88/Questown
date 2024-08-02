@@ -98,9 +98,6 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         }
         if (distToTarget > 1) {
             e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
-        } else {
-            Vec3 p20220 = Vec3.atCenterOf(bp);
-            e.moveTo(p20220);
         }
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
         QT.VILLAGER_LOGGER.trace("{} navigating to {}", e.getUUID(), bp);

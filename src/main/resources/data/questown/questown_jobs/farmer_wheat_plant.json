@@ -27,7 +27,7 @@
     {
       "type": "processing_state",
       "state": "0",
-      "rules": ["questown:use_item_on_block"]
+      "rules": ["questown:use_last_inserted_item_on_block"]
     }
   ]
 }

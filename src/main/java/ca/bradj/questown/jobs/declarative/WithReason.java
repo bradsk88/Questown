@@ -9,8 +9,9 @@ public class WithReason<S> {
     public final String reason;
 
     /**
-     * @deprecated For performance reasons, use the constructor which accepts args (or ignore this deprecation if you
-     * are not doing string formatting on your "reason").
+     * @deprecated For performance reasons, use the constructor which accepts
+     * args (or use WithReason.unformatted(...) if you are not doing string
+     * formatting on your "reason").
      */
     public WithReason(
             S value,
@@ -26,6 +27,10 @@ public class WithReason<S> {
             Object... args
     ) {
         this(value, String.format(format, args));
+    }
+
+    public static <X> WithReason<X> unformatted(X value, String message) {
+        return new WithReason<>(value, message);
     }
 
     public static <X> X orNull(WithReason<X> newStatus) {

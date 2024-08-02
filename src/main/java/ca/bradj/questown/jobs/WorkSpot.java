@@ -4,23 +4,20 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public record WorkSpot<A, P>(P position, A action, int score, P interactionSpot) {
+public record WorkSpot<A, P>(WorkPosition<P> workPos, A action, int score) {
     public WorkSpot(
             @NotNull P position,
             @NotNull A action,
             int score,
             P interactionSpot
     ) {
-        this.position = position;
-        this.action = action;
-        this.score = score;
-        this.interactionSpot = interactionSpot;
+        this(new WorkPosition<>(position, interactionSpot), action, score);
     }
 
     @Override
     public String toString() {
         return "WorkSpot{" +
-                "position=" + position +
+                "position=" + workPos +
                 ", action=" + action +
                 ", score=" + score +
                 '}';
@@ -31,11 +28,11 @@ public record WorkSpot<A, P>(P position, A action, int score, P interactionSpot)
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         WorkSpot<?, ?> workSpot = (WorkSpot<?, ?>) o;
-        return score == workSpot.score && Objects.equals(action, workSpot.action) && Objects.equals(position, workSpot.position) && Objects.equals(interactionSpot, workSpot.interactionSpot);
+        return score == workSpot.score && Objects.equals(action, workSpot.action) && Objects.equals(workPos, workSpot.workPos);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(position, action, score, interactionSpot);
+        return Objects.hash(workPos, action, score);
     }
 }

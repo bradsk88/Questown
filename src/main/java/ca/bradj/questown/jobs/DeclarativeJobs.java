@@ -69,9 +69,8 @@ public class DeclarativeJobs {
                 @Nullable MCTownState
                 >> b = ImmutableMap.builder();
         Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
-            @Nullable WorkOutput<MCTownState, WorkSpot<Integer, BlockPos>> v = ii.wi.tryWorking(
-                    ii.inState,
-                    new WorkSpot<>(ii.fakePos, ii.workBlockState.processingState(), 1, ii.fakePos)
+            @Nullable WorkOutput<MCTownState, WorkPosition<BlockPos>> v = ii.wi.tryWorking(
+                    ii.inState, new WorkPosition<>(ii.fakePos, ii.fakePos)
             );
             if (v == null) {
                 return null;

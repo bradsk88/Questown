@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -150,11 +151,16 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkSpot<Integer, BlockPos>> shuffle(
+    protected ArrayList<WorkPosition<BlockPos>> shuffle(
             Inputs inputs,
-            Collection<WorkSpot<Integer, BlockPos>> workSpots
+            Collection<WorkPosition<BlockPos>> workSpots
     ) {
         return Compat.shuffle(workSpots, inputs.level);
+    }
+
+    @Override
+    protected WorkedSpot<BlockPos> getCurWorkedSpot(Inputs inputs, MCTownState stateSource, BlockPos workSpot) {
+        return new WorkedSpot<>(workSpot, stateSource.getJobBlockState(workSpot).processingState());
     }
 
     @Override
@@ -175,7 +181,7 @@ public class MCTownStateWorldInteraction extends
             @NotNull MCTownState mcTownState,
             Collection<String> rules,
             Inputs inputs,
-            WorkSpot<Integer, BlockPos> position,
+            WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
         return PostInsertHook.run(
@@ -194,10 +200,11 @@ public class MCTownStateWorldInteraction extends
             Inputs inputs,
             BlockPos position
     ) {
+        Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(town, rules, inputs.level(), (ctx, i, s) -> {
             Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
             return tryGiveItems(in, ImmutableList.of(i), position);
-        }, position);
+        }, position, insertedItem);
     }
 
     @Override

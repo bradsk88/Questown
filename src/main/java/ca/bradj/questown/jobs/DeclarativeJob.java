@@ -113,7 +113,7 @@ public class DeclarativeJob extends
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
 
-    private final JobLogic<MCExtra, BlockPos> logic;
+    private final JobLogic<MCExtra, Boolean, BlockPos> logic;
     private final WorkLocation location;
     private final @NotNull Integer maxState;
     private final JobID jobId;
@@ -354,21 +354,24 @@ public class DeclarativeJob extends
                 elp
         );
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
-        WorkSpot<Integer, BlockPos> workSpot = world.getWorkSpot();
+        WorkPosition<BlockPos> workSpot = world.getWorkSpot();
+        BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);
+        int action = bp == null ? 0 : Util.withNullFallback(work.getJobBlockState(bp), State::processingState, 0);
         logic.tick(
                 extra,
                 computeState,
                 jobId,
                 entityCurrentJobSite != null,
                 WorkSeekerJob.isSeekingWork(jobId),
-                workSpot != null && hasInserted(workSpot.action()),
+                workSpot != null && hasInserted(action),
                 expiration,
                 maxState,
                 this.asLogicWorld(
                         extra, town, work,
                         (VisitorMobEntity) entity, entityCurrentJobSite,
                         roomsNeedingIngredientsOrTools
-                )
+                ),
+                (tuwn, bpp) -> Util.withNullFallback(getWorkStatusHandle(town).getJobBlockState(bpp), State::processingState, 0)
         );
     }
 
@@ -390,7 +393,7 @@ public class DeclarativeJob extends
         return false;
     }
 
-    private JobLogic.JLWorld<MCExtra, BlockPos> asLogicWorld(
+    private JobLogic.JLWorld<MCExtra, Boolean, BlockPos> asLogicWorld(
             MCExtra extra,
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
@@ -406,12 +409,12 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public WorkSpot<Integer, BlockPos> getWorkSpot() {
+            public WorkPosition<BlockPos> getWorkSpot() {
                 return world.getWorkSpot();
             }
 
             @Override
-            public Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots() {
+            public Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots() {
                 ServerLevel sl = town.getServerLevel();
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
@@ -437,7 +440,7 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public AbstractWorldInteraction<MCExtra, BlockPos, ?, ?, ?> getHandle() {
+            public AbstractWorldInteraction<MCExtra, BlockPos, ?, ?, Boolean> getHandle() {
                 return world;
             }
 
@@ -534,7 +537,7 @@ public class DeclarativeJob extends
         );
     }
 
-    Map<Integer, Collection<WorkSpot<Integer, BlockPos>>> listAllWorkSpots(
+    Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots(
             Function<BlockPos, State> town,
             @Nullable MCRoom jobSite,
             Predicate<BlockPos> isEmpty,
@@ -547,7 +550,7 @@ public class DeclarativeJob extends
 
         Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
 
-        Map<Integer, List<WorkSpot<Integer, BlockPos>>> b = new HashMap<>();
+        Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
         jobSite.getSpaces()
@@ -569,14 +572,14 @@ public class DeclarativeJob extends
     private static void tryAddSpot(
             Function<BlockPos, State> town,
             BlockPos bp,
-            Map<Integer, List<WorkSpot<Integer, BlockPos>>> b,
+            Map<Integer, List<WorkPosition<BlockPos>>> b,
             Function<BlockPos, BlockPos> is,
             Predicate<BlockPos> isJobBlock
     ) {
         @Nullable Integer blockAction = JobBlock.getState(town, bp);
         if (blockAction != null) {
             if (isJobBlock.test(bp)) {
-                Util.addOrInitialize(b, blockAction, new WorkSpot<>(bp, blockAction, 0, is.apply(bp)));
+                Util.addOrInitialize(b, blockAction, new WorkPosition<>(bp, is.apply(bp)));
             }
         }
     }
@@ -687,7 +690,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected @Nullable WorkSpot<?, BlockPos> findProductionSpot(ServerLevel sl) {
+    protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel sl) {
         return logic.workSpot();
     }
 

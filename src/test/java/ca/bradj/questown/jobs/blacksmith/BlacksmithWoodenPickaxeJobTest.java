@@ -36,11 +36,8 @@ public class BlacksmithWoodenPickaxeJobTest {
                 DEFINITION, inv, ws, () -> null
         );
         WorkSpot<Integer, Position> spot = getArbitrarySpot(BLOCK_STATE_DONE);
-        @Nullable WorkOutput<Boolean, WorkSpot<Integer, Position>> op =
-                wi.tryWorking(
-                        null,
-                        spot
-                );
+
+        wi.tryWorking(null, spot.workPos());
 
         Assertions.assertEquals(State.fresh(), ws.getJobBlockState(ArbitraryWorkSpotPos));
     }
@@ -63,10 +60,10 @@ public class BlacksmithWoodenPickaxeJobTest {
         ws.setJobBlockState(ArbitraryWorkSpotPos, bs);
 
         WorkSpot<Integer, Position> spot = getArbitrarySpot(BLOCK_STATE_NEED_HANDLE);
-        op = wi.tryWorking(null, spot);
+        wi.tryWorking(null, spot.workPos());
 
         Assertions.assertEquals(State.fresh().incrIngredientCount(), ws.getJobBlockState(ArbitraryWorkSpotPos));
-        op = wi.tryWorking(null, spot);
+        wi.tryWorking(null, spot.workPos());
 
         Assertions.assertEquals(State.fresh().incrProcessing(), ws.getJobBlockState(ArbitraryWorkSpotPos));
     }

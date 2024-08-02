@@ -1,10 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.WorkedSpot;
 
 public interface ItemWI<POS, EXTRA, TOWN, ITEM> {
     InsertResult<TOWN, ITEM> tryInsertIngredients(
             EXTRA extra,
-            WorkSpot<Integer,POS> workSpot
+            WorkedSpot<POS> workSpot
     );
 }

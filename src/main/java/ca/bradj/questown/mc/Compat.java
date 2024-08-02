@@ -65,8 +65,8 @@ public class Compat {
         return new TextComponent(x);
     }
 
-    public static ArrayList<WorkSpot<Integer, BlockPos>> shuffle(Collection<WorkSpot<Integer, BlockPos>> c, ServerLevel serverLevel) {
-        ArrayList<WorkSpot<Integer, BlockPos>> list = new ArrayList<>(c);
+    public static <X> ArrayList<X> shuffle(Collection<X> c, ServerLevel serverLevel) {
+        ArrayList<X> list = new ArrayList<>(c);
         int size = list.size();
         for (int i = size; i > 1; --i) {
             Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));

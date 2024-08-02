@@ -4,9 +4,7 @@ import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.Jobs;
-import ca.bradj.questown.jobs.WorkOutput;
-import ca.bradj.questown.jobs.WorkSpot;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -28,7 +26,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -146,9 +147,9 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkSpot<Integer, BlockPos>> shuffle(
+    protected ArrayList<WorkPosition<BlockPos>> shuffle(
             MCExtra mcExtra,
-            Collection<WorkSpot<Integer, BlockPos>> workSpots
+            Collection<WorkPosition<BlockPos>> workSpots
     ) {
         return Compat.shuffle(workSpots, mcExtra.town().getServerLevel());
     }
@@ -236,16 +237,22 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    public @Nullable WorkOutput<Boolean, WorkSpot<Integer, BlockPos>> tryWorking(
+    public @Nullable WorkOutput<Boolean, WorkPosition<BlockPos>> tryWorking(
             MCExtra mcExtra,
-            WorkSpot<Integer, BlockPos> workSpot
+            WorkPosition<BlockPos> workSpot
     ) {
-        @Nullable WorkOutput<@Nullable Boolean, WorkSpot<Integer, BlockPos>> o = super.tryWorking(mcExtra, workSpot);
+        @Nullable WorkOutput<@Nullable Boolean, WorkPosition<BlockPos>> o = super.tryWorking(mcExtra, workSpot);
         if (o != null && o.town() != null && o.town()) {
-            playSound(mcExtra, o.spot().interactionSpot());
+            playSound(mcExtra, o.spot().jobBlock());
             mcExtra.entity().swing(InteractionHand.MAIN_HAND, true);
         }
         return o;
+    }
+
+    @Override
+    protected WorkedSpot<BlockPos> getCurWorkedSpot(MCExtra mcExtra, Boolean stateSource, BlockPos workSpot) {
+        State jobBlockState = getJobBlockState(mcExtra, workSpot);
+        return new WorkedSpot<>(workSpot, Util.withNullFallback(jobBlockState, State::processingState, 0));
     }
 
     private void playSound(
@@ -297,10 +304,11 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             BlockPos position
     ) {
+        VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
         return PreExtractHook.run(didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
             inputs.entity().tryGiveItem(i, s);
             return in;
-        }, position);
+        }, position, Util.orNull(workToUndo, v -> v.item().get().get()));
     }
 
     @Override
@@ -308,7 +316,7 @@ public class RealtimeWorldInteraction extends
             @NotNull Boolean aBoolean,
             Collection<String> rules,
             MCExtra inputs,
-            WorkSpot<Integer, BlockPos> position,
+            WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
         return PostInsertHook.run(aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toItemStack());

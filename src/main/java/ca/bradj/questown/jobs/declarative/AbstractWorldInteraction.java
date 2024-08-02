@@ -17,7 +17,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -37,7 +36,7 @@ public abstract class AbstractWorldInteraction<
     protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates;
-    private WithReason<@Nullable WorkSpot<Integer, POS>> workspot = new WithReason<>(null, "Never set");
+    private WithReason<@Nullable WorkPosition<POS>> workspot = new WithReason<>(null, "Never set");
 
     private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
 
@@ -249,14 +248,18 @@ public abstract class AbstractWorldInteraction<
     );
 
 
-    public WorkOutput<TOWN, WorkSpot<Integer, POS>> tryWorking(
+    public WorkOutput<TOWN, WorkPosition<POS>> tryWorking(
             EXTRA extra,
-            Collection<WorkSpot<Integer, POS>> workSpots
+            Preferred<WorkPosition<POS>> workSpots
     ) {
-        ArrayList<WorkSpot<Integer, POS>> shuffled = shuffle(extra, workSpots);
-        for (WorkSpot<Integer, POS> workSpot : shuffled) {
-            WorkOutput<TOWN, WorkSpot<Integer, POS>> v = tryWorking(extra, workSpot);
-            if (v != null) {
+        ArrayList<WorkPosition<POS>> shuffled = shuffle(extra, workSpots.alternates());
+        if (workSpots.preferredValue() != null) {
+            shuffled.removeIf(v -> v.equals(workSpots.preferredValue()));
+            shuffled.add(0, workSpots.preferredValue());
+        }
+        for (WorkPosition<POS> workSpot : shuffled) {
+            WorkOutput<TOWN, WorkPosition<POS>> v = tryWorking(extra, workSpot);
+            if (v != null && v.worked()) {
                 return v;
             }
         }
@@ -267,19 +270,19 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
-    protected abstract ArrayList<WorkSpot<Integer, POS>> shuffle(
+    protected abstract ArrayList<WorkPosition<POS>> shuffle(
             EXTRA extra,
-            Collection<WorkSpot<Integer, POS>> workSpots
+            Collection<WorkPosition<POS>> workSpots
     );
 
-    public @Nullable WorkOutput<@Nullable TOWN, WorkSpot<Integer, POS>> tryWorking(
+    public @Nullable WorkOutput<@Nullable TOWN, WorkPosition<POS>> tryWorking(
             EXTRA extra,
-            WorkSpot<Integer, POS> workSpot
+            WorkPosition<POS> workSpot
     ) {
         if (!isReady(extra)) {
             return null;
         }
-        boolean canClaim = getWorkStatuses(extra).canClaim(workSpot.position(), () -> this.claimSpots.apply(extra));
+        boolean canClaim = getWorkStatuses(extra).canClaim(workSpot.jobBlock(), () -> this.claimSpots.apply(extra));
 
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
@@ -294,22 +297,24 @@ public abstract class AbstractWorldInteraction<
             return null;
         }
 
-        WorkOutput<TOWN, WorkSpot<Integer, POS>> vNull = new WorkOutput<>(false, null, workSpot);
+        WorkOutput<TOWN, WorkPosition<POS>> vNull = new WorkOutput<>(false, null, workSpot);
 
-        if (!isEntityClose(extra, workSpot.position())) {
+        if (!isEntityClose(extra, workSpot.jobBlock())) {
             return vNull;
         }
 
         ImmutableWorkStateContainer<POS, TOWN> workStatuses = getWorkStatuses(extra);
-        State jobBlockState = workStatuses.getJobBlockState(workSpot.position());
+        State jobBlockState = workStatuses.getJobBlockState(workSpot.jobBlock());
 
-        if (workSpot.action() == maxState) {
+        int action = Util.withNullFallback(jobBlockState, State::processingState, 0);
+        if (action >= maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
-                return new WorkOutput<>(true, tryExtractProduct(extra, workSpot.position()), workSpot);
+                TOWN ex = tryExtractProduct(extra, workSpot.jobBlock());
+                return new WorkOutput<>(true, ex, workSpot);
             }
         }
 
-        Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(workSpot.action());
+        Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(action);
         if (tool != null) {
             Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
             boolean foundTool = items.stream().anyMatch(i -> tool.apply(i.get()));
@@ -318,12 +323,13 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        if (this.ingredientsRequiredAtStates.get(workSpot.action()) != null) {
-            InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(extra, workSpot);
+        TOWN initTown = getTown(extra);
+        if (this.ingredientsRequiredAtStates.get(action) != null) {
+            InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()));
             if (o != null) {
                 TOWN ctx = o.contextAfterInsert();
                 HELD_ITEM item = o.itemBeforeInsert();
-                @Nullable TOWN out = postInsertHook(ctx, extra, workSpot, item);
+                @Nullable TOWN out = postInsertHook(ctx, extra, getCurWorkedSpot(extra, ctx, workSpot.jobBlock()), item);
                 if (out == null) {
                     out = ctx;
                 }
@@ -331,15 +337,15 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        if (this.workRequiredAtStates.containsKey(workSpot.action())) {
-            Integer work = this.workRequiredAtStates.get(workSpot.action());
+        if (this.workRequiredAtStates.containsKey(action)) {
+            Integer work = this.workRequiredAtStates.get(action);
             if (work != null && work > 0) {
-                if (workSpot.action() == 0) {
+                if (action == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = State.fresh();
                     }
                     if (jobBlockState.workLeft() == 0) {
-                        TOWN town = workStatuses.setJobBlockState(workSpot.position(), jobBlockState.setWorkLeft(work));
+                        TOWN town = workStatuses.setJobBlockState(workSpot.jobBlock(), jobBlockState.setWorkLeft(work));
                         return new WorkOutput<>(false, town, workSpot);
                     }
                 }
@@ -348,9 +354,11 @@ public abstract class AbstractWorldInteraction<
 
         // TODO: If workspot is waiting for time, return  null
 
-        TOWN town = workWI.tryWork(extra, workSpot);
+        TOWN town = workWI.tryWork(extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()));
         return new WorkOutput<>(town != null, town, workSpot);
     }
+
+    protected abstract WorkedSpot<POS> getCurWorkedSpot(EXTRA extra, TOWN stateSource, POS workSpot);
 
     protected abstract Collection<HELD_ITEM> getHeldItems(
             EXTRA extra,
@@ -410,10 +418,10 @@ public abstract class AbstractWorldInteraction<
     private @Nullable TOWN postInsertHook(
             @NotNull TOWN ctx,
             EXTRA inputs,
-            WorkSpot<Integer, POS> position,
+            WorkedSpot<POS> position,
             HELD_ITEM item
     ) {
-        Collection<String> rules = specialRules.get(ProductionStatus.fromJobBlockStatus(position.action()));
+        Collection<String> rules = specialRules.get(ProductionStatus.fromJobBlockStatus(position.stateAfterWork()));
         if (rules == null || rules.isEmpty()) {
             return ctx;
         }
@@ -424,7 +432,7 @@ public abstract class AbstractWorldInteraction<
             @NotNull TOWN town,
             Collection<String> rules,
             EXTRA inputs,
-            WorkSpot<Integer, POS> position,
+            WorkedSpot<POS> position,
             HELD_ITEM item
     );
 
@@ -522,11 +530,11 @@ public abstract class AbstractWorldInteraction<
             EXTRA mcExtra
     );
 
-    public @Nullable WorkSpot<Integer, POS> getWorkSpot() {
+    public @Nullable WorkPosition<POS> getWorkSpot() {
         return workspot.value;
     }
 
-    public void setWorkSpot(WithReason<@Nullable WorkSpot<Integer, POS>> o) {
+    public void setWorkSpot(WithReason<@Nullable WorkPosition<POS>> o) {
         this.workspot = o;
     }
 }
