@@ -418,7 +418,7 @@ public class DeclarativeJob extends
                 ServerLevel sl = town.getServerLevel();
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
-                        sl::isEmptyBlock,
+                        bp -> !sl.getBlockState(bp).getMaterial().isSolid(),
                         bp -> location.isJobBlock().test(sl::getBlockState, bp),
                         () -> Direction.getRandom(sl.random)
                 );
@@ -452,11 +452,6 @@ public class DeclarativeJob extends
             @Override
             public void tryGetSupplies() {
                 if (logic.isWrappingUp()) {
-                    // TODO: Remove this line and add regression test
-                    //  Without this line, the worker never goes back to the
-                    //  sign, so they never clear "wrapping up" and can never
-                    //  grab more supplies
-                    changeJob(WorkSeekerJob.getIDForRoot(jobId));
                     return;
                 }
                 self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());
@@ -604,6 +599,7 @@ public class DeclarativeJob extends
             return spot;
         }
 
+        QT.JOB_LOGGER.warn("choosing to approach job block from random side");
         return bp.relative(random.get());
     }
 

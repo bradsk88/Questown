@@ -184,10 +184,8 @@ public class Jobs {
                 .filter(v -> InclusiveSpaces.contains(
                         v.room.getSpaces(),
                         Positions.FromBlockPos(entityBlockPos)
-                ) || (
-                        InclusiveSpaces.calculateArea(v.room.getSpaces()) == 9 &&
-                                v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                ))
+                ) || v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
+                )
                 .findFirst()
                 .orElse(null);
     }

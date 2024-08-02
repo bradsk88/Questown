@@ -259,11 +259,12 @@ public abstract class AbstractWorldInteraction<
         }
         for (WorkPosition<POS> workSpot : shuffled) {
             WorkOutput<TOWN, WorkPosition<POS>> v = tryWorking(extra, workSpot);
-            if (v != null && v.worked()) {
+            if (v != null && (v.worked() || v.claimed())) {
                 return v;
             }
         }
         return new WorkOutput<>(
+                false,
                 false,
                 null,
                 ImmutableList.copyOf(shuffled).get(0)
@@ -287,7 +288,7 @@ public abstract class AbstractWorldInteraction<
         ticksSinceLastAction++;
         if (ticksSinceLastAction < interval) {
             if (canClaim) {
-                return new WorkOutput<>(false, null, workSpot);
+                return new WorkOutput<>(false, true, null, workSpot);
             }
             return null;
         }
@@ -297,7 +298,7 @@ public abstract class AbstractWorldInteraction<
             return null;
         }
 
-        WorkOutput<TOWN, WorkPosition<POS>> vNull = new WorkOutput<>(false, null, workSpot);
+        WorkOutput<TOWN, WorkPosition<POS>> vNull = new WorkOutput<>(false, true, null, workSpot);
 
         if (!isEntityClose(extra, workSpot.jobBlock())) {
             return vNull;
@@ -310,7 +311,7 @@ public abstract class AbstractWorldInteraction<
         if (action >= maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
                 TOWN ex = tryExtractProduct(extra, workSpot.jobBlock());
-                return new WorkOutput<>(true, ex, workSpot);
+                return new WorkOutput<>(true, true, ex, workSpot);
             }
         }
 
@@ -333,7 +334,7 @@ public abstract class AbstractWorldInteraction<
                 if (out == null) {
                     out = ctx;
                 }
-                return new WorkOutput<>(true, out, workSpot);
+                return new WorkOutput<>(true, true, out, workSpot);
             }
         }
 
@@ -346,7 +347,7 @@ public abstract class AbstractWorldInteraction<
                     }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.jobBlock(), jobBlockState.setWorkLeft(work));
-                        return new WorkOutput<>(false, town, workSpot);
+                        return new WorkOutput<>(false, true, town, workSpot);
                     }
                 }
             }
@@ -355,7 +356,7 @@ public abstract class AbstractWorldInteraction<
         // TODO: If workspot is waiting for time, return  null
 
         TOWN town = workWI.tryWork(extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()));
-        return new WorkOutput<>(town != null, town, workSpot);
+        return new WorkOutput<>(town != null, town != null, town, workSpot);
     }
 
     protected abstract WorkedSpot<POS> getCurWorkedSpot(EXTRA extra, TOWN stateSource, POS workSpot);

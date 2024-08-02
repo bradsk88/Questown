@@ -174,7 +174,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             world.setLookTarget(work.spot().jobBlock());
             boolean hasWork = !isSeekingWork;
             Integer stateAfterWork = getState.apply(work.town(), work.spot().jobBlock());
-            boolean finishedWork = stateAfterWork.equals(maxState);
+            boolean finishedWork = productionState > 0 && stateAfterWork.equals(0);
             if (hasWork && finishedWork) {
                 if (!wrappingUp) {
                     world.registerHeldItemsAsFoundLoot(); // TODO: Is this okay for every job to do?
