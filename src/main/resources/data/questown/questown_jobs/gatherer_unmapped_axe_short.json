@@ -19,6 +19,7 @@
       "quantity": 1
     },
     {
+      "tools": "#questown:axes",
       "time": 2000
     }
   ],

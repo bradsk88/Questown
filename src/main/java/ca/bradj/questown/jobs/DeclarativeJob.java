@@ -204,7 +204,7 @@ public class DeclarativeJob extends
 
     @Override
     public boolean shouldStandStill() {
-        return this.logic.hasWorked();
+        return this.getStatus().isWorkingOnProduction() && this.logic.hasWorked();
     }
 
     @NotNull
