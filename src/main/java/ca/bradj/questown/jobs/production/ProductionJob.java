@@ -78,21 +78,34 @@ public abstract class ProductionJob<
     protected final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
 
-    public BlockPos getJobSite(
+    public @Nullable BlockPos getJobSite(
             TownInterface town
     ) {
         if (this.jobSite == null) {
             ServerLevel sl = town.getServerLevel();
+            if (sl == null) {
+                return null;
+            }
             WithReason<@Nullable BlockPos> js = findJobSite(
                     town.getRoomHandle(),
                     getWorkStatusHandle(town)::getJobBlockState,
-                    sl::isEmptyBlock,
+                    bp -> this.isValidWalkTarget(town, bp),
                     bp -> location.isJobBlock().test(sl::getBlockState, bp),
                     sl.getRandom()
             );
             this.jobSite = js.value();
         }
         return jobSite;
+    }
+
+    protected boolean isValidWalkTarget(TownInterface town, BlockPos bp) {
+        @Nullable ServerLevel sl = town.getServerLevel();
+        if (sl == null) {
+            return false;
+        }
+        boolean footSpotBlocked = sl.getBlockState(bp.above()).getMaterial().isSolid();
+        boolean torsoSpotBlocked = sl.getBlockState(bp.above()).getMaterial().isSolid();
+        return !(footSpotBlocked || torsoSpotBlocked);
     }
 
     private BlockPos jobSite;

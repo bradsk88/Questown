@@ -13,6 +13,7 @@ import ca.bradj.questown.gui.VillagerStatsMenu;
 import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.VillagerStatsData;
@@ -139,6 +140,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     Lazy<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = Lazy.of(
             this::getInitialJob
     );
+    private int ticksWithoutJobTarget;
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -416,6 +418,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private void visitorTick() {
+        if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
+            JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
+            town.getVillagerHandle().changeJobForVisitor(uuid, seeker, false);
+        }
+
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
             QT.VILLAGER_LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
@@ -445,15 +452,18 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         .getItem(0));
             }
         }
+        // TODO: Can this go inside the "not on client side" block?
         if (job.get().isWorking()) {
             BlockPos target = job.get().getTarget(blockPosition(), position(), town);
             if (target != null) {
+                ticksWithoutJobTarget = 0;
                 Vec3 center = Vec3.atBottomCenterOf(target);
-                double distToTarget = position().distanceTo(center);
-                if (distToTarget > 0.1 && distToTarget <= 1) {
+                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(position(), target)) {
                     QT.VILLAGER_LOGGER.debug("Moving to {}", target);
-                    this.moveTo(center);
+                    this.moveTo(center.x, center.y, center.z);
                 }
+            } else {
+                ticksWithoutJobTarget++;
             }
         }
         this.useNearbyGates();

@@ -416,9 +416,12 @@ public class DeclarativeJob extends
             @Override
             public Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots() {
                 ServerLevel sl = town.getServerLevel();
+                if (sl == null) {
+                    return ImmutableMap.of();
+                }
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
-                        bp -> !sl.getBlockState(bp).getMaterial().isSolid(),
+                        bp -> isValidWalkTarget(town, bp),
                         bp -> location.isJobBlock().test(sl::getBlockState, bp),
                         () -> Direction.getRandom(sl.random)
                 );
@@ -535,7 +538,7 @@ public class DeclarativeJob extends
     Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots(
             Function<BlockPos, State> town,
             @Nullable MCRoom jobSite,
-            Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
             Supplier<Direction> randomDirection
     ) {
@@ -543,7 +546,7 @@ public class DeclarativeJob extends
             return ImmutableMap.of();
         }
 
-        Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isEmpty, randomDirection);
+        Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isValidWalkTarget, randomDirection);
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
@@ -582,19 +585,19 @@ public class DeclarativeJob extends
     private BlockPos findInteractionSpot(
             BlockPos bp,
             Room jobSite,
-            Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isValidWalkTarget,
             Supplier<Direction> random
     ) {
         @Nullable BlockPos spot;
 
         if (specialGlobalRules.contains(SpecialRules.PREFER_INTERACTION_BELOW)) {
-            spot = doFindInteractionSpot(bp.below(), jobSite, isEmpty);
+            spot = doFindInteractionSpot(bp.below(), jobSite, isValidWalkTarget);
             if (spot != null) {
                 return spot;
             }
         }
 
-        spot = doFindInteractionSpot(bp, jobSite, isEmpty);
+        spot = doFindInteractionSpot(bp, jobSite, isValidWalkTarget);
         if (spot != null) {
             return spot;
         }
@@ -694,7 +697,7 @@ public class DeclarativeJob extends
     protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
             RoomsHolder town,
             Function<BlockPos, State> work,
-            Predicate<BlockPos> isEmpty,
+            Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
             Random rand
     ) {
@@ -728,7 +731,7 @@ public class DeclarativeJob extends
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
                     return new WithReason<>(findInteractionSpot(
-                            blockPos, match.room, isEmpty,
+                            blockPos, match.room, isValidWalkTarget,
                             () -> Direction.getRandom(rand)
                     ), "Found a spot where a held item can be used");
                 }

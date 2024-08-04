@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
 import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -17,6 +18,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 class JobLogicTest {
@@ -28,6 +31,7 @@ class JobLogicTest {
     );
 
     static int STATE_NEED_WIDGET = 0;
+    static int STATE_NEED_WORK = 1;
 
     static JobDefinition DEFINITION = new JobDefinition(
             new JobID("tester", "test"),
@@ -39,9 +43,11 @@ class JobLogicTest {
                     STATE_NEED_WIDGET, 1
             ),
             ImmutableMap.of(),
+            ImmutableMap.of(
+                    STATE_NEED_WORK, 1
+            ),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            "test report"
+            "gold nugget"
     );
 
     private static class TestLogicWorld implements JobLogic.JLWorld<Void, Boolean, Position> {
@@ -144,8 +150,9 @@ class JobLogicTest {
                 (a, b) -> 0
         );
 
+        Integer nextWork = DEFINITION.workRequiredAtStates().get(STATE_NEED_WORK);
         Assertions.assertEquals(
-                State.fresh().incrProcessing(),
+                State.fresh().incrProcessing().setWorkLeft(nextWork),
                 world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS)
         );
     }
@@ -370,5 +377,60 @@ class JobLogicTest {
         Assertions.assertNotNull(workSpotHistory.get(0));
         Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
 
+    }
+
+    @Test
+    void tick_shouldChangeJob_AfterWorkingThroughAllSteps() {
+        AtomicReference<JobID> changedTo = new AtomicReference<>(null);
+
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
+
+        TestLogicWorld world = new TestLogicWorld() {
+            @Override
+            public void changeJob(JobID id) {
+                super.changeJob(id);
+                changedTo.set(id);
+            }
+        };
+        boolean arbitraryInsertState = new Random().nextBoolean();
+
+        Consumer<Integer> ticker = (state) -> {
+            world.allWorkSpots = ImmutableMap.of(
+                    state, ImmutableList.of(ARBITRARY_WORKSPOT)
+            );
+
+            logic.tick(
+                    null,
+                    () -> ProductionStatus.fromJobBlockStatus(state),
+                    DEFINITION.jobId(),
+                    true,
+                    false,
+                    arbitraryInsertState,
+                    ExpirationRules.never(),
+                    DEFINITION.maxState(),
+                    world,
+                    (a, b) -> world.states.getJobBlockState(b).processingState()
+            );
+        };
+
+        // First, insert the ingredient
+        ticker.accept(STATE_NEED_WIDGET);
+        Assertions.assertEquals(null, changedTo.get());
+
+        // Then, do some work
+        ticker.accept(STATE_NEED_WORK);
+        Assertions.assertEquals(null, changedTo.get());
+
+        // Then, extract the product
+        world.allWorkSpots = ImmutableMap.of(
+                DEFINITION.maxState(), ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+      ticker.accept(DEFINITION.maxState());
+        Assertions.assertEquals(null, changedTo.get());
+
+        // Then, change job
+        ticker.accept(DEFINITION.maxState());
+        Assertions.assertEquals(WorkSeekerJob.getIDForRoot(DEFINITION.jobId()), changedTo.get());
     }
 }

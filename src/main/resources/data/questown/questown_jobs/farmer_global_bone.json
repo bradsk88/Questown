@@ -16,8 +16,11 @@
   "room": "questown:special_quest.farm",
   "work_states": [
     {
-      "ingredients": "minecraft:bone_meal",
-      "work": 2
+      "work": 2,
+      "tools": "minecraft:bone_meal"
+    },
+    {
+      "ingredients": "minecraft:bone_meal"
     }
   ],
   "cooldown_ticks": 100,
@@ -27,8 +30,8 @@
       "rules": ["claim_workspot"]
     },
     {
-      "type": "processing_state",
-      "state": "0",
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
       "rules": ["questown:use_last_inserted_item_on_block"]
     }
   ]

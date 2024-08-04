@@ -140,6 +140,12 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         worldBeforeTick.tryDropLoot();
         worldBeforeTick.tryGetSupplies();
+
+        if (wrappingUp) {
+            // TODO: Check if all special rules were leveraged.
+            //  If not, spit an error into the console to help with debugging.
+            worldBeforeTick.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
+        }
     }
 
     // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
@@ -187,6 +193,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
     }
 
     protected void setWorkSpot(WorkPosition<POS> spot) {
+        if (workSpot != null && workSpot.equals(spot)) {
+            return;
+        }
+        QT.JOB_LOGGER.debug("Villager is targeting workspot {}", spot);
         this.workSpot = spot;
     }
 }

@@ -86,7 +86,7 @@ public class DinerWork {
                                 SpecialRules.WORK_IN_EVENING
                         )
                 ),
-                new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 20, 0),
+                new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, 0),
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
                         () -> Long.MAX_VALUE,

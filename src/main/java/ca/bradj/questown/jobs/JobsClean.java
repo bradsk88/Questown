@@ -169,7 +169,7 @@ public class JobsClean {
             TOWN_ITEM mcTownItem = items.get(i);
             if (isRemovalCandidate.apply(mcTownItem)) {
                 TOWN_ITEM unit = mcTownItem.unit();
-                QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit, start);
+                QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit.getShortName(), start);
                 villager.accept(unit);
                 suppliesTarget.removeItem(i, 1);
                 break;
