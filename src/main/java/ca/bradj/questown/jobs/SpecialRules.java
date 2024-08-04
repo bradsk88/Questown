@@ -48,6 +48,10 @@ public class SpecialRules {
     // last inserted will be used in the block before "extract" step of the work
     // is finished. E.g. planting seeds, using bonemeal on crops.
     // If the item cannot be used on the block, it will just be consumed.
+    // (Note: the item itself must implement "useOn". If, instead, the BLOCK is
+    // responsible for the "use item" behaviour, then this rule won't work.
+    // See "compost_at_workspot" for an example implementation for blocks which
+    // control the "use item" behaviour.)
     public static final String USE_LAST_INSERTED_ITEM_ON_BLOCK = "use_last_inserted_item_on_block";
 
     // If this rule is enabled for the "extract product" step and the workspot
@@ -63,4 +67,9 @@ public class SpecialRules {
     // If this rule is active (globally) then blocks will only be considered
     // valid for use as workspots if they have empty air above them.
     public static final String REQUIRE_AIR_ABOVE = "require_air_above";
+
+    // If this rule is active for the "extract" state, and the workspot is a
+    // Minecraft composter block, then the worker will attempt to extract
+    // bone meal from the composter, which will also empty the composter.
+    public static final String COMPOST_AT_WORKSPOT = "compost_at_workspot";
 }

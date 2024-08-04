@@ -20,7 +20,7 @@
       "work": 10
     }
   ],
-  "cooldown_ticks": 20,
+  "cooldown_ticks": 10,
   "special": [
     {
       "type": "global",

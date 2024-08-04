@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "id": "farmer/compost",
+  "priority": "5000",
+  "parent": "farmer/bone_meal",
+  "icon": "minecraft:composter",
+  "initial_request": "minecraft:bone_meal",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": {
+    "id": "minecraft:composter"
+  },
+  "room": "questown:special_quest.farm",
+  "work_states": [
+    {
+      "ingredients": "#questown:compostable"
+    }
+  ],
+  "cooldown_ticks": 1,
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": [
+        "questown:compost_at_workspot"
+      ]
+    }
+  ]
+}

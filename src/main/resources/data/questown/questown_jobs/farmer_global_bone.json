@@ -16,14 +16,14 @@
   "room": "questown:special_quest.farm",
   "work_states": [
     {
-      "work": 2,
+      "work": 20,
       "tools": "minecraft:bone_meal"
     },
     {
       "ingredients": "minecraft:bone_meal"
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 10,
   "special": [
     {
       "type": "global",

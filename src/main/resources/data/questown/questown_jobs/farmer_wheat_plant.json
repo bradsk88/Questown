@@ -18,7 +18,7 @@
       "ingredients": "minecraft:wheat_seeds"
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 1,
   "special": [
     {
       "type": "global",

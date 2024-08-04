@@ -16,10 +16,10 @@
   "work_states": [
     {
       "tools": "#questown:hoes",
-      "work": "2"
+      "work": "20"
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 10,
   "special": [
     {
       "type": "global",

@@ -8,8 +8,17 @@ public record SoundInfo(
         @Nullable Integer chance,
         @Nullable Integer duration
 ) {
+    public SoundInfo(ResourceLocation sound, @Nullable Integer chance, @Nullable Integer duration) {
+        this.sound = sound;
+        this.chance = chance;
+        this.duration = duration;
+        if (duration != null && duration <= 0) {
+            throw new IllegalArgumentException("Duration cannot be zero. If unsure, provide null.");
+        }
+    }
+
     public static SoundInfo everyInterval(ResourceLocation location) {
-        return new SoundInfo(location, 100, 0);
+        return new SoundInfo(location, 100, null);
     }
 
     public static SoundInfo guaranteed(

@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.special.CompostAtWorkspotSpecialRule;
 import ca.bradj.questown.jobs.special.HarvestCropSpecialRule;
 import ca.bradj.questown.jobs.special.UseLastInsertedItemOnBlockSpecialRule;
 import ca.bradj.questown.jobs.SpecialRules;
@@ -26,6 +27,10 @@ public final class QuestownSpecialRules {
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.TILL_WORKSPOT),
                 new TillWorkspotSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.COMPOST_AT_WORKSPOT),
+                new CompostAtWorkspotSpecialRule()
         );
     }
 }

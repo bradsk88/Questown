@@ -52,6 +52,22 @@ public class Compat {
                 pitchUpOrDown
         );
     }
+    public static void playSound(
+            ServerLevel serverLevel,
+            BlockPos pos,
+            SoundEvent sound, SoundSource source
+    ) {
+        float volume = 0.5f;
+        float pitchUpOrDown = 1.0F + (serverLevel.random.nextFloat() - serverLevel.random.nextFloat()) * 0.4F;
+        serverLevel.playSound(
+                null,
+                pos,
+                sound,
+                source,
+                volume,
+                pitchUpOrDown
+        );
+    }
 
     public static Component translatable(String key) {
         return new TranslatableComponent(key);

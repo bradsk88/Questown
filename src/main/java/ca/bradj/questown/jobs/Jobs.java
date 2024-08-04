@@ -372,7 +372,7 @@ public class Jobs {
                 continue;
             }
 
-            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {}", ownerUUID, mct.toShortString(), target.getBlockPos());
+            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {} [{}]", ownerUUID, mct.getShortName(), target.getBlockPos(), mct.toShortString());
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {
