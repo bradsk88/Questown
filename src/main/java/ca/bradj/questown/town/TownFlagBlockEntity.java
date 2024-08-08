@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
+import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
@@ -67,6 +68,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.StandingSignBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -116,7 +118,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 NBT_QUEST_BATCHES, new InitPair(
                         (tag, t) -> {
                             CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-                            MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
+                            boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
+                            if (!inited) {
+                                t.setUpQuestsForNewlyPlacedFlag();
+                            }
                             t.isInitializedQuests = true;
                             QT.FLAG_LOGGER.debug("Initialized quests from {}", tag);
                             return true;
@@ -193,17 +198,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                             t.villagerHandle.associate(t);
                             t.villagerHandle.addHungryListener(e -> {
                                 if (t.getVillagerHandle()
-                                     .isDining(e.getUUID())) {
+                                        .isDining(e.getUUID())) {
                                     return;
                                 }
                                 if (!t.getVillagerHandle()
-                                      .canDine(e.getUUID())) {
+                                        .canDine(e.getUUID())) {
                                     return;
                                 }
                                 String rid = e.getJobId()
-                                              .rootId();
+                                        .rootId();
                                 ResourceLocation diningRoom = DinerWork.asWork(rid)
-                                                                       .baseRoom();
+                                        .baseRoom();
                                 Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(
                                         diningRoom);
                                 if (diningRooms.isEmpty()) {
@@ -292,8 +297,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             QT.FLAG_LOGGER.error("No players detected in world");
             return;
         }
-        double distToPlayer = nearestPlayer.blockPosition()
-                                           .distSqr(e.worldPosition);
+        double distToPlayer = nearestPlayer.blockPosition().distSqr(e.worldPosition);
         if (distToPlayer > Config.TOWN_TICK_RADIUS.get()) {
             if (!e.stopped) {
                 QT.FLAG_LOGGER.info(
@@ -310,7 +314,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         long start = System.currentTimeMillis();
 
         if (!e.initializers.isEmpty()) {
-            QT.FLAG_LOGGER.info("Running initializer ({} left)", e.initializers.size() - 1);
+            QT.FLAG_LOGGER.info("Running initializer ({} left) @ {}", e.initializers.size() - 1, e.getBlockPos());
             Function<TownFlagBlockEntity, Boolean> initr = e.initializers.remove();
             if (!initr.apply(e)) {
                 e.initializers.add(initr);
@@ -383,13 +387,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         ChunkPos here = new ChunkPos(blockPos);
         Biome value = level.getBiome(blockPos)
-                           .value();
+                .value();
         e.nearbyBiomes.add(value);
         for (Direction d : Direction.Plane.HORIZONTAL) {
             for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
                 ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
                 Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY()))
-                                   .value();
+                        .value();
                 e.nearbyBiomes.add(biome);
             }
         }
@@ -404,7 +408,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         villagerHandle.forEach(LivingEntity::stopSleeping);
         villagerHandle.makeAllTotallyHungry();
         Compat.getBlockStoredTagData(this)
-              .putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+                .putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
     }
 
     private static void profileTick(
@@ -419,9 +423,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 QT.PROFILE_LOGGER.debug(
                         "Average tick length: {}",
                         e.times.stream()
-                               .mapToInt(Integer::intValue)
-                               .average()
-                               .getAsDouble()
+                                .mapToInt(Integer::intValue)
+                                .average()
+                                .getAsDouble()
                 );
                 e.times.clear();
             }
@@ -574,20 +578,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 prefix
         ));
         villagerHandle.stream()
-                      .filter(v -> v instanceof VisitorMobEntity)
-                      .map(v -> (VisitorMobEntity) v)
-                      .filter(e -> {
-                          for (WorkRequest r : workHandle.getRequestedResults()) {
-                              if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
-                                  if (e.getStatusForServer()
-                                       .isBusy()) {
-                                      return false;
-                                  }
-                              }
-                          }
-                          return true;
-                      })
-                      .forEach(e -> changeJobForVisitor(e.getUUID(), WorkSeekerJob.getIDForRoot(e.getJobId())));
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(e -> {
+                    for (WorkRequest r : workHandle.getRequestedResults()) {
+                        if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
+                            if (e.getStatusForServer()
+                                    .isBusy()) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .forEach(e -> changeJobForVisitor(e.getUUID(), WorkSeekerJob.getIDForRoot(e.getJobId())));
     }
 
     @Override
@@ -619,11 +623,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
             if (event.getEntity() instanceof ServerPlayer sp) {
                 double v = event.getEntity()
-                                .distanceToSqr(
-                                        this.worldPosition.getX() + 0.5D,
-                                        this.worldPosition.getY() + 0.5D,
-                                        this.worldPosition.getZ() + 0.5D
-                                );
+                        .distanceToSqr(
+                                this.worldPosition.getX() + 0.5D,
+                                this.worldPosition.getY() + 0.5D,
+                                this.worldPosition.getZ() + 0.5D
+                        );
                 if (v < 100) {
                     AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
                             sp, ApproachTownTrigger.Triggers.FirstVisit
@@ -660,8 +664,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer()
-                                   .getPlayerList()
-                                   .getPlayers()) {
+                .getPlayerList()
+                .getPlayers()) {
             p.displayClientMessage(Compat.translatable(key, args), false);
         }
     }
@@ -680,7 +684,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match.getRecipeID()),
                 roomDoorPos.getDoorPos()
-                           .getUIString()
+                        .getUIString()
         );
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
@@ -705,21 +709,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             RoomRecipeMatch<MCRoom> room
     ) {
         BlockPredicate predicate = BlockPredicate.Builder.block()
-                                                         .of(BlockTags.SIGNS)
-                                                         .build();
+                .of(BlockTags.SIGNS)
+                .build();
         for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
-                                                .entrySet()) {
+                .entrySet()) {
             if (!predicate.matches(level, e.getKey())) {
                 continue;
             }
-            // TODO: Get direction
-//            Direction value = level.getBlockState(e.getKey()).getValue(HorizontalDirectionalBlock.FACING);
-            Direction value = Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom());
+            Direction value = Util.rotationToDirection(
+                    level.getBlockState(e.getKey()).getValue(StandingSignBlock.ROTATION)
+            );
             level.setBlockAndUpdate(
                     e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get()
-                                                          .defaultBlockState()
-                                                          .setValue(
-                                                                  HorizontalDirectionalBlock.FACING, value)
+                            .defaultBlockState()
+                            .setValue(HorizontalDirectionalBlock.FACING, value)
             );
             registerJobsBoard(e.getKey());
             jobHandle.setJobBlockState(e.getKey(), State.freshAtState(WorkSeekerJob.MAX_STATE));
@@ -741,7 +744,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 Compat.translatable("room." + oldMatchID.getPath()),
                 Compat.translatable("room." + newMatchID.getPath()),
                 newRoom.getDoorPos()
-                       .getUIString()
+                        .getUIString()
         );
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         if (oldMatch == null && newMatch != null) {
@@ -772,9 +775,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         broadcastMessage(
                 "messages.building.room_destroyed",
                 Compat.translatable("room." + oldRecipeId.getRecipeID()
-                                                         .getPath()),
+                        .getPath()),
                 roomDoorPos.getDoorPos()
-                           .getUIString()
+                        .getUIString()
         );
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
         quests.markQuestAsLost(roomDoorPos, oldRecipeId.getRecipeID());
@@ -793,7 +796,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 getBlockPos().getY() + 10,
                 getBlockPos().getZ(),
                 new ItemStack(Items.FIREWORK_ROCKET.getDefaultInstance()
-                                                   .getItem(), 3)
+                        .getItem(), 3)
         );
         level.addFreshEntity(firework);
     }
@@ -863,8 +866,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             Collection<WorkRequest> requestedResults
     ) {
         Optional<LivingEntity> f = villagerHandle.stream()
-                                                 .filter(v -> uuid.equals(v.getUUID()))
-                                                 .findFirst();
+                .filter(v -> uuid.equals(v.getUUID()))
+                .findFirst();
         if (f.isEmpty()) {
             QT.BLOCK_LOGGER.error("No entities found for UUID: {}", uuid);
             return null;
@@ -905,8 +908,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
 
             List<Ingredient> i = requestedResults.stream()
-                                                 .map(WorkRequest::asIngredient)
-                                                 .toList();
+                    .map(WorkRequest::asIngredient)
+                    .toList();
             for (Ingredient requestedResult : i) {
                 // TODO: Think about how work chains work.
                 //  E.g. If a blacksmith needs iron ingots to do a requested job,
@@ -936,11 +939,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             boolean announce
     ) {
         Optional<VisitorMobEntity> f = villagerHandle.stream()
-                                                     .filter(v -> v instanceof VisitorMobEntity)
-                                                     .map(v -> (VisitorMobEntity) v)
-                                                     .filter(v -> v.getUUID()
-                                                                   .equals(visitorUUID))
-                                                     .findFirst();
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> v.getUUID()
+                        .equals(visitorUUID))
+                .findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
         } else {
@@ -959,7 +962,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             VisitorMobEntity f
     ) {
         f.setJob(JobsRegistry.getInitializedJob(this, jobName, f.getJobJournalSnapshot()
-                                                                .items(), visitorUUID));
+                .items(), visitorUUID));
     }
 
     @Override
@@ -969,7 +972,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         List<UUID> villagers = ImmutableList.copyOf(getVillagers());
         return villagers.get(getServerLevel().getRandom()
-                                             .nextInt(villagers.size()));
+                .nextInt(villagers.size()));
     }
 
     @Override
@@ -980,11 +983,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public Collection<UUID> getUnemployedVillagers() {
         return villagerHandle.stream()
-                             .filter(v -> v instanceof VisitorMobEntity)
-                             .map(v -> (VisitorMobEntity) v)
-                             .filter(VisitorMobEntity::canAcceptJob)
-                             .map(Entity::getUUID)
-                             .toList();
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(VisitorMobEntity::canAcceptJob)
+                .map(Entity::getUUID)
+                .toList();
     }
 
     @Override
@@ -1029,8 +1032,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public ImmutableSet<UUID> getVillagers() {
         return ImmutableSet.copyOf(villagerHandle.stream()
-                                                 .map(Entity::getUUID)
-                                                 .collect(Collectors.toSet()));
+                .map(Entity::getUUID)
+                .collect(Collectors.toSet()));
     }
 
     @Override
@@ -1129,32 +1132,32 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public Optional<MCRoom> getBiggestFarm() {
         return roomsHandle.getFarms()
-                          .stream()
-                          .max(Comparator.comparingInt(
-                                  v -> v.getSpaces()
-                                        .stream()
-                                        .map(InclusiveSpaces::calculateArea)
-                                        .mapToInt(Double::intValue)
-                                        .sum()
-                          ));
+                .stream()
+                .max(Comparator.comparingInt(
+                        v -> v.getSpaces()
+                                .stream()
+                                .map(InclusiveSpaces::calculateArea)
+                                .mapToInt(Double::intValue)
+                                .sum()
+                ));
     }
 
     @Override
     public Collection<String> getAvailableRootJobs() {
         // TODO: Scan villagers to make this decision
         Set<String> allJobs = JobsRegistry.getAllJobs()
-                                          .stream()
-                                          .map(JobID::rootId)
-                                          .collect(Collectors.toSet());
+                .stream()
+                .map(JobID::rootId)
+                .collect(Collectors.toSet());
         Set<String> allFilledJobs = villagerHandle.stream()
-                                                  .filter(v -> v instanceof VisitorMobEntity)
-                                                  .map(v -> (VisitorMobEntity) v)
-                                                  .map(VisitorMobEntity::getJobId)
-                                                  .map(JobID::rootId)
-                                                  .collect(Collectors.toSet());
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .map(VisitorMobEntity::getJobId)
+                .map(JobID::rootId)
+                .collect(Collectors.toSet());
         Set<String> allNewJobs = allJobs.stream()
-                                        .filter(v -> !allFilledJobs.contains(v))
-                                        .collect(Collectors.toSet());
+                .filter(v -> !allFilledJobs.contains(v))
+                .collect(Collectors.toSet());
         if (allNewJobs.isEmpty()) {
             allNewJobs = allJobs;
         }
@@ -1173,7 +1176,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             computeNearbyBiomes(level, getBlockPos(), this);
         }
         Biome biome = nearbyBiomes.get(getServerLevel().getRandom()
-                                                       .nextInt(nearbyBiomes.size()));
+                .nextInt(nearbyBiomes.size()));
         return ForgeRegistries.BIOMES.getKey(biome);
     }
 
@@ -1213,21 +1216,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             ServerLevel sl
     ) {
         if (!Compat.getBlockStoredTagData(this)
-                   .contains(NBT_TOWN_STATE)) {
+                .contains(NBT_TOWN_STATE)) {
             QT.FLAG_LOGGER.error(
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
             return;
         }
         MCTownState state = TownStateSerializer.INSTANCE.load(
                 Compat.getBlockStoredTagData(this)
-                      .getCompound(NBT_TOWN_STATE),
+                        .getCompound(NBT_TOWN_STATE),
                 sl, bp -> this.pois.getWelcomeMats()
-                                   .contains(bp)
+                        .contains(bp)
         );
         Optional<TownState.VillagerData<MCHeldItem>> match = state.villagers.stream()
-                                                                            .filter(v -> v.uuid.equals(
-                                                                                    visitorMobEntity.getUUID()))
-                                                                            .findFirst();
+                .filter(v -> v.uuid.equals(
+                        visitorMobEntity.getUUID()))
+                .findFirst();
         if (match.isEmpty()) {
             QT.FLAG_LOGGER.error(
                     "Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
@@ -1250,6 +1253,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
         setChanged();
+        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                getServerLevel(), RoomTrigger.Triggers.FirstJobBlock, welcomeMatBlock
+        );
     }
 
     public List<BlockPos> getWelcomeMats() {
@@ -1293,12 +1299,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(this, getServerLevel());
         cs.forEach(v -> {
             v.getItems()
-             .stream()
-             .filter(i -> ItemsInit.GATHERER_MAP.get()
-                                                .equals(i.get()))
-             .map(i -> GathererMap.getBiome(i.toItemStack()))
-             .filter(Objects::nonNull)
-             .forEach(b::add);
+                    .stream()
+                    .filter(i -> ItemsInit.GATHERER_MAP.get()
+                            .equals(i.get()))
+                    .map(i -> GathererMap.getBiome(i.toItemStack()))
+                    .filter(Objects::nonNull)
+                    .forEach(b::add);
         });
         nearbyBiomes.forEach(v -> {
             ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
@@ -1317,9 +1323,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void freezeVillagers(Integer ticks) {
         villagerHandle.stream()
-                      .filter(VisitorMobEntity.class::isInstance)
-                      .map(VisitorMobEntity.class::cast)
-                      .forEach(v -> v.freeze(ticks));
+                .filter(VisitorMobEntity.class::isInstance)
+                .map(VisitorMobEntity.class::cast)
+                .forEach(v -> v.freeze(ticks));
     }
 
     public VillagerHolder getVillagerHandle() {

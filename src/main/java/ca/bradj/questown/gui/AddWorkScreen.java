@@ -127,7 +127,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         y = y + PAGE_PADDING;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        ImmutableList<Slot> slotz = renderJobCardIcons(poseStack, work, x, y, mouseX, mouseY);
+        ImmutableList<Slot> slotz = renderRequestItemIcons(poseStack, work, x, y, mouseX, mouseY);
         b.addAll(slotz);
 
         int idX = x + PAGE_PADDING;
@@ -143,7 +143,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
     private List<Slot> slots = new ArrayList<>();
 
-    private ImmutableList<Slot> renderJobCardIcons(
+    private ImmutableList<Slot> renderRequestItemIcons(
             PoseStack poseStack,
             Iterable<Ingredient> possibleRequests,
             int x,

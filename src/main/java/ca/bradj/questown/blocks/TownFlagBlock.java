@@ -2,18 +2,20 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
@@ -74,6 +76,17 @@ public class TownFlagBlock extends BaseEntityBlock {
             ServerLevel level,
             ItemStack itemInHand
     ) {
+        BlockPos bp = GetParentPosFromNBT(itemInHand);
+        if (bp == null) return null;
+        BlockEntity oEntity = level.getBlockEntity(bp);
+        if (oEntity instanceof TownFlagBlockEntity e) {
+            return e;
+        }
+        return null;
+
+    }
+
+    public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
         if (itemInHand.getTag() == null) {
             QT.ITEM_LOGGER.error("Missing tag");
             return null;
@@ -100,13 +113,9 @@ public class TownFlagBlock extends BaseEntityBlock {
 
 
         BlockPos bp = new BlockPos(x, y, z);
-        BlockEntity oEntity = level.getBlockEntity(bp);
-        if (oEntity instanceof TownFlagBlockEntity e) {
-            return e;
-        }
-        return null;
-
+        return bp;
     }
+
     public static void CopyParentFromNBT(
             ItemStack input,
             ItemStack output
@@ -199,13 +208,20 @@ public class TownFlagBlock extends BaseEntityBlock {
         //  any other item and with the parent NBT stored on the new item.
         ItemStack converted = null;
 
+
+        if (itemInHand.getItem().equals(Items.STICK)) {
+            converted = ItemsInit.TOWN_WAND.get().getDefaultInstance();
+        }
+        if (itemInHand.getItem().equals(ItemsInit.TOWN_WAND.get())) {
+            converted = Items.STICK.getDefaultInstance();
+        }
         if (itemInHand.getItem().equals(ItemsInit.WELCOME_MAT_BLOCK.get())) {
             converted = itemInHand;
         }
         if (Ingredient.of(ItemTags.SIGNS).test(itemInHand)) {
             converted = ItemsInit.JOB_BOARD_BLOCK.get().getDefaultInstance();
         }
-        if (Ingredient.of(ItemTags.CARPETS).test(itemInHand)) {
+        if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
             player.giveExperiencePoints(100);
             // TODO: Advancement
@@ -260,6 +276,9 @@ public class TownFlagBlock extends BaseEntityBlock {
                     "{} has been paired with {} at {}",
                     ForgeRegistries.ITEMS.getKey(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
             );
+            if (converted.getItem().equals(ItemsInit.TOWN_WAND.get())) {
+                AdvancementsInit.ROOM_TRIGGER.trigger((ServerPlayer) player, RoomTrigger.Triggers.WandGet);
+            }
             return InteractionResult.sidedSuccess(false);
         }
         return null;
@@ -365,7 +384,12 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        oEntity.get().getQuestHandle().showQuestsUI((ServerPlayer) player);
+        if (oEntity.get().isInitialized()) {
+            oEntity.get().getQuestHandle().showQuestsUI((ServerPlayer) player);
+        } else {
+            oEntity.get().onLoad();
+            player.displayClientMessage(Compat.translatable("messages.town_flag.loading"), false);
+        }
         return InteractionResult.sidedSuccess(false);
     }
 

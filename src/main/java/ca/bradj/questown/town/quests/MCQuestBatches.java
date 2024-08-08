@@ -37,7 +37,7 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCRoom, MCQue
             return ct;
         }
 
-        public void deserializeNBT(TownInterface entity, CompoundTag nbt, MCQuestBatches batches) {
+        public boolean deserializeNBT(TownInterface entity, CompoundTag nbt, MCQuestBatches batches) {
             ImmutableList.Builder<MCQuestBatch> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_BATCHES);
             ListTag aq = nbt.getList(NBT_BATCHES, Tag.TAG_COMPOUND);
@@ -46,7 +46,12 @@ public class MCQuestBatches extends QuestBatches<ResourceLocation, MCRoom, MCQue
                 MCQuestBatch q = MCQuestBatch.SERIALIZER.deserializeNBT(entity, tag);
                 aqs.add(q);
             }
-            batches.initialize(entity, aqs.build());
+            ImmutableList<MCQuestBatch> build = aqs.build();
+            if (build.isEmpty() || build.stream().allMatch(v -> v.getAll().isEmpty())) {
+                return false;
+            }
+            batches.initialize(entity, build);
+            return true;
         }
     }
 }

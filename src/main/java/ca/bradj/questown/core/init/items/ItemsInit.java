@@ -4,13 +4,21 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.*;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+import java.util.function.Supplier;
+
+@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ItemsInit {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Questown.MODID);
 
@@ -115,6 +123,25 @@ public class ItemsInit {
             GathererMap::new
     );
 
+    public static final RegistryObject<Item> TOWN_WAND = ITEMS.register(
+            TownWand.ITEM_ID,
+            TownWand::new
+    );
+
+    @SubscribeEvent
+    public static void onInteractBlock(PlayerInteractEvent.RightClickBlock event) {
+        final var level = event.getWorld();
+        if (level.isClientSide) return; // Note this is fired both client and server side
+        final var itemUsed = event.getItemStack().getItem();
+        if (itemUsed instanceof TownWand item) {
+            item.onRightClicked(
+                    () -> (ServerPlayer) event.getPlayer(),
+                    (ServerLevel) event.getWorld(),
+                    event.getPos(),
+                    event.getItemStack()
+            );
+        }
+    }
 
     public static final RegistryObject<Item> KNOWLEDGE = ITEMS.register(
             KnowledgeMetaItem.ITEM_ID,

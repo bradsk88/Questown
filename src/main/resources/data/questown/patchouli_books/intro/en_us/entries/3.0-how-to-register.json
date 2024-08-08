@@ -1,0 +1,29 @@
+{
+  "name": "Entry 3: Rooms",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:wand_get",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "After using a stick on the flag base, you should have a shiny new TOWN WAND!$(br2)But what does this wand do?$(br2)BE PATIENT! I'M GETTING THERE!$(br2)Let's start by building a room for our guest. Villagers are quite picky, so keep it simple. Let's build a small, square room with a door."
+    },{
+      "type": "patchouli:text",
+      "text": "Once you've got all four walls and the door built, try using the wand on the door!$(br2)Hint: Right-click the door of a room with the TOWN WAND in hand.$(br2)Hint: Go to the next page to see an example."
+    },{
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "T": "minecraft:oak_door[facing=west,half=upper]"
+        },
+        "pattern": [
+          ["WWWW", "W  W", "WWTW"],
+          ["WWWW", "W 0W", "WWDW"]
+        ]
+      },
+      "text": "Hint: Rooms should have four walls (at least 2 blocks tall) and a door. Build them near the town flag."
+    }
+  ]
+}

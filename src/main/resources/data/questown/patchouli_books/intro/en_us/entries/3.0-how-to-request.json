@@ -1,0 +1,27 @@
+{
+  "name": "Entry 3: Requests",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_room",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Villagers will do their best to get the items that YOU WANT. However, first you must tell them what you want.$(br2)A job board will allow us to make requests for certain items. Lets build one!"
+    },{
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "S": "minecraft:oak_sign[rotation=4]",
+          "T": "minecraft:oak_door[facing=west,half=upper]"
+        },
+        "pattern": [
+          ["WWWW", "    ", "    "],
+          ["WWWW", "W0SW", "WWDW"]
+        ]
+      },
+      "text": "Hint: Place a sign in a registered room to convert it into a JOB BOARD"
+    }
+  ]
+}

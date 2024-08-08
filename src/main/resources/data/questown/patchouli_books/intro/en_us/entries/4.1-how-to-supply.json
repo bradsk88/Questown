@@ -1,12 +1,12 @@
 {
-  "name": "Entry 3: Quests",
+  "name": "Entry 4.1: Supplies",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
-  "advancement": "questown:first_room",
+  "advancement": "questown:first_job_block",
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "An empty room is better than nothing, but I'm sure your guests will want something more specific.$(br2)Make sure you light up the room with a torch!"
+      "text": "Now that your villager has somewhere to work, they will be looking for supplies. Have you built a store room yet?$(br2)Build a store room, then fill the chest with a few supplies."
     }, {
       "type": "patchouli:multiblock",
       "multiblock": {
@@ -14,16 +14,15 @@
           "W": "minecraft:oak_planks",
           "D": "minecraft:oak_door[facing=west]",
           "T": "minecraft:oak_door[facing=west,half=upper]",
-          "C": "minecraft:crafting_table",
           "X": "minecraft:chest[facing=east]",
           "R": "minecraft:wall_torch[facing=east]"
         },
         "pattern": [
           ["WWWW", " R  ", "    ", "    "],
-          ["WWWW", "WCXW", "W 0W", "WWDW"]
+          ["WWWW", "W XW", "W 0W", "WWDW"]
         ]
       },
-      "text": "Hint: Right-click on the base of the town flag to view active room quests."
+      "text": "Hint: Right-click on your villager to see what supplies they need."
     }
   ]
 }

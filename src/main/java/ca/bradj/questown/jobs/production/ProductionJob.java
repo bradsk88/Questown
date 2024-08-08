@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -94,6 +96,13 @@ public abstract class ProductionJob<
                     sl.getRandom()
             );
             this.jobSite = js.value();
+            if (this.jobSite != null) {
+                AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                        town.getServerLevel(),
+                        RoomTrigger.Triggers.FirstJobBlock,
+                        this.jobSite
+                );
+            }
         }
         return jobSite;
     }

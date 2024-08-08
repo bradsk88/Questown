@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "TO-DO",
+      "color": "white"
+    },
+    "description": {
+      "text": "Place a block which a villager can use to do work"
+    },
+    "icon": {
+      "item": "questown:welcome_mat_block"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:room_trigger",
+      "conditions": {
+        "context": "first_job_block"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:root"
+}

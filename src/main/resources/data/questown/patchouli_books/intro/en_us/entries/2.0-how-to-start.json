@@ -1,0 +1,15 @@
+{
+  "name": "Entry 2: Getting Started",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_visitor",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "If you followed my advice, you've probably received your first visitor.$(br2)I hope you're a skilled builder; It's a rare talent these days!$(br2)Villagers are really quite helpful, but they need a place to work and live."
+    },{
+      "type": "patchouli:text",
+      "text": "Before we can start anything, we'll need a special tool!$(br2)Try using a wooden stick on the base of the flag.$(br2)$(br2)Right-click the flag base with a stick in hand."
+    }
+  ]
+}

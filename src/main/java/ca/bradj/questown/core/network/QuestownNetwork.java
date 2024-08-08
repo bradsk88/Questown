@@ -69,6 +69,12 @@ public class QuestownNetwork {
                 decoder(OpenVillagerAdvancementsMenuMessage::decode),
                 OpenVillagerAdvancementsMenuMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(WandClickedAwayMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(WandClickedAwayMessage::encode).
+                decoder(WandClickedAwayMessage::decode),
+                WandClickedAwayMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

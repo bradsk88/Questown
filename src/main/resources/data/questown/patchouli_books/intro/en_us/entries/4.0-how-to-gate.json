@@ -6,7 +6,39 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "In my experience, villagers will want to help out.$(br2)Gatherers will leave camp every day to find supplies.$(br2)However, you must build a town gate so they can find their way back!"
+      "text": "Chances are, this new villager is quite skilled at GATHERING.$(br2)They will help you gather supplies, but first you will need to create an environment for them to work in.$(br2)There are 3 things you must do before a villager can work."
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "T": "minecraft:oak_door[facing=west,half=upper]",
+          "X": "minecraft:chest[facing=east]",
+          "R": "minecraft:wall_torch[facing=east]"
+        },
+        "pattern": [
+          ["WWWW", " R  ", "    ", "    "],
+          ["WWWW", "W XW", "W 0W", "WWDW"]
+        ]
+      },
+      "text": "1/3 - Build a room where they can find supplies and deposit the things they find or make."
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "D": "minecraft:oak_door[facing=west]",
+          "T": "minecraft:oak_door[facing=west,half=upper]",
+          "X": "minecraft:chest[facing=east]",
+          "R": "minecraft:wall_torch[facing=east]"
+        },
+        "pattern": [
+          ["WWWW", " R  ", "    ", "    "],
+          ["WWWW", "W XW", "W 0W", "WWDW"]
+        ]
+      },
+      "text": "2/3 - Build a room where they can see what items have been requested"
     }, {
       "type": "patchouli:multiblock",
       "multiblock": {
@@ -21,7 +53,7 @@
           [" W ", "0C ", " W "]
         ]
       },
-      "text": "Hint: Right-click on the base of the town flag with a piece of carpet in hand to craft a Welcome Mat."
+      "text": "Hint: To get a Welcome Mat, right-click on the base of the town flag with a Pressure Plate in hand."
     }
   ]
 }

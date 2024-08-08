@@ -20,6 +20,8 @@ public class StatusArt {
         b.put(ProductionStatus.RELAXING, "menu/gatherer/relaxing.png");
         b.put(ProductionStatus.NO_JOBSITE, "menu/gatherer/no_jobsite.png");
         b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/leaving.png");
+        b.put(ProductionStatus.NO_SUPPLIES, "menu/gatherer/no_supplies.png");
+        b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
         pArt = b.build();
     }
 

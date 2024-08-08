@@ -4,6 +4,7 @@ import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -17,8 +18,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -117,15 +116,9 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         if (level == null) {
             return;
         }
-        int y = entity.getBlockPos().getY();
-        Player np = level.getNearestPlayer(
-                doorPos.x, y, doorPos.z, 8.0D, false
-        );
-        if (!(np instanceof ServerPlayer sp)) {
-            return;
-        }
-        AdvancementsInit.ROOM_TRIGGER.trigger(
-                sp, RoomTrigger.Triggers.FirstRoom
+        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                level, RoomTrigger.Triggers.FirstRoom,
+                Positions.ToBlock(doorPos, entity.getY())
         );
     }
 

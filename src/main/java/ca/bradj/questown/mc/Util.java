@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -253,5 +254,31 @@ public class Util {
             return fallback;
         }
         return fn.apply(input);
+    }
+
+    public static Direction rotationToDirection(Integer value) {
+        if (value == null) {
+            return Direction.WEST;
+        }
+        int v = value % 16;
+        // 0 is south
+        // 4 is west
+        // 8 is north
+        // 12 is east
+
+        // 15, 0, 1 are south
+        if (v == 15 || v < 2) {
+            return Direction.SOUTH;
+        }
+        // 2, 3, 4, 5, 6 are west
+        if (v < 7) {
+            return Direction.WEST;
+        }
+        // 7, 8, 9 are north
+        if (v < 10) {
+            return Direction.NORTH;
+        }
+        // 10, 11, 12, 13, 14 are east
+        return Direction.EAST;
     }
 }

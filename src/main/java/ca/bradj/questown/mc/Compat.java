@@ -10,6 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
@@ -69,12 +70,18 @@ public class Compat {
         );
     }
 
-    public static Component translatable(String key) {
+    public static TranslatableComponent translatable(String key) {
         return new TranslatableComponent(key);
     }
 
-    public static Component translatable(String key, Object... args) {
+    public static TranslatableComponent translatable(String key, Object... args) {
         return new TranslatableComponent(key, args);
+    }
+
+    public static TranslatableComponent translatableStyled(String s, Style style, Object... args) {
+        TranslatableComponent v = translatable(s, args);
+        v.setStyle(style);
+        return v;
     }
 
     public static Component literal(String x) {
