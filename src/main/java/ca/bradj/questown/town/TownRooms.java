@@ -95,11 +95,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
         );
-        entity.broadcastMessage(
-                "messages.building.room_created",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
-                doorPos.getUIString()
-        );
+        entity.messages.roomCreated(recipe, doorPos);
     }
 
     protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(ServerLevel entity, MCRoom room) {
@@ -137,11 +133,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
                 )
         );
-        entity.broadcastMessage(
-                "messages.building.room_size_changed",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
-                doorPos.getUIString()
-        );
+        entity.messages.roomSizeChanged(recipe, doorPos);
     }
 
     @Override
@@ -151,11 +143,7 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
-        entity.broadcastMessage(
-                "messages.building.room_destroyed",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
-                doorPos.getUIString()
-        );
+        entity.messages.roomDestroyed(recipe, doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.SMOKE);
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, null, null)

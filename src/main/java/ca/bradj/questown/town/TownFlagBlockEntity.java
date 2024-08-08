@@ -267,6 +267,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownKnowledgeStore knowledgeHandle = new TownKnowledgeStore();
     private final TownQuestsHandle questsHandle = new TownQuestsHandle();
     private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
+    final TownMessages messages = new TownMessages();
 
     private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
     private @Nullable Supplier<Boolean> debugTask;
@@ -549,6 +550,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             v.onFlagPlace.accept(this);
         });
         initializers.add(t -> {
+            t.messages.initialize(t.getServerLevel());
+            return true;
+        });
+        initializers.add(t -> {
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
             }
@@ -658,18 +663,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
-    void broadcastMessage(
-            String key,
-            Object... args
-    ) {
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
-        for (ServerPlayer p : level.getServer()
-                .getPlayerList()
-                .getPlayers()) {
-            p.displayClientMessage(Compat.translatable(key, args), false);
-        }
-    }
-
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
         return quests.getAll();
     }
@@ -679,13 +672,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom roomDoorPos,
             RoomRecipeMatch<MCRoom> match
     ) {
-        swapBlocks(getServerLevel(), match);
-        broadcastMessage(
-                "messages.building.recipe_created",
-                RoomRecipes.getName(match.getRecipeID()),
-                roomDoorPos.getDoorPos()
-                        .getUIString()
-        );
+        ServerLevel l = getServerLevel();
+        swapBlocks(l, match);
+        messages.roomRecipeCreated(roomDoorPos, match);;
+        BlockPos pos = Positions.ToBlock(roomDoorPos.doorPos, roomDoorPos.yCoord);
+        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
@@ -739,13 +730,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         ResourceLocation oldMatchID = oldMatch.getRecipeID();
         ResourceLocation newMatchID = newMatch.getRecipeID();
-        broadcastMessage(
-                "messages.building.room_changed",
-                Compat.translatable("room." + oldMatchID.getPath()),
-                Compat.translatable("room." + newMatchID.getPath()),
-                newRoom.getDoorPos()
-                        .getUIString()
-        );
+        messages.roomRecipeChanged(oldMatch, newMatch, newRoom);
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         if (oldMatch == null && newMatch != null) {
             quests.markQuestAsComplete(newRoom, newMatchID);
@@ -772,23 +757,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom roomDoorPos,
             RoomRecipeMatch oldRecipeId
     ) {
-        broadcastMessage(
-                "messages.building.room_destroyed",
-                Compat.translatable("room." + oldRecipeId.getRecipeID()
-                        .getPath()),
-                roomDoorPos.getDoorPos()
-                        .getUIString()
-        );
+        messages.roomRecipeDestroyed(roomDoorPos, oldRecipeId);
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
         quests.markQuestAsLost(roomDoorPos, oldRecipeId.getRecipeID());
     }
 
     @Override
     public void questCompleted(MCQuest quest) {
-        broadcastMessage(
-                "messages.town_flag.quest_completed",
-                RoomRecipes.getName(quest.getWantedId())
-        ); // TODO: Do this in a different quest listener (specialized in "messaging")
+        messages.questCompleted(quest);
         setChanged();
         FireworkRocketEntity firework = new FireworkRocketEntity(
                 level,
@@ -803,10 +779,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public void questLost(MCQuest quest) {
-        broadcastMessage(
-                "messages.town_flag.quest_lost",
-                RoomRecipes.getName(quest.getWantedId())
-        ); // TODO: Do this in a different quest listener (specialized in "messaging")
+        messages.questLost(quest);
         setChanged();
     }
 
@@ -950,7 +923,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             doSetJob(visitorUUID, jobID, f.get());
             setChanged();
             if (announce) {
-                broadcastMessage("messages.jobs.changed", jobID.toNiceString(), visitorUUID);
+                messages.jobChanged(jobID, visitorUUID);
             }
         }
     }
@@ -1338,7 +1311,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void startDebugTask(Supplier<Boolean> debugTask) {
         if (!this.debugMode) {
-            broadcastMessage("First you must enabled debug mode on the flag via the /qtdebug <POS> command");
+            messages.startDebugFailed();
             return;
         }
         this.debugTask = debugTask;
@@ -1346,6 +1319,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void toggleDebugMode() {
         this.debugMode = !this.debugMode;
-        broadcastMessage("message.debug_mode", this.debugMode ? "enabled" : "disabled");
+        messages.debugToggled(debugMode);
     }
 }

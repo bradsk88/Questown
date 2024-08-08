@@ -17,7 +17,9 @@ public class AdvancementEvents {
             VisitorTrigger.Triggers.FirstVisitor.getID(),
             VisitorTrigger.Triggers.FirstJobQuest.getID(),
             RoomTrigger.Triggers.FirstRoom.getID(),
-            RoomTrigger.Triggers.FirstJobBlock.getID()
+            RoomTrigger.Triggers.FirstJobBlock.getID(),
+            RoomTrigger.Triggers.WandGet.getID(),
+            RoomTrigger.Triggers.FirstJobBoard.getID()
     );
 
 
@@ -30,7 +32,7 @@ public class AdvancementEvents {
             return;
         }
         String path = event.getAdvancement().getId().getPath();
-        if ("root".equals(path)){
+        if ("root".equals(path)) {
             sp.sendMessage(new TranslatableComponent("messages.town_flag.first_visit_journal"), sp.getUUID());
             sp.addItem(PatchouliAPI.get().getBookStack(new ResourceLocation(Questown.MODID, "intro")));
             return;

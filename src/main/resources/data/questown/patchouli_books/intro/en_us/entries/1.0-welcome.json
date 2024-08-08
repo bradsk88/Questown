@@ -1,5 +1,5 @@
 {
-  "name": "Entry 1: Welcome!",
+  "name": "1: Welcome!",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
   "advancement": "questown:root",

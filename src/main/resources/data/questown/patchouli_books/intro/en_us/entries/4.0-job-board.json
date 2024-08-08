@@ -1,12 +1,12 @@
 {
-  "name": "Entry 3: Requests",
+  "name": "4: Job Board",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
   "advancement": "questown:first_room",
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Villagers will do their best to get the items that YOU WANT. However, first you must tell them what you want.$(br2)A job board will allow us to make requests for certain items. Lets build one!"
+      "text": "Villagers will do their best to get the items that YOU WANT. However, first you must tell them what you want.$(br2)A job board will allow you to make requests for certain items. Lets build one!$(br2)Hint: Place a blank, wooden sign block in a registered room to convert it into a JOB BOARD"
     },{
       "type": "patchouli:multiblock",
       "multiblock": {
@@ -20,8 +20,7 @@
           ["WWWW", "    ", "    "],
           ["WWWW", "W0SW", "WWDW"]
         ]
-      },
-      "text": "Hint: Place a sign in a registered room to convert it into a JOB BOARD"
+      }
     }
   ]
 }

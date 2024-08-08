@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "What I Want",
+      "color": "white"
+    },
+    "description": {
+      "text": "Construct a Job Board room"
+    },
+    "icon": {
+      "item": "minecraft:oak_sign"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:room_trigger",
+      "conditions": {
+        "context": "first_job_board"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:first_room"
+}
