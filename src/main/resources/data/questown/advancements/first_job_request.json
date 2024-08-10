@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "What I really, really want",
+      "color": "white"
+    },
+    "description": {
+      "text": "Request an item via the JOB BOARD"
+    },
+    "icon": {
+      "item": "questown:job_board_block"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:visitor_trigger",
+      "conditions": {
+        "context": "first_job_request"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:first_job_board"
+}

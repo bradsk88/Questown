@@ -2,7 +2,7 @@
   "name": "Entry 5: Changing Jobs",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
-  "advancement": "questown:job_quest",
+  "advancement": "questown:first_job_board",
   "pages": [
     {
       "type": "patchouli:text",

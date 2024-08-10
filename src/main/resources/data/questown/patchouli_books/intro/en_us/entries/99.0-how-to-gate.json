@@ -2,7 +2,7 @@
   "name": "Entry 4: Gatherers",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
-  "advancement": "questown:first_visitor",
+  "advancement": "questown:first_job_board",
   "pages": [
     {
       "type": "patchouli:text",

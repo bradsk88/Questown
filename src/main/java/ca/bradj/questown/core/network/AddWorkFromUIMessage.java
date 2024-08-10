@@ -1,6 +1,8 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -46,6 +48,7 @@ public record AddWorkFromUIMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Work will not be added.", flagX, flagY, flagZ);
                 return;
             }
+            AdvancementsInit.VISITOR_TRIGGER.trigger(ctx.get().getSender(), VisitorTrigger.Triggers.FirstJobRequest);
             tfbe.getWorkHandle().requestWork(requested.getItem());
             tfbe.openJobsMenu(sender);
         });

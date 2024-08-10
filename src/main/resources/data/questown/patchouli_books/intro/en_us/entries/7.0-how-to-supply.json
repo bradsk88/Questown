@@ -1,0 +1,19 @@
+{
+  "name": "7: Supplies",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_job_board",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Excellent, your villager has a job and somewhere to do it!$(br2)Now there's just one last thing we need to do.$(br2)If you talk to the villager, you will see that they want supplies.$(br2)Give the villager some food, and they should leave town to gather more supplies!"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "questown:textures/guide/supplies.png"
+      ],
+      "text": "Hint: Villagers will tell you what they need. Place an item in their 6-slot inventory."
+    }
+  ]
+}

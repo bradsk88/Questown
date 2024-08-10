@@ -387,7 +387,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (oEntity.get().isInitialized()) {
             oEntity.get().getQuestHandle().showQuestsUI((ServerPlayer) player);
         } else {
-            oEntity.get().onLoad();
+            oEntity.get().initializeFreshFlag(true);
             player.displayClientMessage(Compat.translatable("messages.town_flag.loading"), false);
         }
         return InteractionResult.sidedSuccess(false);

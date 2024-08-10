@@ -1,0 +1,27 @@
+{
+  "name": "6: The Town Gate",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_job_request",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Great, your villager knows what items you want! Now, they just need SOMEWHERE to work.$(br2)Most villagers will want to work in a specific type of room.$(br2)Gatherers are a bit special. They need a TOWN GATE so they can venture off into the world and find supplies.$(br2)Let's build one somewhere close!"
+    },{
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "W": "minecraft:oak_planks",
+          "C": "questown:welcome_mat_block[facing=north]",
+          "T": "minecraft:wall_torch[facing=north]",
+          "Y": "minecraft:wall_torch[facing=south]"
+        },
+        "pattern": [
+          ["TWY", "   ", "TWY"],
+          [" W ", "0C ", " W "]
+        ]
+      },
+      "text": "Hint: To get a Welcome Mat, right-click on the base of the town flag with a Pressure Plate in hand."
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "name": "99: Quests",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
-  "advancement": "questown:first_room",
+  "advancement": "questown:first_job_board",
   "pages": [
     {
       "type": "patchouli:text",

@@ -520,10 +520,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+        initializeFreshFlag(false);
+    }
+
+    public void initializeFreshFlag(boolean fullInit) {
         grantAdvancementOnApproach();
-        initPairs.forEach((k, v) -> {
-            v.onFlagPlace.accept(this);
-        });
+        if (fullInit) {
+            loadNextTick(initializers);
+        } else {
+            initPairs.forEach((k, v) -> {
+                v.onFlagPlace.accept(this);
+            });
+        }
         initializers.add(t -> {
             t.messages.initialize(t.getServerLevel());
             return true;
@@ -1063,7 +1071,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public boolean isInitialized() {
-        return isInitializedQuests && !biomes.isInitialized() && initializers.isEmpty();
+        return isInitializedQuests && biomes.isInitialized() && initializers.isEmpty();
     }
 
     @Override

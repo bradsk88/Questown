@@ -41,12 +41,13 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
     public enum Triggers {
         Invalid,
         FirstVisitor,
-        FirstJobQuest;
-        // TODO: WorkAdded
+        FirstJobQuest,
+        FirstJobRequest;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
                 Triggers.FirstVisitor, "first_visitor",
-                Triggers.FirstJobQuest, "first_job_quest"
+                Triggers.FirstJobQuest, "first_job_quest",
+                Triggers.FirstJobRequest, "first_job_request"
         );
 
         public static Triggers fromJSON(JsonElement trick_id) {

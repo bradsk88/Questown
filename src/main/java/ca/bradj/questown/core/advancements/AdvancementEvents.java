@@ -16,6 +16,7 @@ public class AdvancementEvents {
     public static final ImmutableList<String> ADVANCEMENTS_WITH_PAGES = ImmutableList.of(
             VisitorTrigger.Triggers.FirstVisitor.getID(),
             VisitorTrigger.Triggers.FirstJobQuest.getID(),
+            VisitorTrigger.Triggers.FirstJobRequest.getID(),
             RoomTrigger.Triggers.FirstRoom.getID(),
             RoomTrigger.Triggers.FirstJobBlock.getID(),
             RoomTrigger.Triggers.WandGet.getID(),
