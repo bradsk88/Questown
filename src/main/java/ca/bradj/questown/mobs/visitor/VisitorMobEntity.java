@@ -441,7 +441,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
                 remove(RemovalReason.DISCARDED);
             } else {
-                town.validateEntity(this);
+                town.getVillagerHandle().validateEntity(this);
             }
 
             boolean vis = !j.shouldDisappear(town, position());

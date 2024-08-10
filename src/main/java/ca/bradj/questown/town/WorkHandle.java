@@ -9,4 +9,6 @@ public interface WorkHandle {
     void requestWork(WorkRequest r);
 
     void removeWorkRequest(WorkRequest requested);
+
+    boolean hasAtLeastOneBoard();
 }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -44,4 +45,10 @@ public interface VillagerHolder {
     void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce);
 
     boolean canDine(UUID uuid);
+
+    void freezeVillagers(Integer ticks);
+
+    void recallVillagers();
+
+    void validateEntity(VisitorMobEntity visitorMobEntity);
 }

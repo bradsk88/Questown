@@ -10,9 +10,7 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
@@ -20,10 +18,8 @@ import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -62,10 +58,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.StandingSignBlock;
@@ -74,7 +67,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -89,6 +81,12 @@ import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, QuestBatch.ChangeListener<MCQuest>,
         TownPois.Listener {
+
+    private final TownKnownBiomes biomes = new TownKnownBiomes();
+
+    public TownKnownBiomes getBiomesHandle() {
+        return biomes;
+    }
 
     private record InitPair(
             BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag,
@@ -248,7 +246,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private boolean isInitializedQuests = false;
     private boolean everScanned = false;
     private boolean changed = false;
-    private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
 
     // Farmer specific stuff
     private final ArrayList<UUID> assignedFarmers = new ArrayList<>();
@@ -353,10 +350,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.workHandle.tick(sl);
         e.quests.tick(e);
-
-        if (e.nearbyBiomes.isEmpty()) {
-            computeNearbyBiomes(level, blockEntityPos, e);
-        }
+        e.biomes.tick();
 
         e.roomsHandle.tick(sl, blockEntityPos);
 
@@ -379,25 +373,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.everScanned = true;
 
         profileTick(e, start);
-    }
-
-    private static void computeNearbyBiomes(
-            Level level,
-            BlockPos blockPos,
-            TownFlagBlockEntity e
-    ) {
-        ChunkPos here = new ChunkPos(blockPos);
-        Biome value = level.getBiome(blockPos)
-                .value();
-        e.nearbyBiomes.add(value);
-        for (Direction d : Direction.Plane.HORIZONTAL) {
-            for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
-                ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
-                Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY()))
-                        .value();
-                e.nearbyBiomes.add(biome);
-            }
-        }
     }
 
     private void morningTick(Long newTime) {
@@ -554,6 +529,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         });
         initializers.add(t -> {
+            t.biomes.initialize(t);
+            return true;
+        });
+        initializers.add(t -> {
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
             }
@@ -578,10 +557,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     //  being done, and assign the rest to people who are idle or
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
-        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                getKnownBiomes(),
-                prefix
-        ));
+        WorksBehaviour.TownData td = getTownData();
         villagerHandle.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
@@ -805,17 +781,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void addRandomJobQuestForVisitor(UUID visitorUUID) {
         TownQuests.addJobQuest(this, quests, visitorUUID);
         setChanged();
-        // TODO: Town should have owners?
+        // TODO: Town should have owners who all get the cheevo
         BlockPos bp = getBlockPos();
-        ServerPlayer p = (ServerPlayer) level.getNearestPlayer(
-                bp.getX(),
-                bp.getY(),
-                bp.getZ(),
-                100.0,
-                false
-        );
-        AdvancementsInit.VISITOR_TRIGGER.trigger(
-                p, VisitorTrigger.Triggers.FirstJobQuest
+        AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                getServerLevel(), VisitorTrigger.Triggers.FirstJobQuest, bp
         );
     }
 
@@ -826,7 +795,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public boolean changeJobForVisitorFromBoard(UUID ownerUUID) {
-        JobID work = getVillagerPreferredWork(ownerUUID, workHandle.getRequestedResults());
+        VisitorMobEntity villager = villagerHandle.getEntity(ownerUUID);
+        if (villager == null) {
+            return true;
+        }
+        ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
+        WorksBehaviour.TownData td = getTownData();
+        Predicate<JobID> canFit = p -> JobsRegistry.canFit(this, uuid, p, Util.getDayTime(getServerLevel()));
+        JobID work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, requestedResults, td);
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
             return true;
@@ -834,68 +810,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return false;
     }
 
-    private JobID getVillagerPreferredWork(
-            UUID uuid,
-            Collection<WorkRequest> requestedResults
-    ) {
-        Optional<LivingEntity> f = villagerHandle.stream()
-                .filter(v -> uuid.equals(v.getUUID()))
-                .findFirst();
-        if (f.isEmpty()) {
-            QT.BLOCK_LOGGER.error("No entities found for UUID: {}", uuid);
-            return null;
-        }
-        LivingEntity ff = f.get();
-        if (!(ff instanceof VisitorMobEntity v)) {
-            QT.BLOCK_LOGGER.error("Entity is wrong type: {}", ff);
-            return null;
-        }
-
-        Collection<ResourceLocation> mapBiomes = getKnownBiomes();
-        WorksBehaviour.TownData data = new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                mapBiomes, prefix
-        ));
-
-        List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(v.getJobId()));
-
-        // TODO[TEST]: Allow work to be "claimed" so that if there are multiple
-        //  requests that can be satisfied by one job, the villagers with that
-        //  job will distribute themselves across those requests.
-
-        // For now, we use randomization to give work requests a fair chance of being selected
-        Collections.shuffle(preference);
-
-        // TODO[ASAP]: Use a job attempt counter to determine which preference they choose
-        //  With full random, the villager could theoretically never choose a job that
-        //  is possible with the items currently in town. Under true random, they could
-        //  potentially just keep choosing "gather with axe" over and over while there
-        //  are no axes in town, without trying "gather with shovel" while there IS a
-        //  shovel in town. Using a counter would allow the villager to consider every
-        //  job option.
-
-        for (JobID p : preference) {
-            if (!JobsRegistry.canFit(this, uuid, p, Util.getDayTime(getServerLevel()))) {
-                QT.FLAG_LOGGER.debug(
-                        "Villager will not do {} because there is not enough time left in the day: {}", p, uuid);
-                continue;
-            }
-
-            List<Ingredient> i = requestedResults.stream()
-                    .map(WorkRequest::asIngredient)
-                    .toList();
-            for (Ingredient requestedResult : i) {
-                // TODO: Think about how work chains work.
-                //  E.g. If a blacksmith needs iron ingots to do a requested job,
-                //  but none of the other villagers produce that resource, the
-                //  blacksmith should light up red to indicate a broken chain and
-                //  that the player will need to contribute in order for the
-                //  blacksmith to work, rather than everything being automated.
-                if (JobsRegistry.canSatisfy(data, p, requestedResult)) {
-                    return p;
-                }
-            }
-        }
-        return null;
+    WorksBehaviour.TownData getTownData() {
+        return new WorksBehaviour.TownData(
+                prefix -> knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix)
+        );
     }
 
     @Override
@@ -1144,18 +1062,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public ResourceLocation getRandomNearbyBiome() {
-        if (nearbyBiomes.isEmpty()) {
-            computeNearbyBiomes(level, getBlockPos(), this);
-        }
-        Biome biome = nearbyBiomes.get(getServerLevel().getRandom()
-                .nextInt(nearbyBiomes.size()));
-        return ForgeRegistries.BIOMES.getKey(biome);
-    }
-
-    @Override
     public boolean isInitialized() {
-        return isInitializedQuests && !nearbyBiomes.isEmpty() && initializers.isEmpty();
+        return isInitializedQuests && !biomes.isInitialized() && initializers.isEmpty();
     }
 
     @Override
@@ -1236,69 +1144,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
-    @Override
-    public void validateEntity(VisitorMobEntity visitorMobEntity) {
-        if (villagerHandle.exists(visitorMobEntity)) {
-            return;
-        }
-        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
-        visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
-    }
-
-    public void recallVillagers() {
-        villagerHandle.forEach(v -> {
-            BlockPos visitorJoinPos = getTownFlagBasePos();
-            QT.FLAG_LOGGER.debug("Moving {} to {}", v, visitorJoinPos);
-            v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
-            v.setHealth(v.getMaxHealth());
-        });
-    }
-
     public void registerJobsBoard(BlockPos matPos) {
         this.workHandle.registerJobBoard(matPos);
         this.setChanged();
-    }
-
-    public boolean hasJobBoard() {
-        return workHandle.hasAtLeastOneBoard();
     }
 
     public void openJobsMenu(ServerPlayer sender) {
         workHandle.openMenuRequested(sender);
     }
 
-    public Collection<ResourceLocation> getKnownBiomes() {
-        ImmutableSet.Builder<ResourceLocation> b = ImmutableSet.builder();
-        List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(this, getServerLevel());
-        cs.forEach(v -> {
-            v.getItems()
-                    .stream()
-                    .filter(i -> ItemsInit.GATHERER_MAP.get()
-                            .equals(i.get()))
-                    .map(i -> GathererMap.getBiome(i.toItemStack()))
-                    .filter(Objects::nonNull)
-                    .forEach(b::add);
-        });
-        nearbyBiomes.forEach(v -> {
-            ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
-            if (key == null) {
-                return;
-            }
-            b.add(key);
-        });
-        b.add(Loots.fallbackBiome);
-        return b.build();
-    }
-
     public void warpTime(int ticks) {
         state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
-    }
-
-    public void freezeVillagers(Integer ticks) {
-        villagerHandle.stream()
-                .filter(VisitorMobEntity.class::isInstance)
-                .map(VisitorMobEntity.class::cast)
-                .forEach(v -> v.freeze(ticks));
     }
 
     public VillagerHolder getVillagerHandle() {

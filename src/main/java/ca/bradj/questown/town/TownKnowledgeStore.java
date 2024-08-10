@@ -4,35 +4,23 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
 public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldItem, MCTownItem> {
     @Nullable
-    private TownFlagBlockEntity town;
+    private UnsafeTown town = new UnsafeTown();
 
     public void initialize(TownFlagBlockEntity t) {
-        this.town = t;
+        this.town.initialize(t);
     }
 
     public boolean isInitialized() {
         return town != null;
-    }
-
-    /**
-     * Only safe to call after initialize
-     */
-    private @NotNull TownFlagBlockEntity unsafeGetTown() {
-        if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
-        }
-        return town;
     }
 
     public TownKnowledgeStore() {
@@ -58,6 +46,6 @@ public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldI
     @Override
     public void registerFoundLoots(Collection<MCHeldItem> items) {
         super.registerFoundLoots(items);
-        unsafeGetTown().setChanged();
+        town.getUnsafe().setChanged();
     }
 }

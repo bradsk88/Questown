@@ -82,8 +82,6 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     @Override
     boolean isVillagerMissing(UUID uuid);
 
-    void validateEntity(VisitorMobEntity visitorMobEntity);
-
     Collection<UUID> getUnemployedVillagers();
 
     void addRandomJobQuestForVisitor(UUID visitorUUID);
@@ -101,8 +99,6 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     Collection<String> getAvailableRootJobs();
 
     boolean hasEnoughBeds();
-
-    ResourceLocation getRandomNearbyBiome();
 
     boolean isInitialized();
 

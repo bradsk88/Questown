@@ -9,8 +9,11 @@ import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
 import net.minecraft.advancements.critereon.DeserializationContext;
 import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.function.Predicate;
 
@@ -19,6 +22,21 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
     public static final ResourceLocation ID = new ResourceLocation(
             Questown.MODID, "visitor_trigger"
     );
+
+    public void triggerForNearestPlayer(
+            ServerLevel level,
+            VisitorTrigger.Triggers triggers,
+            BlockPos nearPos
+    ) {
+        Player np = level.getNearestPlayer(
+                nearPos.getX(), nearPos.getY(), nearPos.getZ(), 8.0D, false
+        );
+        if (!(np instanceof ServerPlayer sp)) {
+            return;
+        }
+        trigger(sp, triggers);
+    }
+
 
     public enum Triggers {
         Invalid,

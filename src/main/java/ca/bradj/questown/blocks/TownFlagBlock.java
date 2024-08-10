@@ -200,7 +200,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.POTATO)) {
-            entity.recallVillagers();
+            entity.getVillagerHandle().recallVillagers();
             return InteractionResult.sidedSuccess(false);
         }
 

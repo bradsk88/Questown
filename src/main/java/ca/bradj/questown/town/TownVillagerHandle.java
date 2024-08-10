@@ -15,10 +15,12 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -41,7 +43,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private final List<LivingEntity> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
-    private TownFlagBlockEntity town;
+    private final UnsafeTown town = new UnsafeTown();
 
     public void initialize(
             Map<UUID, Integer> fullness,
@@ -91,7 +93,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce) {
-        this.town.changeJobForVisitor(villagerUUID, newJob, announce);
+        this.town.getUnsafe().changeJobForVisitor(villagerUUID, newJob, announce);
     }
 
     public Stream<LivingEntity> stream() {
@@ -277,6 +279,49 @@ public class TownVillagerHandle implements VillagerHolder {
      * @deprecated Eventually this handle should not require a reference to the flag entity
      */
     public void associate(TownFlagBlockEntity t) {
-        this.town = t;
+        this.town.initialize(t);
+    }
+
+    @Override
+    public void freezeVillagers(Integer ticks) {
+        stream()
+                .filter(VisitorMobEntity.class::isInstance)
+                .map(VisitorMobEntity.class::cast)
+                .forEach(v -> v.freeze(ticks));
+    }
+
+    @Override
+    public void recallVillagers() {
+        final BlockPos visitorJoinPos = town.getUnsafe().getBlockPos();
+        forEach(v -> {
+            QT.FLAG_LOGGER.debug("Moving {} to {} and healing", v, visitorJoinPos);
+            v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
+            v.setHealth(v.getMaxHealth());
+        });
+    }
+
+    @Override
+    public void validateEntity(VisitorMobEntity visitorMobEntity) {
+        if (exists(visitorMobEntity)) {
+            return;
+        }
+        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
+    }
+
+    public VisitorMobEntity getEntity(UUID ownerUUID) {
+        Optional<LivingEntity> f = stream()
+                .filter(v -> ownerUUID.equals(v.getUUID()))
+                .findFirst();
+        if (f.isEmpty()) {
+            QT.FLAG_LOGGER.error("No entities found for UUID: {}", ownerUUID);
+            return null;
+        }
+        LivingEntity ff = f.get();
+        if (!(ff instanceof VisitorMobEntity v)) {
+            QT.FLAG_LOGGER.error("Entity is wrong type: {}", ff);
+            return null;
+        }
+        return v;
     }
 }

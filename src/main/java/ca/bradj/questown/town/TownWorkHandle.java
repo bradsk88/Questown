@@ -80,6 +80,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         });
     }
 
+    @Override
     public boolean hasAtLeastOneBoard() {
         return !jobBoards.isEmpty();
     }
@@ -93,10 +94,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         }
 
         BlockPos flagPos = parent.getTownFlagBasePos();
-        Collection<ResourceLocation> biomes = parent.getKnownBiomes();
-        WorksBehaviour.TownData td = new WorksBehaviour.TownData(prefix ->
-                parent.getKnowledgeHandle().getAllKnownGatherResults(biomes, prefix)
-        );
+        WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override

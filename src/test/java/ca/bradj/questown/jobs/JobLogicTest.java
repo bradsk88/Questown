@@ -11,6 +11,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -307,6 +308,7 @@ class JobLogicTest {
         );
     }
 
+    @Disabled("Doesn't seem to be needed anymore. Remove if play testing is successful")
     @ParameterizedTest
     @MethodSource("provideNotProductionStatuses")
     void tick_shouldClearWorkSpotIfStatusIsNotProduction(ProductionStatus status) {

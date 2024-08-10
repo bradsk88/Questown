@@ -17,11 +17,11 @@ public class FreezeCommand {
                 })
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .then(Commands.argument("ticks", IntegerArgumentType.integer()).executes(css -> {
-                            return timeWarp(css.getSource(), BlockPosArgument.getLoadedBlockPos(css, "pos"), IntegerArgumentType.getInteger(css, "ticks"));
+                            return freeze(css.getSource(), BlockPosArgument.getLoadedBlockPos(css, "pos"), IntegerArgumentType.getInteger(css, "ticks"));
                         }))));
     }
 
-    private static int timeWarp(
+    private static int freeze(
             CommandSourceStack source,
             BlockPos target,
             Integer ticks
@@ -32,7 +32,7 @@ public class FreezeCommand {
             return -1;
         }
 
-        tfbe.freezeVillagers(ticks);
+        tfbe.getVillagerHandle().freezeVillagers(ticks);
         return 0;
     }
 }
