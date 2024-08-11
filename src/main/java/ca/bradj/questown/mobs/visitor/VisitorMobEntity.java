@@ -169,6 +169,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(
                 this.job.get().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );
+        setArrowCount(10);
     }
 
     public VisitorMobEntity(

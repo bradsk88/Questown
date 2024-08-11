@@ -7,7 +7,6 @@ import ca.bradj.questown.core.network.WandClickedAwayMessage;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -23,9 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.network.PacketDistributor;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -43,8 +40,9 @@ public class TownWand extends Item {
         BlockPos doorPos = getClickedPos(level, clickedPos, parent);
         if (doorPos == null) {
             QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(player), new WandClickedAwayMessage(parent.getTownFlagBasePos()));
+            return;
         }
-        parent.getRoomHandle().registerDoor(clickedPos);
+        parent.getRoomHandle().registerDoor(doorPos);
     }
 
     private static @Nullable BlockPos getClickedPos(ServerLevel level, BlockPos clickedPos, TownFlagBlockEntity parent) {
