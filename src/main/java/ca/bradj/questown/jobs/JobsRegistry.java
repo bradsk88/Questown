@@ -162,7 +162,7 @@ public class JobsRegistry {
         return false;
     }
 
-    public static Function<IStatus<?>, Collection<Ingredient>> getWantedResourcesProvider(
+    public static Function<IStatus<?>, ImmutableList<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
         if (isSeekingWork(p)) {
@@ -174,7 +174,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return (s) -> ImmutableList.of();
         }
-        return w.get().needs();
+        return s -> ImmutableList.copyOf(w.get().needs().apply(s));
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {

@@ -17,10 +17,12 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_VILLAGER_ID = "villager_uuid";
     private static final String NBT_VALUE = "value";
     private static final String NBT_DURATION = "duration";
+    private static final String NBT_DAMAGE = "damage";
 
     public void deserialize(CompoundTag compound, TownVillagerHandle villagerHandle, long currentTick) {
         ImmutableMap.Builder<UUID, Integer> fullness = ImmutableMap.builder();
         ImmutableMap.Builder<UUID, ImmutableList<Effect>> moodEffects = ImmutableMap.builder();
+        ImmutableMap.Builder<UUID, Integer> damage = ImmutableMap.builder();
 
         ListTag fullnessPairs = compound.getList(NBT_FULLNESS, Tag.TAG_COMPOUND);
 
@@ -45,7 +47,16 @@ public class TownVillagerHandlerSerializer {
             moodEffects.put(uuid, b2.build());
         });
 
-        villagerHandle.initialize(fullness.build(), moodEffects.build());
+
+        ListTag damagePairs = compound.getList(NBT_DAMAGE, Tag.TAG_COMPOUND);
+
+        damagePairs.forEach(tag -> {
+            UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
+            int value = ((CompoundTag) tag).getInt(NBT_VALUE);
+            damage.put(uuid, value);
+        });
+
+        villagerHandle.initialize(fullness.build(), moodEffects.build(), damage.build());
     }
 
     public CompoundTag serialize(TownVillagerHandle villagerHandle, long currentTick) {
@@ -83,6 +94,19 @@ public class TownVillagerHandlerSerializer {
         });
 
         compound.put(NBT_MOOD, moodPairs);
+
+
+        Map<UUID, Integer> damageMap = villagerHandle.damage;
+        ListTag damagePairs = new ListTag();
+
+        damageMap.forEach((uuid, value) -> {
+            CompoundTag tag = new CompoundTag();
+            tag.putUUID(NBT_VILLAGER_ID, uuid);
+            tag.putInt(NBT_VALUE, value);
+            damagePairs.add(tag);
+        });
+
+        compound.put(NBT_DAMAGE, damagePairs);
 
         return compound;
     }

@@ -51,4 +51,8 @@ public interface VillagerHolder {
     void recallVillagers();
 
     void validateEntity(VisitorMobEntity visitorMobEntity);
+
+    void addDamage(UUID uuid);
+
+    int getDamageTicksLeft(UUID uuid);
 }

@@ -1,16 +1,15 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.JobWantedIngredientsMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.StatusListener;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -21,8 +20,12 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
+import net.minecraftforge.network.PacketDistributor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class InventoryAndStatusMenu extends AbstractVillagerMenu implements StatusListener {
 
@@ -62,37 +65,30 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
             Container gathererInv,
             Inventory inv,
             Collection<Boolean> slotLocks,
-            VisitorMobEntity gatherer,
+            UUID villagerUUID,
             JobID jobId,
             BlockPos flagPos
 // For checking validity
     ) {
-        super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId, flagPos, gatherer.getUUID());
+        super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId, flagPos, villagerUUID);
         this.playerInventory = new InvWrapper(inv);
         this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.jobId = jobId;
-        this.openQuestsFn = makeOpenFn(flagPos, gatherer.getUUID(), OpenVillagerMenuMessage.QUESTS);
-        this.openStatsFn = makeOpenFn(flagPos, gatherer.getUUID(), OpenVillagerMenuMessage.STATS);
+        this.openQuestsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.QUESTS);
+        this.openStatsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.STATS);
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
-        if (!gatherer.level.isClientSide()) {
-            IStatus<?> statusForServer = gatherer.getStatusForServer();
-            this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(statusForServer));
-        }
 
-        int i = 0;
-        for (boolean locked : gatherer.getSlotLocks()) {
-            DataSlot lockedSlot = this.addDataSlot(DataSlot.standalone());
-            lockedSlot.set(locked ? 1 : 0);
-            this.lockedSlots.add(this.addDataSlot(gatherer.getLockSlot(i)));
-            i++;
-        }
-
-        gatherer.addStatusListener(this);
-
-        this.closers.add(() -> gatherer.removeStatusListener(this));
+        // TODO: Bring back slot locks (or get rid of them)
+//        int i = 0;
+//        for (boolean locked : gatherer.getSlotLocks()) {
+//            DataSlot lockedSlot = this.addDataSlot(DataSlot.standalone());
+//            lockedSlot.set(locked ? 1 : 0);
+//            this.lockedSlots.add(this.addDataSlot(gatherer.getLockSlot(i)));
+//            i++;
+//        }
     }
 
     private Runnable makeOpenFn(
@@ -288,10 +284,6 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
         return this.jobId.rootId();
     }
 
-    public Collection<Ingredient> getWantedResources() {
-        return JobsRegistry.getWantedResourcesProvider(this.jobId).apply(getStatus());
-    }
-
     public void onClose() {
         closers.forEach(Runnable::run);
     }
@@ -309,4 +301,43 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
         return ENABLED_TABS;
     }
 
+    public void connectToServer(
+            VisitorMobEntity e,
+            ServerPlayer sender
+    ) {
+        IStatus<?> status = e.getStatusForServer();
+        addStatusListener(e, status);
+        addWantedIngredientsListener(e, sender, status);
+    }
+
+    private void addStatusListener(
+            VisitorMobEntity e,
+            IStatus<?> status
+    ) {
+        this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(status));
+        e.addStatusListener(this);
+        this.closers.add(() -> e.removeStatusListener(this));
+    }
+
+    private void addWantedIngredientsListener(
+            VisitorMobEntity e,
+            ServerPlayer sender,
+            IStatus<?> status
+    ) {
+        JobWantedIngredientsMessage msg = buildMessage(e, status);
+        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
+        Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.CHANNEL.send(tgt, msg);
+
+        e.addWantedIngredientsListener(listener);
+        this.closers.add(() -> e.removeWantedIngredientsListener(listener));
+        QuestownNetwork.CHANNEL.send(tgt, buildMessage(e, status));
+    }
+
+    private static @NotNull JobWantedIngredientsMessage buildMessage(
+            VisitorMobEntity e,
+            IStatus<?> status
+    ) {
+        Function<IStatus<?>, ImmutableList<Ingredient>> wantFn = JobsRegistry.getWantedResourcesProvider(e.getJobId());
+        return new JobWantedIngredientsMessage(wantFn.apply(status));
+    }
 }

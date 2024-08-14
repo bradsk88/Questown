@@ -254,6 +254,14 @@ public class TownFlagBlock extends BaseEntityBlock {
             converted = ItemsInit.PLATE_BLOCK.get().getDefaultInstance();
         }
 
+        if (Ingredient.of(ItemTags.BEDS).test(itemInHand.getItem().getDefaultInstance())) {
+            converted = ItemsInit.HOSPITAL_BED.get().getDefaultInstance();
+        }
+
+        if (ItemsInit.HOSPITAL_BED.get().equals(itemInHand.getItem())) {
+            converted = GetFlagInputFromItemNBT(itemInHand);
+        }
+
         if (converted != null) {
             StoreFlagInputOnOutputNBT(itemInHand, converted);
             player.setItemInHand(hand, converted);

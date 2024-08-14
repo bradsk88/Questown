@@ -67,6 +67,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
@@ -74,6 +75,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
 
     static {
         // Scanning Config
@@ -192,6 +194,9 @@ public class Config {
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
                         "for eating uncomfortably."
         ).defineInRange("MaxTicksWithoutDiningTable", 2000L, 1L, 24000L);
+        DAMAGE_TICKS = BUILDER.comment(
+                "The number of ticks that it will take for one point of damage to heal when no effects are present"
+        ).defineInRange("DamageTicks", 1000L, 1L, 24000L);
 
         // Villager Moods Config
         BUILDER.push("Moods");
@@ -218,6 +223,16 @@ public class Config {
         BUILDER.pop();
 
         // End Villagers
+        BUILDER.pop();
+
+        // Blocks Config
+        BUILDER.push("Blocks");
+
+        HOSPITAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
+                "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
+        ).defineInRange("HospitalBedHealMultiplier", 2.0, 0.5, 100);
+
+        // End Blocks Config
         BUILDER.pop();
 
         // Advanced Config

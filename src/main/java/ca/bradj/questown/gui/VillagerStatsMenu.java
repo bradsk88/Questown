@@ -24,6 +24,7 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
             OpenVillagerMenuMessage.SKILLS
     );
     private final DataSlot fullnessSlot;
+    private final DataSlot damageSlot;
     private final DataSlot moodSlot;
     private final Stack<Runnable> closers = new Stack<>();
     private final Runnable openInvFn;
@@ -54,17 +55,21 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
         this.addDataSlot(this.moodSlot = DataSlot.standalone());
         this.moodSlot.set((int) (initialData.moodPercent() * 100));
 
+        this.addDataSlot(this.damageSlot = DataSlot.standalone());
+        this.damageSlot.set((int) (initialData.damageLevelPercent() * 100));
+
         entity.addStatsListener(this);
         this.closers.add(() -> entity.removeStatsListener(this));
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
-        return new VillagerStatsData(buf.readFloat(), buf.readFloat());
+        return new VillagerStatsData(buf.readFloat(), buf.readFloat(), buf.readFloat());
     }
 
     public static void write(VillagerStatsData data, FriendlyByteBuf buf) {
         buf.writeFloat(data.fullnessPercent());
         buf.writeFloat(data.moodPercent());
+        buf.writeFloat(data.damageLevelPercent());
     }
 
     @Override
@@ -85,12 +90,18 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
     public void accept(VillagerStatsData villagerStatsData) {
         int fullness = (int) (100 * villagerStatsData.fullnessPercent());
         this.fullnessSlot.set(fullness);
+        int damage = (int) (100 * villagerStatsData.damageLevelPercent());
+        this.damageSlot.set(damage);
         int mood = (int) (100 * villagerStatsData.moodPercent());
         this.moodSlot.set(mood);
     }
 
     public int getFullnessPercent() {
         return fullnessSlot.get();
+    }
+
+    public int getDamageLevel() {
+        return damageSlot.get();
     }
 
     public int getMoodPercent() {

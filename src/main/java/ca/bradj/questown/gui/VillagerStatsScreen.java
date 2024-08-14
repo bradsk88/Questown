@@ -81,6 +81,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
 
         renderMood(poseStack);
         renderHunger(poseStack);
+        renderDamage(poseStack);
     }
 
     private void renderMood(PoseStack stack) {
@@ -92,6 +93,12 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int fullnessPercent = menu.getFullnessPercent();
         Component title = Compat.translatable("menu.hunger");
         renderBar(stack, 1, title, fullnessPercent);
+    }
+
+    private void renderDamage(PoseStack stack) {
+        int damageLevel = menu.getDamageLevel();
+        Component title = Compat.translatable("menu.damage");
+        renderBar(stack, 2, title, damageLevel);
     }
 
     private void renderBar(PoseStack stack, int index, Component title, int fullnessPercent) {

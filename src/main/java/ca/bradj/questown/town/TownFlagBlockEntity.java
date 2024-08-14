@@ -15,8 +15,6 @@ import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
-import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -43,8 +41,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -72,7 +68,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
@@ -83,157 +82,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         TownPois.Listener {
 
     private final TownKnownBiomes biomes = new TownKnownBiomes();
+    private TownHealingHandle healing = new TownHealingHandle();
+    private final TownFlagInitialization initializer;
 
     public TownKnownBiomes getBiomesHandle() {
         return biomes;
     }
 
-    private record InitPair(
-            BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag,
-            Consumer<TownFlagBlockEntity> onFlagPlace
-    ) {
+    public TownHealingHandle getHealingHandle() {
+        return healing;
     }
 
     private static Map<String, InitPair> initPairs;
 
     public static void staticInitialize() {
-        ImmutableMap.Builder<String, InitPair> b = ImmutableMap.builder();
-        b.put(
-                NBT_ROOMS, new InitPair(
-                        (CompoundTag tag, TownFlagBlockEntity t) -> {
-                            TownRoomsMapSerializer.INSTANCE.deserialize(
-                                    tag, t, t.roomsHandle.getRegisteredRooms());
-                            QT.FLAG_LOGGER.debug("Initialized rooms from {}", tag);
-                            return true;
-                        },
-                        t -> {
-                            t.roomsHandle.initializeNew(t);
-                            QT.FLAG_LOGGER.debug("Initialized rooms for new flag");
-                        }
-                )
-        );
-        b.put(
-                NBT_QUEST_BATCHES, new InitPair(
-                        (tag, t) -> {
-                            CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-                            boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
-                            if (!inited) {
-                                t.setUpQuestsForNewlyPlacedFlag();
-                            }
-                            t.isInitializedQuests = true;
-                            QT.FLAG_LOGGER.debug("Initialized quests from {}", tag);
-                            return true;
-                        },
-                        t -> {
-                            t.questsHandle.initialize(t);
-                            QT.FLAG_LOGGER.debug("Initialized quests for new flag");
-                        }
-                )
-        );
-        b.put(
-                NBT_MORNING_REWARDS, new InitPair(
-                        (tag, t) -> {
-                            CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
-                            t.morningRewards.deserializeNbt(t, data);
-                            QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
-                            return true;
-                        },
-                        t -> {
-                            QT.FLAG_LOGGER.debug("Initialized morning rewards for new flag");
-                        }
-                )
-        );
-        b.put(
-                NBT_WELCOME_MATS, new InitPair(
-                        (tag, t) -> {
-                            ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
-                            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
-                            l.forEach(t.pois::registerWelcomeMat);
-                            QT.FLAG_LOGGER.debug("Initialized welcome mats from {}", tag);
-                            return true;
-                        },
-                        t -> QT.FLAG_LOGGER.debug("Initialized welcome mats for new flag")
-                )
-        );
-        b.put(
-                NBT_JOBS, new InitPair(
-                        (tag, t) -> {
-                            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
-                            QT.FLAG_LOGGER.debug("Initialized jobs from {}", tag);
-                            return true;
-                        },
-                        t -> QT.FLAG_LOGGER.debug("Initialized jobs for new flag")
-                )
-        );
-        b.put(
-                NBT_KNOWLEDGE, new InitPair(
-                        (tag, t) -> {
-                            if (!t.knowledgeHandle.isInitialized()) {
-                                return false;
-                            }
-                            TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(
-                                    QTNBT.getCompound(tag, NBT_KNOWLEDGE),
-                                    t.knowledgeHandle
-                            );
-                            QT.FLAG_LOGGER.debug("Initialized knowledge from {}", tag);
-                            return true;
-                        },
-                        t -> {
-                            t.knowledgeHandle.initialize(t);
-                            QT.FLAG_LOGGER.debug("Initialized knowledge for new flag");
-                        }
-                )
-        );
-        b.put(
-                NBT_VILLAGERS, new InitPair(
-                        (tag, t) -> {
-                            long currentTick = Util.getTick(t.getServerLevel());
-                            TownVillagerHandle.SERIALIZER.deserialize(tag, t.villagerHandle, currentTick);
-                            QT.FLAG_LOGGER.debug("Initialized villagers from {}", tag);
-                            return true;
-                        },
-                        t -> {
-                            t.villagerHandle.associate(t);
-                            t.villagerHandle.addHungryListener(e -> {
-                                if (t.getVillagerHandle()
-                                        .isDining(e.getUUID())) {
-                                    return;
-                                }
-                                if (!t.getVillagerHandle()
-                                        .canDine(e.getUUID())) {
-                                    return;
-                                }
-                                String rid = e.getJobId()
-                                        .rootId();
-                                ResourceLocation diningRoom = DinerWork.asWork(rid)
-                                        .baseRoom();
-                                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(
-                                        diningRoom);
-                                if (diningRooms.isEmpty()) {
-                                    t.changeJobForVisitor(
-                                            e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
-                                } else {
-                                    t.changeJobForVisitor(
-                                            e.getUUID(), DinerWork.getIdForRoot(rid));
-                                }
-                            });
-                            t.villagerHandle.addStatsListener(s -> t.setChanged());
-                            QT.FLAG_LOGGER.debug("Initialized villagers for new flag");
-                        }
-                )
-        );
-        initPairs = b.build();
+        initPairs = TownFlagTileData.initialize();
     }
 
     public static final String ID = "flag_base_block_entity";
-    // TODO: Extract serialization
-    public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
-    public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
-    public static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
-    public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
-    public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
-    private static final String NBT_KNOWLEDGE = "knowledge";
-    private static final String NBT_VILLAGERS = "villagers";
+
     private boolean stopped = true;
     final TownQuests quests = new TownQuests();
     private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
@@ -263,7 +130,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     // TODO: Move all quest-related stuff into the handle
     private final TownKnowledgeStore knowledgeHandle = new TownKnowledgeStore();
     private final TownQuestsHandle questsHandle = new TownQuestsHandle();
-    private final TownRoomsHandle roomsHandle = new TownRoomsHandle();
+    final TownRoomsHandle roomsHandle = new TownRoomsHandle();
     final TownMessages messages = new TownMessages();
 
     private final TownVillagerHandle villagerHandle = new TownVillagerHandle();
@@ -275,8 +142,68 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             BlockState p_155230_
     ) {
         super(TilesInit.TOWN_FLAG.get(), p_155229_, p_155230_);
+        this.initializer = initializeInitializer(this);
         // Don't write code here, it runs on both client and server.
         // Instead, put any initialization in onLoad
+    }
+
+    private TownFlagInitialization initializeInitializer(TownFlagBlockEntity self) {
+        return new TownFlagInitialization() {
+            @Override
+            public TownRoomsHandle getRoomsHandle() {
+                return self.roomsHandle;
+            }
+
+            @Override
+            public void setUpQuestsForNewlyPlacedFlag() {
+                self.setUpQuestsForNewlyPlacedFlag();
+            }
+
+            @Override
+            public void setInitializedQuests(boolean b) {
+                self.isInitializedQuests = b;
+            }
+
+            @Override
+            public TownQuestsHandle getQuests() {
+                return self.questsHandle;
+            }
+
+            @Override
+            public MCMorningRewards getMorningRewards() {
+                return self.morningRewards;
+            }
+
+            @Override
+            public TownPois getPOIs() {
+                return self.pois;
+            }
+
+            @Override
+            public TownKnowledgeStore getKnowledge() {
+                return self.knowledgeHandle;
+            }
+
+            @Override
+            public TownVillagerHandle getVillagers() {
+                return self.villagerHandle;
+            }
+
+            @Override
+            public TownHealingHandle getHealing() {
+                return self.healing;
+            }
+
+            @Override
+            public MCQuestBatches getQuestBatches() {
+                return self.quests.questBatches;
+            }
+
+            @Override
+            public TownWorkHandle getWorkHandle() {
+                return self.workHandle;
+            }
+        };
     }
 
     public static void tick(
@@ -302,6 +229,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
                         blockEntityPos, Config.TOWN_TICK_RADIUS.get(), distToPlayer
                 );
+                e.subBlocks.parentUnloaded();
             }
             e.stopped = true;
             return;
@@ -351,6 +279,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.workHandle.tick(sl);
         e.quests.tick(e);
         e.biomes.tick();
+        e.healing.tick();
 
         e.roomsHandle.tick(sl, blockEntityPos);
 
@@ -464,7 +393,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     initializers.add(t -> {
                         CompoundTag tag = Compat.getBlockStoredTagData(t);
                         if (tag.contains(key)) {
-                            return pair.fromTag.apply(tag.getCompound(key), t);
+                            return pair.fromTag().apply(tag.getCompound(key), t);
                         }
                         QT.FLAG_LOGGER.info("No data for {}. Skipping deserialization.", key);
                         return true;
@@ -486,16 +415,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 //        if (roomsMap.numRecipes() > 0) {
 //            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
 //        }
-        tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(quests.questBatches));
-        tag.put(NBT_MORNING_REWARDS, this.morningRewards.serializeNbt());
-        tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(pois.getWelcomeMats()));
-        tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(roomsHandle.getRegisteredRooms()));
-        tag.put(NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(workHandle));
-        QTNBT.put(tag, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(knowledgeHandle));
-        QTNBT.put(
-                tag, NBT_VILLAGERS,
-                TownVillagerHandle.SERIALIZER.serialize(villagerHandle, Util.getTick(getServerLevel()))
-        );
+        TownFlagTileData.write(Util.getTick(getServerLevel()), tag, this.initializer);
         // TODO: Serialization for ASAPss
     }
 
@@ -529,7 +449,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             loadNextTick(initializers);
         } else {
             initPairs.forEach((k, v) -> {
-                v.onFlagPlace.accept(this);
+                v.onFlagPlace().accept(this);
             });
         }
         initializers.add(t -> {
@@ -1184,5 +1104,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void toggleDebugMode() {
         this.debugMode = !this.debugMode;
         messages.debugToggled(debugMode);
+    }
+
+    TownFlagInitialization initializer() {
+        return initializer;
     }
 }

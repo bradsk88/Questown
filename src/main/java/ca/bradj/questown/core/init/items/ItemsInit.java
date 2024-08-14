@@ -16,8 +16,6 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-import java.util.function.Supplier;
-
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ItemsInit {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Questown.MODID);
@@ -152,6 +150,10 @@ public class ItemsInit {
     public static final RegistryObject<Item> EFFECT = ITEMS.register(
             EffectMetaItem.ITEM_ID,
             EffectMetaItem::new
+    );
+    public static final RegistryObject<Item> HOSPITAL_BED = ITEMS.register(
+            HospitalBedBlock.ITEM_ID,
+            () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))
     );
 
     public static void register(IEventBus bus) {

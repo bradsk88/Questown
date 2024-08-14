@@ -10,6 +10,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
@@ -30,6 +31,7 @@ import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -38,6 +40,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
 
     final Map<UUID, Integer> fullness = new HashMap<>();
+    final Map<UUID, Integer> damage = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -45,44 +48,69 @@ public class TownVillagerHandle implements VillagerHolder {
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
     private final UnsafeTown town = new UnsafeTown();
 
+    private static final int TICK_FACTOR = 10;
+
     public void initialize(
             Map<UUID, Integer> fullness,
-            Map<UUID, ImmutableList<Effect>> moodEffects
-    ) {
+            Map<UUID, ImmutableList<Effect>> moodEffects,
+            Map<UUID, Integer> damage
+            ) {
         if (!this.fullness.isEmpty()) {
-            throw new IllegalStateException("Attempting to initialize already active fullness");
+            throw new IllegalStateException("Attempting to initialize already initialized");
         }
         this.fullness.putAll(fullness);
-
         this.moods.initialize(moodEffects);
+        this.damage.putAll(damage);
     }
 
     public void tick(long currentTick) {
         tickHunger();
+        tickDamage();
         moods.tick(currentTick);
     }
 
     private void tickHunger() {
-        entities.forEach(e -> {
-            UUID u = e.getUUID();
-            int oldVal = fullness.getOrDefault(u, Config.BASE_FULLNESS.get());
-            int newVal = Math.max(0, oldVal - 10);
-            fullness.put(u, newVal);
-            if (newVal != oldVal) {
-                listeners.forEach(l -> l.accept(getStats(u)));
-            }
+        Map<UUID, Integer> map = fullness;
+        Integer base = Config.BASE_FULLNESS.get();
+        BiConsumer<Integer, LivingEntity> then = (newVal, e) -> {
             if (newVal == 0) {
                 hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
             }
+        };
+        tickThing(map, base, 10, then);
+    }
+
+    private void tickDamage() {
+        tickThing(damage, 0, 100, (newVal, e) -> {});
+    }
+
+    private void tickThing(
+            Map<UUID, Integer> map,
+            Integer base,
+            int amount,
+            BiConsumer<Integer, LivingEntity> then
+    ) {
+        entities.forEach(e -> {
+            UUID u = e.getUUID();
+            int oldVal = map.getOrDefault(u, base);
+            int newVal = Math.max(0, oldVal - amount);
+            map.put(u, newVal);
+            if (newVal != oldVal) {
+                listeners.forEach(l -> l.accept(getStats(u)));
+            }
+            then.accept(newVal, e);
         });
     }
 
     public VillagerStatsData getStats(UUID uuid) {
-        float fullnessPercent = (float) fullness.get(uuid) / Config.BASE_FULLNESS.get();
+        Integer bf = Config.BASE_FULLNESS.get();
+        float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
+        float damagePercent = (float) Util.getOrDefault(damage, uuid, 0) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
         return new VillagerStatsData(
-                // TODO: Get max fullness from villager
+                // TODO: Track max fullness per villager based on their traits
                 fullnessPercent,
-                moods.getMood(uuid)
+                moods.getMood(uuid),
+                damagePercent
         );
     }
 
@@ -130,9 +158,13 @@ public class TownVillagerHandle implements VillagerHolder {
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
 
         ImmutableMap<String, Runnable> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(sender, (windowId, inv, p) -> new InventoryAndStatusMenu(
-                        windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e, e.getJobId(), e.getFlagPos()
-                ), quests, e, stats),
+                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(sender, (windowId, inv, p) -> {
+                    InventoryAndStatusMenu x =  new InventoryAndStatusMenu(
+                            windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e.getUUID(), e.getJobId(), e.getFlagPos()
+                    );
+                    x.connectToServer(e, sender);
+                    return x;
+                }, quests, e, stats),
                 OpenVillagerMenuMessage.QUESTS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
                         windowId, e.getUUID(), quests, e.getFlagPos()
                 ), quests, e, stats),
@@ -323,5 +355,17 @@ public class TownVillagerHandle implements VillagerHolder {
             return null;
         }
         return v;
+    }
+
+    @Override
+    public void addDamage(UUID uuid) {
+        Integer oldVal = Util.getOrDefault(damage, uuid, 0);
+        int addition = (int) (Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        damage.put(uuid, oldVal + addition);
+    }
+
+    @Override
+    public int getDamageTicksLeft(UUID uuid) {
+        return Util.getOrDefault(damage, uuid, 0) / TICK_FACTOR;
     }
 }

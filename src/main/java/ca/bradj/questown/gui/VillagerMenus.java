@@ -37,12 +37,14 @@ public class VillagerMenus {
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
 
         JobID jobId = new JobID(rootId, jobId1);
+        // FIXME: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);
+        // Never provide these initializers with the entity, itself.
+        // It tends to cause client-side-only bugs that don't show up in the dev environment.
         menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos);
-
         menus.initVillagerStatsMenu(windowId, flagPos, stats);
-        menus.initInventory(windowId, jobId, player, e, invSize, flagPos);
+        menus.initInventory(windowId, jobId, player, e.getUUID(), e.getSlotLocks(), invSize, flagPos);
         return menus;
     }
 
@@ -64,7 +66,7 @@ public class VillagerMenus {
 
     private InventoryAndStatusMenu initInventory(
             int windowId, JobID jobId, Player player,
-            VisitorMobEntity e, int invSize, BlockPos flagPos
+            UUID uuid, Collection<Boolean> slotLocks, int invSize, BlockPos flagPos
     ) {
         invMenu = new InventoryAndStatusMenu(windowId,
                 // Minecraft will handle filling this container by syncing from server
@@ -73,7 +75,7 @@ public class VillagerMenus {
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, player.getInventory(), e.getSlotLocks(), e, jobId, flagPos
+                }, player.getInventory(), slotLocks, uuid, jobId, flagPos
         );
         return invMenu;
     }

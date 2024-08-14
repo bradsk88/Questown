@@ -1,6 +1,7 @@
 package ca.bradj.questown.items;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.WandClickedAwayMessage;
@@ -35,25 +36,37 @@ public class TownWand extends Item {
         super(Questown.DEFAULT_ITEM_PROPS);
     }
 
-    public void onRightClicked(Supplier<ServerPlayer> player, ServerLevel level, BlockPos clickedPos, ItemStack itemInHand) {
+    public void onRightClicked(
+            Supplier<ServerPlayer> player,
+            ServerLevel level,
+            BlockPos clickedPos,
+            ItemStack itemInHand
+    ) {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(level, itemInHand);
-        BlockPos doorPos = getClickedPos(level, clickedPos, parent);
+        BlockPos doorPos = getClickedPos(level, clickedPos);
         if (doorPos == null) {
-            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(player), new WandClickedAwayMessage(parent.getTownFlagBasePos()));
+            WandClickedAwayMessage msg = new WandClickedAwayMessage(parent.getTownFlagBasePos());
+            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(player), msg);
             return;
         }
         parent.getRoomHandle().registerDoor(doorPos);
     }
 
-    private static @Nullable BlockPos getClickedPos(ServerLevel level, BlockPos clickedPos, TownFlagBlockEntity parent) {
+    private static @Nullable BlockPos getClickedPos(
+            ServerLevel level,
+            BlockPos clickedPos
+    ) {
         BlockState bs = level.getBlockState(clickedPos);
+        if (bs.getBlock() instanceof FalseDoorBlock) {
+            return clickedPos;
+        }
+
         if (bs.getBlock() instanceof DoorBlock) {
             if (DoubleBlockHalf.UPPER.equals(bs.getValue(DoorBlock.HALF))) {
                 clickedPos = clickedPos.below();
             }
         } else {
-            bs = parent.getServerLevel()
-                    .getBlockState(clickedPos.above());
+            bs = level.getBlockState(clickedPos.above());
             if (bs.getBlock() instanceof DoorBlock) {
                 clickedPos = clickedPos.above();
             } else {
@@ -69,12 +82,16 @@ public class TownWand extends Item {
         if (p_41427_.getLevel().isClientSide) {
             return x;
         }
+        ServerLevel level = (ServerLevel) p_41427_.getLevel();
+        if (getClickedPos(level, p_41427_.getClickedPos()) != null) {
+            return x;
+        }
         if (!x.consumesAction()) {
-            ServerLevel level = (ServerLevel) p_41427_.getLevel();
             ItemStack item = p_41427_.getItemInHand();
             TownInterface parent = TownFlagBlock.GetParentFromNBT(level, item);
-            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(
-                    () -> (ServerPlayer) p_41427_.getPlayer()),
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(
+                            () -> (ServerPlayer) p_41427_.getPlayer()),
                     new WandClickedAwayMessage(parent.getTownFlagBasePos())
             );
         }
@@ -82,7 +99,12 @@ public class TownWand extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack item, @Nullable Level level, List<Component> p_41423_, TooltipFlag p_41424_) {
+    public void appendHoverText(
+            ItemStack item,
+            @Nullable Level level,
+            List<Component> p_41423_,
+            TooltipFlag p_41424_
+    ) {
         super.appendHoverText(item, level, p_41423_, p_41424_);
         BlockPos parent = TownFlagBlock.GetParentPosFromNBT(item);
         Style color = Style.EMPTY.withColor(TextColor.parseColor("GRAY"));

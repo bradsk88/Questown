@@ -24,6 +24,9 @@ public class RecipeItemConfig {
     private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.TORCH_INGREDIENTS, false
     );
+    private static final int STICK_SCORE = RecipeItemScore.canCraftInFourGrid(
+            CommonRecipes.STICK_INGREDIENTS, false
+    );
 
     private static final int CRAFTING_TABLE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.CRAFTING_TABLE, false
@@ -85,9 +88,10 @@ public class RecipeItemConfig {
                     Collections.nCopies(7, CraftedResources.IRON_ORE_OR_INGOT)
             ), false
     );
+    private static final int HOSPITAL_BED = STICK_SCORE + BED;
 
-    // TODO: Scan all recipes on server start and check for missing weights up front
-    // Currently, they only get scanned when the town flag tries to generate quests
+    // TODO[ASAP]: Scan all recipes on server start and check for missing weights up front
+    //  Currently, they only get scanned when the town flag tries to generate quests
 
     static {
         defaultItemWeights.add(String.format("#%s", ItemTags.BEDS.location()), BED);
@@ -108,6 +112,7 @@ public class RecipeItemConfig {
         defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.BREWING_STAND).toString(), BREW_STAND);
         defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.TARGET).toString(), TARGET);
         defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(Items.CACTUS).toString(), CAULDRON);
+//        defaultItemWeights.add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
 
     // TODO: How can mod pack builders add weights to this?

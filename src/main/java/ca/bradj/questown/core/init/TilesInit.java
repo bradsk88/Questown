@@ -1,9 +1,11 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.HospitalBedBlock;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -36,6 +38,12 @@ public class TilesInit {
     public static final RegistryObject<BlockEntityType<PlateBlockEntity>> PLATE = TILES.register(
             PlateBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     PlateBlockEntity::new, BlocksInit.PLATE_BLOCK.get()
+            ).build(null)
+    );
+
+    public static final RegistryObject<BlockEntityType<HospitalBedBlockEntity>> HOSPITAL_BED = TILES.register(
+            HospitalBedBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    HospitalBedBlockEntity::new, BlocksInit.HOSPITAL_BED.get()
             ).build(null)
     );
 

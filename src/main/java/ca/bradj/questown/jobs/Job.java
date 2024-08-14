@@ -72,7 +72,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     JobID getId();
 
-    void removeStatusListener(StatusListener inventoryAndStatusMenu);
+    void removeStatusListener(StatusListener l);
 
     boolean shouldStandStill();
 

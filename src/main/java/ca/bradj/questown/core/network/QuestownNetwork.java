@@ -75,6 +75,12 @@ public class QuestownNetwork {
                 decoder(WandClickedAwayMessage::decode),
                 WandClickedAwayMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(JobWantedIngredientsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(JobWantedIngredientsMessage::encode).
+                decoder(JobWantedIngredientsMessage::decode),
+                JobWantedIngredientsMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

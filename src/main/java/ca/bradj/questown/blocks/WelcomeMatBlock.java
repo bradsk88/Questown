@@ -122,7 +122,8 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
 
         @Override
         public Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
-            ItemStack toDrop = Items.WHITE_CARPET.getDefaultInstance();
+            // TODO: Preserve original input item? (e.g. dark oak pressure plate)
+            ItemStack toDrop = Items.OAK_PRESSURE_PLATE.getDefaultInstance();
             TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
             return ImmutableList.of(toDrop);
         }

@@ -114,14 +114,15 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.slot.draw(stack, xCoord, yCoord);
-            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
-                // TODO: Compute or provide this value (6)
-                int statusI = i - TE_INVENTORY_FIRST_SLOT_INDEX;
-                renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
-            }
+            // TODO: Bring back slot locks (or remove them)
+//            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
+//                // TODO: Compute or provide this value (6)
+//                int statusI = i - TE_INVENTORY_FIRST_SLOT_INDEX;
+//                renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
+//            }
         }
         int iconX = x - 12;
-        for (Ingredient i : menu.getWantedResources()) {
+        for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
             int curSeconds = (int) (System.currentTimeMillis() / 1000);
             ItemStack[] matchingStacks = i.getItems();
             ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
@@ -232,7 +233,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         }
 
         int iconX = x - 12;
-        for (Ingredient i : menu.getWantedResources()) {
+        for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
             if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
                 return;
             }

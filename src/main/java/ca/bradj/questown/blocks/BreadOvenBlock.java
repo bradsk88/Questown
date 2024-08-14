@@ -115,7 +115,9 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             BlockState p_60537_,
             LootContext.Builder p_60538_
     ) {
-        // FIXME: Also drop stuff inside
+        // TODO: Also drop stuff inside
+        //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }
+        //  So the first hit from a player will cause the items to pop out.
         return ImmutableList.of(ItemsInit.BREAD_OVEN_BLOCK.get().getDefaultInstance());
     }
 

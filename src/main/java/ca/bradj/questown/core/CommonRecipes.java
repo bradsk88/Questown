@@ -11,6 +11,10 @@ public class CommonRecipes {
             MinedResources.COAL,
             CraftedResources.STICK
     );
+    public static final ImmutableList<Resource> STICK_INGREDIENTS = ImmutableList.of(
+            CraftedResources.STICK,
+            CraftedResources.STICK
+    );
     public static final Collection<? extends Resource> CRAFTING_TABLE = ImmutableList.of(
             CraftedResources.PLANKS,
             CraftedResources.PLANKS,

@@ -76,7 +76,9 @@ public class Works {
     }
 
     public static Supplier<Work> get(JobID jobID) {
-        assert initialized;
+        if (!initialized) {
+            throw new IllegalStateException("Works not initialized");
+        }
         if (DinerWork.isDining(jobID)) {
             return () -> DinerWork.asWork(jobID.rootId());
         }

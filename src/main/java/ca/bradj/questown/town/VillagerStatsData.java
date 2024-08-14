@@ -4,9 +4,10 @@ import ca.bradj.questown.core.Config;
 
 public record VillagerStatsData(
         float fullnessPercent,
-        float moodPercent
+        float moodPercent,
+        float damageLevelPercent
 ) {
     public static VillagerStatsData empty() {
-        return new VillagerStatsData(0, Config.NEUTRAL_MOOD.get());
+        return new VillagerStatsData(0, Config.NEUTRAL_MOOD.get(), 0);
     }
 }

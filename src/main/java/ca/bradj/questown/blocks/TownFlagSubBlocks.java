@@ -24,12 +24,14 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, Function<BlockPos, Collection<ItemStack>>> dropOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
+    private boolean parentIsUnloaded = false;
 
     public TownFlagSubBlocks(BlockPos blockPos) {
         this.flagPos = blockPos;
     }
 
     public void parentTick(ServerLevel sl) {
+        parentIsUnloaded = false;
         if (!pending.isEmpty()) {
             BlockPos popped = pending.pop();
             try {
@@ -62,6 +64,10 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pos
     ) {
+        if (this.parentIsUnloaded) {
+            return;
+        }
+
         ticksWithoutChild.put(pos, 0);
         Integer twop = ticksWithoutParent.get(pos);
         if (twop == null) {
@@ -116,5 +122,9 @@ public final class TownFlagSubBlocks {
 
     public void register(BlockPos matPos) {
         this.pending.push(matPos);
+    }
+
+    public void parentUnloaded() {
+        this.parentIsUnloaded = true;
     }
 }

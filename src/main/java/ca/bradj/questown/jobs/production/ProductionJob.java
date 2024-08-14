@@ -107,7 +107,10 @@ public abstract class ProductionJob<
         return jobSite;
     }
 
-    protected boolean isValidWalkTarget(TownInterface town, BlockPos bp) {
+    protected boolean isValidWalkTarget(
+            TownInterface town,
+            BlockPos bp
+    ) {
         @Nullable ServerLevel sl = town.getServerLevel();
         if (sl == null) {
             return false;

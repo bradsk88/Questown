@@ -1,6 +1,7 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.town.workstatus.State;
@@ -47,46 +48,38 @@ public class Util {
         return b.build();
     }
 
+    /**
+     * @deprecated Use UtilClean version
+     */
     public static <K, X, Y extends X> X getOrDefault(
             Map<K, X> map,
             K key,
             Y fallback
     ) {
-        X x = map.get(key);
-        if (x == null) {
-            return fallback;
-        }
-        return x;
-    }
-
-    public static <K, X> Collection<X> getOrDefaultCollection(
-            Map<K, ? extends Collection<? extends X>> map,
-            K key,
-            Collection<X> fallback
-    ) {
-        return getOrDefaultCollection(map, key, fallback, false);
+        return UtilClean.getOrDefault(map, key, fallback);
     }
 
     /**
-     * @deprecated Use other signature of getOrDefaultCollection so contract of
-     * mutability is obvious.
+     * @deprecated Use UtilClean version
      */
-    public static <K, X> Collection<X> getOrDefaultCollection(
+    public static <K, X> ImmutableList<X> getOrDefaultCollection(
+            Map<K, ? extends Collection<? extends X>> map,
+            K key,
+            ImmutableList<X> fallback
+    ) {
+        return UtilClean.getOrDefaultCollection(map, key, fallback);
+    }
+
+    /**
+     * @deprecated Use UtilClean version
+     */
+    private static <K, X> Collection<X> getOrDefaultCollection(
             Map<K, ? extends Collection<? extends X>> map,
             K key,
             Collection<X> fallback,
             boolean mutable
     ) {
-        Collection<? extends X> x = map.get(key);
-        if (x == null) {
-            return fallback;
-        }
-        if (mutable) {
-            return new ArrayList<>(x);
-        }
-        ImmutableList.Builder<X> b = ImmutableList.builder();
-        x.forEach(b::add);
-        return b.build();
+        return UtilClean.getOrDefaultCollection(map, key, fallback, mutable);
     }
 
     public static <K, V> Map<K, ArrayList<V>> makeMutable(Map<K, ? extends Collection<V>> inMap) {
@@ -219,7 +212,7 @@ public class Util {
             Y value
     ) {
         Map unsafe = map;
-        Collection cur = Util.getOrDefaultCollection(map, key, (Collection) new ArrayList<>(), true);
+        Collection cur = Util.getOrDefaultCollection(map, key, new ArrayList<>(), true);
         cur.add(value);
         unsafe.put(key, cur);
     }

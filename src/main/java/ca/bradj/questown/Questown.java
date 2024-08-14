@@ -1,5 +1,6 @@
 package ca.bradj.questown;
 
+import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
 import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
 import ca.bradj.questown.core.Config;
@@ -11,6 +12,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.renderer.blockentity.BedRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.commands.synchronization.ArgumentTypes;
@@ -94,6 +96,10 @@ public class Questown {
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.PLATE.get(),
                 PlateBlockEntityRenderer::new
+        ));
+        event.enqueueWork(() -> BlockEntityRenderers.register(
+                TilesInit.HOSPITAL_BED.get(),
+                HospitalBedEntityRenderer::new
         ));
     }
 }

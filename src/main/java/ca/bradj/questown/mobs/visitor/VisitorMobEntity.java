@@ -77,6 +77,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FarmBlock;
@@ -141,6 +142,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this::getInitialJob
     );
     private int ticksWithoutJobTarget;
+    private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -148,9 +150,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private @Nullable WorkToUndo workToUndo;
     private BlockPos wanderTarget;
-    private List<ChangeListener> changeListeners = new ArrayList<>();
+    private final List<ChangeListener> changeListeners = new ArrayList<>();
     private boolean initialized;
-    private Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
+    private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
     private int freezeTicks;
 
     public VisitorMobEntity(
@@ -163,13 +165,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         if (town != null) {
             initBrain();
+            setArrowCount((int) (town.getVillagerHandle().getDamageTicksLeft(uuid) / Config.DAMAGE_TICKS.get()));
         }
-        // Technically this also gets us item updates because item changes cause status to go back to IDLE
-        // But this is admittedly a bit fragile.
-        this.cleanupJobListeners.add(
-                this.job.get().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
-        );
-        setArrowCount(10);
+        this.changeListeners.add(() -> {
+            IStatus<?> s = getStatusForServer();
+            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId()).apply(s);
+           ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
+        });
     }
 
     public VisitorMobEntity(
@@ -301,10 +303,17 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // TODO: Make this abstract or injectable
     @NotNull
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
-        return Works.get(GathererUnmappedNoToolWorkQtrDay.ID)
-                .get()
-                .jobFunc()
-                .apply(town, uuid);
+        JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
+        Work work = Works.get(initialID).get();
+        WorksBehaviour.JobFunc wf = work.jobFunc();
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = wf.apply(town, uuid);
+
+        // Technically this also gets us item updates because item changes cause status to go back to IDLE
+        // But this is admittedly a bit fragile.
+        this.cleanupJobListeners.add(
+                j.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+        );
+        return j;
     }
 
     public BlockPos getLookTarget() {
@@ -388,6 +397,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void tick() {
         super.tick();
 
+        if (level.isClientSide()) {
+            return;
+        }
+
         if (!initialized) {
             return;
         }
@@ -411,8 +424,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             QT.VILLAGER_LOGGER.debug(
                     "VME Average tick length: {}",
                     tickTimes.stream()
-                            .mapToInt(Integer::intValue)
-                            .average()
+                             .mapToInt(Integer::intValue)
+                             .average()
             );
             tickTimes.clear();
         }
@@ -450,7 +463,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             if (j.isInitialized()) {
                 entityData.set(status, j.getStatusToSyncToClient());
                 entityData.set(heldItem, j.getInventory()
-                        .getItem(0));
+                                          .getItem(0));
             }
         }
         // TODO: Can this go inside the "not on client side" block?
@@ -472,7 +485,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private void useNearbyGates() {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
-                .isPresent()) {
+                      .isPresent()) {
             BlockPos on = blockPosition();
             BlockState bs = level.getBlockState(on);
             if (bs.getBlock() instanceof FarmBlock) {
@@ -535,7 +548,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             BlockPos p_20040_,
             BlockState p_20041_
     ) {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return false;
         }
         return super.isColliding(p_20040_, p_20041_);
@@ -543,7 +556,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public boolean canBeCollidedWith() {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return false;
         }
         return super.canBeCollidedWith();
@@ -551,7 +564,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public boolean canCollideWith(Entity p_20303_) {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return false;
         }
         return super.canCollideWith(p_20303_);
@@ -563,15 +576,22 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             double p_20287_,
             double p_20288_
     ) {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
         super.push(p_20286_, p_20287_, p_20288_);
     }
 
+    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
+        if (level.isClientSide()) {
+            return ClientSideThrowingJob.INSTANCE;
+        }
+        return this.job.get();
+    }
+
     @Override
     protected void pushEntities() {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
         super.pushEntities();
@@ -582,7 +602,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
         Jobs.getItems(job.get())
-                .forEach(v -> items.add(v.serializeNBT()));
+            .forEach(v -> items.add(v.serializeNBT()));
         p_21484_.put("items", items);
     }
 
@@ -601,15 +621,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private void initBrain() {
         this.getBrain()
-                .setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
+            .setMemory(MemoryModuleType.LAST_SLEPT, Optional.empty());
         this.getBrain()
-                .setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
+            .setMemory(MemoryModuleType.LAST_WOKEN, Optional.empty());
         this.getBrain()
-                .setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
+            .setMemory(MemoryModuleType.WALK_TARGET, Optional.empty());
         this.getBrain()
-                .setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
+            .setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, Optional.empty());
         this.getBrain()
-                .setMemory(MemoryModuleType.PATH, Optional.empty());
+            .setMemory(MemoryModuleType.PATH, Optional.empty());
     }
 
     @Override
@@ -681,7 +701,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                             BlockState above = getr.getBlockState(pos.above());
                             if (above.isAir()) {
                                 BlockState roof = getr.getBlockState(pos.above()
-                                        .above());
+                                                                        .above());
                                 if (!roof.isAir()) {
                                     return BlockPathTypes.BLOCKED;
                                 }
@@ -706,7 +726,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         p_77618_ = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, p_77618_);
 
                         if (p_77618_ == BlockPathTypes.FENCE && (getr.getBlockState(pos)
-                                .getBlock() instanceof FenceGateBlock)) {
+                                                                     .getBlock() instanceof FenceGateBlock)) {
                             p_77618_ = BlockPathTypes.DOOR_OPEN;
                         }
 
@@ -787,11 +807,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     protected void customServerAiStep() {
         this.level.getProfiler()
-                .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
+                  .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
         Brain<VisitorMobEntity> brain1 = (Brain<VisitorMobEntity>) this.getBrain();
         brain1.tick((ServerLevel) this.level, this);
         this.level.getProfiler()
-                .pop();
+                  .pop();
         super.customServerAiStep();
 
         runLongPaths(brain1);
@@ -834,10 +854,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.wanderTarget = blockPos;
         if (blockPos == null) {
             this.getBrain()
-                    .eraseMemory(MemoryModuleType.WALK_TARGET);
+                .eraseMemory(MemoryModuleType.WALK_TARGET);
         } else {
             this.getBrain()
-                    .setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(blockPos, 0.3f, 0));
+                .setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(blockPos, 0.3f, 0));
         }
     }
 
@@ -856,8 +876,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             QT.PROFILE_LOGGER.debug(
                     "VME Average target acquisition length: {}",
                     targetTimes.stream()
-                            .mapToInt(Integer::intValue)
-                            .average()
+                               .mapToInt(Integer::intValue)
+                               .average()
             );
             targetTimes.clear();
         }
@@ -875,19 +895,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (this.level instanceof ServerLevel) {
             MinecraftServer minecraftserver = ((ServerLevel) this.level).getServer();
             this.brain.getMemory(p_35429_)
-                    .ifPresent((p_186306_) -> {
-                        ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
-                        if (serverlevel != null) {
-                            PoiManager poimanager = serverlevel.getPoiManager();
-                            Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
-                            BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
-                            if (optional.isPresent() && bipredicate.test(this, optional.get())) {
-                                poimanager.release(p_186306_.pos());
-                                DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());
-                            }
+                      .ifPresent((p_186306_) -> {
+                          ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
+                          if (serverlevel != null) {
+                              PoiManager poimanager = serverlevel.getPoiManager();
+                              Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
+                              BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
+                              if (optional.isPresent() && bipredicate.test(this, optional.get())) {
+                                  poimanager.release(p_186306_.pos());
+                                  DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());
+                              }
 
-                        }
-                    });
+                          }
+                      });
         }
     }
 
@@ -937,10 +957,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
                 town.getVillagersWithQuests()
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .toList()
-                        .size() == 1,
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .toList()
+                    .size() == 1,
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
@@ -992,7 +1012,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         setJob(JobsRegistry.getInitializedJob(town, journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(
-                this.job.get().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+                getJob().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
@@ -1004,7 +1024,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public List<Boolean> getSlotLocks() {
-        return this.job.get().getSlotLockStatuses();
+        return getJob().getSlotLockStatuses();
     }
 
     public DataSlot getLockSlot(int i) {
@@ -1025,7 +1045,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public boolean canAcceptJob() {
         return GathererUnmappedNoToolWorkQtrDay.ID.rootId()
-                .equals(job.get().getId().rootId());
+                                                  .equals(job.get().getId().rootId());
     }
 
     public void addChangeListener(ChangeListener cl) {
@@ -1038,7 +1058,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             DamageSource p_21016_,
             float p_21017_
     ) {
-        if (this.job.get().shouldBeNoClip(town, blockPosition())) {
+        if (getJob().shouldBeNoClip(town, blockPosition())) {
             return false;
         }
 
@@ -1101,12 +1121,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         job.get().removeStatusListener(inventoryAndStatusMenu);
     }
 
+    public void addWantedIngredientsListener(Consumer<ImmutableList<Ingredient>> l) {
+        this.ingrListeners.add(l);
+    }
+
+    public void removeWantedIngredientsListener(Consumer<ImmutableList<Ingredient>> l) {
+        this.ingrListeners.remove(l);
+    }
+
     public void addStatsListener(VillagerStatsMenu villagerStatsMenu) {
         if (town == null || town.getServerLevel() == null) {
             return;
         }
         town.getVillagerHandle()
-                .addStatsListener(villagerStatsMenu);
+            .addStatsListener(villagerStatsMenu);
     }
 
 
@@ -1115,7 +1143,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-                .removeStatsListener(villagerStatsMenu);
+            .removeStatsListener(villagerStatsMenu);
     }
 
     public boolean shouldStandStill() {
