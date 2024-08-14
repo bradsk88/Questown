@@ -1,28 +1,16 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
-import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static ca.bradj.questown.jobs.WorksBehaviour.NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK;
 
 // This file attempts to resemble a collection of JSON files - which is the ultimate vision of Questown.
 // Having a JSON file approach would allow other mods to easily integrate with Questown.
@@ -58,12 +46,6 @@ public class Works {
         b.put(GathererUnmappedRodWorkQtrDay.ID, GathererUnmappedRodWorkQtrDay::asWork);
 
         works = b.build();
-
-        works.forEach((id, work) -> {
-            VillagerAdvancements.register(id, work.get()
-                                                  .parentID());
-        });
-
         initialized = true;
     }
 

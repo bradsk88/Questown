@@ -54,7 +54,12 @@ public class VillagerAdvancementsScreen extends Screen {
 //        this.advancements.setListener(this);
     }
 
-    public void render(PoseStack p_97361_, int p_97362_, int p_97363_, float p_97364_) {
+    public void render(
+            PoseStack p_97361_,
+            int p_97362_,
+            int p_97363_,
+            float p_97364_
+    ) {
         int i = (this.width - 252) / 2;
         int j = (this.height - 140) / 2;
         this.renderBackground(p_97361_);
@@ -63,7 +68,13 @@ public class VillagerAdvancementsScreen extends Screen {
         this.renderTooltips(p_97361_, p_97362_, p_97363_, i, j);
     }
 
-    public boolean mouseDragged(double p_97347_, double p_97348_, int p_97349_, double p_97350_, double p_97351_) {
+    public boolean mouseDragged(
+            double p_97347_,
+            double p_97348_,
+            int p_97349_,
+            double p_97350_,
+            double p_97351_
+    ) {
         if (p_97349_ != 0) {
             this.isScrolling = false;
             return false;
@@ -79,12 +90,22 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double p_94686_, double p_94687_, double p_94688_) {
+    public boolean mouseScrolled(
+            double p_94686_,
+            double p_94687_,
+            double p_94688_
+    ) {
         this.content.scroll(0, p_94688_ * 3); // TODO: Provide a client-side config option
         return super.mouseScrolled(p_94686_, p_94687_, p_94688_);
     }
 
-    private void renderInside(PoseStack p_97374_, int p_97375_, int p_97376_, int p_97377_, int p_97378_) {
+    private void renderInside(
+            PoseStack p_97374_,
+            int p_97375_,
+            int p_97376_,
+            int p_97377_,
+            int p_97378_
+    ) {
         VillagerAdvancementsContent advancementtab = this.content;
         if (advancementtab == null) {
             fill(p_97374_, p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
@@ -105,7 +126,11 @@ public class VillagerAdvancementsScreen extends Screen {
 
     }
 
-    public void renderWindow(PoseStack p_97357_, int p_97358_, int p_97359_) {
+    public void renderWindow(
+            PoseStack p_97357_,
+            int p_97358_,
+            int p_97359_
+    ) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -115,7 +140,13 @@ public class VillagerAdvancementsScreen extends Screen {
         this.font.draw(p_97357_, TITLE, (float) (p_97358_ + 8), (float) (p_97359_ + 6), 4210752);
     }
 
-    private void renderTooltips(PoseStack p_97382_, int p_97383_, int p_97384_, int p_97385_, int p_97386_) {
+    private void renderTooltips(
+            PoseStack p_97382_,
+            int p_97383_,
+            int p_97384_,
+            int p_97385_,
+            int p_97386_
+    ) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
             PoseStack posestack = RenderSystem.getModelViewStack();
@@ -132,7 +163,11 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseY, double mouseX, int p_94697_) {
+    public boolean mouseClicked(
+            double mouseY,
+            double mouseX,
+            int p_94697_
+    ) {
         JobID id = this.content.getClickJob(mouseX, mouseY);
 
         if (id == null) {
