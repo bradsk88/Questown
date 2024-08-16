@@ -862,6 +862,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public TownHealingHandle getHealHandle() {
+        return healing;
+    }
+
+    @Override
     public ImmutableSet<UUID> getVillagersWithQuests() {
         return TownQuests.getVillagers(quests);
     }

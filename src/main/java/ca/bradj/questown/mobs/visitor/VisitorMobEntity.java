@@ -212,6 +212,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         Behavior<? super VisitorMobEntity> walkTarget = new SetWalkTargetFromBlockMemory(
                 MemoryModuleType.HOME, 0.5f, 1, 150, 1200
         );
+
         return ImmutableList.of(
                 Pair.of(
                         1,

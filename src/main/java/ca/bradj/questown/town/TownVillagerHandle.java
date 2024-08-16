@@ -23,6 +23,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -49,12 +50,13 @@ public class TownVillagerHandle implements VillagerHolder {
     private final UnsafeTown town = new UnsafeTown();
 
     private static final int TICK_FACTOR = 10;
+    private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
 
     public void initialize(
             Map<UUID, Integer> fullness,
             Map<UUID, ImmutableList<Effect>> moodEffects,
             Map<UUID, Integer> damage
-            ) {
+    ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
         }
@@ -67,6 +69,9 @@ public class TownVillagerHandle implements VillagerHolder {
         tickHunger();
         tickDamage();
         moods.tick(currentTick);
+        TownFlagBlockEntity t = town.getUnsafe();
+        beds.tick(t, ImmutableList.copyOf(entities));
+        entities.forEach(e -> e.getBrain().setMemory(MemoryModuleType.HOME, beds.getBestBed(t, e)));
     }
 
     private void tickHunger() {
@@ -81,7 +86,8 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     private void tickDamage() {
-        tickThing(damage, 0, 100, (newVal, e) -> {});
+        tickThing(damage, 0, 100, (newVal, e) -> {
+        });
     }
 
     private void tickThing(
@@ -105,7 +111,11 @@ public class TownVillagerHandle implements VillagerHolder {
     public VillagerStatsData getStats(UUID uuid) {
         Integer bf = Config.BASE_FULLNESS.get();
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
-        float damagePercent = (float) Util.getOrDefault(damage, uuid, 0) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        float damagePercent = (float) Util.getOrDefault(
+                damage,
+                uuid,
+                0
+        ) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
                 fullnessPercent,
@@ -120,7 +130,11 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public void changeJobForVisitor(UUID villagerUUID, JobID newJob, boolean announce) {
+    public void changeJobForVisitor(
+            UUID villagerUUID,
+            JobID newJob,
+            boolean announce
+    ) {
         this.town.getUnsafe().changeJobForVisitor(villagerUUID, newJob, announce);
     }
 
@@ -158,20 +172,30 @@ public class TownVillagerHandle implements VillagerHolder {
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
 
         ImmutableMap<String, Runnable> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(sender, (windowId, inv, p) -> {
-                    InventoryAndStatusMenu x =  new InventoryAndStatusMenu(
-                            windowId, e.getInventory(), p.getInventory(), e.getSlotLocks(), e.getUUID(), e.getJobId(), e.getFlagPos()
+                OpenVillagerMenuMessage.INVENTORY,
+                () -> openMenu(sender, (windowId, inv, p) -> {
+                    InventoryAndStatusMenu x = new InventoryAndStatusMenu(
+                            windowId,
+                            e.getInventory(),
+                            p.getInventory(),
+                            e.getSlotLocks(),
+                            e.getUUID(),
+                            e.getJobId(),
+                            e.getFlagPos()
                     );
                     x.connectToServer(e, sender);
                     return x;
                 }, quests, e, stats),
-                OpenVillagerMenuMessage.QUESTS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
+                OpenVillagerMenuMessage.QUESTS,
+                () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
                         windowId, e.getUUID(), quests, e.getFlagPos()
                 ), quests, e, stats),
-                OpenVillagerMenuMessage.STATS, () -> openMenu(sender, (windowId, inv, p) -> new VillagerStatsMenu(
+                OpenVillagerMenuMessage.STATS,
+                () -> openMenu(sender, (windowId, inv, p) -> new VillagerStatsMenu(
                         windowId, e, e.getFlagPos(), stats
                 ), quests, e, stats),
-                OpenVillagerMenuMessage.SKILLS, () -> {
+                OpenVillagerMenuMessage.SKILLS,
+                () -> {
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> sender),
                             new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
@@ -210,6 +234,9 @@ public class TownVillagerHandle implements VillagerHolder {
         }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
     }
 
+    private void claimBed(UUID uuid) {
+    }
+
     @Override
     public void fillHunger(UUID uuid) {
         // TODO: Get max fullness from villager
@@ -235,6 +262,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void add(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
+        this.beds.claim(vEntity, town.getUnsafe());
     }
 
     public boolean exists(VisitorMobEntity visitorMobEntity) {
@@ -271,23 +299,27 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isDining(UUID uuid) {
         return entities.stream()
-                .filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
-                .findFirst()
-                .orElse(false);
+                       .filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
+                       .findFirst()
+                       .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
         return entities.stream()
-                .filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
-                .findFirst()
-                .orElse(false);
+                       .filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
+                       .findFirst()
+                       .orElse(false);
     }
 
     @Override
-    public void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {
+    public void applyEffect(
+            ResourceLocation effect,
+            Long expireOnTick,
+            UUID uuid
+    ) {
         // TODO: Generalize
         if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
             fillHunger(uuid);
@@ -297,7 +329,10 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public int getAffectedTime(UUID uuid, Integer timeToAugment) {
+    public int getAffectedTime(
+            UUID uuid,
+            Integer timeToAugment
+    ) {
         float offset = ((Config.NEUTRAL_MOOD.get() / 100f) - moods.getMood(uuid));
         return (int) ((1f + offset) * timeToAugment);
     }

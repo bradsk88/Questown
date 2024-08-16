@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoubleBlockCombiner;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.ForgeHooksClient;
@@ -119,7 +120,7 @@ public class HospitalBedEntityRenderer implements BlockEntityRenderer<HospitalBe
             this.renderPiece(
                     p_112207_,
                     p_112208_,
-                    blockstate.getValue(HospitalBedBlock.PART) == BedPart.HEAD ? this.headRoot : this.footRoot,
+                    blockstate.getValue(BlockStateProperties.BED_PART) == BedPart.HEAD ? this.headRoot : this.footRoot,
                     blockstate.getValue(HospitalBedBlock.FACING),
                     material,
                     i,

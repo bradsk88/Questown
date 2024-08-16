@@ -6,6 +6,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.HealingStore;
+import ca.bradj.questown.town.TownHealingHandle;
 import ca.bradj.questown.town.WorkHandle;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
@@ -134,6 +136,10 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     VillagerHolder getVillagerHandle();
 
     void removeEntity(VisitorMobEntity visitorMobEntity);
+
+    TownHealingHandle getHealHandle();
+
+    HealingStore<BlockPos> getHealingHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

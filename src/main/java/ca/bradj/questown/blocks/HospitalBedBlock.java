@@ -32,7 +32,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.material.PushReaction;
@@ -49,8 +48,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
+import static net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART;
+
 public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing {
-    public static final EnumProperty<BedPart> PART = BlockStateProperties.BED_PART;
     public static final BooleanProperty OCCUPIED = BlockStateProperties.OCCUPIED;
     public static final String ITEM_ID = "hospital_bed";
     protected static final int HEIGHT = 9;
@@ -75,7 +75,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     public HospitalBedBlock(DyeColor p_49454_, BlockBehaviour.Properties p_49455_) {
         super(p_49455_);
         this.color = p_49454_;
-        this.registerDefaultState(this.stateDefinition.any().setValue(PART, BedPart.FOOT).setValue(OCCUPIED, Boolean.valueOf(false)));
+        this.registerDefaultState(this.stateDefinition.any().setValue(BED_PART, BedPart.FOOT).setValue(OCCUPIED, Boolean.valueOf(false)));
     }
 
     @Nullable
@@ -88,7 +88,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         if (p_49516_.isClientSide) {
             return InteractionResult.CONSUME;
         } else {
-            if (p_49515_.getValue(PART) != BedPart.HEAD) {
+            if (p_49515_.getValue(BED_PART) != BedPart.HEAD) {
                 p_49517_ = p_49517_.relative(p_49515_.getValue(FACING));
                 p_49515_ = p_49516_.getBlockState(p_49517_);
                 if (!p_49515_.is(this)) {
@@ -160,8 +160,8 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     }
 
     public BlockState updateShape(BlockState p_49525_, Direction p_49526_, BlockState p_49527_, LevelAccessor p_49528_, BlockPos p_49529_, BlockPos p_49530_) {
-        if (p_49526_ == getNeighbourDirection(p_49525_.getValue(PART), p_49525_.getValue(FACING))) {
-            return p_49527_.is(this) && p_49527_.getValue(PART) != p_49525_.getValue(PART) ? p_49525_.setValue(OCCUPIED, p_49527_.getValue(OCCUPIED)) : Blocks.AIR.defaultBlockState();
+        if (p_49526_ == getNeighbourDirection(p_49525_.getValue(BED_PART), p_49525_.getValue(FACING))) {
+            return p_49527_.is(this) && p_49527_.getValue(BED_PART) != p_49525_.getValue(BED_PART) ? p_49525_.setValue(OCCUPIED, p_49527_.getValue(OCCUPIED)) : Blocks.AIR.defaultBlockState();
         } else {
             return super.updateShape(p_49525_, p_49526_, p_49527_, p_49528_, p_49529_, p_49530_);
         }
@@ -173,11 +173,11 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
 
     public void playerWillDestroy(Level p_49505_, BlockPos p_49506_, BlockState p_49507_, Player p_49508_) {
         if (!p_49505_.isClientSide && p_49508_.isCreative()) {
-            BedPart bedpart = p_49507_.getValue(PART);
+            BedPart bedpart = p_49507_.getValue(BED_PART);
             if (bedpart == BedPart.FOOT) {
                 BlockPos blockpos = p_49506_.relative(getNeighbourDirection(bedpart, p_49507_.getValue(FACING)));
                 BlockState blockstate = p_49505_.getBlockState(blockpos);
-                if (blockstate.is(this) && blockstate.getValue(PART) == BedPart.HEAD) {
+                if (blockstate.is(this) && blockstate.getValue(BED_PART) == BedPart.HEAD) {
                     p_49505_.setBlock(blockpos, Blocks.AIR.defaultBlockState(), 35);
                     p_49505_.levelEvent(p_49508_, 2001, blockpos, Block.getId(blockstate));
                 }
@@ -233,11 +233,11 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
 
     public static Direction getConnectedDirection(BlockState p_49558_) {
         Direction direction = p_49558_.getValue(FACING);
-        return p_49558_.getValue(PART) == BedPart.HEAD ? direction.getOpposite() : direction;
+        return p_49558_.getValue(BED_PART) == BedPart.HEAD ? direction.getOpposite() : direction;
     }
 
     public static DoubleBlockCombiner.BlockType getBlockType(BlockState p_49560_) {
-        BedPart bedpart = p_49560_.getValue(PART);
+        BedPart bedpart = p_49560_.getValue(BED_PART);
         return bedpart == BedPart.HEAD ? DoubleBlockCombiner.BlockType.FIRST : DoubleBlockCombiner.BlockType.SECOND;
     }
 
@@ -309,7 +309,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49532_) {
-        p_49532_.add(FACING, PART, OCCUPIED);
+        p_49532_.add(FACING, BED_PART, OCCUPIED);
     }
 
     public BlockEntity newBlockEntity(BlockPos p_152175_, BlockState p_152176_) {
@@ -320,7 +320,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         super.setPlacedBy(p_49499_, p_49500_, p_49501_, p_49502_, p_49503_);
         if (!p_49499_.isClientSide) {
             BlockPos blockpos = p_49500_.relative(p_49501_.getValue(FACING));
-            p_49499_.setBlock(blockpos, p_49501_.setValue(PART, BedPart.HEAD), 3);
+            p_49499_.setBlock(blockpos, p_49501_.setValue(BED_PART, BedPart.HEAD), 3);
             p_49499_.blockUpdated(p_49500_, Blocks.AIR);
             p_49501_.updateNeighbourShapes(p_49499_, p_49500_, 3);
         }
@@ -332,7 +332,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     }
 
     public long getSeed(BlockState p_49522_, BlockPos p_49523_) {
-        BlockPos blockpos = p_49523_.relative(p_49522_.getValue(FACING), p_49522_.getValue(PART) == BedPart.HEAD ? 0 : 1);
+        BlockPos blockpos = p_49523_.relative(p_49522_.getValue(FACING), p_49522_.getValue(BED_PART) == BedPart.HEAD ? 0 : 1);
         return Mth.getSeed(blockpos.getX(), p_49523_.getY(), blockpos.getZ());
     }
 

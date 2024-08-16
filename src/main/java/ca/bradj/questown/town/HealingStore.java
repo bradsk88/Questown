@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,6 +14,10 @@ public class HealingStore<POS> {
     private final Map<POS, Double> healingBedsGroundTruth = new HashMap<>();
     private final Map<POS, Map<String, TemporaryBoost>> boosts = new HashMap<>();
     private final Map<POS, Double> healingBedsBoosted = new HashMap<>();
+
+    public ImmutableMap<POS, Double> getAll() {
+        return ImmutableMap.copyOf(healingBedsBoosted);
+    }
 
     public void tick() {
         for (Map.Entry<POS, Map<String, TemporaryBoost>> boostMap : boosts.entrySet()) {

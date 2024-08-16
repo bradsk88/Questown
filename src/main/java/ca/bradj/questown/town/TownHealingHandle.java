@@ -1,6 +1,9 @@
 package ca.bradj.questown.town;
 
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+
+import java.util.Map;
 
 public class TownHealingHandle extends HealingStore<BlockPos> {
     public static final TownHealingSerializer SERIALIZER = new TownHealingSerializer();

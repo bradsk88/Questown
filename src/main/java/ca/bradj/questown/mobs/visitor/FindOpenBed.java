@@ -1,6 +1,9 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.HospitalBedBlock;
+import ca.bradj.questown.town.TownHealingHandle;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -10,8 +13,11 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 public class FindOpenBed extends Behavior<VisitorMobEntity> {
@@ -48,5 +54,25 @@ public class FindOpenBed extends Behavior<VisitorMobEntity> {
                 }
             }
         }
+    }
+
+    private static Collection<BlockPos> getBeds(VisitorMobEntity entity) {
+        // TODO: Do this calculation in the TFBE. And handle occupied beds.
+        RoomsHolder rooms = entity.town.getRoomHandle();
+        Collection<BlockPos> beds = rooms.findMatchedRecipeBlocks(
+                i -> i instanceof BedBlock || i instanceof HospitalBedBlock
+        );
+        if (entity.town.getVillagerHandle().getDamageTicksLeft(entity.getUUID()) > 0) {
+            return sortByHealing(entity, beds);
+        }
+        return beds;
+    }
+
+    private static @NotNull List<BlockPos> sortByHealing(
+            VisitorMobEntity entity,
+            Collection<BlockPos> beds
+    ) {
+        TownHealingHandle healing = entity.town.getHealHandle();
+        return beds.stream().sorted(Comparator.comparingDouble(healing::getHealFactor)).toList();
     }
 }
