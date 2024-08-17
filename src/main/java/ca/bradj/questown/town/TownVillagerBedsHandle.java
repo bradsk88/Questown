@@ -15,7 +15,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Optional;
-import java.util.UUID;
 
 public class TownVillagerBedsHandle {
 
@@ -23,7 +22,8 @@ public class TownVillagerBedsHandle {
             TownVillagerBedsHandle::getAllBedHeads,
             TownVillagerBedsHandle::getHealingFactor,
             TownVillagerBedsHandle::getDamageTicksLeft,
-            TownVillagerBedsHandle::getDistance
+            TownVillagerBedsHandle::getDistance,
+            v -> v.getUUID().toString()
     );
 
     private static double getDistance(

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,22 +16,25 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
 
     private final Map<POS, ENT> claimedBeds = new HashMap<>();
     // TODO: Add keyify function so we're not keying on entire entities
-    private final Map<ENT, POS> assignedBeds = new HashMap<>();
+    private final Map<String, POS> assignedBeds = new HashMap<>();
     private final Function<TOWN, Collection<POS>> getAllBedHeads;
     private final BiFunction<TOWN, POS, Double> getHealingFactor;
     private final BiFunction<TOWN, ENT, Integer> getDamageTicksLeft;
     private final BiFunction<ENT, POS, Double> getDistance;
+    private final Function<ENT, String> keyify;
 
     public VillagerBedsHandle(
             Function<TOWN, Collection<POS>> getAllBedHeads,
             BiFunction<TOWN, POS, Double> getHealingFactor,
             BiFunction<TOWN, ENT, Integer> getDamageTicksLeft,
-            BiFunction<ENT, POS, Double> getDistance
+            BiFunction<ENT, POS, Double> getDistance,
+            Function<ENT, String> keyify
     ) {
         this.getAllBedHeads = getAllBedHeads;
         this.getHealingFactor = getHealingFactor;
         this.getDamageTicksLeft = getDamageTicksLeft;
         this.getDistance = getDistance;
+        this.keyify = keyify;
     }
 
     public void claim(
@@ -58,7 +62,10 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
             // TODO: Is this loop helping anyone?
             for (POS p : bestBedsForVillager) {
                 //   TODO: If villager's claimed bed has same score as smallest number, use it instead
-                assignedBeds.put(v, p);
+                if (!assignedBeds.get(keyify.apply(v)).equals(p)) {
+                    QT.FLAG_LOGGER.debug("Villager bed set to {} for {}", p, v);
+                }
+                assignedBeds.put(keyify.apply(v), p);
                 bedsLeftToAssign.removeIf(z -> z.pos.equals(p));
                 return;
             }
@@ -71,7 +78,7 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
             Collection<HealingBed<POS>> all
     ) {
         List<HealingBed<POS>> bedsLeftToAssign = new ArrayList<>(all);
-        bedsLeftToAssign.sort(Comparator.comparingDouble(a -> getDistance.apply(entity, a.pos) / a.factor));
+        bedsLeftToAssign.sort(Comparator.comparingDouble(a -> getDistance.apply(entity, a.pos) / (Math.pow(a.factor, 2))));
         return ImmutableList.copyOf(bedsLeftToAssign.stream().map(v -> v.pos).toList());
     }
 
@@ -80,7 +87,7 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
             Collection<ENT> villagers
     ) {
         ArrayList<ENT> out = new ArrayList<>(villagers);
-        out.sort(Comparator.comparingDouble(v -> getDamageTicksLeft.apply(town, v)));
+        out.sort(Comparator.comparingDouble(v -> -getDamageTicksLeft.apply(town, v)));
         return ImmutableList.copyOf(out);
     }
 
@@ -98,6 +105,6 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
     }
 
     public POS getBestBed(ENT villager1) {
-        return assignedBeds.get(villager1);
+        return assignedBeds.get(keyify.apply(villager1));
     }
 }
