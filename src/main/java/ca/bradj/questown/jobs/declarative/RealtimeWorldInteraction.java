@@ -331,4 +331,12 @@ public class RealtimeWorldInteraction extends
     ) {
         PreStateChangeHook.run(rules, inputs.town().getServerLevel(), position);
     }
+
+    @Override
+    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
+            MCExtra mcExtra,
+            WorkOutput<Boolean, WorkPosition<BlockPos>> v
+    ) {
+        return Util.workWithSurfaceInteractionPos(mcExtra.town().getServerLevel(), v);
+    }
 }

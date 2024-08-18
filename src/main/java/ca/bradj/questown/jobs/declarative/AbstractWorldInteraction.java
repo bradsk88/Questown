@@ -260,16 +260,18 @@ public abstract class AbstractWorldInteraction<
         for (WorkPosition<POS> workSpot : shuffled) {
             WorkOutput<TOWN, WorkPosition<POS>> v = tryWorking(extra, workSpot);
             if (v != null && (v.worked() || v.claimed())) {
-                return v;
+                return getWithSurfaceInteractionPos(extra, v);
             }
         }
-        return new WorkOutput<>(
+        return getWithSurfaceInteractionPos(extra, new WorkOutput<>(
                 false,
                 false,
                 null,
                 ImmutableList.copyOf(shuffled).get(0)
-        );
+        ));
     }
+
+    protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(EXTRA extra, WorkOutput<TOWN, WorkPosition<POS>> v);
 
     protected abstract ArrayList<WorkPosition<POS>> shuffle(
             EXTRA extra,

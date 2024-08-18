@@ -82,6 +82,10 @@ public class TownVillagerBedsHandle {
 
     public Optional<GlobalPos> getBestBed(TownInterface town, LivingEntity ent) {
         // TODO[ASAP]: Handle no beds left
-        return Optional.of(GlobalPos.of(town.getServerLevel().dimension(), delegate.getBestBed(ent)));
+        BlockPos bestBed = delegate.getBestBed(ent);
+        if (bestBed == null) {
+            return Optional.empty();
+        }
+        return Optional.of(GlobalPos.of(town.getServerLevel().dimension(), bestBed));
     }
 }

@@ -151,6 +151,14 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
+    protected WorkOutput<MCTownState, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
+            Inputs inputs,
+            WorkOutput<MCTownState, WorkPosition<BlockPos>> v
+    ) {
+        return Util.workWithSurfaceInteractionPos(inputs.level(), v);
+    }
+
+    @Override
     protected ArrayList<WorkPosition<BlockPos>> shuffle(
             Inputs inputs,
             Collection<WorkPosition<BlockPos>> workSpots

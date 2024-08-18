@@ -4,7 +4,7 @@ import java.util.Objects;
 
 public record WorkPosition<POS>(
         POS jobBlock,
-        POS groundBelowEntity
+        POS entityFeetPos
 ) {
 
     @Override
@@ -12,11 +12,11 @@ public record WorkPosition<POS>(
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         WorkPosition<?> that = (WorkPosition<?>) o;
-        return Objects.equals(jobBlock, that.jobBlock) && Objects.equals(groundBelowEntity, that.groundBelowEntity);
+        return Objects.equals(jobBlock, that.jobBlock) && Objects.equals(entityFeetPos, that.entityFeetPos);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(jobBlock, groundBelowEntity);
+        return Objects.hash(jobBlock, entityFeetPos);
     }
 }

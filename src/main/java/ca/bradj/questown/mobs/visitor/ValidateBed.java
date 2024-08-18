@@ -54,6 +54,9 @@ public class ValidateBed extends Behavior<VisitorMobEntity> {
         }
 
         Optional<GlobalPos> home = entity.getBrain().getMemory(MemoryModuleType.HOME);
+        if (home.isEmpty() || home.get().pos() == null) {
+            return;
+        }
         BlockPos bp = home.get().pos();
         BlockState bs = level.getBlockState(bp);
         Optional<Boolean> occupied = bs.getOptionalValue(BedBlock.OCCUPIED);

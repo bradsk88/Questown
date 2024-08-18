@@ -62,7 +62,7 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
             // TODO: Is this loop helping anyone?
             for (POS p : bestBedsForVillager) {
                 //   TODO: If villager's claimed bed has same score as smallest number, use it instead
-                if (!assignedBeds.get(keyify.apply(v)).equals(p)) {
+                if (!p.equals(assignedBeds.get(keyify.apply(v)))) {
                     QT.FLAG_LOGGER.debug("Villager bed set to {} for {}", p, v);
                 }
                 assignedBeds.put(keyify.apply(v), p);

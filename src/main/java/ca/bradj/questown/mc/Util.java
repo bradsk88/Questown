@@ -14,6 +14,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -273,5 +274,19 @@ public class Util {
         }
         // 10, 11, 12, 13, 14 are east
         return Direction.EAST;
+    }
+
+    public static <X> WorkOutput<X, WorkPosition<BlockPos>> workWithSurfaceInteractionPos(
+            ServerLevel sl,
+            WorkOutput<X, WorkPosition<BlockPos>> v
+    ) {
+        BlockPos feet = v.spot().entityFeetPos();
+        int feetY = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, feet.getX(), feet.getZ());
+        return new WorkOutput<>(
+                v.worked(),
+                v.claimed(),
+                v.town(),
+                new WorkPosition<>(v.spot().jobBlock(), v.spot().entityFeetPos().atY(feetY))
+        );
     }
 }

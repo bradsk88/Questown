@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
@@ -16,10 +17,10 @@ import java.util.function.Supplier;
 
 public class JobLogic<EXTRA, TOWN, POS> {
 
-    private boolean worked;
+    private int worked = 0;
 
-    public boolean hasWorked() {
-        return worked;
+    public boolean hasWorkedRecently() {
+        return worked > 0;
     }
 
     public boolean isWrappingUp() {
@@ -157,6 +158,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
             JLWorld<EXTRA, TOWN, POS> world,
             BiFunction<TOWN, POS, Integer> getState
     ) {
+        worked = Math.max(0, worked - 1);
+
         // TODO: Update listAllWorkSpots to actually find "rich" workspots (an
         //  implemntation of WorkSpot) which have the block name to help with debugging
         Map<Integer, Collection<WorkPosition<POS>>> workSpots = world.listAllWorkSpots();
@@ -164,7 +167,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         Collection<WorkPosition<POS>> workSpot1 = workSpots.get(productionState);
         if (workSpot1 == null) {
             String problem = "Worker somehow has different status than all existing work spots";
-            QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
+//            QT.JOB_LOGGER.error("{}. This is probably a bug.", problem);
             return WithReason.unformatted(null, problem);
         }
         Preferred<WorkPosition<POS>> allSpots = new Preferred<>(this.workSpot, workSpot1);
@@ -176,7 +179,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         WorkOutput<TOWN, WorkPosition<POS>> work = world.getHandle().tryWorking(extra, allSpots);
         this.setWorkSpot(work.spot());
         if (work.worked()) {
-            this.worked = true;
+            this.worked = Config.WORKED_RECENTLY_TICKS.get().intValue();
             world.setLookTarget(work.spot().jobBlock());
             boolean hasWork = !isSeekingWork;
             Integer stateAfterWork = getState.apply(work.town(), work.spot().jobBlock());
@@ -186,7 +189,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     world.registerHeldItemsAsFoundLoot(); // TODO: Is this okay for every job to do?
                 }
                 wrappingUp = true;
-                this.worked = false;
             }
         }
         return WithReason.unformatted(wrappingUp, "If worked");

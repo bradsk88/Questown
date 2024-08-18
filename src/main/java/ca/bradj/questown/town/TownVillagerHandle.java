@@ -17,6 +17,7 @@ import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -71,7 +72,10 @@ public class TownVillagerHandle implements VillagerHolder {
         moods.tick(currentTick);
         TownFlagBlockEntity t = town.getUnsafe();
         beds.tick(t, ImmutableList.copyOf(entities));
-        entities.forEach(e -> e.getBrain().setMemory(MemoryModuleType.HOME, beds.getBestBed(t, e)));
+        entities.forEach(e -> {
+            Optional<GlobalPos> bestBed = beds.getBestBed(t, e);
+            e.getBrain().setMemory(MemoryModuleType.HOME, bestBed);
+        });
     }
 
     private void tickHunger() {

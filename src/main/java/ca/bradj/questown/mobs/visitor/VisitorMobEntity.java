@@ -102,6 +102,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;
+
 public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
@@ -170,7 +172,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.changeListeners.add(() -> {
             IStatus<?> s = getStatusForServer();
             Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId()).apply(s);
-           ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
+            ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
         });
     }
 
@@ -468,14 +470,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
         // TODO: Can this go inside the "not on client side" block?
-        if (job.get().isWorking()) {
+        if (job.get().isWorking() || job.get().getStatus().isCollectingSupplies()) {
             BlockPos target = job.get().getTarget(blockPosition(), position(), town);
             if (target != null) {
+                int surfaceY = level.getHeight(MOTION_BLOCKING_NO_LEAVES, target.getX(), target.getZ());
+                target = target.atY(surfaceY);
                 ticksWithoutJobTarget = 0;
                 Vec3 center = Vec3.atBottomCenterOf(target);
-                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(position(), target)) {
+                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(position(), target) && !Jobs.isOnTopOf(position(), target)) {
                     QT.VILLAGER_LOGGER.debug("Moving to {}", target);
-                    this.moveTo(center.x, center.y, center.z);
+                    this.moveTo(center.x, position().y, center.z);
                 }
             } else {
                 ticksWithoutJobTarget++;

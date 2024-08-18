@@ -204,7 +204,7 @@ public class DeclarativeJob extends
 
     @Override
     public boolean shouldStandStill() {
-        return this.getStatus().isWorkingOnProduction() && this.logic.hasWorked();
+        return this.getStatus().isWorkingOnProduction() && this.logic.hasWorkedRecently();
     }
 
     @NotNull
@@ -725,15 +725,20 @@ public class DeclarativeJob extends
                     roomFoundButNotBlock = true;
                     continue;
                 }
+
+                Supplier<BlockPos> is = () -> findInteractionSpot(
+                        blockPos,
+                        match.room,
+                        isValidWalkTarget,
+                        () -> Direction.getRandom(rand)
+                );
+
                 if (maxState.equals(blockState)) {
-                    return new WithReason<>(blockPos, "Found extractable product");
+                    return new WithReason<>(is.get(), "Found extractable product");
                 }
                 boolean shouldGo = statusItems.getOrDefault(blockState, false);
                 if (shouldGo) {
-                    return new WithReason<>(findInteractionSpot(
-                            blockPos, match.room, isValidWalkTarget,
-                            () -> Direction.getRandom(rand)
-                    ), "Found a spot where a held item can be used");
+                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
                 }
             }
         }

@@ -292,7 +292,7 @@ public abstract class ProductionJob<
             WorkPosition<BlockPos> productionSpot = findProductionSpot(sl);
             if (productionSpot != null) {
                 this.setLookTarget(productionSpot.jobBlock());
-                return productionSpot.groundBelowEntity();
+                return productionSpot.entityFeetPos();
             }
             QT.JOB_LOGGER.error("Production spot was null somehow");
             return null;

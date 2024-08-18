@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -77,6 +78,15 @@ public class Jobs {
     ) {
         double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
         return d < 0.5;
+    }
+
+
+
+    public static boolean isOnTopOf(
+            Vec3 position,
+            BlockPos center
+    ) {
+        return isVeryCloseTo(position.with(Direction.Axis.Y, center.getY()), center);
     }
 
     public static void handleItemChanges(
