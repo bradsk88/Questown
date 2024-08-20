@@ -16,7 +16,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 public record SyncVillagerAdvancementsMessage(
-        Map<JobID, @Nullable JobID> parents
+        Map<JobID, @Nullable JobID> parents,
+        Map<JobID, ResourceLocation> icons
 ) {
 
     public static void encode(
@@ -33,6 +34,11 @@ public record SyncVillagerAdvancementsMessage(
                 buffer.writeUtf(value.id().toString());
             }
         });
+        buffer.writeInt(msg.icons.size());
+        msg.icons.entrySet().forEach(i -> {
+            buffer.writeUtf(i.getKey().id().toString());
+            buffer.writeResourceLocation(i.getValue());
+        });
     }
 
     public static SyncVillagerAdvancementsMessage decode(FriendlyByteBuf buffer) {
@@ -47,7 +53,14 @@ public record SyncVillagerAdvancementsMessage(
             }
             b.put(JobID.fromRL(new ResourceLocation(job)), p);
         }
-        return new SyncVillagerAdvancementsMessage(b);
+        HashMap<JobID, ResourceLocation> b2 = new HashMap<>();
+         num = buffer.readInt();
+        for (int i = 0; i < num; i++) {
+            String job = buffer.readUtf();
+            ResourceLocation icon = buffer.readResourceLocation();
+            b2.put(JobID.fromRL(new ResourceLocation(job)), icon);
+        }
+        return new SyncVillagerAdvancementsMessage(b, b2);
     }
 
     public void handle(
@@ -59,6 +72,7 @@ public record SyncVillagerAdvancementsMessage(
                     Dist.CLIENT,
                     () -> () -> {
                         parents.forEach(VillagerAdvancements::registerOnClientSide);
+                        VillagerAdvancements.registerIcons(icons);
                         success.set(true);
                     }
             );

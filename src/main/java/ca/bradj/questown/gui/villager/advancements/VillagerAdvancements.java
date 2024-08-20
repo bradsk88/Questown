@@ -2,13 +2,19 @@ package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class VillagerAdvancements {
 
+    private static final Map<JobID, ResourceLocation> icons = new HashMap<>();
     // This gets populated via register
     private static final JobRelationship all = new JobRelationship(
             null,
@@ -58,5 +64,15 @@ public class VillagerAdvancements {
             }
         }
         return id;
+    }
+
+    public static void registerIcons(Map<JobID, ResourceLocation> in) {
+        icons.clear();;
+        icons.putAll(in);
+    }
+
+    public static ItemStack getIcon(JobID prerequisite) {
+        // TODO: Handle item not found
+        return ForgeRegistries.ITEMS.getValue(icons.get(prerequisite)).getDefaultInstance();
     }
 }

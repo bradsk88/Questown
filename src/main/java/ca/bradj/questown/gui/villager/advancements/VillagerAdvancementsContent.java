@@ -1,7 +1,6 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AtomicDouble;
@@ -71,7 +70,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
         advancements.forEach(
                 this.root, (JobRelationship adv, JobRelationship.ContextualPosition p, VillagerAdvancementsWidget parentWidget) -> {
                     DisplayInfo di = new DisplayInfo(
-                            Works.get(adv.prerequisite()).get().icon(),
+                            VillagerAdvancements.getIcon(adv.prerequisite()),
                             Compat.translatable(adv.prerequisite().jobId()),
                             Compat.literal(""),
                             display.getBackground(),

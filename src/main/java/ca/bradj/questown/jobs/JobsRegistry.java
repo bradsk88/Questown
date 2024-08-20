@@ -159,7 +159,7 @@ public class JobsRegistry {
                 return true;
             }
         }
-        return false;
+        return requestedResult.test(w.get().initialRequest());
     }
 
     public static Function<IStatus<?>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -191,9 +191,13 @@ public class JobsRegistry {
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
         List<Ingredient> list = Works.values().stream()
-                                     .map(v -> v.get().results().apply(t))
+                                     .map(v -> {
+                                         ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
+                                         v.get().results().apply(t).forEach(z -> b.add(z.toItemStack()));
+                                         b.add(v.get().initialRequest());
+                                         return b.build();
+                                     })
                                      .flatMap(Collection::stream)
-                                     .map(MCTownItem::toItemStack)
                                      .map(Ingredient::of)
                                      .map(Ingredients::asWorkRequest)
                                      .collect(Collectors.toSet())
