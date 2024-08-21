@@ -66,6 +66,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
 
     @Override
     protected boolean canStillUse(ServerLevel level, VisitorMobEntity entity, long p_22547_) {
+        if (entity.job.get().shouldStandStill()) {
+            return false;
+        }
         Optional<Long> since = entity.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         if (since.isEmpty()) {
             entity.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, level.getDayTime());
