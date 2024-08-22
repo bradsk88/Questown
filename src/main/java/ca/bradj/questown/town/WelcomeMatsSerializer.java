@@ -11,7 +11,7 @@ import java.util.Collection;
 public class WelcomeMatsSerializer {
     public static final WelcomeMatsSerializer INSTANCE = new WelcomeMatsSerializer();
 
-    public Tag serializeNBT(ImmutableList<BlockPos> welcomeMats) {
+    public CompoundTag serializeNBT(ImmutableList<BlockPos> welcomeMats) {
         ListTag tag = new ListTag();
         for (BlockPos m : welcomeMats) {
             CompoundTag t = new CompoundTag();
@@ -20,14 +20,16 @@ public class WelcomeMatsSerializer {
             t.putInt("z", m.getZ());
             tag.add(t);
         }
-        return tag;
+        CompoundTag out = new CompoundTag();
+        out.put("mats", tag);
+        return out;
     }
 
     public Collection<BlockPos> deserializeNBT(
-            ListTag data
+            CompoundTag data
     ) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
-        for (Tag t : data) {
+        for (Tag t : data.getList("mats", Tag.TAG_COMPOUND)) {
             CompoundTag c = (CompoundTag) t;
             b.add(new BlockPos(c.getInt("x"), c.getInt("y"), c.getInt("z")));
         }

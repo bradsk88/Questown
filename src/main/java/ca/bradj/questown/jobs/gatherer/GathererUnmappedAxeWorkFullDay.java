@@ -29,8 +29,8 @@ public class GathererUnmappedAxeWorkFullDay extends NewLeaverWork {
 
     public static final JobID ID = new JobID("gatherer", "axe_full_day");
 
-    public static final int BLOCK_STATE_NEED_FOOD = 0;
-    public static final int BLOCK_STATE_NEED_TOOL = 1;
+    public static final int BLOCK_STATE_NEED_TOOL = 0;
+    public static final int BLOCK_STATE_NEED_FOOD = 1;
     public static final int BLOCK_STATE_NEED_ROAM = 2;
     public static final int BLOCK_STATE_DONE = 3;
 

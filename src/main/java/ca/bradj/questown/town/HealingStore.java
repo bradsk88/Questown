@@ -1,11 +1,11 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
-import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 // TODO: Optimize Performance
 //  We check every healing spot every tick. Distribute across many ticks.
@@ -15,8 +15,13 @@ public class HealingStore<POS> {
     private final Map<POS, Map<String, TemporaryBoost>> boosts = new HashMap<>();
     private final Map<POS, Double> healingBedsBoosted = new HashMap<>();
 
-    public ImmutableMap<POS, Double> getAll() {
-        return ImmutableMap.copyOf(healingBedsBoosted);
+    public @Nullable Map.Entry<POS, Double> getRandom(Function<Integer, Integer> randRangedInt) {
+        if (healingBedsGroundTruth.isEmpty()) {
+            return null;
+        }
+        List<Map.Entry<POS, Double>> list = healingBedsGroundTruth.entrySet().stream().toList();
+        Map.Entry<POS, Double> out = list.get(randRangedInt.apply(list.size()));
+        return new AbstractMap.SimpleEntry<>(out.getKey(), getHealFactor(out.getKey()));
     }
 
     public void tick() {
@@ -51,7 +56,8 @@ public class HealingStore<POS> {
     }
 
     public Double getHealFactor(POS p) {
-        return UtilClean.getOrDefault(healingBedsBoosted, p, 1.0);
+        Supplier<Double> unboosted = () -> UtilClean.getOrDefault(healingBedsGroundTruth, p, 1.0);
+        return UtilClean.getOrDefault2(healingBedsBoosted, p, unboosted);
     }
 
     protected void putGroundTruth(

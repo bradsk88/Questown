@@ -257,6 +257,14 @@ public class TestWorldInteraction extends
     }
 
     @Override
+    protected WorkOutput<Boolean, WorkPosition<Position>> getWithSurfaceInteractionPos(
+            Void unused,
+            WorkOutput<Boolean, WorkPosition<Position>> v
+    ) {
+        return v;
+    }
+
+    @Override
     protected ArrayList<WorkPosition<Position>> shuffle(
             Void unused,
             Collection<WorkPosition<Position>> workSpots

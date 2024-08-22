@@ -15,6 +15,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -45,6 +46,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -53,6 +55,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -80,6 +83,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -134,6 +138,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             SensorType.NEAREST_BED
     );
     private static final int inventoryCapacity = 6;
+    private static final float slowWalkSpeed = 0.2f;
     private static final float walkSpeed = 0.3f;
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
@@ -145,6 +150,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     );
     private int ticksWithoutJobTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
+    private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
+    private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -309,7 +316,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
         Work work = Works.get(initialID).get();
         WorksBehaviour.JobFunc wf = work.jobFunc();
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = wf.apply(town, uuid);
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = wf.apply(uuid);
 
         // Technically this also gets us item updates because item changes cause status to go back to IDLE
         // But this is admittedly a bit fragile.
@@ -336,6 +343,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
         ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toItemStack());
         level.addFreshEntity(item);
+    }
+
+    public void addSleepListener(Consumer<VillagerSleptEvent> l) {
+        this.sleepListeners.add(l);
     }
 
     public record WorkToUndo(
@@ -435,6 +446,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private void visitorTick() {
+        slowDownForPlayers();
+
         if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
             town.getVillagerHandle().changeJobForVisitor(uuid, seeker, false);
@@ -477,7 +490,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 target = target.atY(surfaceY);
                 ticksWithoutJobTarget = 0;
                 Vec3 center = Vec3.atBottomCenterOf(target);
-                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(position(), target) && !Jobs.isOnTopOf(position(), target)) {
+                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(
+                        position(),
+                        target
+                ) && !Jobs.isOnTopOf(position(), target)) {
                     QT.VILLAGER_LOGGER.debug("Moving to {}", target);
                     this.moveTo(center.x, position().y, center.z);
                 }
@@ -486,6 +502,31 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
         this.useNearbyGates();
+    }
+
+    private void slowDownForPlayers() {
+        // TODO: Add a way to easily slow down villagers
+//        List<Player> ps = level.getNearbyPlayers(
+//                TargetingConditions.forNonCombat(),
+//                this,
+//                this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
+//        );
+//        for (Player p : ps) {
+//            if (isLookingAtMe(p)) {
+//                getNavigation().setSpeedModifier(slowWalkSpeed);
+//                return;
+//            }
+//        }
+    }
+
+    private boolean isLookingAtMe(Player p) {
+        Vec3 vec3 = p.getViewVector(1.0F).normalize();
+        Vec3 vec31 = new Vec3(this.getX() - p.getX(), this.getEyeY() - p.getEyeY(), this.getZ() - p.getZ());
+        double d0 = vec31.length();
+        vec31 = vec31.normalize();
+        double d1 = vec3.dot(vec31);
+        QT.VILLAGER_LOGGER.debug("D1: {}", d1);
+        return d1 > 0.95D - 0.025D / d0 ? p.hasLineOfSight(this) : false;
     }
 
     private void useNearbyGates() {
@@ -796,17 +837,86 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public void startSleeping(BlockPos p_21141_) {
-        super.startSleeping(p_21141_);
+        getInBed(p_21141_);
         this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level.getGameTime());
         this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        this.lastBedTime = Util.getDayTime(level);
+    }
+
+    private void getInBed(BlockPos p_21141_) {
+        if (this.isPassenger()) {
+            this.stopRiding();
+        }
+
+        BlockState blockstate = this.level.getBlockState(p_21141_);
+        if (blockstate.isBed(level, p_21141_, this)) {
+            blockstate.setBedOccupied(level, p_21141_, this, true);
+        }
+
+        this.setPose(Pose.SLEEPING);
+        this.setPosToBed(p_21141_);
+        this.setSleepingPos(p_21141_);
+        this.setDeltaMovement(Vec3.ZERO);
+        this.hasImpulse = true;
+    }
+
+    private void setPosToBed(BlockPos p_21081_) {
+        this.setPos(
+                (double) p_21081_.getX() + 0.5D,
+                (double) p_21081_.getY() + 0.6875D,
+                (double) p_21081_.getZ() + 0.5D
+        );
     }
 
     @Override
     public void stopSleeping() {
-        super.stopSleeping();
-        this.brain.setMemory(MemoryModuleType.LAST_WOKEN, this.level.getGameTime());
+        Optional<BlockPos> sleepingPos = getOutOfBed();
+        long curTime = this.level.getGameTime();
+        this.brain.setMemory(MemoryModuleType.LAST_WOKEN, curTime);
+
+        sleepingPos.ifPresent(
+                bed -> {
+                    long nightSleepTicks = lastBedTime.ticksBeforeMidnight();
+                    long ticksSlept = Util.getDayTime(level).dayTime() + nightSleepTicks;
+                    sleepListeners.forEach(l -> l.accept(new VillagerSleptEvent(ticksSlept, bed)));
+                }
+        );
+
         this.setHealth(this.getMaxHealth());
+    }
+
+    private @NotNull Optional<BlockPos> getOutOfBed() {
+        Optional<BlockPos> sleepingPos = this.getSleepingPos();
+        sleepingPos.filter(this.level::hasChunkAt).ifPresent((p_147228_) -> {
+            BlockState blockstate = this.level.getBlockState(p_147228_);
+            if (blockstate.isBed(level, p_147228_, this)) {
+                blockstate.setBedOccupied(level, p_147228_, this, false);
+                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level, p_147228_, this.getYRot())
+                                     .orElseGet(() -> {
+                                         BlockPos blockpos = p_147228_.above();
+                                         return new Vec3(
+                                                 (double) blockpos.getX() + 0.5D,
+                                                 (double) blockpos.getY() + 0.1D,
+                                                 (double) blockpos.getZ() + 0.5D
+                                         );
+                                     });
+                Vec3 vec32 = Vec3.atBottomCenterOf(p_147228_).subtract(vec31).normalize();
+                float f = (float) Mth.wrapDegrees(Mth.atan2(
+                        vec32.z,
+                        vec32.x
+                ) * (double) (180F / (float) Math.PI) - 90.0D);
+                this.setPos(vec31.x, vec31.y, vec31.z);
+                this.setYRot(f);
+                this.setXRot(0.0F);
+            }
+
+        });
+        Vec3 vec3 = this.position();
+        this.setPose(Pose.STANDING);
+        this.setPos(vec3.x, vec3.y, vec3.z);
+        this.clearSleepingPos();
+        return sleepingPos;
     }
 
     @Override
@@ -1015,7 +1125,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Snapshot journal
     ) {
         this.town = town;
-        setJob(JobsRegistry.getInitializedJob(town, journal.jobId(), journal, uuid));
+        setJob(JobsRegistry.getInitializedJob(journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(
                 getJob().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );

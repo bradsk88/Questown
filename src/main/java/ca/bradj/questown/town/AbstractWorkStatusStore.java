@@ -102,6 +102,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         return value == null ? null : Math.toIntExact(value);
     }
 
+    @Override
+    public void clearAllTimers() {
+        this.timeJobStatuses.keySet().forEach(k -> this.timeJobStatuses.put(k, 1L));
+    }
+
     public interface InsertionRules<ITEM> {
 
 

@@ -91,7 +91,7 @@ public class SpawnVisitorReward extends MCReward {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         if (this.visitorUUID != null) {
             tag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);

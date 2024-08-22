@@ -13,7 +13,6 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.QuestBatches;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -30,7 +29,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
-    @Nullable ServerLevel getServerLevel();
+    @Nullable
+    ServerLevel getServerLevel();
 
     BlockPos getTownFlagBasePos();
 
@@ -69,17 +69,20 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
      */
     ImmutableSet<UUID> getVillagers();
 
-    @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
+    @Nullable
+    ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
 
     void registerEntity(VisitorMobEntity vEntity);
 
     BlockPos getEnterExitPos();
 
-    @Nullable BlockPos getClosestWelcomeMatPos(BlockPos reference);
+    @Nullable
+    BlockPos getClosestWelcomeMatPos(BlockPos reference);
 
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 
-    @Nullable UUID getRandomVillager();
+    @Nullable
+    UUID getRandomVillager();
 
     @Override
     boolean isVillagerMissing(UUID uuid);
@@ -96,7 +99,10 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
             JobID jobID
     );
 
-    boolean changeJobForVisitorFromBoard(UUID ownerUUID);
+    boolean changeJobForVisitorFromBoard(
+            UUID ownerUUID,
+            JobID currentJob
+    );
 
     Collection<String> getAvailableRootJobs();
 

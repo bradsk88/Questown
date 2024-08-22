@@ -110,7 +110,7 @@ public class WorksBehaviour {
     }
 
 
-    public interface JobFunc extends BiFunction<TownInterface, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
+    public interface JobFunc extends Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
@@ -174,7 +174,7 @@ public class WorksBehaviour {
                 jobId,
                 parentID,
                 icon,
-                (TownInterface job, UUID uuid) -> new DeclarativeJob(
+                (UUID uuid) -> new DeclarativeJob(
                         uuid, 6, // TODO: Add support for different inventory sizes
                         jobId, location, states.maxState(),
                         world.actionDuration(),

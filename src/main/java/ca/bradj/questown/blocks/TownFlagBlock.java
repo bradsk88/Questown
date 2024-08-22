@@ -88,7 +88,7 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
         if (itemInHand.getTag() == null) {
-            QT.ITEM_LOGGER.error("Missing tag");
+            QT.ITEM_LOGGER.error("Missing NBT tag on {}", itemInHand);
             return null;
         }
         int x, y, z;

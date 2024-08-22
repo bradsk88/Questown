@@ -36,7 +36,7 @@ public class MCMorningRewards extends MCRewardList {
     }
 
     @Override
-    public Tag serializeNbt() {
+    public CompoundTag serializeNbt() {
         return super.serializeNbt();
     }
 

@@ -342,7 +342,7 @@ public abstract class ProductionJob<
             Random rand
     );
 
-    protected abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    public abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -386,7 +386,6 @@ public abstract class ProductionJob<
     private void setupForGetSupplies(
             TownInterface town
     ) {
-        QT.JOB_LOGGER.debug(marker, "Searching for supplies");
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
                 journal.getItems(), item

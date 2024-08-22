@@ -22,7 +22,7 @@ public class TownKnowledgeStoreSerializer {
         knowledgeHandle.registerFoundLoots(ImmutableList.copyOf(knownLoot));
     }
 
-    public Tag serializeNBT(TownKnowledgeStore knowledgeHandle) {
+    public CompoundTag serializeNBT(TownKnowledgeStore knowledgeHandle) {
         CompoundTag t = new CompoundTag();
         ListTag gatherResults = new ListTag();
         knowledgeHandle.getAllKnownGatherResults().forEach(

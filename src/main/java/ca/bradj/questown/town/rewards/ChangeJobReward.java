@@ -62,7 +62,7 @@ public class ChangeJobReward extends MCReward {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
         compoundTag.putString(NBT_JOB_NAME, this.jobName);

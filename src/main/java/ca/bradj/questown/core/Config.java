@@ -58,6 +58,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> WORK_SEEKER_COOLDOWN;
     public static final ForgeConfigSpec.ConfigValue<Long> WORKED_RECENTLY_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Double> MIN_JOB_ACCEPTANCE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
@@ -179,6 +180,9 @@ public class Config {
         WORKED_RECENTLY_TICKS = BUILDER.comment(
                 "The number of ticks after working where a villager will be considered 'worked recently'. Used for navigation logic."
         ).defineInRange("WorkedRecentlyTicks", 20L, 1L, 24000L);
+        MIN_JOB_ACCEPTANCE = BUILDER.comment(
+                "A percentage representing the minimum number of job states that are currently possible. For example, if a job has four states but only three can be done (due to missing tools, etc) then the percentage is 0.75.  This setting determines the minimum acceptable percentage for a villager to even consider trying the work."
+        ).defineInRange("MinJobAcceptance", 0.65, 0.0, 1.0);
         BUILDER.pop();
 
         // Villagers Config

@@ -59,7 +59,7 @@ public class TownRoomsMapSerializer {
         roomsMap.initialize(owner, activeRecipes, doorsB.build(), gatesB.build());
     }
 
-    public Tag serializeNBT(TownRoomsMap roomsMap) {
+    public CompoundTag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();
         for (TownPosition bp : roomsMap.getRegisteredDoors()) {

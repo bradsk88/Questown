@@ -33,9 +33,9 @@ public class GathererMappedAxeWork extends NewLeaverWork {
 
     public static final JobID ID = new JobID("gatherer", "axe_mapped");
 
-    public static final int BLOCK_STATE_NEED_FOOD = 0;
+    public static final int BLOCK_STATE_NEED_TOOL = 0;
     public static final int BLOCK_STATE_NEED_MAP = 1;
-    public static final int BLOCK_STATE_NEED_TOOL = 2;
+    public static final int BLOCK_STATE_NEED_FOOD = 2;
     public static final int BLOCK_STATE_NEED_ROAM = 3;
     public static final int BLOCK_STATE_DONE = 4;
 

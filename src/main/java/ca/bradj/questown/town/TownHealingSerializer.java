@@ -1,7 +1,6 @@
 package ca.bradj.questown.town;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 
 public class TownHealingSerializer {
     public void deserialize(
@@ -11,7 +10,7 @@ public class TownHealingSerializer {
         // FIXME: Implement
     }
 
-    public Tag serialize(
+    public CompoundTag serialize(
             TownVillagerHandle villagers,
             Long currentTick
     ) {

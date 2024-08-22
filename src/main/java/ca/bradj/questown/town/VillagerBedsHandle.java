@@ -98,6 +98,7 @@ public class VillagerBedsHandle<POS, ENT, TOWN> {
         Function<POS, HealingBed<POS>> hf = (v) -> new HealingBed<>(v, getHealingFactor.apply(town, v));
         List<HealingBed<POS>> bedsLeftToAssign = new ArrayList<>(all.stream().map(hf).toList());
         bedsLeftToAssign.sort(Comparator.comparingDouble(a -> a.factor));
+        // FIXME: Exclude occupied beds
         return bedsLeftToAssign;
     }
 

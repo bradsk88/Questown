@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
@@ -62,7 +63,11 @@ public class TownVillagerBedsHandle {
             TownInterface town,
             BlockPos i
     ) {
-        BedPart value = town.getServerLevel().getBlockState(i).getValue(BlockStateProperties.BED_PART);
+        BlockState blockState = town.getServerLevel().getBlockState(i);
+        if (!blockState.hasProperty(BlockStateProperties.BED_PART)) {
+            return false;
+        }
+        BedPart value = blockState.getValue(BlockStateProperties.BED_PART);
         return BedPart.HEAD.equals(value);
     }
 

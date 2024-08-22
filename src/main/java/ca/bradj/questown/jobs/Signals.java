@@ -3,9 +3,14 @@ package ca.bradj.questown.jobs;
 public enum Signals {
     UNDEFINED, MORNING, NOON, EVENING, NIGHT;
 
+    public static final long NIGHT_START_TICK = 22000;
+
     public record DayTime(
             long dayTime
     ) {
+        public long ticksBeforeMidnight() {
+            return 24000 - dayTime;
+        }
     }
 
     public static Signals fromDayTime(DayTime gameTime) {
@@ -14,7 +19,7 @@ public enum Signals {
             return Signals.MORNING;
         } else if (dayTime < 11500) {
             return Signals.NOON;
-        } else if (dayTime < 22000) {
+        } else if (dayTime < NIGHT_START_TICK) {
             return Signals.EVENING;
         } else {
             return Signals.NIGHT;

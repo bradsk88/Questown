@@ -31,9 +31,10 @@ public class SpecialQuests {
             FARM,
             new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FENCE_GATE.get())), Integer.MAX_VALUE)
     );
-    public static final ResourceLocation BEDROOM = new ResourceLocation(Questown.MODID, "bedroom");
-    public static final ResourceLocation JOB_BOARD = new ResourceLocation(Questown.MODID, "job_board");
-    public static final ResourceLocation DINING_ROOM = new ResourceLocation(Questown.MODID, "dining_room");
+    public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
+    public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
+    public static final ResourceLocation DINING_ROOM = Questown.ResourceLocation("dining_room");
+    public static final ResourceLocation CLINIC = Questown.ResourceLocation("clinic");
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);

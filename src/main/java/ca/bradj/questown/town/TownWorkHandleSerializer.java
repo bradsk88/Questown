@@ -15,7 +15,7 @@ import java.util.Collection;
 public class TownWorkHandleSerializer {
     public static final TownWorkHandleSerializer INSTANCE = new TownWorkHandleSerializer();
 
-    public Tag serializeNBT(TownWorkHandle workHandle) {
+    public CompoundTag serializeNBT(TownWorkHandle workHandle) {
         CompoundTag tag = new CompoundTag();
         QTNBT.put(tag, "boards", serializeBoards(workHandle));
         QTNBT.put(tag, "requests", serializeRequests(workHandle));

@@ -42,6 +42,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.common.extensions.IForgeBlock;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
@@ -50,7 +51,7 @@ import java.util.Optional;
 
 import static net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART;
 
-public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing {
+public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing, IForgeBlock {
     public static final BooleanProperty OCCUPIED = BlockStateProperties.OCCUPIED;
     public static final String ITEM_ID = "hospital_bed";
     protected static final int HEIGHT = 9;
@@ -350,5 +351,15 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
 
     private static int[][] bedAboveStandUpOffsets(Direction p_49537_) {
         return new int[][]{{0, 0}, {-p_49537_.getStepX(), -p_49537_.getStepZ()}};
+    }
+
+    @Override
+    public boolean isBed(
+            BlockState state,
+            BlockGetter level,
+            BlockPos pos,
+            @org.jetbrains.annotations.Nullable Entity player
+    ) {
+        return true;
     }
 }

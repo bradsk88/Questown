@@ -40,7 +40,7 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
         this.town = town;
     }
 
-    public Tag serializeNbt() {
+    public CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         tag.put(NBT_CHILD, MCReward.SERIALIZER.serializeNBT(child));
         return tag;

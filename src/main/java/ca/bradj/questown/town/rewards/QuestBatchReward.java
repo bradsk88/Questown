@@ -37,7 +37,7 @@ public class QuestBatchReward extends MCReward {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         return MCQuestBatch.SERIALIZER.serializeNBT(this.batch);
     }
 

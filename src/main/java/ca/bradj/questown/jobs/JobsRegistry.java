@@ -212,14 +212,13 @@ public class JobsRegistry {
     }
 
     public static boolean canFit(
-            TownInterface town,
             UUID villagerID,
             JobID p,
             Signals.DayTime currentTick
     ) {
         Work w = Works.get(p).get();
         long jobDuration = w.jobFunc()
-                            .apply(town, villagerID)
+                            .apply(villagerID)
                             .getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
@@ -278,25 +277,22 @@ public class JobsRegistry {
     private static ImmutableMap<String, Jerb> jobs;
 
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(
-            TownInterface town,
             JobID jobName,
             @NotNull Snapshot<MCHeldItem> journal,
             UUID ownerUUID
     ) {
-        return getInitializedJob(town, jobName, journal, null, ownerUUID);
+        return getInitializedJob(jobName, journal, null, ownerUUID);
     }
 
     public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
-            TownInterface town,
             JobID jobName,
             ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        return getInitializedJob(town, jobName, null, heldItems, ownerUUID);
+        return getInitializedJob(jobName, null, heldItems, ownerUUID);
     }
 
     private static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
-            TownInterface town,
             JobID jobName,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
@@ -309,18 +305,18 @@ public class JobsRegistry {
             journal = newWorkSeekerJournal(jobName, journal, heldItems);
         } else if (DinerWork.isDining(jobName)) {
             Work dw = DinerWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(town, ownerUUID);
+            j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (DinerNoTableWork.isDining(jobName)) {
             Work dw = DinerNoTableWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(town, ownerUUID);
+            j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(town, ownerUUID);
+            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);
         } else {
             Work work = fn.get();
-            j = work.jobFunc().apply(town, ownerUUID);
+            j = work.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, work);
         }
         if (journal != null) {

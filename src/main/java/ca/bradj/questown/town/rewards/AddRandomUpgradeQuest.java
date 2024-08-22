@@ -43,7 +43,7 @@ public class AddRandomUpgradeQuest extends MCReward {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
         return compoundTag;

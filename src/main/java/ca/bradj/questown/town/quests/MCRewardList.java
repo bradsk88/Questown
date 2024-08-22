@@ -54,7 +54,7 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         ListTag cs = new ListTag();
         for (MCReward r : this.getChildren()) {

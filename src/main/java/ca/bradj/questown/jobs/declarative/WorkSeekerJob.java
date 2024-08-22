@@ -103,7 +103,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 if (getWorkCooldown > 0) {
                     return false;
                 }
-                if (!extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID)) {
+                if (!extra.town().changeJobForVisitorFromBoard(WorkSeekerJob.this.ownerUUID, getId())) {
                     this.getWorkCooldown = Config.WORK_SEEKER_COOLDOWN.get();
                 }
                 return true;

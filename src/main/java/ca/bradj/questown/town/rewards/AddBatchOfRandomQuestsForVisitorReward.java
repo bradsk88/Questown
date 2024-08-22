@@ -40,7 +40,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     }
 
     @Override
-    protected Tag serializeNbt() {
+    protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         if (this.visitorUUID != null) {
             compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);

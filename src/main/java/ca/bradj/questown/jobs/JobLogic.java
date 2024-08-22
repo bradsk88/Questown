@@ -81,6 +81,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             JLWorld<EXTRA, TOWN, POS> worldBeforeTick,
             BiFunction<TOWN, POS, Integer> getState
     ) {
+        worked = Math.max(0, worked - 1);
         if (this.grabbingInsertedSupplies) {
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
@@ -158,8 +159,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
             JLWorld<EXTRA, TOWN, POS> world,
             BiFunction<TOWN, POS, Integer> getState
     ) {
-        worked = Math.max(0, worked - 1);
-
         // TODO: Update listAllWorkSpots to actually find "rich" workspots (an
         //  implemntation of WorkSpot) which have the block name to help with debugging
         Map<Integer, Collection<WorkPosition<POS>>> workSpots = world.listAllWorkSpots();

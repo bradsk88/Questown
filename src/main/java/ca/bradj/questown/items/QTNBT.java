@@ -8,6 +8,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 public class QTNBT {
     private static String keyify(String key) {
         return String.format("%s_%s", Questown.MODID, key);
@@ -35,6 +37,14 @@ public class QTNBT {
             CompoundTag target,
             String key,
             Tag tag
+    ) {
+        target.put(keyify(key), tag);
+    }
+
+    public static <X> void put(
+            Map<String, X> target,
+            String key,
+            X tag
     ) {
         target.put(keyify(key), tag);
     }

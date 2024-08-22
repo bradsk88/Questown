@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class UtilClean {
 
@@ -52,6 +53,18 @@ public class UtilClean {
         X x = map.get(key);
         if (x == null) {
             return fallback;
+        }
+        return x;
+    }
+
+    public static <K, X, Y extends X> X getOrDefault2(
+            Map<K, X> map,
+            K key,
+            Supplier<Y> fallback
+    ) {
+        X x = map.get(key);
+        if (x == null) {
+            return fallback.get();
         }
         return x;
     }

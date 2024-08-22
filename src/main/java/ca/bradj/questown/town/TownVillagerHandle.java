@@ -115,17 +115,21 @@ public class TownVillagerHandle implements VillagerHolder {
     public VillagerStatsData getStats(UUID uuid) {
         Integer bf = Config.BASE_FULLNESS.get();
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
-        float damagePercent = (float) Util.getOrDefault(
-                damage,
-                uuid,
-                0
-        ) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        float damagePercent = getDamagePercent(uuid);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
                 fullnessPercent,
                 moods.getMood(uuid),
                 damagePercent
         );
+    }
+
+    public float getDamagePercent(UUID uuid) {
+        return (float) Util.getOrDefault(
+                damage,
+                uuid,
+                0
+        ) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
     }
 
     @Override
@@ -267,6 +271,24 @@ public class TownVillagerHandle implements VillagerHolder {
     public void add(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
         this.beds.claim(vEntity, town.getUnsafe());
+        vEntity.addSleepListener(e -> {
+            Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());
+            long ticksHealed = (long) (e.duration() * healFactor);
+            damage.compute(
+                    vEntity.getUUID(),
+                    (id, cur) -> {
+                        if (cur == null) {
+                            return 0;
+                        }
+                        int newVal = Math.toIntExact(Math.max(0, cur - ticksHealed));
+                        QT.VILLAGER_LOGGER.debug(
+                                "Villager damage changed from {} to {} after {} ticks of sleep via bed at {} with heal factor {} [{}]",
+                                cur, newVal, e.duration(), e.bedPos(), healFactor, vEntity.getUUID()
+                        );
+                        return newVal;
+                    }
+            );
+        });
     }
 
     public boolean exists(VisitorMobEntity visitorMobEntity) {

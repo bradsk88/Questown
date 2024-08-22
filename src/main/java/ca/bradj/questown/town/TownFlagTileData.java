@@ -26,14 +26,14 @@ import java.util.function.Consumer;
 
 public class TownFlagTileData {
 
-    public static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
-    public static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
-    public static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
-    public static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
-    public static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
-    private static final String NBT_KNOWLEDGE = "knowledge";
-    private static final String NBT_VILLAGERS = "villagers";
-    private static final String NBT_HEALSPOTS = "heal_spots";
+    private static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
+    private static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
+    private static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
+    private static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
+    private static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
+    private static final String NBT_KNOWLEDGE = String.format("%s_knowledge", Questown.MODID);
+    private static final String NBT_VILLAGERS = String.format("%s_villagers", Questown.MODID);
+    private static final String NBT_HEALSPOTS = String.format("%s_heal_spots", Questown.MODID);
 
     public static Map<String, InitPair> initialize() {
 
@@ -94,8 +94,7 @@ public class TownFlagTileData {
 
     private static @NotNull InitPair initWelcomeMats() {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
-            ListTag data = tag.getList(NBT_WELCOME_MATS, Tag.TAG_COMPOUND);
-            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(data);
+            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(tag);
             l.forEach(t.initializer().getPOIs()::registerWelcomeMat);
             QT.FLAG_LOGGER.debug("Initialized welcome mats from {}", tag);
             return true;
@@ -173,16 +172,24 @@ public class TownFlagTileData {
 
     public static void write(
             Long currentTick,
-            CompoundTag tag,
+            CompoundTag t,
             TownFlagInitialization flag
     ) {
-        tag.put(NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(flag.getQuestBatches()));
-        tag.put(NBT_MORNING_REWARDS, flag.getMorningRewards().serializeNbt());
-        tag.put(NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(flag.getPOIs().getWelcomeMats()));
-        tag.put(NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(flag.getRoomsHandle().getRegisteredRooms()));
-        tag.put(NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(flag.getWorkHandle()));
-        QTNBT.put(tag, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
-        QTNBT.put(tag, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
-        QTNBT.put(tag, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        write(t, NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(flag.getQuestBatches()));
+        write(t, NBT_MORNING_REWARDS, flag.getMorningRewards().serializeNbt());
+        write(t, NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(flag.getPOIs().getWelcomeMats()));
+        write(t, NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(flag.getRoomsHandle().getRegisteredRooms()));
+        write(t, NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(flag.getWorkHandle()));
+        write(t, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
+        write(t, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        write(t, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+    }
+
+    private static void write(
+            CompoundTag target,
+            String key,
+            CompoundTag value
+    ) {
+        target.put(key, value);
     }
 }

@@ -26,6 +26,14 @@ class HealingStoreTest {
     }
 
     @Test
+    public void testShouldHaveInitialNoBoost_RegisteredHealSpot() {
+        HealingStore<Position> s = new HealingStore<Position>();
+        s.putGroundTruth(TEST_POSITION, 2.0);
+        Double initial = s.getHealFactor(TEST_POSITION);
+        assertEquals(2, initial);
+    }
+
+    @Test
     public void testShouldBeBoosted() {
         HealingStore<Position> s = new HealingStore<Position>();
         s.addBoost(TEST_POSITION, "test", new TemporaryBoost(2, 100));

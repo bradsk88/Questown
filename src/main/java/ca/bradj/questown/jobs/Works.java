@@ -49,6 +49,13 @@ public class Works {
         initialized = true;
     }
 
+    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> regularJobs() {
+        assert initialized;
+        ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
+        b.addAll(works.entrySet());
+        return b.build();
+    }
+
     public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootID) {
         assert initialized;
         ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
