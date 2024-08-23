@@ -282,7 +282,7 @@ public abstract class LeaverJob implements Job<MCHeldItem, GathererJournal.Snaps
             BlockPos entityPos,
             TownInterface town
     ) {
-        this.successTarget = Jobs.setupForDropLoot(town, this.successTarget);
+        this.successTarget = Jobs.setupForDropLoot(town, this.successTarget, entityPos);
         if (this.successTarget != null) {
             return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
         }

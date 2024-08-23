@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -26,6 +27,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -299,7 +301,7 @@ public abstract class ProductionJob<
         }
 
         if (status.isDroppingLoot()) {
-            successTarget = Jobs.setupForDropLoot(town, this.successTarget);
+            successTarget = Jobs.setupForDropLoot(town, this.successTarget, entityBlockPos);
             if (successTarget != null) {
                 this.setLookTarget(successTarget.getBlockPos());
                 return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
@@ -308,7 +310,7 @@ public abstract class ProductionJob<
 
         if (journal.getStatus()
                    .isCollectingSupplies()) {
-            setupForGetSupplies(town);
+            setupForGetSupplies(town, entityBlockPos);
             if (suppliesTarget != null) {
                 this.setLookTarget(suppliesTarget.getBlockPos());
                 return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
@@ -384,18 +386,24 @@ public abstract class ProductionJob<
     );
 
     private void setupForGetSupplies(
-            TownInterface town
+            TownInterface town,
+            BlockPos pos
     ) {
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
                 journal.getItems(), item
         );
+
+        Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
+                town, checkFn, pos
+        );
+
         if (this.suppliesTarget != null) {
             if (!this.suppliesTarget.hasItem(checkFn)) {
-                this.suppliesTarget = town.findMatchingContainer(checkFn);
+                this.suppliesTarget = find.get();
             }
         } else {
-            this.suppliesTarget = town.findMatchingContainer(checkFn);
+            this.suppliesTarget = find.get();
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());

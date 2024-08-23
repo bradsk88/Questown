@@ -168,7 +168,10 @@ class JobLogicTest {
 
     @ParameterizedTest
     @MethodSource("provideCollectSuppliesArgs")
-    void tick_ShouldCollectSuppliesIfTargetExists(boolean entityInJobSite, boolean expectCollect) {
+    void tick_ShouldCollectSuppliesIfTargetExists(
+            boolean entityInJobSite,
+            boolean expectCollect
+    ) {
         JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
 
         final AtomicBoolean triedToGetSupplies = new AtomicBoolean(false);
@@ -428,7 +431,7 @@ class JobLogicTest {
                 DEFINITION.maxState(), ImmutableList.of(ARBITRARY_WORKSPOT)
         );
 
-      ticker.accept(DEFINITION.maxState());
+        ticker.accept(DEFINITION.maxState());
         Assertions.assertEquals(null, changedTo.get());
 
         // Then, change job

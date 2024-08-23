@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.workstatus.State;
@@ -122,14 +123,18 @@ public class Jobs {
 
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> setupForDropLoot(
             TownInterface town,
-            ContainerTarget<MCContainer, MCTownItem> currentTarget
+            ContainerTarget<MCContainer, MCTownItem> currentTarget,
+            BlockPos pos
     ) {
+        Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
+                town, MCTownItem::isEmpty, pos
+        );
         if (currentTarget != null) {
             if (!currentTarget.hasItem(MCTownItem::isEmpty)) {
-                currentTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+                currentTarget = find.get();
             }
         } else {
-            currentTarget = town.findMatchingContainer(MCTownItem::isEmpty);
+            currentTarget = find.get();
         }
         if (currentTarget != null) {
             return currentTarget;
