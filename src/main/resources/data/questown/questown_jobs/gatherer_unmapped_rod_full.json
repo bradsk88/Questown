@@ -15,7 +15,8 @@
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
-      "tools": "#questown:fishing_rods",
+      "tools": "#questown:fishing_rods"
+    }, {
       "ingredients": "#questown:villager_food",
       "quantity": 2
     },

@@ -8,7 +8,6 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.blacksmith.BlacksmithWoodenPickaxeJob;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
@@ -19,7 +18,6 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -233,14 +231,7 @@ public class JobsRegistry {
     }
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {
-        ImmutableMap<String, Jerb> hc = ImmutableMap.of(
-                BlacksmithWoodenPickaxeJob.DEF.jobId().rootId(), new Jerb(
-                        ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId()),
-                        ImmutableList.of(BlacksmithWoodenPickaxeJob.DEF.jobId())
-                )
-        );
         ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
-        b.putAll(hc);
 
         HashMap<String, ArrayList<Work>> ps = new HashMap<>();
         js.forEach((id, job) -> {

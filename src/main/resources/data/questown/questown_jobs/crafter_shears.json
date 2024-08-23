@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "crafter/shears",
+  "priority": "3500",
+  "parent": "crafter/stick",
+  "icon": "minecraft:shears",
+  "initial_request": "minecraft:shears",
+  "result": {
+    "type": "item",
+    "item": "minecraft:shears",
+    "quantity": 1
+  },
+  "block": "minecraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "minecraft:iron_ingot",
+      "quantity": 1
+    },
+    {
+      "work": 50
+    }
+  ],
+  "cooldown_ticks": 10,
+  "sound": {
+    "id": "minecraft:block.metal.hit",
+    "chance": "100",
+    "duration": 5
+  }
+}

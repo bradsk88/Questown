@@ -1,27 +1,28 @@
 {
   "version": 1,
-  "id": "gatherer/rod_half_day",
-  "priority": "5000",
-  "parent": "gatherer/rod_quarter_day",
-  "icon": "minecraft:cod",
-  "initial_request": "minecraft:cod",
+  "id": "gatherer/shears_full_day",
+  "priority": "1000",
+  "parent": "gatherer/gather_full_day",
+  "icon": "minecraft:purple_wool",
+  "initial_request": "minecraft:white_wool",
   "result": {
     "type": "biome_loot",
-    "prefix": "jobs/gatherer_fishing",
-    "default": "jobs/gatherer_fishing/default",
-    "attempts": 3
+    "prefix": "jobs/gatherer_shears",
+    "default": "jobs/gatherer_shears/default",
+    "attempts": 6
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
-      "tools": "#questown:fishing_rods"
-    }, {
+      "tools": "minecraft:shears"
+    },
+    {
       "ingredients": "#questown:villager_food",
       "quantity": 2
     },
     {
-      "time": 4000
+      "time": 6000
     }
   ],
   "cooldown_ticks": 0,

@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "id": "gatherer/rod_half_day",
-  "priority": "5000",
-  "parent": "gatherer/rod_quarter_day",
-  "icon": "minecraft:cod",
+  "id": "gatherer/rod_quarter_day",
+  "priority": "3000",
+  "parent": null,
+  "icon": "minecraft:fishing_rod",
   "initial_request": "minecraft:cod",
   "result": {
     "type": "biome_loot",
     "prefix": "jobs/gatherer_fishing",
     "default": "jobs/gatherer_fishing/default",
-    "attempts": 3
+    "attempts": 1
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
@@ -18,7 +18,7 @@
       "tools": "#questown:fishing_rods"
     }, {
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "quantity": 1
     },
     {
       "time": 4000

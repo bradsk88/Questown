@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "blacksmith/wooden_pickaxe",
+  "priority": "3000",
+  "parent": null,
+  "icon": "minecraft:wooden_pickaxe",
+  "initial_request": "minecraft:wooden_pickaxe",
+  "result": {
+    "type": "item",
+    "item": "minecraft:wooden_pickaxe",
+    "quantity": 1
+  },
+  "block": "minecraft:wooden_pickaxe",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "#minecraft:planks",
+      "quantity": 2
+    },
+    {
+      "work": 10
+    }
+  ],
+  "cooldown_ticks": 100,
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
+}
