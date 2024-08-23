@@ -385,8 +385,9 @@ public class DeclarativeJob extends
 
     private Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town, Function<BlockPos, State> getJobBlockState, Integer state) {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         return Jobs.roomsWithState(
-                town, location.baseRoom(),
+                town, rooms,
                 (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp),
                 (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
         );
@@ -872,5 +873,9 @@ public class DeclarativeJob extends
 
     public int getMaxState() {
         return maxState;
+    }
+
+    public WorkLocation location() {
+        return location;
     }
 }

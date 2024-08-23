@@ -316,11 +316,10 @@ public class Jobs {
 
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town,
-            ResourceLocation roomType,
+            Collection<RoomRecipeMatch<MCRoom>> rooms,
             BiPredicate<ServerLevel, BlockPos> blockCheck,
             StateCheck check
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(roomType);
         return rooms.stream()
                 .filter(v -> {
                     List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream().filter(

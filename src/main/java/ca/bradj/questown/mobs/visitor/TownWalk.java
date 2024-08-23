@@ -9,7 +9,6 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
@@ -44,9 +43,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (e.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
             return false;
         }
-        if (e.getBrain().getMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM).orElse(false)) {
-            return false;
-        }
+//        if (e.getBrain().getMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM).orElse(false)) {
+//            return false;
+//        }
         if (level.getGameTime() - this.nextUpdate < REPEAT_BUFFER) {
             return false;
         }

@@ -1,16 +1,23 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,6 +92,29 @@ public class TownPossibleWork {
             TownFlagBlockEntity t,
             DeclarativeJob dj
     ) {
+        boolean townHasJobSite = false;
+        for (int i = 0; i < dj.getMaxState(); i++) {
+            int ii = i;
+            WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
+            ProductionStatus s = ProductionStatus.fromJobBlockStatus(ii);
+            if (!UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
+                          .contains(SpecialRules.CLAIM_SPOT)) {
+                Collection<RoomRecipeMatch<MCRoom>> rooms = t.getRoomHandle()
+                                                             .getRoomsMatching(dj.location().baseRoom());
+                Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
+                        t, rooms,
+                        (sl, bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        (sl, bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
+                );
+                if (!roomsWS.isEmpty()) {
+                    townHasJobSite = true;
+                    break;
+                }
+            }
+        }
+        if (!townHasJobSite) {
+            return 0;
+        }
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
@@ -110,6 +140,7 @@ public class TownPossibleWork {
                     townHasTool = true;
                 }
             }
+
             if (!townHasIngredient || !townHasTool) {
                 return Math.max(0, i - 1);
             }
