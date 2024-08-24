@@ -45,66 +45,12 @@ import java.util.*;
 import java.util.function.*;
 import java.util.stream.Stream;
 
+import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
+
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends
         DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
-    public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
-        @Override
-        public ProductionStatus fromJobBlockState(int s) {
-            return ProductionStatus.fromJobBlockStatus(s);
-        }
-
-        @Override
-        public ProductionStatus waitingForTimedState() {
-            return ProductionStatus.FACTORY.waitingForTimedState();
-        }
-
-        @Override
-        public ProductionStatus droppingLoot() {
-            return ProductionStatus.FACTORY.droppingLoot();
-        }
-
-        @Override
-        public ProductionStatus noSpace() {
-            return ProductionStatus.FACTORY.noSpace();
-        }
-
-        @Override
-        public ProductionStatus goingToJobSite() {
-            return ProductionStatus.FACTORY.goingToJobSite();
-        }
-
-        @Override
-        public ProductionStatus noJobSite() {
-            return ProductionStatus.FACTORY.noJobSite();
-        }
-
-        @Override
-        public ProductionStatus noSupplies() {
-            return ProductionStatus.FACTORY.noSupplies();
-        }
-
-        @Override
-        public ProductionStatus collectingSupplies() {
-            return ProductionStatus.FACTORY.collectingSupplies();
-        }
-
-        @Override
-        public ProductionStatus idle() {
-            return ProductionStatus.FACTORY.idle();
-        }
-
-        @Override
-        public ProductionStatus extractingProduct() {
-            return ProductionStatus.FACTORY.extractingProduct();
-        }
-
-        @Override
-        public ProductionStatus relaxing() {
-            return ProductionStatus.FACTORY.relaxing();
-        }
-    };
     public final ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     public final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
@@ -145,13 +91,7 @@ public class DeclarativeJob extends
                 ownerUUID, inventoryCapacity, buildRecipe(
                         ingredientsRequiredAtStates, toolsRequiredAtStates
                 ), marker,
-                (capacity, signalSource) -> new ProductionJournal<>(
-                        jobId,
-                        signalSource,
-                        capacity,
-                        MCHeldItem::Air,
-                        STATUS_FACTORY
-                ),
+                DeclarativeJobs.journalInitializer(jobId),
                 STATUS_FACTORY,
                 specialStatusRules, specialGlobalRules,
                 () -> {
@@ -414,7 +354,7 @@ public class DeclarativeJob extends
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
-                town.getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
+                town.getVillagerHandle().changeJobForVillager(ownerUUID, id, false);
             }
 
             @Override
@@ -472,7 +412,7 @@ public class DeclarativeJob extends
             @Override
             public void seekFallbackWork() {
                 JobID id = WorkSeekerJob.getIDForRoot(jobId);
-                extra.town().getVillagerHandle().changeJobForVisitor(ownerUUID, id, false);
+                extra.town().getVillagerHandle().changeJobForVillager(ownerUUID, id, false);
             }
 
             @Override
@@ -823,15 +763,6 @@ public class DeclarativeJob extends
             }
         });
         return ImmutableMap.copyOf(b);
-    }
-
-    @Override
-    protected BlockPos findNonWorkTarget(
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
-            TownInterface town
-    ) {
-        return null;
     }
 
     @Override

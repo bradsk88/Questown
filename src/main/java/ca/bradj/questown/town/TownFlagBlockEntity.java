@@ -786,24 +786,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             UUID visitorUUID,
             JobID jobID
     ) {
-        this.changeJobForVisitor(visitorUUID, jobID, false);
+        this.changeJobForVillager(visitorUUID, jobID, false);
     }
 
-    public void changeJobForVisitor(
+    public void changeJobForVillager(
             UUID visitorUUID,
             JobID jobID,
             boolean announce
     ) {
-        Optional<VisitorMobEntity> f = villagerHandle.stream()
-                                                     .filter(v -> v instanceof VisitorMobEntity)
-                                                     .map(v -> (VisitorMobEntity) v)
-                                                     .filter(v -> v.getUUID()
-                                                                   .equals(visitorUUID))
-                                                     .findFirst();
-        if (f.isEmpty()) {
+        VisitorMobEntity f = villagerHandle.getEntity(visitorUUID);
+        if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
         } else {
-            doSetJob(visitorUUID, jobID, f.get());
+            doSetJob(visitorUUID, jobID, f);
             setChanged();
             if (announce) {
                 messages.jobChanged(jobID, visitorUUID);

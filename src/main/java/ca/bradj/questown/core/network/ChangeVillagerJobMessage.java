@@ -51,7 +51,7 @@ public record ChangeVillagerJobMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getVillagerHandle().changeJobForVisitor(villagerUUID, newJob, announce);
+            flag.get().getVillagerHandle().changeJobForVillager(villagerUUID, newJob, announce);
         });
         ctx.get().setPacketHandled(true);
 

@@ -5,7 +5,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.nomc.LootDropperJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -132,7 +132,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (worldBeforeTick.canDropLoot()) {
-            worldBeforeTick.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
+            worldBeforeTick.changeJob(LootDropperJob.getIDForRoot(entityCurrentJob));
             return;
         }
 
@@ -146,7 +146,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         if (wrappingUp) {
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
-            worldBeforeTick.changeJob(WorkSeekerJob.getIDForRoot(entityCurrentJob));
+            worldBeforeTick.changeJob(LootDropperJob.getIDForRoot(entityCurrentJob));
         }
     }
 

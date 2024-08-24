@@ -138,12 +138,12 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public void changeJobForVisitor(
+    public void changeJobForVillager(
             UUID villagerUUID,
             JobID newJob,
             boolean announce
     ) {
-        this.town.getUnsafe().changeJobForVisitor(villagerUUID, newJob, announce);
+        this.town.getUnsafe().changeJobForVillager(villagerUUID, newJob, announce);
     }
 
     public Stream<LivingEntity> stream() {

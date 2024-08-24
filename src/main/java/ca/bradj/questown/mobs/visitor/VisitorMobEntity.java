@@ -450,7 +450,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
-            town.getVillagerHandle().changeJobForVisitor(uuid, seeker, false);
+            town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
         }
 
         if (isInWall()) {

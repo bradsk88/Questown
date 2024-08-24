@@ -1,6 +1,9 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.mc.Util;
@@ -20,10 +23,69 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 public class DeclarativeJobs {
+
+    public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
+        @Override
+        public ProductionStatus fromJobBlockState(int s) {
+            return ProductionStatus.fromJobBlockStatus(s);
+        }
+
+        @Override
+        public ProductionStatus waitingForTimedState() {
+            return ProductionStatus.FACTORY.waitingForTimedState();
+        }
+
+        @Override
+        public ProductionStatus droppingLoot() {
+            return ProductionStatus.FACTORY.droppingLoot();
+        }
+
+        @Override
+        public ProductionStatus noSpace() {
+            return ProductionStatus.FACTORY.noSpace();
+        }
+
+        @Override
+        public ProductionStatus goingToJobSite() {
+            return ProductionStatus.FACTORY.goingToJobSite();
+        }
+
+        @Override
+        public ProductionStatus noJobSite() {
+            return ProductionStatus.FACTORY.noJobSite();
+        }
+
+        @Override
+        public ProductionStatus noSupplies() {
+            return ProductionStatus.FACTORY.noSupplies();
+        }
+
+        @Override
+        public ProductionStatus collectingSupplies() {
+            return ProductionStatus.FACTORY.collectingSupplies();
+        }
+
+        @Override
+        public ProductionStatus idle() {
+            return ProductionStatus.FACTORY.idle();
+        }
+
+        @Override
+        public ProductionStatus extractingProduct() {
+            return ProductionStatus.FACTORY.extractingProduct();
+        }
+
+        @Override
+        public ProductionStatus relaxing() {
+            return ProductionStatus.FACTORY.relaxing();
+        }
+    };
+
     public static <INGREDIENT, ITEM extends Item<ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, ITEM>> Map<Integer, Boolean> getSupplyItemStatus(
             Collection<HELD_ITEM> journalItems,
             ImmutableMap<Integer, INGREDIENT> ingredientsRequiredAtStates,
@@ -52,6 +114,16 @@ public class DeclarativeJobs {
     }
 
     private static ImmutableMap<ProductionStatus, Function<HandlerInputs, MCTownState>> handler;
+
+    public static BiFunction<Integer, SignalSource, ProductionJournal<MCTownItem, MCHeldItem>> journalInitializer(JobID jobId) {
+        return (capacity, signalSource) -> new ProductionJournal<>(
+                jobId,
+                signalSource,
+                capacity,
+                MCHeldItem::Air,
+                STATUS_FACTORY
+        );
+    }
 
     private record HandlerInputs(
             MCTownStateWorldInteraction wi,
@@ -183,7 +255,7 @@ public class DeclarativeJobs {
                                 outState.containers
                         ),
                         DeclarativeJobs.alwaysInRoom(fakeRoom),
-                        DeclarativeJob.STATUS_FACTORY, prioritizeExtraction
+                        STATUS_FACTORY, prioritizeExtraction
                 );
                 if (nuStatus != null) {
                     status = nuStatus;

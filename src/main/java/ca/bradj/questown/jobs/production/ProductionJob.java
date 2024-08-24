@@ -321,18 +321,12 @@ public abstract class ProductionJob<
             return entityBlockPos;
         }
 
-        return findNonWorkTarget(entityBlockPos, entityPos, town);
+        return null;
     }
 
     protected void setLookTarget(BlockPos jobSite1) {
         this.lookTarget = jobSite1;
     }
-
-    protected abstract BlockPos findNonWorkTarget(
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
-            TownInterface town
-    );
 
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
