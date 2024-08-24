@@ -766,14 +766,6 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public boolean openScreen(
-            ServerPlayer sp,
-            VisitorMobEntity e
-    ) {
-        return Jobs.openInventoryAndStatusScreen(sp, e);
-    }
-
-    @Override
     public JobName getJobName() {
         return new JobName("jobs." + jobId);
     }

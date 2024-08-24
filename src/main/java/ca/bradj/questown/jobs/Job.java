@@ -33,11 +33,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
             Vec3 entityPosition
     );
 
-    boolean openScreen(
-            ServerPlayer sp,
-            VisitorMobEntity visitorMobEntity
-    );
-
     Container getInventory();
 
     SNAPSHOT getJournalSnapshot();
@@ -62,6 +57,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     boolean addToEmptySlot(MCHeldItem mcTownItem);
 
+    // TODO: Assess if this is still required now that we send information to
+    //  the client side via the network
     void initializeStatusFromEntityData(@Nullable String s);
 
     String getStatusToSyncToClient();

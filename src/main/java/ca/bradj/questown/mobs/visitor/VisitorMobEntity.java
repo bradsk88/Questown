@@ -1079,7 +1079,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
-        if (!job.get().openScreen(sp, this)) {
+        if (!Jobs.openInventoryAndStatusScreen(sp, this)) {
             openDialogScreen(sp, quests, ctx);
         }
 

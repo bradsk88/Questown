@@ -29,266 +29,108 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class LootDropperWork implements Job<MCHeldItem, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionStatus> {
-    private final DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> delegate = new DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>>() {
-        @Override
-        public Signals getSignal() {
-            // Always drop loot - no matter the time of day
-            return Signals.NOON;
-        }
-
-        @Override
-        protected Map<Integer, Boolean> getSupplyItemStatus() {
-            // Cannot work (can only drop). Never has supplies.
-            return Map.of();
-        }
-
-        @Override
-        protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level) {
-            // Cannot work (can only drop). There is never a work spot.
-            return null;
-        }
-
-        @Override
-        protected WithReason<@Nullable BlockPos> findJobSite(
-                RoomsHolder town,
-                Function<BlockPos, State> work,
-                Predicate<BlockPos> isEmpty,
-                Predicate<BlockPos> isJobBlock,
-                Random rand
-        ) {
-            return null;
-        }
-
-        @Override
-        public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
-                TownInterface town,
-                Function<BlockPos, State> work,
-                Predicate<BlockPos> canClaim
-        ) {
-            return Map.of();
-        }
-
-        @Override
-        protected void tick(
-                TownInterface town,
-                WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
-                LivingEntity entity,
-                Direction facingPos,
-                Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
-                IProductionStatusFactory<ProductionStatus> statusFactory
-        ) {
-
-        }
-
-        @Override
-        public boolean openScreen(
-                ServerPlayer sp,
-                VisitorMobEntity visitorMobEntity
-        ) {
-            return false;
-        }
-
-        @Override
-        public JobName getJobName() {
-            return null;
-        }
-
-        @Override
-        public void initializeStatusFromEntityData(@Nullable String s) {
-
-        }
-
-        @Override
-        public JobID getId() {
-            return null;
-        }
-
-        @Override
-        public boolean shouldStandStill() {
-            return false;
-        }
-
-        @Override
-        public Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener) {
-            return null;
-        }
-
-        @Override
-        public Function<Void, Void> addJobCompletionListener(Runnable listener) {
-            return null;
-        }
-
-        @Override
-        public long getTotalDuration() {
-            return 0;
-        }
-    };
+public class LootDropperWork implements
+        Job<MCHeldItem, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionStatus> {
+    private final DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> delegate;
 
     public LootDropperWork(
             UUID ownerUUID,
             int invSize,
             String rootId
     ) {
-        this.journal = DeclarativeJobs.journalInitializer(LootDropperJob.newIDForRoot(rootId)).apply(
-                invSize, () -> Signals.NOON
-        );
+        JobID id = LootDropperJob.newIDForRoot(rootId);
+        delegate
+                = new DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>>(
+                        ownerUUID,
+                invSize,
+
+        ) {
+            @Override
+            public Signals getSignal() {
+                // Always drop loot - no matter the time of day
+                return Signals.NOON;
+            }
+
+            @Override
+            protected Map<Integer, Boolean> getSupplyItemStatus() {
+                // Cannot work (can only drop). Never has supplies.
+                return Map.of();
+            }
+
+            @Override
+            protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level) {
+                // Cannot work (can only drop). There is never a work spot.
+                return null;
+            }
+
+            @Override
+            protected WithReason<@Nullable BlockPos> findJobSite(
+                    RoomsHolder town,
+                    Function<BlockPos, State> work,
+                    Predicate<BlockPos> isEmpty,
+                    Predicate<BlockPos> isJobBlock,
+                    Random rand
+            ) {
+                // Cannot work (can only drop). There is never a jobsite.
+                return null;
+            }
+
+            @Override
+            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+                    TownInterface town,
+                    Function<BlockPos, State> work,
+                    Predicate<BlockPos> canClaim
+            ) {
+                return Map.of();
+            }
+
+            @Override
+            protected void tick(
+                    TownInterface town,
+                    WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
+                    LivingEntity entity,
+                    Direction facingPos,
+                    Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+                    IProductionStatusFactory<ProductionStatus> statusFactory
+            ) {
+                // Everything the dropper needs gets calculated in getTarget()
+            }
+
+            @Override
+            public JobName getJobName() {
+                return new JobName("dropper");
+            }
+
+            @Override
+            public void initializeStatusFromEntityData(@Nullable String s) {
+                journal.initializeStatus(ProductionStatus.DROPPING_LOOT);
+            }
+
+            @Override
+            public JobID getId() {
+                return id;
+            }
+
+            @Override
+            public boolean shouldStandStill() {
+                return false;
+            }
+
+            @Override
+            public Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener) {
+                return (v) -> null;
+            }
+
+            @Override
+            public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+                return (v) -> null;
+            }
+
+            @Override
+            public long getTotalDuration() {
+                return 0;
+            }
+        };
     }
 
-    @Override
-    public Function<Void, Void> addStatusListener(StatusListener o) {
-        return null;
-    }
-
-    @Override
-    public ProductionStatus getStatus() {
-        return ProductionStatus.DROPPING_LOOT;
-    }
-
-    @Override
-    public void tick(
-            TownInterface town,
-            LivingEntity entity,
-            Direction facingPos
-    ) {
-
-    }
-
-    @Override
-    public boolean shouldDisappear(
-            TownInterface town,
-            Vec3 entityPosition
-    ) {
-        return false;
-    }
-
-    @Override
-    public boolean openScreen(
-            ServerPlayer sp,
-            VisitorMobEntity visitorMobEntity
-    ) {
-        return false;
-    }
-
-    @Override
-    public Container getInventory() {
-        return null;
-    }
-
-    @Override
-    public SimpleSnapshot<ProductionStatus, MCHeldItem> getJournalSnapshot() {
-        return journal.getSnapshot();
-    }
-
-    @Override
-    public void initialize(Snapshot<MCHeldItem> journal) {
-
-    }
-
-    @Override
-    public List<Boolean> getSlotLockStatuses() {
-        return List.of();
-    }
-
-    @Override
-    public DataSlot getLockSlot(int i) {
-        return null;
-    }
-
-    @Override
-    public @Nullable BlockPos getTarget(
-            BlockPos entityBlockPos,
-            Vec3 entityPos,
-            TownInterface town
-    ) {
-        return null;
-    }
-
-    @Override
-    public void initializeItems(Iterable<MCHeldItem> itemz) {
-
-    }
-
-    @Override
-    public boolean shouldBeNoClip(
-            TownInterface town,
-            BlockPos blockPos
-    ) {
-        return false;
-    }
-
-    @Override
-    public JobName getJobName() {
-        return null;
-    }
-
-    @Override
-    public boolean addToEmptySlot(MCHeldItem mcTownItem) {
-        return false;
-    }
-
-    @Override
-    public void initializeStatusFromEntityData(@Nullable String s) {
-
-    }
-
-    @Override
-    public String getStatusToSyncToClient() {
-        return "";
-    }
-
-    @Override
-    public boolean isJumpingAllowed(BlockState onBlock) {
-        return false;
-    }
-
-    @Override
-    public boolean isInitialized() {
-        return false;
-    }
-
-    @Override
-    public JobID getId() {
-        return null;
-    }
-
-    @Override
-    public void removeStatusListener(StatusListener l) {
-
-    }
-
-    @Override
-    public boolean shouldStandStill() {
-        return false;
-    }
-
-    @Override
-    public boolean canStopWorkingAtAnyTime() {
-        return false;
-    }
-
-    @Override
-    public Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener) {
-        return null;
-    }
-
-    @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
-        return null;
-    }
-
-    @Override
-    public long getTotalDuration() {
-        return 0;
-    }
-
-    @Override
-    public BlockPos getLook() {
-        return null;
-    }
-
-    @Override
-    public boolean isWorking() {
-        return false;
-    }
 }
