@@ -38,4 +38,18 @@ public record Work(
                 priority
         );
     }
+
+    // FIXME: For consistency, this should just be a special rule
+    public Work withAlwaysExtractable() {
+        WorksBehaviour.JobFunc jf = uuid -> {
+            Job apply = jobFunc.apply(uuid);
+            apply.setCustomRoomChecker(room -> true);
+            return apply;
+        };
+        return new Work(
+                id, parentID, icon, jf, snapshotFunc,
+                isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
+                priority
+        );
+    }
 }

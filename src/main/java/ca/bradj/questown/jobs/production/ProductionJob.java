@@ -190,7 +190,7 @@ public abstract class ProductionJob<
 
     @Override
     public boolean isWorking() {
-        return getStatus().isWorkingOnProduction();
+        return isInitialized() && getStatus().isWorkingOnProduction();
     }
 
     @Override

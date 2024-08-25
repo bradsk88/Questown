@@ -10,8 +10,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
+import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
-import ca.bradj.questown.jobs.declarative.nomc.LootDropperJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -303,9 +303,13 @@ public class JobsRegistry {
             Work dw = DinerNoTableWork.asWork(jobName.rootId());
             j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
+        } else if (ResterWork.isResting(jobName)) {
+            Work dw = ResterWork.asWork(jobName.rootId());
+            j = dw.jobFunc().apply(ownerUUID);
+            journal = newJournal(jobName, journal, heldItems, dw);
         } else if (fn == null) {
-            QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-            j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);
+            j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
+            journal = newWorkSeekerJournal(jobName, journal, heldItems);
         } else {
             Work work = fn.get();
             j = work.jobFunc().apply(ownerUUID);

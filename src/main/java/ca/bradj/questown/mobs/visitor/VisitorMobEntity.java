@@ -426,8 +426,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private void villagerTick() {
         slowDownForPlayers();
 
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> joob = job.get();
         if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
-            JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
+            JobID seeker = WorkSeekerJob.getIDForRoot(joob.getId());
             town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
         }
 
@@ -439,7 +440,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             moveTo(nudged);
         }
 
-        Job<?, ?, ? extends IStatus<?>> j = job.get();
+        Job<?, ?, ? extends IStatus<?>> j = joob;
 
         if (j.getStatus() == null || j.getStatus().isUnset()) {
             @Nullable String s = getStatusForClient();
@@ -466,8 +467,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             entityData.set(heldItem, j.getInventory()
                                       .getItem(0));
         }
-        if (job.get().isWorking() || job.get().getStatus().isCollectingSupplies()) {
-            BlockPos target = job.get().getTarget(blockPosition(), position(), town);
+        if (joob.isWorking() || joob.getStatus().isCollectingSupplies()) {
+            BlockPos target = joob.getTarget(blockPosition(), position(), town);
             if (target != null) {
                 ticksWithoutJobTarget = 0;
             } else {

@@ -1,7 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.roomrecipes.core.Room;
-
 import java.util.Collection;
 import java.util.Map;
 

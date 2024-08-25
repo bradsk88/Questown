@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.PlateBlock;
+import ca.bradj.questown.blocks.HospitalBedBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
@@ -48,13 +48,13 @@ public class ResterWork {
     public static Work asWork(
             String rootId
     ) {
-        return productionWork(
+        Work work = productionWork(
                 null,
                 Blocks.BLACK_BED.asItem().getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        WorkLocation.isBlock(PlateBlock.class),
+                        WorkLocation.isBlock(HospitalBedBlock.class),
                         SpecialQuests.CLINIC
                 ),
                 new WorkStates(
@@ -85,13 +85,15 @@ public class ResterWork {
                         WorkSeekerJob::getIDForRoot
                 )
         );
+        // FIXME: For consistency, this should just be a custom rule
+        return work.withAlwaysExtractable();
     }
 
     public static JobID getIdForRoot(String rootId) {
         return new JobID(rootId, ID);
     }
 
-    public static boolean isDining(JobID jobName) {
+    public static boolean isResting(JobID jobName) {
         return ID.equals(jobName.jobId());
     }
 }
