@@ -495,8 +495,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (ticksStuckWithTarget > Config.MAX_STICK_TICKS_WITH_TARGET.get()) {
             ticksStuckWithTarget = 0;
             BlockPos bp = blockPosition();
-            int surfaceY = level.getHeight(MOTION_BLOCKING_NO_LEAVES, bp.getX(), bp.getZ());
-            moveTo(Vec3.atBottomCenterOf(bp.atY(surfaceY)));
+            if (level.getBlockState(bp).getMaterial().isSolid()) {
+                bp = bp.above();
+            }
+            moveTo(Vec3.atBottomCenterOf(bp));
             QT.VILLAGER_LOGGER.debug("Nudged from {} to {} to unstick navigation", lastPos, position());
         }
     }

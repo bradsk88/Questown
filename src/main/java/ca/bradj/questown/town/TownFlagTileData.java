@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.mc.Util;
@@ -14,8 +13,6 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
@@ -65,8 +62,7 @@ public class TownFlagTileData {
 
     private static @NotNull InitPair initQuestBatches() {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
-            CompoundTag data = tag.getCompound(NBT_QUEST_BATCHES);
-            boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, data, t.quests.questBatches);
+            boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, tag, t.quests.questBatches);
             if (!inited) {
                 t.initializer().setUpQuestsForNewlyPlacedFlag();
             }
@@ -83,8 +79,7 @@ public class TownFlagTileData {
 
     private static @NotNull InitPair initMorningRewards() {
         return new InitPair((tag, t) -> {
-            CompoundTag data = tag.getCompound(NBT_MORNING_REWARDS);
-            t.initializer().getMorningRewards().deserializeNbt(t, data);
+            t.initializer().getMorningRewards().deserializeNbt(t, tag);
             QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
             return true;
         }, t -> {
@@ -117,7 +112,7 @@ public class TownFlagTileData {
             if (!knowledge.isInitialized()) {
                 return false;
             }
-            TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(QTNBT.getCompound(tag, NBT_KNOWLEDGE), knowledge);
+            TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(tag, knowledge);
             QT.FLAG_LOGGER.debug("Initialized knowledge from {}", tag);
             return true;
         };

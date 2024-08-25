@@ -281,12 +281,14 @@ public class Util {
             WorkOutput<X, WorkPosition<BlockPos>> v
     ) {
         BlockPos feet = v.spot().entityFeetPos();
-        int feetY = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, feet.getX(), feet.getZ());
+        if (sl.getBlockState(feet).getMaterial().isSolid()) {
+            feet = feet.above();
+        }
         return new WorkOutput<>(
                 v.worked(),
                 v.claimed(),
                 v.town(),
-                new WorkPosition<>(v.spot().jobBlock(), v.spot().entityFeetPos().atY(feetY))
+                new WorkPosition<>(v.spot().jobBlock(), feet)
         );
     }
 }

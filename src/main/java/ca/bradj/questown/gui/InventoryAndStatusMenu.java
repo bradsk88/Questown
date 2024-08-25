@@ -72,7 +72,9 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), windowId, flagPos, villagerUUID);
         this.playerInventory = new InvWrapper(inv);
-        this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
+        // TODO: Bring back slot locks (or get rid of them)
+//        this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
+        this.gathererInventory = new InvWrapper(gathererInv);
         this.jobId = jobId;
         this.openQuestsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.QUESTS);
         this.openStatsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.STATS);

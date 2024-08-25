@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -80,6 +81,11 @@ public class TownPossibleWork {
         Job<?, ?, ?> j = work.jobFunc()
                              .apply(UUID.randomUUID());
         if (!(j instanceof DeclarativeJob dj)) {
+            return 0.0;
+        }
+
+        if (!JobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
+            QT.FLAG_LOGGER.trace("Villager will not do {} because there is not enough time left in the day", j.getId().toNiceString());
             return 0.0;
         }
 

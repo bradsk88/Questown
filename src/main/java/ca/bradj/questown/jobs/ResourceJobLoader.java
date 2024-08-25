@@ -114,7 +114,7 @@ public class ResourceJobLoader {
                     iconItem.getDefaultInstance(),
                     JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
                     JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                    WorksBehaviour.standardDescription(initReq::getDefaultInstance),
+                    description(initReq, object),
                     new WorkLocation(isJobBlock, required(object, "room")),
                     ResourceJobLoader.workStates(object),
                     wwi,
@@ -145,7 +145,7 @@ public class ResourceJobLoader {
                     iconItem.getDefaultInstance(),
                     JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
                     JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                    WorksBehaviour.standardDescription(initReq::getDefaultInstance),
+                    description(initReq, object),
                     new WorkLocation(isJobBlock, required(object, "room")),
                     ResourceJobLoader.workStates(object),
                     wwi,
@@ -217,6 +217,33 @@ public class ResourceJobLoader {
             return new WorkWorldInteractions(cooldownTicks, g);
         }
 
+    }
+
+    private static @NotNull WorkDescription description(Item initReq,
+                                                        JsonObject object
+    ) {
+        if (!object.has("result")) {
+            throw new IllegalArgumentException("result is required");
+        }
+        JsonObject rizz = object.get("result").getAsJsonObject();
+        String type = rizz.get("type").getAsString();
+
+        return switch (type) {
+            case "biome_loot" -> biomeDesc(initReq, rizz);
+            default -> WorksBehaviour.standardDescription(initReq::getDefaultInstance);
+        };
+
+    }
+
+    private static @NotNull WorkDescription biomeDesc(Item initReq,
+                                                      JsonObject rizz
+    ) {
+        String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
+        GathererTools.LootTablePrefix lootTablePrefix = new GathererTools.LootTablePrefix(resultPrefix);
+        return new WorkDescription(
+                t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
+                initReq.getDefaultInstance()
+        );
     }
 
     private static void registerRule(
