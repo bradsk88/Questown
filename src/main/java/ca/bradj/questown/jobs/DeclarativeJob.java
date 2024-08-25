@@ -15,6 +15,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -29,12 +30,10 @@ import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -358,6 +357,11 @@ public class DeclarativeJob extends
             }
 
             @Override
+            public void changeToNextJob() {
+                town.getVillagerHandle().changeToNextJobForVillager(ownerUUID, getId());
+            }
+
+            @Override
             public WorkPosition<BlockPos> getWorkSpot() {
                 return world.getWorkSpot();
             }
@@ -374,11 +378,6 @@ public class DeclarativeJob extends
                         bp -> location.isJobBlock().test(sl::getBlockState, bp),
                         () -> Direction.getRandom(sl.random)
                 );
-            }
-
-            @Override
-            public void clearWorkSpot(String reason) {
-                world.setWorkSpot(new WithReason<>(null, reason));
             }
 
             @Override

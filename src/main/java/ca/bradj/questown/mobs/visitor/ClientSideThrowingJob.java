@@ -48,14 +48,6 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     }
 
     @Override
-    public boolean openScreen(
-            ServerPlayer sp,
-            VisitorMobEntity visitorMobEntity
-    ) {
-        throw new UnsupportedOperationException("Should only be called on server side");
-    }
-
-    @Override
     public Container getInventory() {
         throw new UnsupportedOperationException("Should only be called on server side");
     }

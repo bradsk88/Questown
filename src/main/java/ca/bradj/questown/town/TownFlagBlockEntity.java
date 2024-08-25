@@ -219,6 +219,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
+        if (!e.initializers.isEmpty()) {
+            QT.FLAG_LOGGER.info("Running initializer ({} left) @ {}", e.initializers.size() - 1, e.getBlockPos());
+            Function<TownFlagBlockEntity, Boolean> initr = e.initializers.remove();
+            if (!initr.apply(e)) {
+                e.initializers.add(initr);
+            }
+            return;
+        }
+
         Player nearestPlayer = level.getNearestPlayer(
                 blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
         if (nearestPlayer == null) {
@@ -241,15 +250,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.stopped = false;
 
         long start = System.currentTimeMillis();
-
-        if (!e.initializers.isEmpty()) {
-            QT.FLAG_LOGGER.info("Running initializer ({} left) @ {}", e.initializers.size() - 1, e.getBlockPos());
-            Function<TownFlagBlockEntity, Boolean> initr = e.initializers.remove();
-            if (!initr.apply(e)) {
-                e.initializers.add(initr);
-            }
-            return;
-        }
 
         // Must tick sub-blocks even with debug mode enabled,
         // because non-ticked sub-blocks will self-destruct.
@@ -750,7 +750,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> JobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
-        JobID work = TownVillagers.chooseFromList(
+            JobID work = TownVillagers.chooseFromList(
                 canFit, requestedResults, td, possibleWork.getFor(villager.getJobId())
         );
         if (work != null) {
@@ -765,10 +765,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
 
         Optional<Map.Entry<JobID, Supplier<Work>>> anyO = Works.regularJobs().stream()
-                                                               .filter(v -> v.getKey().rootId()
-                                                                                 .equals(currentJob.jobId()))
+                                                               .filter(v -> v.getKey().sameRoot(currentJob))
                                                                .findFirst();
         if (anyO.isEmpty()) {
+            changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(currentJob));
             return false;
         }
         changeJobForVisitor(ownerUUID, anyO.get().getKey());

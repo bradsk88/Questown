@@ -27,10 +27,10 @@ import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.jetbrains.annotations.NotNull;
@@ -117,8 +117,10 @@ public abstract class ProductionJob<
         if (sl == null) {
             return false;
         }
-        boolean footSpotBlocked = sl.getBlockState(bp.above()).getMaterial().isSolid();
-        boolean torsoSpotBlocked = sl.getBlockState(bp.above()).getMaterial().isSolid();
+        Material footMaterial = sl.getBlockState(bp).getMaterial();
+        boolean footSpotBlocked = footMaterial.isSolid();
+        BlockState torsoMaterial = sl.getBlockState(bp.above());
+        boolean torsoSpotBlocked = torsoMaterial.getMaterial().isSolid();
         return !(footSpotBlocked || torsoSpotBlocked);
     }
 

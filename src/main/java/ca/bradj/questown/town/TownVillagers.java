@@ -44,8 +44,7 @@ public class TownVillagers {
 
         for (JobID p : preference) {
             if (!canFitInDay.test(p)) {
-                QT.FLAG_LOGGER.debug(
-                        "Villager will not do {} because there is not enough time left in the day", p);
+                QT.FLAG_LOGGER.trace("Villager will not do {} because there is not enough time left in the day", p);
                 continue;
             }
 

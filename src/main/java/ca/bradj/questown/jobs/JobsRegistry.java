@@ -303,9 +303,6 @@ public class JobsRegistry {
             Work dw = DinerNoTableWork.asWork(jobName.rootId());
             j = dw.jobFunc().apply(ownerUUID);
             journal = newJournal(jobName, journal, heldItems, dw);
-        } else if (LootDropperJob.isDropping(jobName)) {
-            j = new LootDropperWork(ownerUUID, 6, jobName.rootId());
-            journal = newWorkSeekerJournal(jobName, journal, heldItems);
         } else if (fn == null) {
             QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
             j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);

@@ -146,6 +146,14 @@ public class TownVillagerHandle implements VillagerHolder {
         this.town.getUnsafe().changeJobForVillager(villagerUUID, newJob, announce);
     }
 
+    @Override
+    public void changeToNextJobForVillager(
+            UUID villagerUUID,
+            JobID currentJob
+    ) {
+        this.town.getUnsafe().changeJobForVisitorFromBoard(villagerUUID, currentJob);
+    }
+
     public Stream<LivingEntity> stream() {
         return entities.stream();
     }

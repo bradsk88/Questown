@@ -36,8 +36,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         WorkPosition<POS> getWorkSpot();
 
-        void clearWorkSpot(String reason);
-
         boolean tryGrabbingInsertedSupplies();
 
         boolean canDropLoot();
@@ -55,6 +53,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         void registerHeldItemsAsFoundLoot();
 
         AbstractWorldInteraction<EXTRA, POS, ?, ?, TOWN> getHandle();
+
+        void changeToNextJob();
     }
 
     private WorkPosition<POS> workSpot;
@@ -132,7 +132,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (worldBeforeTick.canDropLoot()) {
-            worldBeforeTick.changeJob(LootDropperJob.getIDForRoot(entityCurrentJob));
+            worldBeforeTick.changeToNextJob();
             return;
         }
 
@@ -146,7 +146,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         if (wrappingUp) {
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
-            worldBeforeTick.changeJob(LootDropperJob.getIDForRoot(entityCurrentJob));
+            worldBeforeTick.changeToNextJob();
         }
     }
 

@@ -15,4 +15,11 @@ public record WorkLocation(
     public static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isBlock(Class<? extends Block> blockClass) {
         return (sl, bp) -> blockClass.isInstance(sl.apply(bp).getBlock());
     }
+
+    public static WorkLocation nowhere() {
+        return new WorkLocation(
+                (a, b) -> false,
+                null // TODO: Redesign to avoid bugs
+        );
+    }
 }

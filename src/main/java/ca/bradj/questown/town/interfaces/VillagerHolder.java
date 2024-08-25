@@ -43,6 +43,7 @@ public interface VillagerHolder {
     Collection<JobID> getJobs();
 
     void changeJobForVillager(UUID villagerUUID, JobID newJob, boolean announce);
+    void changeToNextJobForVillager(UUID villagerUUID, JobID currentJob);
 
     boolean canDine(UUID uuid);
 

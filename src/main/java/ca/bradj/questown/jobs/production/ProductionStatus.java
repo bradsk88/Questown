@@ -1,12 +1,14 @@
 package ca.bradj.questown.jobs.production;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatusFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class ProductionStatus implements IProductionStatus<ProductionStatus> {
@@ -17,7 +19,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     // TODO: Should probably build something more flexible
     public static final int firstNonCustomIndex = 10;
     private static int nextIndex = firstNonCustomIndex;
-    private static final HashSet<ProductionStatus> allStatuses = new HashSet<>();
+    private static final Map<Integer, ProductionStatus> allStatuses = new HashMap<>();
 
     static {
         for (int i = 0; i < firstNonCustomIndex; i++) {
@@ -26,12 +28,12 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     }
 
     private static ProductionStatus register(ProductionStatus ps) {
-        allStatuses.add(ps);
+        allStatuses.put(ps.value, ps);
         return SessionUniqueOrdinals.register(ps);
     }
 
     public static ImmutableSet<ProductionStatus> allStatuses() {
-        return ImmutableSet.copyOf(allStatuses);
+        return ImmutableSet.copyOf(allStatuses.values());
     }
 
     public static final ProductionStatus DROPPING_LOOT = register(
@@ -135,7 +137,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     public static ProductionStatus from(String s) {
         int i = Integer.parseInt(s);
-        return new ProductionStatus(s, i);
+        return UtilClean.getOrDefault2(allStatuses, i, () -> new ProductionStatus(s, i));
     }
 
     @Override

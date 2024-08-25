@@ -12,6 +12,9 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 
 import java.util.Optional;
 
+/**
+ * @deprecated Too complex to integrate with Questown.
+ */
 public class TownWalk extends Behavior<VisitorMobEntity> {
     private static final int REPEAT_BUFFER = 20;
     private static final int PAUSE_TICKS = 100;
@@ -20,6 +23,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
     private long nextUpdate;
     private BlockPos target;
 
+    /**
+     * @deprecated Too complex to integrate with Questown.
+     */
     public TownWalk(
             float speedModifier
     ) {

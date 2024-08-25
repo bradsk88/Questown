@@ -64,6 +64,9 @@ public class TownVillagerBedsHandle {
             BlockPos i
     ) {
         BlockState blockState = town.getServerLevel().getBlockState(i);
+        if (blockState.isAir()) {
+            return false;
+        }
         if (!blockState.hasProperty(BlockStateProperties.BED_PART)) {
             return false;
         }

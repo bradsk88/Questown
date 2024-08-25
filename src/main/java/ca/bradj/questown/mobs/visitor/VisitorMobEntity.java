@@ -46,6 +46,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -62,7 +63,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -83,9 +83,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.block.FarmBlock;
-import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -96,6 +94,9 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.Lazy;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.ForgeRegistry;
+import net.minecraftforge.registries.tags.ITag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,9 +150,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this::getInitialJob
     );
     private int ticksWithoutJobTarget;
+    private int ticksStuckWithTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
+    private @Nullable Vec3 lastPos = null;
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -201,18 +204,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     ) {
         return ImmutableList.of(
                 Pair.of(0, new Swim(0.8F)),
-//                Pair.of(0, new InteractWithDoor()),
-
                 Pair.of(0, new LookAtWalkTarget()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new WakeUp()),
                 Pair.of(1, new MoveToTownTargetSink()),
-                Pair.of(3, new TendCrops(200)),
                 Pair.of(4, new Admire(100)),
                 Pair.of(5, new CoerceWalk()),
-                Pair.of(9, new ValidateBed()),
-                Pair.of(10, new FindOpenBed())
-//                Pair.of(10, new AcquirePoi(PoiType.HOME, MemoryModuleType.HOME, false, Optional.of((byte) 14)))
+                Pair.of(9, new ValidateBed())
         );
     }
 
@@ -223,26 +221,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         );
 
         return ImmutableList.of(
-                Pair.of(
-                        1,
-                        walkTarget
-                ),
-                Pair.of(2, new Admire(100)),
-                Pair.of(3, new Admire(500)),
-//                Pair.of(3, new ValidateNearbyPoi(PoiType.HOME, MemoryModuleType.HOME)),
+                Pair.of(1, walkTarget),
                 Pair.of(4, new SleepInBed()),
-                Pair.of(
-                        5,
-                        new RunOne<>(
-                                ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
-                                ImmutableList.of(
-                                        Pair.of(new TownWalk(walkSpeed), 1),
-                                        Pair.of(new SetClosestHomeAsWalkTarget(0.5f), 1),
-                                        Pair.of(new InsideBrownianWalk(0.5f), 4),
-                                        Pair.of(new DoNothing(20, 40), 2)
-                                )
-                        )
-                ),
                 Pair.of(99, new UpdateActivityFromSchedule())
         );
     }
@@ -253,8 +233,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
 //        b.add(Pair.of(2, new DoNothing(30, 60)));
         b.add(Pair.of(3, new LookAtWalkTarget()));
-        b.add(Pair.of(3, new TownWalk(walkSpeed)));
-        b.add(Pair.of(10, new TownWalk(runSpeed)));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
         return b.build();
     }
@@ -429,7 +407,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
 
         long start = System.currentTimeMillis();
-        visitorTick();
+        villagerTick();
         long end = System.currentTimeMillis();
 
         tickTimes.add((int) (end - start));
@@ -445,13 +423,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
-    private void visitorTick() {
+    private void villagerTick() {
         slowDownForPlayers();
 
         if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
             town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
         }
+
+        nudgeForJobNav();
 
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
@@ -466,42 +446,76 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             j.initializeStatusFromEntityData(s);
         }
         j.tick(town, this, getDirection());
-        if (!level.isClientSide()) {
-            if (town == null) {
-                QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
-                remove(RemovalReason.DISCARDED);
-            } else {
-                town.getVillagerHandle().validateEntity(this);
-            }
-
-            boolean vis = !j.shouldDisappear(town, position());
-            this.entityData.set(visible, vis);
-            if (j.isInitialized()) {
-                entityData.set(status, j.getStatusToSyncToClient());
-                entityData.set(heldItem, j.getInventory()
-                                          .getItem(0));
-            }
+        if (level.isClientSide()) {
+            return;
         }
-        // TODO: Can this go inside the "not on client side" block?
+
+        trySetWalkTargetFromJob(j);
+
+        if (town == null) {
+            QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
+            remove(RemovalReason.DISCARDED);
+        } else {
+            town.getVillagerHandle().validateEntity(this);
+        }
+
+        boolean vis = !j.shouldDisappear(town, position());
+        this.entityData.set(visible, vis);
+        if (j.isInitialized()) {
+            entityData.set(status, j.getStatusToSyncToClient());
+            entityData.set(heldItem, j.getInventory()
+                                      .getItem(0));
+        }
         if (job.get().isWorking() || job.get().getStatus().isCollectingSupplies()) {
             BlockPos target = job.get().getTarget(blockPosition(), position(), town);
             if (target != null) {
-                int surfaceY = level.getHeight(MOTION_BLOCKING_NO_LEAVES, target.getX(), target.getZ());
-                target = target.atY(surfaceY);
                 ticksWithoutJobTarget = 0;
-                Vec3 center = Vec3.atBottomCenterOf(target);
-                if (Jobs.isCloseTo(blockPosition(), target) && !Jobs.isVeryCloseTo(
-                        position(),
-                        target
-                ) && !Jobs.isOnTopOf(position(), target)) {
-                    QT.VILLAGER_LOGGER.debug("Moving to {}", target);
-                    this.moveTo(center.x, position().y, center.z);
-                }
             } else {
                 ticksWithoutJobTarget++;
             }
         }
         this.useNearbyGates();
+    }
+
+    private void nudgeForJobNav() {
+        BlockPos target = getWanderTarget();
+        if (target != null) {
+            if (Jobs.isOnTopOf(position(), target)) {
+                return;
+            }
+
+            if (lastPos != null) {
+                if (lastPos.equals(position())) {
+                    ticksStuckWithTarget++;
+                }
+            }
+            lastPos = position();
+        }
+
+        if (ticksStuckWithTarget > Config.MAX_STICK_TICKS_WITH_TARGET.get()) {
+            ticksStuckWithTarget = 0;
+            BlockPos bp = blockPosition();
+            int surfaceY = level.getHeight(MOTION_BLOCKING_NO_LEAVES, bp.getX(), bp.getZ());
+            moveTo(Vec3.atBottomCenterOf(bp.atY(surfaceY)));
+            QT.VILLAGER_LOGGER.debug("Nudged from {} to {} to unstick navigation", lastPos, position());
+        }
+    }
+
+    private void trySetWalkTargetFromJob(Job<?, ?, ? extends IStatus<?>> j) {
+        if (j.shouldStandStill()) {
+            getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            return;
+        }
+        Optional<WalkTarget> curTarget = getBrain().getMemory(MemoryModuleType.WALK_TARGET);
+        @Nullable BlockPos target = j.getTarget(blockPosition(), position(), town);
+        if (target == null) {
+            // TODO: Check if villager can randomly wander
+            return;
+        }
+        Boolean isTargetDifferent = curTarget.map(t -> t.getTarget().currentBlockPosition().equals(target)).orElse(true);
+        if (isTargetDifferent) {
+            setWanderTarget(target);
+        }
     }
 
     private void slowDownForPlayers() {
@@ -754,8 +768,17 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                             }
                         }
 
-                        if (getr.getBlockState(pos).getBlock() instanceof FenceGateBlock) {
+                        ITag<Block> gates = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCE_GATES);
+                        if (gates.contains(getr.getBlockState(pos).getBlock())) {
                             return BlockPathTypes.DOOR_WOOD_CLOSED;
+                        }
+
+                        ITag<Block> fences = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCES);
+                        if (fences.contains(getr.getBlockState(pos).getBlock())) {
+                            return BlockPathTypes.BLOCKED;
+                        }
+                        if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
+                            return BlockPathTypes.BLOCKED;
                         }
 
                         return super.getBlockPathType(getr, x, y, z);
@@ -767,16 +790,24 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                             boolean p_77615_,
                             boolean p_77616_,
                             BlockPos pos,
-                            BlockPathTypes p_77618_
+                            BlockPathTypes defaultType
                     ) {
-                        p_77618_ = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, p_77618_);
+                        defaultType = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, defaultType);
 
-                        if (p_77618_ == BlockPathTypes.FENCE && (getr.getBlockState(pos)
+                        if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
                                                                      .getBlock() instanceof FenceGateBlock)) {
-                            p_77618_ = BlockPathTypes.DOOR_OPEN;
+                            return BlockPathTypes.DOOR_OPEN;
                         }
 
-                        return p_77618_;
+                        ITag<Block> fences = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCES);
+                        if (fences.contains(getr.getBlockState(pos).getBlock())) {
+                            return BlockPathTypes.BLOCKED;
+                        }
+                        if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
+                            return BlockPathTypes.BLOCKED;
+                        }
+
+                        return defaultType;
                     }
                 };
                 this.nodeEvaluator.setCanPassDoors(true);
@@ -798,8 +829,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.registerGoals();
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new OpenGateGoal(this, true));
-        // TODO: Make a behaviour that only runs in the day
-//        this.goalSelector.addGoal(4, new TownWalk(this, 2, 0.5f));
     }
 
     @Override

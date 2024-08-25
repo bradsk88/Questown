@@ -58,4 +58,8 @@ public record JobID(
     public String toNiceString() {
         return String.format("%s:%s", rootId, jobId);
     }
+
+    public boolean sameRoot(JobID other) {
+        return rootId.equals(other.rootId);
+    }
 }
