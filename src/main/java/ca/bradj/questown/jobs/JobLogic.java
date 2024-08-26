@@ -5,7 +5,6 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.questown.jobs.declarative.nomc.LootDropperJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
@@ -55,6 +54,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         AbstractWorldInteraction<EXTRA, POS, ?, ?, TOWN> getHandle();
 
         void changeToNextJob();
+
+        boolean setWorkLeftAtFreshState(int workRequiredAtFirstState);
     }
 
     private WorkPosition<POS> workSpot;
@@ -69,6 +70,14 @@ public class JobLogic<EXTRA, TOWN, POS> {
     private int ticksSinceStart;
     private int noSuppliesTicks;
 
+    private boolean settingUp = true;
+
+    public record JobDetails(
+            int maxState,
+            @Nullable Integer workRequiredAtFirstState
+    ) {
+    }
+
     public void tick(
             EXTRA extra,
             Supplier<ProductionStatus> computeState,
@@ -77,10 +86,25 @@ public class JobLogic<EXTRA, TOWN, POS> {
             boolean isSeekingWork,
             boolean hasInsertedAtLeastOneIngredient,
             ExpirationRules expiration,
-            int maxState,
+            JobDetails details,
             JLWorld<EXTRA, TOWN, POS> worldBeforeTick,
             BiFunction<TOWN, POS, Integer> getState
     ) {
+        this.ticksSinceStart++;
+        ProductionStatus status = computeState.get();
+
+        if (ImmutableList.of(
+                ProductionStatus.NO_SUPPLIES,
+                ProductionStatus.NO_JOBSITE
+        ).contains(status)) {
+            noSuppliesTicks++;
+        } else {
+            noSuppliesTicks = 0;
+        }
+
+        if (setup(details.workRequiredAtFirstState(), worldBeforeTick)) {
+            return;
+        }
         worked = Math.max(0, worked - 1);
         if (this.grabbingInsertedSupplies) {
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
@@ -95,11 +119,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
-        this.ticksSinceStart++;
         WorkPosition<?> workSpot = worldBeforeTick.getWorkSpot();
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
-                    .apply(entityCurrentJob);
+                                    .apply(entityCurrentJob);
             QT.JOB_LOGGER.debug(
                     "Reached max ticks for {}. Falling back to {}.",
                     entityCurrentJob, fbJov
@@ -109,24 +132,18 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 //        world.clearWorkSpot("Cleared before trying work");
 
-        ProductionStatus status = computeState.get();
-
-        if (ImmutableList.of(
-                ProductionStatus.NO_SUPPLIES,
-                ProductionStatus.NO_JOBSITE
-        ).contains(status)) {
-            noSuppliesTicks++;
-        } else {
-            noSuppliesTicks = 0;
-        }
-
         long maxNoSupplyTicks = expiration.maxInitialTicksWithoutSupplies();
         if (hasInsertedAtLeastOneIngredient) {
             maxNoSupplyTicks = expiration.maxTicksWithoutSupplies();
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
-            QT.JOB_LOGGER.debug("{} gave up waiting for ingredients after {} ticks ({})", entityCurrentJob.rootId(), noSuppliesTicks, entityCurrentJob.jobId());
+            QT.JOB_LOGGER.debug(
+                    "{} gave up waiting for ingredients after {} ticks ({})",
+                    entityCurrentJob.rootId(),
+                    noSuppliesTicks,
+                    entityCurrentJob.jobId()
+            );
             this.grabbingInsertedSupplies = true;
             return;
         }
@@ -137,7 +154,13 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (isEntityInJobSite && status.isWorkingOnProduction()) {
-            doTryWorking(extra, maxState, status.getProductionState(maxState), isSeekingWork, worldBeforeTick, getState);
+            doTryWorking(
+                    extra,
+                    status.getProductionState(details.maxState()),
+                    isSeekingWork,
+                    worldBeforeTick,
+                    getState
+            );
         }
 
         worldBeforeTick.tryDropLoot();
@@ -150,10 +173,25 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
     }
 
+    protected boolean setup(
+            @Nullable Integer workRequiredAtFirstState,
+            JLWorld<EXTRA, TOWN, POS> worldBeforeTick
+    ) {
+        if (!settingUp) {
+            return false;
+        }
+        if (workRequiredAtFirstState != null && workRequiredAtFirstState != 0) {
+            if (worldBeforeTick.setWorkLeftAtFreshState(workRequiredAtFirstState)) {
+                settingUp = false;
+                return true;
+            }
+        }
+        return false;
+    }
+
     // TODO: Phase out this function by extracting "getWorkspots" and "handleWorkOutput"
     private WithReason<Boolean> doTryWorking(
             EXTRA extra,
-            int maxState,
             int productionState,
             boolean isSeekingWork,
             JLWorld<EXTRA, TOWN, POS> world,

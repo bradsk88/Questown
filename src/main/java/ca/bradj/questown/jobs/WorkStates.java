@@ -1,9 +1,13 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class WorkStates {
@@ -34,7 +38,28 @@ public class WorkStates {
         this.toolsRequired = toolsRequired;
         this.workRequired = workRequired;
         this.timeRequired = timeRequired;
+        validateDefinition(timeRequired);
     }
+
+    private void validateDefinition(
+            ImmutableMap<Integer, Supplier<Integer>> timeRequiredAtStates
+    ) {
+        Consumer<String> throwe = msg -> {
+            if (Config.CRASH_ON_INVALID_JOBS.get()) {
+                throw new IllegalStateException(msg);
+            } else {
+                QT.JOB_LOGGER.error(msg);
+            }
+        };
+
+        if (UtilClean.getOrDefault(Util.realize(timeRequiredAtStates), 0, 0) > 0) {
+            String err = "Timers are not allowed in the very first state.";
+            String doWhat = "This job definition should be updated";
+            String how = "to require at least 1 work or ingredient in a previous state.";
+            throwe.accept(String.format("%s %s %s", err, doWhat, how));
+        }
+    }
+
 
     public int maxState() {
         return maxState;

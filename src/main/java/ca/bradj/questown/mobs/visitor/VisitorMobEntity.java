@@ -426,9 +426,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private void villagerTick() {
         slowDownForPlayers();
 
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> joob = job.get();
         if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
-            JobID seeker = WorkSeekerJob.getIDForRoot(joob.getId());
+            JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
             town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
         }
 
@@ -440,7 +439,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             moveTo(nudged);
         }
 
-        Job<?, ?, ? extends IStatus<?>> j = joob;
+        Job<?, ?, ? extends IStatus<?>> j = job.get();
 
         if (j.getStatus() == null || j.getStatus().isUnset()) {
             @Nullable String s = getStatusForClient();
@@ -466,16 +465,32 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             entityData.set(status, j.getStatusToSyncToClient());
             entityData.set(heldItem, j.getInventory()
                                       .getItem(0));
-        }
-        if (joob.isWorking() || joob.getStatus().isCollectingSupplies()) {
-            BlockPos target = joob.getTarget(blockPosition(), position(), town);
-            if (target != null) {
-                ticksWithoutJobTarget = 0;
-            } else {
-                ticksWithoutJobTarget++;
+            if (!job.get().isInitialized()) {
+                QT.VILLAGER_LOGGER.error("Wat");
             }
+            trackTarget();
         }
         this.useNearbyGates();
+    }
+
+    private void trackTarget() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        IStatus<?> status1 = j.getStatus();
+        if (status1 == null) {
+            QT.VILLAGER_LOGGER.error("Null status");
+        }
+        if (!j.isWorking()) {
+            return;
+        }
+        if (!status1.isCollectingSupplies()) {
+            return;
+        }
+        BlockPos target = j.getTarget(blockPosition(), position(), town);
+        if (target != null) {
+            ticksWithoutJobTarget = 0;
+        } else {
+            ticksWithoutJobTarget++;
+        }
     }
 
     private void nudgeForJobNav() {
@@ -515,7 +530,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             // TODO: Check if villager can randomly wander
             return;
         }
-        Boolean isTargetDifferent = curTarget.map(t -> t.getTarget().currentBlockPosition().equals(target)).orElse(true);
+        Boolean isTargetDifferent = curTarget.map(t -> t.getTarget().currentBlockPosition().equals(target))
+                                             .orElse(true);
         if (isTargetDifferent) {
             setWanderTarget(target);
         }
@@ -798,7 +814,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                         defaultType = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, defaultType);
 
                         if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
-                                                                     .getBlock() instanceof FenceGateBlock)) {
+                                                                        .getBlock() instanceof FenceGateBlock)) {
                             return BlockPathTypes.DOOR_OPEN;
                         }
 

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.*;
@@ -15,6 +16,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -25,7 +27,6 @@ import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -54,6 +55,7 @@ public class DeclarativeJob extends
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     public final ImmutableMap<Integer, Ingredient> toolsRequiredAtStates;
     public final ImmutableMap<Integer, Integer> workRequiredAtStates;
+    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
 
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
@@ -67,7 +69,6 @@ public class DeclarativeJob extends
     private Signals signal;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
-    private CustomRoomChecker customRoomChecker = room -> false;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -127,9 +128,10 @@ public class DeclarativeJob extends
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = toolsRequiredAtStates;
         this.workRequiredAtStates = workRequiredAtStates;
+        this.timeRequiredAtStates = timeRequiredAtStates;
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
-        this.logic = new JobLogic();
+        this.logic = new JobLogic<>();
     }
 
     @NotNull
@@ -248,7 +250,7 @@ public class DeclarativeJob extends
                 WorkSeekerJob.isSeekingWork(jobId),
                 workSpot != null && hasInserted(action),
                 expiration,
-                maxState,
+                new JobLogic.JobDetails(maxState, workRequiredAtStates.get(0)),
                 this.asLogicWorld(
                         extra, town, work,
                         (VisitorMobEntity) entity, entityCurrentJobSite,
@@ -315,6 +317,11 @@ public class DeclarativeJob extends
             }
 
             @Override
+            public Collection<MCRoom> roomsAtState(Integer state) {
+                return roomsWithState(town, getJobBlockState, state).stream().map(v -> v.room).toList();
+            }
+
+            @Override
             public boolean hasSupplies() {
                 Map<Integer, ? extends Collection<MCRoom>> needs = roomsNeedingIngredientsByState();
                 return Jobs.townHasSupplies(town, journal, convertToCleanFns(needs));
@@ -333,14 +340,11 @@ public class DeclarativeJob extends
             Integer state
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
-        ImmutableSet.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableSet.builder();
-        b.addAll(Jobs.roomsWithState(
+        return Jobs.roomsWithState(
                 town, rooms,
                 (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp),
                 (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
-        ));
-        rooms.stream().filter(v -> DeclarativeJob.this.customRoomChecker.isReadyForExtract(v.room)).forEach(b::add);
-        return b.build();
+        );
     }
 
     private boolean hasInserted(Integer action) {
@@ -370,6 +374,26 @@ public class DeclarativeJob extends
             @Override
             public void changeToNextJob() {
                 town.getVillagerHandle().changeToNextJobForVillager(ownerUUID, getId());
+            }
+
+            @Override
+            public boolean setWorkLeftAtFreshState(int workRequiredAtFirstState) {
+                ServerLevel sl = town.getServerLevel();
+                boolean didIt = false;
+                for (RoomRecipeMatch<MCRoom> room : town.getRoomHandle().getRoomsMatching(SpecialQuests.CLINIC)) {
+                    Map<Integer, Collection<WorkPosition<BlockPos>>> spots = DeclarativeJob.this.listAllWorkSpots(
+                            getWorkStatusHandle(town)::getJobBlockState,
+                            room.room,
+                            bp -> isValidWalkTarget(town, bp),
+                            bp -> location.isJobBlock().test(sl::getBlockState, bp),
+                            () -> Direction.getRandom(sl.random)
+                    );
+                    for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
+                        work.setJobBlockState(p.jobBlock(), State.fresh().setWorkLeft(workRequiredAtFirstState));
+                        didIt = true;
+                    }
+                }
+                return didIt;
             }
 
             @Override
@@ -647,7 +671,10 @@ public class DeclarativeJob extends
         return JobsClean.getSupplyItemStatuses(
                 journal::getItems,
                 Jobs.unMCHeld2(ingredientsRequiredAtStates),
-                Jobs.unMCHeld2(toolsRequiredAtStates)
+                s -> !UtilClean.getOrDefault(ingredientsRequiredAtStates, s, Ingredient.EMPTY).isEmpty(),
+                Jobs.unMCHeld2(toolsRequiredAtStates),
+                s -> !UtilClean.getOrDefault(toolsRequiredAtStates, s, Ingredient.EMPTY).isEmpty(),
+                workRequiredAtStates
         );
     }
 

@@ -59,6 +59,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> WORK_SEEKER_COOLDOWN;
     public static final ForgeConfigSpec.ConfigValue<Long> WORKED_RECENTLY_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Double> MIN_JOB_ACCEPTANCE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_INVALID_JOBS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
@@ -187,6 +188,9 @@ public class Config {
         MIN_JOB_ACCEPTANCE = BUILDER.comment(
                 "A percentage representing the minimum number of job states that are currently possible. For example, if a job has four states but only three can be done (due to missing tools, etc) then the percentage is 0.75.  This setting determines the minimum acceptable percentage for a villager to even consider trying the work."
         ).defineInRange("MinJobAcceptance", 0.65, 0.0, 1.0);
+        CRASH_ON_INVALID_JOBS = BUILDER.comment(
+                "If enabled, questown will crash the server when an invalid job definition is detected. If disabled, it just means those invalid jobs may not function correctly."
+        ).define("CrashOnInvalidJobs", true);
         BUILDER.pop();
 
         // Villagers Config

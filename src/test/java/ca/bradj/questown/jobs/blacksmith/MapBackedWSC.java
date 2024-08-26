@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs.blacksmith;
 
-import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 public class MapBackedWSC implements ImmutableWorkStateContainer<Position, Boolean> {
 
     Map<Position, State> map = new HashMap<>();
+    Map<Position, Integer> timers = new HashMap<>();
 
     @Override
     public @Nullable State getJobBlockState(Position bp) {
@@ -41,12 +42,14 @@ public class MapBackedWSC implements ImmutableWorkStateContainer<Position, Boole
             int ticksToNextState
     ) {
         map.put(bp, bs);
+        timers.put(bp, ticksToNextState);
         return true;
     }
 
     @Override
     public Boolean clearState(Position bp) {
         map.remove(bp);
+        timers.remove(bp);
         return true;
     }
 
@@ -69,5 +72,9 @@ public class MapBackedWSC implements ImmutableWorkStateContainer<Position, Boole
             Supplier<Claim> makeClaim
     ) {
         return true;
+    }
+
+    public @Nullable Integer getTimer(Position p) {
+        return timers.get(p);
     }
 }

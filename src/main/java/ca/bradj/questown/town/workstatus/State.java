@@ -86,15 +86,12 @@ public class State {
         return processingState;
     }
 
-    /**
-     * @deprecated Use workLeftV2
-     */
     public int workLeft() {
         return (int) Math.ceil(0.1f * workLeft);
     }
 
-    public int workLeftV2() {
-        return workLeft;
+    public boolean hasWorkLeft() {
+        return workLeft > 0.0;
     }
 
     public int ingredientCount() {

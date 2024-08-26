@@ -11,4 +11,6 @@ public interface JobTownProvider<ROOM> extends TownProvider {
     boolean isUnfinishedTimeWorkPresent();
 
     Collection<Integer> getStatesWithUnfinishedItemlessWork();
+
+    Collection<ROOM> roomsAtState(Integer state);
 }

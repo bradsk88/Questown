@@ -163,9 +163,18 @@ public class JobStatuses {
                 new Job<>() {
                     @Override
                     public @Nullable STATUS tryChoosingItemlessWork() {
+                            ROOM location = entity.getEntityCurrentJobSite();
                         Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
-                        for (Integer state : states) {
-                            return factory.fromJobBlockState(state);
+                        if (!states.isEmpty()) {
+                            for (Integer state : states) {
+                                // TODO[ASAP]: Unit test
+                                if (location != null) {
+                                    if (town.roomsAtState(state).contains(location)) {
+                                        return factory.fromJobBlockState(state);
+                                    }
+                                }
+                            }
+                            return factory.goingToJobSite();
                         }
 
                         Collection<ROOM> rooms = town.roomsWithCompletedProduct();
@@ -173,7 +182,6 @@ public class JobStatuses {
                             return null;
                         }
 
-                        ROOM location = entity.getEntityCurrentJobSite();
                         if (location != null) {
                             if (rooms.contains(location)) {
                                 return factory.extractingProduct();

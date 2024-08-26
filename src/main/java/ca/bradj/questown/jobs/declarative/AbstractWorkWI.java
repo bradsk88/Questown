@@ -73,12 +73,12 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             oldState = initForState(curState);
         }
         State bs = oldState.decrWork(getWorkSpeedOf10(extra));
-        if (oldState.workLeftV2() > 0 && oldState.equals(bs)) {
+        if (oldState.hasWorkLeft() && oldState.equals(bs)) {
             return null;
         }
 
 
-        if (bs.workLeftV2() == 0f) {
+        if (!bs.hasWorkLeft()) {
             this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
         }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -86,6 +87,9 @@ public class ResourceJobLoader {
                                 "Failed to load work {} using version {}",
                                 id, optional(object, "version", JsonElement::getAsInt), e
                         );
+                        if (Config.CRASH_ON_INVALID_JOBS.get()) {
+                            throw e;
+                        }
                     }
                 }
             }

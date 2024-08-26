@@ -1,17 +1,12 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.function.*;
 
 public class JobsClean {
@@ -40,7 +35,10 @@ public class JobsClean {
     static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
             ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+            Function<Integer, Boolean> anyIngredientsRequiredAtStates,
+            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates,
+            Function<Integer, Boolean> anyToolsRequiredAtStates,
+            ImmutableMap<Integer, Integer> workRequiredAtStates
     ) {
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
@@ -59,6 +57,12 @@ public class JobsClean {
         };
         ingredientsRequiredAtStates.forEach(fn);
         toolsRequiredAtStates.forEach(fn);
+        for (Map.Entry<Integer, Integer> work: workRequiredAtStates.entrySet()) {
+            // If work is require, but no tools or items are required: pretend we have the necessary supply items
+            if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
+                b.put(work.getKey(), true);
+            }
+        }
         return ImmutableMap.copyOf(b);
     }
 

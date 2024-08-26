@@ -13,7 +13,9 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BedPart;
 
 import java.util.Collection;
 
@@ -23,7 +25,8 @@ public class ResterWork {
     public static final String ID = "resting";
 
     public static final int BLOCK_STATE_NEED_BED = 0;
-    public static final int BLOCK_STATE_DONE = 1;
+    public static final int BLOCK_STATE_NEED_REST = 1;
+    public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -34,10 +37,10 @@ public class ResterWork {
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_BED, 1
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_BED, 2000,
-            BLOCK_STATE_DONE, 0
+            BLOCK_STATE_NEED_REST, 2000
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
@@ -48,13 +51,14 @@ public class ResterWork {
     public static Work asWork(
             String rootId
     ) {
-        Work work = productionWork(
+        return productionWork(
                 null,
                 Blocks.BLACK_BED.asItem().getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        WorkLocation.isBlock(HospitalBedBlock.class),
+                        (bs, bp) -> WorkLocation.isBlock(HospitalBedBlock.class).test(bs, bp) && bs.apply(bp).getValue(
+                                BedBlock.PART).equals(BedPart.HEAD),
                         SpecialQuests.CLINIC
                 ),
                 new WorkStates(
@@ -85,8 +89,6 @@ public class ResterWork {
                         WorkSeekerJob::getIDForRoot
                 )
         );
-        // FIXME: For consistency, this should just be a custom rule
-        return work.withAlwaysExtractable();
     }
 
     public static JobID getIdForRoot(String rootId) {

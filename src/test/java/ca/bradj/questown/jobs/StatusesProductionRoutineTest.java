@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -56,6 +57,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
             return ImmutableList.of();
+        }
+
+        @Override
+        public Collection<Room> roomsAtState(Integer state) {
+            return List.of();
         }
     }
 
@@ -698,6 +704,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
             return ImmutableList.of();
+        }
+
+        @Override
+        public Collection<Room> roomsAtState(Integer state) {
+            return List.of();
         }
     }
 

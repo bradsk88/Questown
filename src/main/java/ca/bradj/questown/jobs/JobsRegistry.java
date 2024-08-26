@@ -30,11 +30,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import vazkii.patchouli.api.TriPredicate;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,14 +49,72 @@ public class JobsRegistry {
     private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
             new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
 
-    public static boolean isJobBlock(Function<BlockPos, BlockState> sl, BlockPos bp) {
+    private record SpecialJob(
+            Predicate<JobID> idTest,
+            BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
+            TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
+            TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest
+    ) {
+
+        static SpecialJob fromWork(
+                Predicate<JobID> idTest,
+                Function<JobID, Work> work
+        ) {
+            HashMap<JobID, Work> cache = new HashMap<>();
+            Function<JobID, Work> cached = id -> {
+                Work w = cache.get(id);
+                if (w != null) {
+                    return w;
+                }
+                Work newOne = work.apply(id);
+                cache.put(id, newOne);
+                return newOne;
+            };
+            return new SpecialJob(
+                    idTest,
+                    (id, owner) -> cached.apply(id).jobFunc().apply(owner),
+                    (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
+                    (id, bs, bp) -> cached.apply(id).isJobBlock().test(ignored -> bs.get(), bp)
+            );
+        }
+    }
+
+    private static ImmutableList<SpecialJob> specialJobs;
+
+    private static void initSpecialJobs() {
+        ImmutableList.Builder<SpecialJob> b = ImmutableList.builder();
+
+        b.add(new SpecialJob(
+                ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob::isSeekingWork,
+                (j, owner) -> new WorkSeekerJob(owner, 6, j.rootId()),
+                JobsRegistry::newWorkSeekerJournal,
+                (id, bsSrc, bp) -> {
+                    Block block = bsSrc.get().getBlock();
+                    return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
+                }
+        ));
+
+        b.add(SpecialJob.fromWork(DinerWork::isDining, id -> DinerWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(DinerNoTableWork::isDining, id -> DinerNoTableWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(ResterWork::isResting, id -> ResterWork.asWork(id.rootId())));
+
+        specialJobs = b.build();
+    }
+
+    public static boolean isJobBlock(
+            Function<BlockPos, BlockState> sl,
+            BlockPos bp
+    ) {
         if (sl.apply(bp).isAir()) {
             return false;
         }
         BlockState bs = sl.apply(bp);
         Block b = bs.getBlock();
-        if (Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(b.asItem().getDefaultInstance())) {
-            return true;
+        JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
+        for (SpecialJob sj : specialJobs) {
+            if (sj.jobBlockTest.test(a, () -> bs, bp)) {
+                return true;
+            }
         }
         boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(sl, bp));
         // TODO: This might not be needed anymore
@@ -165,7 +227,10 @@ public class JobsRegistry {
             JobID p
     ) {
         if (isSeekingWork(p)) {
-            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get().asItem()));
+            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()));
+        }
+        if (ResterWork.isResting(p)) {
+            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.HOSPITAL_BED.get()));
         }
 
         Supplier<Work> w = Works.get(p);
@@ -232,6 +297,11 @@ public class JobsRegistry {
     }
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {
+        initJobs(js);
+        initSpecialJobs();
+    }
+
+    private static void initJobs(ImmutableMap<JobID, Work> js) {
         ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
 
         HashMap<String, ArrayList<Work>> ps = new HashMap<>();
@@ -290,30 +360,24 @@ public class JobsRegistry {
             @Nullable ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j;
-        Supplier<Work> fn = Works.get(jobName);
-        if (isSeekingWork(jobName)) {
-            j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
-            journal = newWorkSeekerJournal(jobName, journal, heldItems);
-        } else if (DinerWork.isDining(jobName)) {
-            Work dw = DinerWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(ownerUUID);
-            journal = newJournal(jobName, journal, heldItems, dw);
-        } else if (DinerNoTableWork.isDining(jobName)) {
-            Work dw = DinerNoTableWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(ownerUUID);
-            journal = newJournal(jobName, journal, heldItems, dw);
-        } else if (ResterWork.isResting(jobName)) {
-            Work dw = ResterWork.asWork(jobName.rootId());
-            j = dw.jobFunc().apply(ownerUUID);
-            journal = newJournal(jobName, journal, heldItems, dw);
-        } else if (fn == null) {
-            j = new WorkSeekerJob(ownerUUID, 6, jobName.rootId());
-            journal = newWorkSeekerJournal(jobName, journal, heldItems);
-        } else {
-            Work work = fn.get();
-            j = work.jobFunc().apply(ownerUUID);
-            journal = newJournal(jobName, journal, heldItems, work);
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = null;
+        for (SpecialJob sj : specialJobs) {
+            if (sj.idTest.test(jobName)) {
+                j = sj.jobFn.apply(jobName, ownerUUID);
+                journal = sj.journalFn.apply(jobName, journal, heldItems);
+                break;
+            }
+        }
+        if (j == null) {
+            Supplier<Work> fn = Works.get(jobName);
+            if (fn == null) {
+                QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
+                j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);
+            } else {
+                Work work = fn.get();
+                j = work.jobFunc().apply(ownerUUID);
+                journal = newJournal(jobName, journal, heldItems, work);
+            }
         }
         if (journal != null) {
             j.initialize(journal);

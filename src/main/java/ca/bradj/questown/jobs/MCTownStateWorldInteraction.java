@@ -30,10 +30,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -317,6 +314,14 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
+            public Collection<MCRoom> roomsAtState(Integer state) {
+                if (workStates.processingState() == state) {
+                    return ImmutableList.of(mcRoom);
+                }
+                return ImmutableList.of();
+            }
+
+            @Override
             public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
                 int curState = workStates.processingState();
                 Function<MCHeldItem, Boolean> ings = ingredientsRequiredAtStates().get(curState);
@@ -419,7 +424,10 @@ public class MCTownStateWorldInteraction extends
                 return JobsClean.getSupplyItemStatuses(
                         heldItems,
                         Jobs.unFn(ingredientsRequiredAtStates()),
-                        Jobs.unHeld(toolsRequiredAtStates)
+                        (s) -> true, // TODO: Time warp: Implement this?
+                        Jobs.unHeld(toolsRequiredAtStates),
+                        (s) -> true,
+                        workRequiredAtStates
                 );
             }
         };
