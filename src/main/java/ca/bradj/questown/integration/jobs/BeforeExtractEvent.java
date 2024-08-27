@@ -9,6 +9,7 @@ public record BeforeExtractEvent<TOWN>(
         ServerLevel level,
         ItemAcceptor<TOWN> entity,
         BlockPos workSpot,
-        Item lastInsertedItem
+        Item lastInsertedItem,
+        Runnable poseClearer
 ) {
 }

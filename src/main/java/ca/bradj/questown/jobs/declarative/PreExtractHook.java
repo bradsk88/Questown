@@ -25,7 +25,8 @@ public class PreExtractHook {
             ServerLevel level,
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
             BlockPos position,
-            Item lastInsertedItem
+            Item lastInsertedItem,
+            Runnable clearPoses
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         ItemAcceptor<TOWN> itemAcceptor = new ItemAcceptor<>() {
@@ -39,7 +40,9 @@ public class PreExtractHook {
                 return tryGiveItem.apply(ctx, item, inventoryFullStrategy);
             }
         };
-        BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(level, itemAcceptor, position, lastInsertedItem);
+        BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(
+                level, itemAcceptor, position, lastInsertedItem, clearPoses
+        );
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
     }
 }

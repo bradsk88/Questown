@@ -2,12 +2,14 @@ package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -56,4 +58,10 @@ public interface VillagerHolder {
     void addDamage(UUID uuid);
 
     int getDamageTicksLeft(UUID uuid);
+
+    void requestPose(UUID uuid, PoseInPlace pose);
+
+    Optional<PoseInPlace> getRequestedPose(UUID uuid);
+
+    void clearPoseRequests(UUID uuid);
 }

@@ -164,7 +164,11 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected WorkedSpot<BlockPos> getCurWorkedSpot(Inputs inputs, MCTownState stateSource, BlockPos workSpot) {
+    protected WorkedSpot<BlockPos> getCurWorkedSpot(
+            Inputs inputs,
+            MCTownState stateSource,
+            BlockPos workSpot
+    ) {
         return new WorkedSpot<>(workSpot, stateSource.getJobBlockState(workSpot).processingState());
     }
 
@@ -177,8 +181,14 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected void preStateChangeHooks(@NotNull MCTownState ctx, Collection<String> rules, Inputs inputs, WorkSpot<Integer, BlockPos> position) {
-        PreStateChangeHook.run(rules, inputs.level(), position);
+    protected void preStateChangeHooks(
+            @NotNull MCTownState ctx,
+            Collection<String> rules,
+            Inputs inputs,
+            WorkSpot<Integer, BlockPos> position
+    ) {
+        PreStateChangeHook.run(rules, (pose) -> {
+        });
     }
 
     @Override
@@ -209,7 +219,8 @@ public class MCTownStateWorldInteraction extends
         return PreExtractHook.run(town, rules, inputs.level(), (ctx, i, s) -> {
             Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
             return tryGiveItems(in, ImmutableList.of(i), position);
-        }, position, insertedItem);
+        }, position, insertedItem, () -> {
+        });
     }
 
     @Override

@@ -5,6 +5,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -74,10 +75,16 @@ public class ResterWork {
                         (lvl, hand) -> MCHeldItem.fromMCItemStacks(RESULTS)
                 ),
                 new WorkSpecialRules(
-                        ImmutableMap.of(), // No stage rules
+                        ImmutableMap.of(
+                                ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_BED),
+                                ImmutableList.of(SpecialRules.LIE_ON_WORKSPOT),
+                                ProductionStatus.EXTRACTING_PRODUCT,
+                                ImmutableList.of(SpecialRules.CLEAR_POSE)
+                        ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.CLAIM_SPOT,
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.PREFER_INTERACTION_STAND_ON_TOP
                         )
                 ),
                 null,

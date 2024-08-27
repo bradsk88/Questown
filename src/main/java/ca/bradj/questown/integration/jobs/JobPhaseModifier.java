@@ -22,8 +22,8 @@ public interface JobPhaseModifier {
         }
 
         @Override
-        public Void beforeStateChange(
-                BeforeStateChangeEvent event
+        public Void beforeMoveToNextState(
+                BeforeMoveToNextStateEvent event
         ) {
             return null;
         }
@@ -41,7 +41,7 @@ public interface JobPhaseModifier {
 
     // TOOD: Potentially phase out. Was used for farmer_till but changed that to
     // run beforeExtract for better state management.
-    Void beforeStateChange(
-            BeforeStateChangeEvent event
+    Void beforeMoveToNextState(
+            BeforeMoveToNextStateEvent event
     );
 }

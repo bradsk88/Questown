@@ -24,6 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class TownVillagerHandle implements VillagerHolder {
@@ -43,6 +45,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     final Map<UUID, Integer> fullness = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
+    final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -86,24 +89,45 @@ public class TownVillagerHandle implements VillagerHolder {
                 hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
             }
         };
-        tickThing(map, base, 10, then);
+        tickThing(map, base, e -> 10, then);
     }
 
     private void tickDamage() {
-        tickThing(damage, 0, 100, (newVal, e) -> {
+        tickThing(damage, 0, e -> applyHealFactor(e, 100), (newVal, e) -> {
         });
+    }
+
+    private int applyHealFactor(
+            LivingEntity e,
+            int i
+    ) {
+        if (!(e instanceof VisitorMobEntity)) {
+            return i;
+        }
+        PoseInPlace pose = requestedPose.get(e.getUUID());
+        if (pose == null) {
+            return i;
+        }
+        if (!Pose.SLEEPING.equals(pose.pose())) {
+            return i;
+        }
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
+        Double hf = t.getHealingHandle().getHealFactor(e.blockPosition());
+        int i1 = (int) (i * hf);
+        QT.VILLAGER_LOGGER.debug("Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID());
+        return i1;
     }
 
     private void tickThing(
             Map<UUID, Integer> map,
             Integer base,
-            int amount,
+            Function<LivingEntity, Integer> amount,
             BiConsumer<Integer, LivingEntity> then
     ) {
         entities.forEach(e -> {
             UUID u = e.getUUID();
             int oldVal = map.getOrDefault(u, base);
-            int newVal = Math.max(0, oldVal - amount);
+            int newVal = Math.max(0, oldVal - amount.apply(e));
             map.put(u, newVal);
             if (newVal != oldVal) {
                 listeners.forEach(l -> l.accept(getStats(u)));
@@ -250,9 +274,6 @@ public class TownVillagerHandle implements VillagerHolder {
         }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
     }
 
-    private void claimBed(UUID uuid) {
-    }
-
     @Override
     public void fillHunger(UUID uuid) {
         // TODO: Get max fullness from villager
@@ -291,7 +312,12 @@ public class TownVillagerHandle implements VillagerHolder {
                         int newVal = Math.toIntExact(Math.max(0, cur - ticksHealed));
                         QT.VILLAGER_LOGGER.debug(
                                 "Villager damage changed from {} to {} after {} ticks of sleep via bed at {} with heal factor {} [{}]",
-                                cur, newVal, e.duration(), e.bedPos(), healFactor, vEntity.getUUID()
+                                cur,
+                                newVal,
+                                e.duration(),
+                                e.bedPos(),
+                                healFactor,
+                                vEntity.getUUID()
                         );
                         return newVal;
                     }
@@ -436,5 +462,23 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public int getDamageTicksLeft(UUID uuid) {
         return Util.getOrDefault(damage, uuid, 0) / TICK_FACTOR;
+    }
+
+    @Override
+    public void requestPose(
+            UUID ownerUUID,
+            PoseInPlace pose
+    ) {
+        requestedPose.put(ownerUUID, pose);
+    }
+
+    @Override
+    public Optional<PoseInPlace> getRequestedPose(UUID ownerUUID) {
+        return Optional.ofNullable(requestedPose.get(ownerUUID));
+    }
+
+    @Override
+    public void clearPoseRequests(UUID uuid) {
+        requestedPose.remove(uuid);
     }
 }

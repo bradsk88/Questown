@@ -10,6 +10,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -57,7 +58,8 @@ public class RealtimeWorldInteraction extends
             int interval,
             @Nullable SoundInfo sound
     ) {
-        super(journal.getJobId(),
+        super(
+                journal.getJobId(),
                 -1,
                 // Not used by this implementation
                 interval,
@@ -250,7 +252,11 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected WorkedSpot<BlockPos> getCurWorkedSpot(MCExtra mcExtra, Boolean stateSource, BlockPos workSpot) {
+    protected WorkedSpot<BlockPos> getCurWorkedSpot(
+            MCExtra mcExtra,
+            Boolean stateSource,
+            BlockPos workSpot
+    ) {
         State jobBlockState = getJobBlockState(mcExtra, workSpot);
         return new WorkedSpot<>(workSpot, Util.withNullFallback(jobBlockState, State::processingState, 0));
     }
@@ -306,9 +312,11 @@ public class RealtimeWorldInteraction extends
     ) {
         VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
         return PreExtractHook.run(didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
-            inputs.entity().tryGiveItem(i, s);
-            return in;
-        }, position, Util.orNull(workToUndo, v -> v.item().get().get()));
+                    inputs.entity().tryGiveItem(i, s);
+                    return in;
+                }, position, Util.orNull(workToUndo, v -> v.item().get().get()),
+                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
+        );
     }
 
     @Override
@@ -329,7 +337,23 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             WorkSpot<Integer, BlockPos> position
     ) {
-        PreStateChangeHook.run(rules, inputs.town().getServerLevel(), position);
+        PreStateChangeHook.run(
+                rules,
+                pose -> inputs.town().getVillagerHandle().requestPose(inputs.entity().getUUID(), new PoseInPlace(
+                        pose,
+                        decideSpot(rules, position)
+                ))
+        );
+    }
+
+    private static BlockPos decideSpot(
+            Collection<String> rules,
+            WorkSpot<Integer, BlockPos> position
+    ) {
+        if (rules.contains(SpecialRules.PREFER_INTERACTION_STAND_ON_TOP)) {
+            return position.workPos().jobBlock().above();
+        }
+        return position.workPos().entityFeetPos();
     }
 
     @Override

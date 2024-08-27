@@ -37,39 +37,26 @@ public class SpecialRules {
     // toward that spot. If this rule is not enabled, or there are no interaction spots
     // on the layer below the job block, they will navigate to a spot on the same level
     // as the job block.
-    public static final String PREFER_INTERACTION_BELOW = "claim_spot";
+    public static final String PREFER_INTERACTION_BELOW = "prefer_interaction_below";
+
+    // If this rule is enabled, the villager will stand on top of the block while working
+    public static final String PREFER_INTERACTION_STAND_ON_TOP = "prefer_interaction_stand_on_top";
 
     // If this rule is enabled, the villager will continue working into the evening until
     // it is time for them to go to bed. If this rule is disabled, villagers will become
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
-    // If this rule is enabled for work where one or more items are used, the
-    // last inserted will be used in the block before "extract" step of the work
-    // is finished. E.g. planting seeds, using bonemeal on crops.
-    // If the item cannot be used on the block, it will just be consumed.
-    // (Note: the item itself must implement "useOn". If, instead, the BLOCK is
-    // responsible for the "use item" behaviour, then this rule won't work.
-    // See "compost_at_workspot" for an example implementation for blocks which
-    // control the "use item" behaviour.)
-    public static final String USE_LAST_INSERTED_ITEM_ON_BLOCK = "use_last_inserted_item_on_block";
-
-    // If this rule is enabled for the "extract product" step and the workspot
-    // is a full grown crop, the crop will be harvested (using its loot table)
-    // and replaced with an age=0 version of the same crop.
-    public static final String HARVEST_CROP = "harvest_crop";
-
-    // If this rule is enabled for a processing state and the workspot is a
-    // tillable block, then the block will be tilled before moving to the next
-    // processing state.
-    public static final String TILL_WORKSPOT = "till_workspot";
-
     // If this rule is active (globally) then blocks will only be considered
     // valid for use as workspots if they have empty air above them.
     public static final String REQUIRE_AIR_ABOVE = "require_air_above";
 
-    // If this rule is active for the "extract" state, and the workspot is a
-    // Minecraft composter block, then the worker will attempt to extract
-    // bone meal from the composter, which will also empty the composter.
-    public static final String COMPOST_AT_WORKSPOT = "compost_at_workspot";
+    // If this rule is active for a job state, the villager will assume a
+    // sleeping position on top of the workspot for the duration of that
+    // state.
+    public static final String LIE_ON_WORKSPOT = "lie_on_workspot";
+    // If this rule is active for a job state, any requested poses will be
+    // cleared. For example, LIE_ON_WORKSPOT sets the villager to the sleeping
+    // pose on top of their workspot.
+    public static final String CLEAR_POSE = "clear_pose";
 }

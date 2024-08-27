@@ -583,6 +583,9 @@ public class DeclarativeJob extends
                 return spot;
             }
         }
+        if (specialGlobalRules.contains(SpecialRules.PREFER_INTERACTION_STAND_ON_TOP)) {
+            return bp.above();
+        }
 
         spot = doFindInteractionSpot(bp, jobSite, isValidWalkTarget);
         if (spot != null) {

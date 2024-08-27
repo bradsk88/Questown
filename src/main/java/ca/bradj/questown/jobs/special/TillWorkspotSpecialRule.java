@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
-import ca.bradj.questown.integration.jobs.BeforeStateChangeEvent;
+import ca.bradj.questown.integration.jobs.BeforeMoveToNextStateEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,7 +41,7 @@ public class TillWorkspotSpecialRule implements
     }
 
     @Override
-    public Void beforeStateChange(BeforeStateChangeEvent event) {
+    public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
         return null;
     }
 

@@ -1,14 +1,13 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.SpecialRulesRegistry;
-import ca.bradj.questown.integration.jobs.BeforeStateChangeEvent;
+import ca.bradj.questown.integration.jobs.BeforeMoveToNextStateEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.questown.jobs.WorkSpot;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Pose;
 
 import java.util.Collection;
+import java.util.function.Consumer;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
@@ -16,13 +15,12 @@ public class PreStateChangeHook {
 
     public static void run(
             Collection<String> rules,
-            ServerLevel level,
-            WorkSpot<Integer, BlockPos> position
+            Consumer<Pose> requestPose
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeStateChangeEvent bxEvent = new BeforeStateChangeEvent(level, position);
+        BeforeMoveToNextStateEvent bxEvent = new BeforeMoveToNextStateEvent(requestPose);
         processMulti(false, appliers, (o, a) -> {
-            a.beforeStateChange(bxEvent);
+            a.beforeMoveToNextState(bxEvent);
             return true;
         });
     }

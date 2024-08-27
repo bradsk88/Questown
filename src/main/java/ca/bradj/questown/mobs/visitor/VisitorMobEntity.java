@@ -16,6 +16,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -83,7 +84,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -95,7 +99,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.Lazy;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.tags.ITag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -107,7 +110,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;
+import static net.minecraft.world.entity.Pose.SLEEPING;
 
 public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
@@ -450,6 +453,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
 
+        town.getVillagerHandle().getRequestedPose(uuid).ifPresent(this::applyRequestedPose);
+
         trySetWalkTargetFromJob(j);
 
         if (town == null) {
@@ -473,6 +478,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.useNearbyGates();
     }
 
+    private void applyRequestedPose(PoseInPlace pose) {
+        switch (pose.pose()) {
+            case SLEEPING -> getInBed(pose.place());
+            default -> getOutOfBed();
+        }
+    }
+
     private void trackTarget() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
         IStatus<?> status1 = j.getStatus();
@@ -494,29 +506,29 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private void nudgeForJobNav() {
-        BlockPos target = getWanderTarget();
-        if (target != null) {
-            if (Jobs.isOnTopOf(position(), target)) {
-                return;
-            }
-
-            if (lastPos != null) {
-                if (lastPos.equals(position())) {
-                    ticksStuckWithTarget++;
-                }
-            }
-            lastPos = position();
-        }
-
-        if (ticksStuckWithTarget > Config.MAX_STICK_TICKS_WITH_TARGET.get()) {
-            ticksStuckWithTarget = 0;
-            BlockPos bp = blockPosition();
-            if (level.getBlockState(bp).getMaterial().isSolid()) {
-                bp = bp.above();
-            }
-            moveTo(Vec3.atBottomCenterOf(bp));
-            QT.VILLAGER_LOGGER.debug("Nudged from {} to {} to unstick navigation", lastPos, position());
-        }
+//        BlockPos target = getWanderTarget();
+//        if (target != null) {
+//            if (Jobs.isOnTopOf(position(), target)) {
+//                return;
+//            }
+//
+//            if (lastPos != null) {
+//                if (lastPos.equals(position())) {
+//                    ticksStuckWithTarget++;
+//                }
+//            }
+//            lastPos = position();
+//        }
+//
+//        if (ticksStuckWithTarget > Config.MAX_STICK_TICKS_WITH_TARGET.get()) {
+//            ticksStuckWithTarget = 0;
+//            BlockPos bp = blockPosition();
+//            if (level.getBlockState(bp).getMaterial().isSolid()) {
+//                bp = bp.above();
+//            }
+//            moveTo(Vec3.atBottomCenterOf(bp));
+//            QT.VILLAGER_LOGGER.debug("Nudged from {} to {} to unstick navigation", lastPos, position());
+//        }
     }
 
     private void trySetWalkTargetFromJob(Job<?, ?, ? extends IStatus<?>> j) {
@@ -886,6 +898,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public void startSleeping(BlockPos p_21141_) {
         getInBed(p_21141_);
+        this.setSleepingPos(p_21141_);
         this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level.getGameTime());
         this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
@@ -902,9 +915,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             blockstate.setBedOccupied(level, p_21141_, this, true);
         }
 
-        this.setPose(Pose.SLEEPING);
+        this.setPose(SLEEPING);
         this.setPosToBed(p_21141_);
-        this.setSleepingPos(p_21141_);
         this.setDeltaMovement(Vec3.ZERO);
         this.hasImpulse = true;
     }

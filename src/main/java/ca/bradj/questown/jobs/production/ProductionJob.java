@@ -285,7 +285,11 @@ public abstract class ProductionJob<
             return null;
         }
 
-        STATUS status = journal.getStatus();
+            STATUS status = journal.getStatus();
+
+        // TODO: Allow modders to short-circuit this and set another target (like PreStateChangeHook)
+        //  if (target = BeforeTargetSelection.run(...)) {
+        //    return target;
         if (status.isGoingToJobsite()) {
             BlockPos jobSite1 = getJobSite(town);
             this.setLookTarget(jobSite1);
