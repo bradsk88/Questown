@@ -112,7 +112,9 @@ public class TownVillagerHandle implements VillagerHolder {
             return i;
         }
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        Double hf = t.getHealingHandle().getHealFactor(e.blockPosition());
+        Double bedFactor = Config.NORMAL_BED_HEAL_MULTIPLIER.get();
+        Double boostedFactor = t.getHealingHandle().getHealFactor(e.blockPosition());
+        Double hf = Math.min(bedFactor, boostedFactor);
         int i1 = (int) (i * hf);
         QT.VILLAGER_LOGGER.debug("Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID());
         return i1;

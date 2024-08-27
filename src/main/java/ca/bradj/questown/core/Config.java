@@ -79,6 +79,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
 
     static {
@@ -243,6 +244,10 @@ public class Config {
 
         // Blocks Config
         BUILDER.push("Blocks");
+
+        NORMAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
+                "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
+        ).defineInRange("HospitalBedHealMultiplier", 1.5, 0.5, 100);
 
         HOSPITAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
                 "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
