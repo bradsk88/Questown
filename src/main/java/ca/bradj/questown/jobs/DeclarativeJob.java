@@ -66,6 +66,7 @@ public class DeclarativeJob extends
     private final JobID jobId;
     private final ExpirationRules expiration;
     private final long totalDuration;
+    private final int workInterval;
     private Signals signal;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
@@ -132,6 +133,7 @@ public class DeclarativeJob extends
         this.expiration = expiration;
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
         this.logic = new JobLogic<>();
+        this.workInterval = workInterval;
     }
 
     @NotNull
@@ -249,8 +251,9 @@ public class DeclarativeJob extends
                 entityCurrentJobSite != null,
                 WorkSeekerJob.isSeekingWork(jobId),
                 workSpot != null && hasInserted(action),
+                !inventory.isEmpty(),
                 expiration,
-                new JobLogic.JobDetails(maxState, workRequiredAtStates.get(0)),
+                new JobLogic.JobDetails(maxState, workRequiredAtStates.get(0), workInterval),
                 this.asLogicWorld(
                         extra, town, work,
                         (VisitorMobEntity) entity, entityCurrentJobSite,

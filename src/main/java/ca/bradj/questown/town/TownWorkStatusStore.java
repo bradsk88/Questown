@@ -36,7 +36,16 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
                     if (b instanceof StatefulJobBlock sjb) {
-                        return (state) -> sjb.setProcessingState(level, pos, state);
+                        return (state) -> {
+                            BlockState mbs2 = level.getBlockState(pos);
+                            Block b2 = mbs2.getBlock();
+                            if (b2 instanceof StatefulJobBlock still) {
+                                still.setProcessingState(level, pos, state);
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        };
                     }
                     return null;
                 }

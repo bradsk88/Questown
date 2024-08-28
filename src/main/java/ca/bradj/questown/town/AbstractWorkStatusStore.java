@@ -21,11 +21,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
     // visual indication of progress). This map facilitates that.
-    private final Map<POS, Consumer<State>> cascading = new HashMap<>();
+    private final Map<POS, Function<State, Boolean>> cascading = new HashMap<>();
     private final BiFunction<ROOM, Position, Collection<POS>> posFactory;
     private final BiFunction<TICK_SOURCE, POS, Boolean> airCheck;
     private final BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory;
-    private final BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer;
+    private final BiFunction<TICK_SOURCE, POS, @Nullable Function<State, Boolean>> cascadingBlockRevealer;
 
     private final HashSet<ROOM> rooms = new HashSet<>();
 
@@ -39,7 +39,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
             BiFunction<TICK_SOURCE, POS, Boolean> airCheck,
             BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory,
-            BiFunction<TICK_SOURCE, POS, @Nullable Consumer<State>> cascadingBlockRevealer
+            BiFunction<TICK_SOURCE, POS, @Nullable Function<State, Boolean>> cascadingBlockRevealer
     ) {
         this.posFactory = posFactory;
         this.airCheck = airCheck;
@@ -68,7 +68,9 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         State newV = jobStatuses.compute(pos, (p, s) -> mutator.apply(p, s));
         QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
-            cascading.get(pos).accept(newV);
+            if (!cascading.get(pos).apply(newV)) {
+                cascading.remove(pos);
+            }
         }
     }
 
@@ -182,10 +184,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                         jobStatuses.put(pp, def);
                     }
 
-                    @Nullable Consumer<State> cas = cascadingBlockRevealer.apply(tickSource, pp);
+                    @Nullable Function<State, Boolean> cas = cascadingBlockRevealer.apply(tickSource, pp);
                     if (cas != null) {
                         cascading.put(pp, cas);
-                        cas.accept(def == null ? State.fresh() : def);
+                        if (!cas.apply(def == null ? State.fresh() : def)) {
+                            cascading.remove(pp);
+                        }
                     }
                 });
             }

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "id": "crafter/wooden_pickaxe",
+  "id": "crafter/wooden_hoe",
   "unlocks_title": "blacksmith",
-  "priority": "3000",
-  "parent": "crafter/wooden_hoe",
-  "icon": "minecraft:wooden_pickaxe",
-  "initial_request": "minecraft:wooden_pickaxe",
+  "priority": "2999",
+  "parent": "crafter/stick",
+  "icon": "minecraft:wooden_hoe",
+  "initial_request": "minecraft:wooden_hoe",
   "result": {
     "type": "item",
-    "item": "minecraft:wooden_pickaxe",
+    "item": "minecraft:wooden_hoe",
     "quantity": 1
   },
   "block": "questown:blacksmiths_table",
@@ -20,7 +20,7 @@
     },
     {
       "ingredients": "#minecraft:planks",
-      "quantity": 2
+      "quantity": 1
     },
     {
       "work": 40

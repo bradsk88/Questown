@@ -177,8 +177,15 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
 
     @Override
     public String name() {
-        // TODO[ASAP]: For known statuses (e.g. collecting supplies) return a string value
         return Integer.toString(value);
+    }
+
+    @Override
+    public String nameV2() {
+        if (value < firstNonCustomIndex) {
+            return Integer.toString(value);
+        }
+        return name;
     }
 
     @Override

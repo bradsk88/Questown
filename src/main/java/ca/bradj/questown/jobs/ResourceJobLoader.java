@@ -25,19 +25,22 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.*;
 
 public class ResourceJobLoader {
@@ -216,6 +219,7 @@ public class ResourceJobLoader {
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g = switch (type) {
                 case "item" -> itemResult(object, rizz);
                 case "biome_loot" -> biomeLootResult(rizz);
+                case "crafting_table" -> craftingTableResult(rizz);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
             return new WorkWorldInteractions(cooldownTicks, g);
@@ -318,6 +322,45 @@ public class ResourceJobLoader {
                         new GathererTools.LootTablePath(resultDefault)
                 )
         );
+    }
+
+    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> craftingTableResult(
+            JsonObject rizz
+    ) {
+        JsonArray resultPrefix = required(rizz, "recipe", JsonElement::getAsJsonArray);
+        @Nullable String fallback = optional(rizz, "fallback", JsonElement::getAsString);
+        int qty = requiredInt(rizz, "quantity");
+        return (l, i) -> {
+            ItemStack itemstack = ItemStack.EMPTY;
+            CraftingContainer cc = new CraftingContainer(new AbstractContainerMenu(null, 0) {
+                @Override
+                public boolean stillValid(Player p_38874_) {
+                    return false;
+                }
+            }, 3, 3);
+
+            for (int j = 0; j < resultPrefix.size(); j++) {
+                String rowStr = resultPrefix.get(j).getAsString();
+                for (int k = 0; k < rowStr.length(); k++) {
+                    if (Character.isWhitespace(rowStr.charAt(k))) {
+                        continue;
+                    }
+                    ItemStack itemFromChar = Items.OAK_LOG.getDefaultInstance();
+                    cc.setItem((j+1) * k, itemFromChar);
+                }
+            }
+
+            Optional<CraftingRecipe> optional = l.getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, cc, l);
+            if (optional.isPresent()) {
+                CraftingRecipe craftingrecipe = optional.get();
+                itemstack = craftingrecipe.assemble(cc);
+            }
+            if (itemstack.isEmpty() && fallback != null) {
+                itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
+            }
+            itemstack.setCount(1);
+            return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
+        };
     }
 
     private static WorkStates workStates(JsonObject object) {

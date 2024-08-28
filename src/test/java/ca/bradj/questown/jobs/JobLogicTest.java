@@ -52,7 +52,8 @@ class JobLogicTest {
 
     private static final JobLogic.JobDetails DEFAULT_DETAILS = new JobLogic.JobDetails(
             DEFINITION.maxState(),
-            DEFINITION.workRequiredAtStates().get(0)
+            DEFINITION.workRequiredAtStates().get(0),
+            0
     );
 
     private static class TestLogicWorld implements JobLogic.JLWorld<Void, Boolean, Position> {
@@ -172,8 +173,9 @@ class JobLogicTest {
                     entityInJobSite,
                     false,
                     new Random().nextBoolean(),
+                    false,
                     ExpirationRules.never(),
-                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0)),
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                     world,
                     (a, b) -> blockState.apply(b)
             );
@@ -281,6 +283,7 @@ class JobLogicTest {
                 true,
                 false,
                 false,
+                false,
                 ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFAULT_DETAILS,
                 world,
@@ -325,6 +328,7 @@ class JobLogicTest {
                 true,
                 false,
                 true,
+                false,
                 ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFAULT_DETAILS,
                 world,
@@ -486,8 +490,9 @@ class JobLogicTest {
                 true,
                 false,
                 false,
+                false,
                 ExpirationRules.never(),
-                new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0)),
+                new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                 world,
                 (a, b) -> world.states.getJobBlockState(b).processingState()
         );

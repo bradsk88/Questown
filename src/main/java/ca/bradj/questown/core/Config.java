@@ -184,7 +184,7 @@ public class Config {
                 "The number of ticks a WorkSeeker will pause for after finding zero available jobs. Helps avoid wasted CPU and excessive sound effects."
         ).defineInRange("WorkSeekerCooldown", 200L, 1L, 24000L);
         WORKED_RECENTLY_TICKS = BUILDER.comment(
-                "The number of ticks after working where a villager will be considered 'worked recently'. Used for navigation logic."
+                "The number of ticks after working where a villager will be considered 'worked recently'. Used for navigation logic. This number is in addition to the cooldown_ticks."
         ).defineInRange("WorkedRecentlyTicks", 20L, 1L, 24000L);
         MIN_JOB_ACCEPTANCE = BUILDER.comment(
                 "A percentage representing the minimum number of job states that are currently possible. For example, if a job has four states but only three can be done (due to missing tools, etc) then the percentage is 0.75.  This setting determines the minimum acceptable percentage for a villager to even consider trying the work."

@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -157,7 +158,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.getStatus()));
+        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.jobId, menu.getStatus()));
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;
@@ -207,12 +208,18 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 if (cat == null) {
                     cat = jobId;
                 }
+
+                // TODO: Handle work seeker statuses some where else
+                if (WorkSeekerJob.isSeekingWork(menu.jobId)) {
+                    cat = "work_seeker";
+                }
+
                 TranslatableComponent component = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.name()),
+                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
                         jobName
                 );
                 TranslatableComponent component2 = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.name()),
+                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
                         jobName
                 );
                 super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);

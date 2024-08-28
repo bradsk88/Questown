@@ -764,16 +764,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        List<Map.Entry<JobID, Supplier<Work>>> allOptions = Works.regularJobs().stream()
-                                                           .filter(v -> v.getKey().sameRoot(currentJob))
-                                                           .toList();
-        if (allOptions.isEmpty()) {
-            changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(currentJob));
-            return false;
-        }
-        int randIdx = Compat.nextInt(getServerLevel(), allOptions.size());
-        changeJobForVisitor(ownerUUID, allOptions.get(randIdx).getKey());
-        return true;
+        // Don't do this because it bypasses the job board requests
+//        List<Map.Entry<JobID, Supplier<Work>>> allOptions = Works.regularJobs().stream()
+//                                                           .filter(v -> v.getKey().sameRoot(currentJob))
+//                                                           .toList();
+//        if (allOptions.isEmpty()) {
+//            changeJobForVisitor(ownerUUID, WorkSeekerJob.getIDForRoot(currentJob));
+//            return false;
+//        }
+//        int randIdx = Compat.nextInt(getServerLevel(), allOptions.size());
+//        changeJobForVisitor(ownerUUID, allOptions.get(randIdx).getKey());
+        return false;
     }
 
     WorksBehaviour.TownData getTownData() {

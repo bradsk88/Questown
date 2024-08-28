@@ -46,9 +46,6 @@ import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWor
 
 public class JobsRegistry {
 
-    private static final WorksBehaviour.SnapshotFunc GATHERER_SNAPSHOT_FUNC = (id, status, items) ->
-            new GathererJournal.Snapshot<>(GathererJournal.Status.from(status), items);
-
     private record SpecialJob(
             Predicate<JobID> idTest,
             BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,

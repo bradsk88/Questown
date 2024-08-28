@@ -15,6 +15,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -361,7 +362,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(visible, true);
-        this.entityData.define(status, GathererJournal.Status.IDLE.name());
+        this.entityData.define(status, ProductionStatus.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
     }

@@ -74,7 +74,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
     public record JobDetails(
             int maxState,
-            @Nullable Integer workRequiredAtFirstState
+            @Nullable Integer workRequiredAtFirstState,
+            int workPause
     ) {
     }
 
@@ -85,11 +86,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
             boolean isEntityInJobSite,
             boolean isSeekingWork,
             boolean hasInsertedAtLeastOneIngredient,
+            boolean hasAnyItems,
             ExpirationRules expiration,
             JobDetails details,
             JLWorld<EXTRA, TOWN, POS> worldBeforeTick,
             BiFunction<TOWN, POS, Integer> getState
     ) {
+        if (!hasAnyItems && computeState.get().isDroppingLoot()) {
+            worldBeforeTick.changeToNextJob();
+            return;
+        }
+
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
 
@@ -159,7 +166,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     status.getProductionState(details.maxState()),
                     isSeekingWork,
                     worldBeforeTick,
-                    getState
+                    getState,
+                    details.workPause
             );
         }
 
@@ -195,7 +203,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
             int productionState,
             boolean isSeekingWork,
             JLWorld<EXTRA, TOWN, POS> world,
-            BiFunction<TOWN, POS, Integer> getState
+            BiFunction<TOWN, POS, Integer> getState,
+            int workPause
     ) {
         // TODO: Update listAllWorkSpots to actually find "rich" workspots (an
         //  implemntation of WorkSpot) which have the block name to help with debugging
@@ -216,7 +225,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         WorkOutput<TOWN, WorkPosition<POS>> work = world.getHandle().tryWorking(extra, allSpots);
         this.setWorkSpot(work.spot());
         if (work.worked()) {
-            this.worked = Config.WORKED_RECENTLY_TICKS.get().intValue();
+            this.worked = Config.WORKED_RECENTLY_TICKS.get().intValue() + workPause;
             world.setLookTarget(work.spot().jobBlock());
             boolean hasWork = !isSeekingWork;
             Integer stateAfterWork = getState.apply(work.town(), work.spot().jobBlock());

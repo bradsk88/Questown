@@ -1,7 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.GathererJournal;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -61,9 +60,6 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         this.target = e.newWanderTarget();
         if (target == null) {
             return false;
-        }
-        if (e.getStatusForServer() == GathererJournal.Status.GATHERING) {
-            return true;
         }
         QT.VILLAGER_LOGGER.trace("Visitor has chosen {} as their target [{}]", target, e.getUUID());
         return true;

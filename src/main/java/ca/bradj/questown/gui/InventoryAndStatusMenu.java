@@ -43,7 +43,7 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     private final DataSlot statusSlot;
     final List<DataSlot> lockedSlots = new ArrayList<>(
     );
-    private final JobID jobId;
+    final JobID jobId;
 
     private final Stack<Runnable> closers = new Stack<>();
 

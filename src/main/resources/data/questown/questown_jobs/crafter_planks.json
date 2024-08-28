@@ -6,8 +6,11 @@
   "icon": "minecraft:oak_planks",
   "initial_request": "minecraft:oak_planks",
   "result": {
-    "type": "item",
-    "item": "minecraft:oak_planks",
+    "type": "crafting_table",
+    "recipe": [
+      "0"
+    ],
+    "fallback": "minecraft:oak_planks",
     "quantity": 1
   },
   "block": "minecraft:crafting_table",
@@ -18,10 +21,10 @@
       "quantity": 1
     },
     {
-      "work": 10
+      "work": 40
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 25,
   "sound": {
     "id": "minecraft:block.wood.hit",
     "chance": "100",

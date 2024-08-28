@@ -44,6 +44,11 @@ public class SessionUniqueOrdinals {
         }
 
         @Override
+        public String nameV2() {
+            return name();
+        }
+
+        @Override
         public boolean isUnset() {
             return false;
         }
