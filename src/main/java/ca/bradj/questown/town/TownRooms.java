@@ -2,10 +2,10 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
-import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
@@ -32,6 +32,10 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     public void addRecipeRoomChangeListener(RecipeRoomChangeListener cl) {
         this.changeListeners.add(cl);
+    }
+
+    public Optional<Room> get(Position position) {
+        return Optional.ofNullable(rooms.get(position));
     }
 
     public interface RecipeRoomChangeListener {

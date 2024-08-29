@@ -32,6 +32,7 @@ public class TownPossibleWork {
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
     private boolean shouldRecompute = true;
+    private int buffer;
 
     public TownPossibleWork() {
     }
@@ -42,6 +43,12 @@ public class TownPossibleWork {
 
     public void tick() {
         if (!shouldRecompute) {
+            return;
+        }
+        buffer++;
+        int freq = Config.WORK_PRECOMPUTE_FREQUENCY.get().intValue();
+        buffer = buffer % freq;
+        if (buffer != 0) {
             return;
         }
         TownFlagBlockEntity t = town.getUnsafe();

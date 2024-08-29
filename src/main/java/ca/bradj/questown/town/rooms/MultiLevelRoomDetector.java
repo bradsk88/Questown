@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.town.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -71,7 +72,7 @@ public class MultiLevelRoomDetector {
                 ), yOffset)));
     }
 
-    public boolean proceed() {
+    public boolean proceed(Function<Integer, @Nullable TownRooms> currentRoomsAtYOffset) {
         if (this.trueStart == null) {
             this.trueStart = System.currentTimeMillis();
         }
@@ -81,7 +82,13 @@ public class MultiLevelRoomDetector {
 
         if (!roomDetectors.isEmpty()) {
             DetectorWithLevel nextDetector = roomDetectors.remove();
-            @Nullable ImmutableMap<Position, Optional<Room>> result = nextDetector.detector.proceed();
+            TownRooms cur = currentRoomsAtYOffset.apply(nextDetector.scanLevel);
+            @Nullable ImmutableMap<Position, Optional<Room>> result;
+            if (cur != null) {
+                result = nextDetector.detector.proceed(cur::get);
+            } else {
+                result = nextDetector.detector.proceed();
+            }
             if (result != null) {
                 ImmutableMap<Position, Optional<MCRoom>> build = handleNewRooms(result, nextDetector.scanLevel);
                 this.newRoomsHandler.accept(nextDetector.scanLevel, build);

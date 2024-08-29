@@ -177,7 +177,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
         if (pendingRooms != null) {
             long start = System.currentTimeMillis();
-            boolean finished = pendingRooms.proceed();
+            boolean finished = pendingRooms.proceed(activeRooms::get);
             if (finished) {
                 this.pendingRooms = null;
             }

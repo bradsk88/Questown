@@ -267,7 +267,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         MultiLevelRoomDetector ptr = initMLRD(t, recipesAtLevel, doorsAtLevel);
         ptr.setArtSink(artSink::put);
         return () -> {
-            boolean done = ptr.proceed();
+            boolean done = ptr.proceed(i -> null);
             if (!done) {
                 return false;
             }

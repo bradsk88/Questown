@@ -60,6 +60,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> WORKED_RECENTLY_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Double> MIN_JOB_ACCEPTANCE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_INVALID_JOBS;
+    public static final ForgeConfigSpec.ConfigValue<Long> WORK_PRECOMPUTE_FREQUENCY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
     public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
@@ -192,6 +193,9 @@ public class Config {
         CRASH_ON_INVALID_JOBS = BUILDER.comment(
                 "If enabled, questown will crash the server when an invalid job definition is detected. If disabled, it just means those invalid jobs may not function correctly."
         ).define("CrashOnInvalidJobs", true);
+        WORK_PRECOMPUTE_FREQUENCY = BUILDER.comment(
+                "Questown tries to pre-compute the work that can be picked up by villagers in advance. This controls how many ticks are between attempts."
+        ).defineInRange("WorkPrecomputeFrequency", 100L, 1L, 24000L);
         BUILDER.pop();
 
         // Villagers Config
