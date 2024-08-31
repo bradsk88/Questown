@@ -2,7 +2,7 @@
   "version": 1,
   "id": "gatherer/axe",
   "priority": "3000",
-  "parent": null,
+  "parent": "gatherer/gather",
   "icon": "minecraft:stone_axe",
   "initial_request": "minecraft:oak_wood",
   "result": {

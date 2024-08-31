@@ -81,6 +81,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownKnownBiomes biomes = new TownKnownBiomes();
     private TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
+    private int preferredBuffer;
 
     public TownKnownBiomes getBiomesHandle() {
         return biomes;
@@ -757,6 +758,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             changeJobForVisitor(ownerUUID, work);
             return true;
         }
+
+        if (preferredBuffer < 100) {
+            preferredBuffer++;
+            return false;
+        }
+        preferredBuffer=0;
 
         work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, requestedResults, td);
         if (work != null) {

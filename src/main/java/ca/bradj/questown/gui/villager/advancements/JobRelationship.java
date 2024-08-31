@@ -6,23 +6,25 @@ import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.*;
 
 public class JobRelationship implements Iterable<JobRelationship> {
 
     private final JobID prerequisite;
-    private final ArrayList<JobRelationship> jobs;
+    private final HashSet<JobRelationship> jobs;
 
-    JobRelationship(@Nullable JobID prerequisite,
-                    Collection<JobRelationship> jobs
+    JobRelationship(
+            @Nullable JobID prerequisite,
+            Collection<JobRelationship> jobs
     ) {
         this.prerequisite = prerequisite;
-        this.jobs = new ArrayList<>(jobs);
+        this.jobs = new HashSet<>(jobs);
     }
 
-    public <X> void forEach(X parentWidget, TriFunction<JobRelationship, ContextualPosition, X, X> fn) {
+    public <X> void forEach(
+            X parentWidget,
+            TriFunction<JobRelationship, ContextualPosition, X, X> fn
+    ) {
         int i = 0;
         int leafs = countLeafNodes(); // TODO:: This is probably quite inefficient
         for (JobRelationship j : jobs) {
@@ -37,9 +39,10 @@ public class JobRelationship implements Iterable<JobRelationship> {
     }
 
     public void addChildLeaf(JobID id) {
-        jobs.add(new JobRelationship(
-                id, ImmutableList.of()
-        ));
+        if (jobs.stream().anyMatch(v -> id.equals(v.prerequisite))) {
+            return;
+        }
+        jobs.add(new JobRelationship(id, ImmutableList.of()));
     }
 
     @NotNull
@@ -60,5 +63,18 @@ public class JobRelationship implements Iterable<JobRelationship> {
             return 1;
         }
         return jobs.stream().map(JobRelationship::countLeafNodes).reduce(Integer::sum).orElse(0);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        JobRelationship that = (JobRelationship) o;
+        return Objects.equals(prerequisite, that.prerequisite) && Objects.equals(jobs, that.jobs);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(prerequisite, jobs);
     }
 }

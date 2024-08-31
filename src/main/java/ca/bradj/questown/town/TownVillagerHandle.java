@@ -5,10 +5,13 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.SyncVillagerAdvancementsMessage;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.Work;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -32,6 +35,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -203,6 +207,8 @@ public class TownVillagerHandle implements VillagerHolder {
             return;
         }
 
+        syncWorkToClient(sender);
+
         VisitorMobEntity e = (VisitorMobEntity) f.get();
 
         TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(e.getFlagPos());
@@ -250,6 +256,18 @@ public class TownVillagerHandle implements VillagerHolder {
             throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
         }
         runnable.run();
+    }
+
+    private static void syncWorkToClient(ServerPlayer sender) {
+        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
+        Map<JobID, @Nullable JobID> b = new HashMap<>();
+        Map<JobID, ResourceLocation> b2 = new HashMap<>();
+        Works.values().forEach(w -> {
+            Work work = w.get();
+            b.put(work.id(), work.parentID());
+            b2.put(work.id(), work.icon().getItem().getRegistryName());
+        });
+        QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
     }
 
     private static void openMenu(
