@@ -23,5 +23,6 @@ public class CommandInit {
         AddDamageCommand.register(event.getDispatcher());
         DrainTimersCommand.register(event.getDispatcher());
         PrepareWorkCommand.register(event.getDispatcher());
+        LogDataCommand.register(event.getDispatcher());
     }
 }

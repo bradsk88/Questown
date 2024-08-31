@@ -33,6 +33,8 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -60,6 +62,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,6 +85,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
+
+    public static void logStoredData(TownFlagBlockEntity entity, CompoundTag tTag) {
+        List<String> qss = entity.getAllQuests().stream().map(Quest::toShortString).toList();
+        QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
+        QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
+        QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
+        QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
+        QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(), '\n'));
+
+        String prettyJsonString = new GsonBuilder().setPrettyPrinting().create()
+                                                   .toJson(JsonParser.parseString(tTag.toString()));
+        QT.FLAG_LOGGER.debug("NBT: {}", prettyJsonString);
+    }
 
     public TownKnownBiomes getBiomesHandle() {
         return biomes;
@@ -393,12 +409,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private static void loadNextTick(Queue<Function<TownFlagBlockEntity, Boolean>> initializers) {
         // TODO: Store active rooms. Otherwise they get re-announced on each startup.
 
+        initializers.add(t -> {
+            logStoredData(t, Compat.getBlockStoredTagData(t));
+            return true;
+        });
         initPairs.forEach(
                 (key, pair) -> {
                     initializers.add(t -> {
                         CompoundTag tag = Compat.getBlockStoredTagData(t);
                         if (tag.contains(key)) {
-                            return pair.fromTag().apply(tag.getCompound(key), t);
+                            CompoundTag cTag = tag.getCompound(key);
+                            if (!cTag.isEmpty()) {
+                                return pair.fromTag().apply(cTag, t);
+                            }
                         }
                         QT.FLAG_LOGGER.info("No data for {}. Skipping deserialization.", key);
                         return true;
@@ -763,7 +786,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             preferredBuffer++;
             return false;
         }
-        preferredBuffer=0;
+        preferredBuffer = 0;
 
         work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, requestedResults, td);
         if (work != null) {

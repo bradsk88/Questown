@@ -212,6 +212,13 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     }
 
     @Override
+    public void deregisterDoor(BlockPos doorPos) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        roomsMap.deRegisterDoor(Positions.FromBlockPos(doorPos), doorPos.getY() - t.getY());
+        t.setChanged();
+    }
+
+    @Override
     public Supplier<Boolean> getDebugTaskForAllDoors() {
         // TODO: Finish implementing this
         @NotNull TownFlagBlockEntity t = unsafeGetTown();

@@ -8,17 +8,10 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
-import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
-import com.google.common.collect.ImmutableList;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -45,12 +38,13 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
-import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -153,19 +147,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             TownFlagBlockEntity entity
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
-        if (player.getItemInHand(hand).getItem().equals(Items.DIRT)) {
-            VisitorMobEntity livingEntity = (VisitorMobEntity) ImmutableList.copyOf(entity.getVillagerHandle().entities())
-                    .get(0); // TODO[ASAP]: Move this to a villager tab
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> (ServerPlayer) player),
-                    new OpenVillagerAdvancementsMenuMessage(
-                            entity.getTownFlagBasePos(),
-                            livingEntity.getUUID(),
-                            livingEntity.getJobId()
-                    )
-            );
-            return InteractionResult.sidedSuccess(false);
-        }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
             for (UUID uuid : entity.getVillagersWithQuests()) {
@@ -181,21 +162,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             entity.addImmediateReward(
                     new AddBatchOfRandomQuestsForVisitorReward(entity, randomVillager)
             );
-            return InteractionResult.sidedSuccess(false);
-        }
-
-        if (itemInHand.getItem().equals(Items.OAK_LOG)) {
-            List<String> qss = entity.getAllQuests().stream().map(Quest::toShortString).toList();
-            QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
-            QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
-            QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
-            QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
-            QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(), '\n'));
-
-            CompoundTag tTag = new CompoundTag();
-            entity.writeTownData(tTag);
-            String prettyJsonString = new GsonBuilder().setPrettyPrinting().create().toJson(JsonParser.parseString(tTag.toString()));
-            QT.FLAG_LOGGER.debug("NBT: {}", prettyJsonString);
             return InteractionResult.sidedSuccess(false);
         }
 

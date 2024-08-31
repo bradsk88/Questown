@@ -20,9 +20,10 @@ public interface RoomsHolder {
 
     Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr);
 
-    void registerFenceGate(BlockPos above);
+    void registerFenceGate(BlockPos doorPos);
 
-    void registerDoor(BlockPos above);
+    void registerDoor(BlockPos doorPos);
+    void deregisterDoor(BlockPos doorPos);
 
     Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos);
 

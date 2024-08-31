@@ -44,6 +44,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private @Nullable MultiLevelRoomDetector pendingRooms;
     private List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
+    private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -208,7 +209,19 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 level, flagPos.getY(),
                 p -> WallDetection.IsWall(level, p.toPosition(), flagPos.getY() + p.scanLevel),
                 p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
-                (scanLevel, rooms) -> getOrCreateRooms(scanLevel).update(rooms),
+                (scanLevel, rooms) -> {
+                    getOrCreateRooms(scanLevel).update(rooms);
+                    registeredDoors.stream().filter(v -> rooms.values().stream()
+                                                              .noneMatch(z -> z.isPresent() && v.toPosition().equals(z.get().doorPos)))
+                                   .forEach(
+                                           nonRoomDoor -> doorsToDrop.compute(new TownPosition(
+                                                   nonRoomDoor.x,
+                                                   nonRoomDoor.z,
+                                                   scanLevel
+                                           ), (door, ticks) -> ticks == null ? 1 : ticks + 1)
+                                   );
+                    dropDeadDoors(flagPos);
+                },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),
                 false
@@ -230,6 +243,28 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             updateActiveFarms(level, scanLev, y1, gatesAtLevel);
         }
         profileTick("queue+farm", start);
+    }
+
+    private void dropDeadDoors(BlockPos flagPos) {
+        int ticksToKeepNonRoomDoors = 100;
+        List<Map.Entry<TownPosition, Integer>> deadDoors = doorsToDrop.entrySet().stream()
+                                                                      .filter(v -> v.getValue() > ticksToKeepNonRoomDoors)
+                                                                      .toList();
+        ImmutableList<Map.Entry<TownPosition, Integer>> snapshot = ImmutableList.copyOf(deadDoors);
+        snapshot.forEach(entry -> {
+            TownPosition deadDoor = entry.getKey();
+            BlockPos p = new BlockPos(
+                    deadDoor.x,
+                    deadDoor.scanLevel + flagPos.getY(),
+                    deadDoor.z
+            );
+            unsafeGetTown().getRoomHandle().deregisterDoor(p);
+            QT.FLAG_LOGGER.info(
+                    "De-registered door at {} because {} full town scans finished without finding a valid room",
+                    Positions.FromBlockPos(p).getUIString(), ticksToKeepNonRoomDoors
+            );
+            doorsToDrop.remove(new TownPosition(p.getX(), p.getZ(), p.getY() - flagPos.getY()));
+        });
     }
 
     private void profileTick(
@@ -336,6 +371,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         registeredDoors.add(new TownPosition(p.x, p.z, scanLevel));
         Questown.LOGGER.debug("Door was registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
+    }
+
+    public void deRegisterDoor(
+            Position p,
+            int scanLevel
+    ) {
+        registeredDoors.remove(new TownPosition(p.x, p.z, scanLevel));
+        Questown.LOGGER.debug("Door was de-registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
     }
 
     public void registerFenceGate(
