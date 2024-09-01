@@ -37,11 +37,13 @@ public class EffectMetaItem extends Item {
 
     public static class ConsumableEffects {
         public static final ResourceLocation FILL_HUNGER = Questown.ResourceLocation("fill_hunger");
+        public static final ResourceLocation FILL_HUNGER_HALF = Questown.ResourceLocation("fill_hunger_half");
     }
 
     public static class MoodEffects {
         public static final ResourceLocation UNCOMFORTABLE_EATING = Questown.ResourceLocation("uncomfortable_eating");
         public static final ResourceLocation COMFORTABLE_EATING = Questown.ResourceLocation("comfortable_eating");
+        public static final ResourceLocation ATE_RAW_FOOD = Questown.ResourceLocation("are_raw_food");
     }
 
 }

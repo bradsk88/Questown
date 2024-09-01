@@ -2,6 +2,7 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
@@ -110,7 +111,7 @@ public class RoomRecipes {
                 }
             }
             if (!foundWeight) {
-                weight += ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT.get();
+                weight += Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get();
             }
         }
         return weight;

@@ -1,4 +1,4 @@
-package ca.bradj.questown.jobs.declarative;
+package ca.bradj.questown.jobs.declarative.meta;
 
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
@@ -6,7 +6,8 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
+import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -21,8 +22,8 @@ import java.util.Collection;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
-public class DinerNoTableWork {
-    public static final String ID = "dining_no_table";
+public class DinerRawFoodWork {
+    public static final String ID = "dining_raw_food";
 
     public static final int BLOCK_STATE_NEED_EAT = 0;
     public static final int BLOCK_STATE_CONSUME_FOOD = 1;
@@ -30,16 +31,18 @@ public class DinerNoTableWork {
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
+    private static final Ingredient INGREDIENTS = Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD);
+
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
+            BLOCK_STATE_CONSUME_FOOD, INGREDIENTS
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_CONSUME_FOOD, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             // Food is listed as a "tool" so the villager will render it in hand while they eat
-            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_FOOD),
-            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
+            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD),
+            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_EAT, 25,
@@ -53,8 +56,8 @@ public class DinerNoTableWork {
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withConsumableEffect(EffectMetaItem.ConsumableEffects.FILL_HUNGER),
-            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get())
+            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()),
+            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.ATE_RAW_FOOD, Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get())
     );
     public static final int PAUSE_FOR_ACTION = 10;
 
@@ -83,7 +86,10 @@ public class DinerNoTableWork {
                         (lvl, hand) -> MCHeldItem.fromMCItemStacks(RESULTS)
                 ),
                 new WorkSpecialRules(
-                        ImmutableMap.of(), // No stage rules
+                        ImmutableMap.of(
+                                ProductionStatus.EXTRACTING_PRODUCT,
+                                ImmutableList.of(SpecialRules.HUNGER_FILL_HALF)
+                        ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.WORK_IN_EVENING
                         )
@@ -91,12 +97,12 @@ public class DinerNoTableWork {
                 new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, null),
                 new ExpirationRules(
                         () -> Long.MAX_VALUE,
-                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
-                        jobId -> DinerRawFoodWork.getIdForRoot(jobId.rootId()),
+                        () -> Long.MAX_VALUE,
+                        jobId -> jobId,
                         () -> Long.MAX_VALUE,
                         jobId -> jobId
                 )
-        ).withNeeds(s -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
+        ).withNeeds(s -> ImmutableList.of(INGREDIENTS));
     }
 
     public static JobID getIdForRoot(String rootId) {

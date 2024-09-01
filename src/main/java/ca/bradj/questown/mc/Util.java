@@ -172,7 +172,7 @@ public class Util {
      */
     public static <X> void iterate(Iterable<X> source, Consumer<X> sink) {
         Iterator<X> iter = source.iterator();
-        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+        for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
             if (iter.hasNext()) {
                 sink.accept(iter.next());
             } else {

@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -29,7 +30,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     private float speedModifier;
 
     public MoveToTownTargetSink() {
-        this(Config.WANDER_GIVEUP_TICKS.get(), Config.WANDER_GIVEUP_TICKS.get());
+        this(Compat.configGet(Config.WANDER_GIVEUP_TICKS).get(), Compat.configGet(Config.WANDER_GIVEUP_TICKS).get());
     }
 
     public MoveToTownTargetSink(int p_23573_, int p_23574_) {

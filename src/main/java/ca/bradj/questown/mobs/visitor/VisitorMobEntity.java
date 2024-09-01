@@ -16,6 +16,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -181,7 +182,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         if (town != null) {
             initBrain();
-            setArrowCount((int) (town.getVillagerHandle().getDamageTicksLeft(uuid) / Config.DAMAGE_TICKS.get()));
+            setArrowCount((int) (town.getVillagerHandle().getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
         this.changeListeners.add(() -> {
             IStatus<?> s = getStatusForServer();
@@ -343,10 +344,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * {@link TownInterface#changeJobForVisitor} instead.
      */
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
+        String curJobName = "null";
+        if (curJob != null) {
+            curJobName = curJob.getId().toNiceString();
+        }
         this.cleanupJobListeners.forEach(v -> v.apply(null));
         job = Lazy.of(() -> initializedJob);
         entityData.set(jobName, initializedJob.getJobName().translationKey());
-        QT.VILLAGER_LOGGER.debug("Job changed to {} for {}", initializedJob.getId(), uuid);
+        QT.VILLAGER_LOGGER.debug("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
         this.cleanupJobListeners.add(
                 initializedJob.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );
@@ -416,7 +422,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         tickTimes.add((int) (end - start));
 
-        if (Config.TICK_SAMPLING_RATE.get() != 0 && tickTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
+        Integer rate = Compat.configGet(Config.TICK_SAMPLING_RATE).get();
+        if (rate != 0 && tickTimes.size() > rate) {
             QT.VILLAGER_LOGGER.debug(
                     "VME Average tick length: {}",
                     tickTimes.stream()
@@ -430,7 +437,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private void villagerTick() {
         slowDownForPlayers();
 
-        if (ticksWithoutJobTarget > Config.MAX_TICKS_WITHOUT_SUPPLIES.get()) {
+        if (ticksWithoutJobTarget > Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
             town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
         }
@@ -1048,7 +1055,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         targetTimes.add((int) (end - start));
 
-        if (Config.TICK_SAMPLING_RATE.get() != 0 && targetTimes.size() > Config.TICK_SAMPLING_RATE.get()) {
+        Integer rate = Compat.configGet(Config.TICK_SAMPLING_RATE).get();
+        if (rate != 0 && targetTimes.size() > rate) {
             QT.PROFILE_LOGGER.debug(
                     "VME Average target acquisition length: {}",
                     targetTimes.stream()

@@ -12,6 +12,7 @@ import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -50,7 +51,8 @@ public class JobsRegistry {
             Predicate<JobID> idTest,
             BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
             TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
-            TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest
+            TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest,
+            BiFunction<JobID, IStatus<?>, ImmutableList<Ingredient>> needs
     ) {
 
         static SpecialJob fromWork(
@@ -71,7 +73,8 @@ public class JobsRegistry {
                     idTest,
                     (id, owner) -> cached.apply(id).jobFunc().apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
-                    (id, bs, bp) -> cached.apply(id).isJobBlock().test(ignored -> bs.get(), bp)
+                    (id, bs, bp) -> cached.apply(id).isJobBlock().test(ignored -> bs.get(), bp),
+                    (id, s) -> ImmutableList.copyOf(cached.apply(id).needs().apply(s))
             );
         }
     }
@@ -88,11 +91,13 @@ public class JobsRegistry {
                 (id, bsSrc, bp) -> {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
-                }
+                },
+                (id, s) -> ImmutableList.of()
         ));
 
         b.add(SpecialJob.fromWork(DinerWork::isDining, id -> DinerWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(DinerNoTableWork::isDining, id -> DinerNoTableWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(DinerRawFoodWork::isDining, id -> DinerRawFoodWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(ResterWork::isResting, id -> ResterWork.asWork(id.rootId())));
 
         specialJobs = b.build();
@@ -190,12 +195,15 @@ public class JobsRegistry {
             int villagerIndex,
             JobID jobID
     ) {
-        if (isSeekingWork(jobID)) {
-            return NoOpWarper.INSTANCE;
-        }
-        Supplier<Work> w = Works.get(jobID);
-        assert w != null;
-        return w.get().warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
+        return NoOpWarper.INSTANCE;
+
+        // TODO: Bring back warpers
+//        if (isSeekingWork(jobID)) {
+//            return NoOpWarper.INSTANCE;
+//        }
+//        Supplier<Work> w = Works.get(jobID);
+//        assert w != null;
+//        return w.get().warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
     }
 
     public static boolean canSatisfy(
@@ -228,6 +236,11 @@ public class JobsRegistry {
         }
         if (ResterWork.isResting(p)) {
             return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.HOSPITAL_BED.get()));
+        }
+
+        Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(p)).findFirst();
+        if (sj.isPresent()) {
+            return s -> sj.get().needs().apply(p, s);
         }
 
         Supplier<Work> w = Works.get(p);
@@ -269,7 +282,7 @@ public class JobsRegistry {
     }
 
     public static boolean isDining(JobID jobID) {
-        return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID);
+        return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID) || DinerRawFoodWork.isDining(jobID);
     }
 
     public static boolean canFit(

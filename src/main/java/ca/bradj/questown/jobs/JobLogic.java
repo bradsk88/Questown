@@ -139,9 +139,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 //        world.clearWorkSpot("Cleared before trying work");
 
-        long maxNoSupplyTicks = expiration.maxInitialTicksWithoutSupplies();
+        long maxNoSupplyTicks = expiration.maxInitialTicksWithoutSuppliesOrJobSite();
         if (hasInsertedAtLeastOneIngredient) {
-            maxNoSupplyTicks = expiration.maxTicksWithoutSupplies();
+            maxNoSupplyTicks = expiration.maxTicksWithoutSuppliesOrJobSite();
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {

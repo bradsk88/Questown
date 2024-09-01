@@ -1,6 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
+import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
@@ -213,6 +216,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 if (WorkSeekerJob.isSeekingWork(menu.jobId)) {
                     cat = "work_seeker";
                 }
+                if (
+                        DinerNoTableWork.isDining(menu.jobId) ||
+                                DinerWork.isDining(menu.jobId) ||
+                                DinerRawFoodWork.isDining(menu.jobId)
+                ) {
+                    cat = "diner";
+                }
 
                 TranslatableComponent component = new TranslatableComponent(
                         String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
@@ -250,10 +260,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
+    public boolean mouseClicked(
+            double mouseX,
+            double mouseY,
+            int p_97750_
+    ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.tabs.mouseClicked(x, y ,mouseX, mouseY);
+        this.tabs.mouseClicked(x, y, mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

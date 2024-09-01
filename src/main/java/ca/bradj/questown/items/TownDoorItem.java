@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
@@ -38,7 +39,7 @@ public class TownDoorItem extends Item {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
             parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
         }
-        if (!Config.INFINITE_TOWN_DOORS.get()) {
+        if (!Compat.configGet(Config.INFINITE_TOWN_DOORS).get()) {
             ctx.getItemInHand().shrink(1);
         }
         return interactionResult;

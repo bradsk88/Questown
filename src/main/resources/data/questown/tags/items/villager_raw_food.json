@@ -1,0 +1,16 @@
+{
+  "replace": false,
+  "values": [
+    "#forge:seeds",
+    "minecraft:salmon",
+    "minecraft:rabbit",
+    "minecraft:porkchop",
+    "minecraft:mutton",
+    "minecraft:cod",
+    "minecraft:chicken",
+    "minecraft:beef",
+    "minecraft:potato",
+    "minecraft:brown_mushroom",
+    "minecraft:red_mushroom"
+  ]
+}

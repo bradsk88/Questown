@@ -13,6 +13,7 @@ public class TagsInit {
     public static class Items {
 
         public static final TagKey<Item> VILLAGER_FOOD = createTag("villager_food");
+        public static final TagKey<Item> VILLAGER_RAW_FOOD = createTag("villager_raw_food");
         public static final TagKey<Item> AXES = createTag("axes");
         public static final TagKey<Item> PICKAXES = createTag("pickaxes");
         public static final TagKey<Item> SHOVELS = createTag("shovels");

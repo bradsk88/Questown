@@ -314,7 +314,12 @@ public class RealtimeWorldInteraction extends
         return PreExtractHook.run(didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
                     return in;
-                }, position, Util.orNull(workToUndo, v -> v.item().get().get()),
+                },
+                (in, up) -> {
+                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    return in;
+                },
+                position, Util.orNull(workToUndo, v -> v.item().get().get()),
                 () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
         );
     }

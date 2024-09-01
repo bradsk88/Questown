@@ -2,6 +2,7 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -36,7 +37,7 @@ public class TownCycle {
             Iterable<Position> registeredDoors
     ) {
         ImmutableCollection<Position> foundDoors = ImmutableList.of();
-        if (scanAroundPosition != null && Config.SCAN_FOR_DOORS.get()) {
+        if (scanAroundPosition != null && Compat.configGet(Config.SCAN_FOR_DOORS).get()) {
             foundDoors = findDoors(checker, scanAroundPosition);
             // TODO: Register these doors?
         }
@@ -59,7 +60,7 @@ public class TownCycle {
                     }
                     return blocks.IsDoor(dp);
                 },
-                Config.DOOR_SEARCH_RADIUS.get()
+                Compat.configGet(Config.DOOR_SEARCH_RADIUS).get()
         );
         return ImmutableList.copyOf(doors);
     }
@@ -70,7 +71,7 @@ public class TownCycle {
     ) {
         // TODO: Move to RoomRecipes?
 
-        int radius = Config.CAMPFIRE_SEARCH_RADIUS.get();
+        int radius = Compat.configGet(Config.CAMPFIRE_SEARCH_RADIUS).get();
         for(int z = -radius; z < radius; ++z) {
             for(int x = -radius; x < radius; ++x) {
                 BlockPos cfPos = pos.offset(x, 0, z);

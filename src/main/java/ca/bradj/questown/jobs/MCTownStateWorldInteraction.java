@@ -30,7 +30,10 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -217,10 +220,13 @@ public class MCTownStateWorldInteraction extends
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(town, rules, inputs.level(), (ctx, i, s) -> {
-            Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
-            return tryGiveItems(in, ImmutableList.of(i), position);
-        }, position, insertedItem, () -> {
-        });
+                    Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
+                    return tryGiveItems(in, ImmutableList.of(i), position);
+                },
+                (ctx, up) -> ctx.withHungerFilledBy(inputs.uuid, up),
+                position, insertedItem, () -> {
+                }
+        );
     }
 
     @Override

@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -158,7 +159,7 @@ public class Jobs {
             MCHeldItem is,
             boolean nullifyExcess
     ) {
-        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+        for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
             if (is.isEmpty()) {
                 break;
             }

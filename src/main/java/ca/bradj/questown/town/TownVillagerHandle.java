@@ -297,7 +297,12 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void fillHunger(UUID uuid) {
         // TODO: Get max fullness from villager
-        fullness.put(uuid, Config.BASE_FULLNESS.get());
+        fillHunger(uuid, 1.0f);
+    }
+
+    @Override
+    public void fillHunger(UUID uuid, float percent) {
+        fullness.put(uuid, (int) (percent * Config.BASE_FULLNESS.get()));
     }
 
     @Override
@@ -405,6 +410,10 @@ public class TownVillagerHandle implements VillagerHolder {
             fillHunger(uuid);
             return;
         }
+        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER_HALF.equals(effect)) {
+            fillHunger(uuid, 0.5f);
+            return;
+        }
         moods.tryApplyEffect(effect, expireOnTick, uuid);
     }
 
@@ -441,7 +450,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public void recallVillagers() {
         final BlockPos visitorJoinPos = town.getUnsafe().getBlockPos();
         forEach(v -> {
-            QT.FLAG_LOGGER.debug("Moving {} to {} and healing", v, visitorJoinPos);
+            QT.FLAG_LOGGER.debug("Moving {} to {} and hungerUpdater", v, visitorJoinPos);
             v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
             v.setHealth(v.getMaxHealth());
         });

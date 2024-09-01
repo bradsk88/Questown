@@ -61,5 +61,10 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation(SpecialRules.CLEAR_POSE),
                 new ClearPoseSpecialRule()
         );
+        // See description in SpecialRules
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.HUNGER_FILL_HALF),
+                new FillHungerSpecialRule(0.5f)
+        );
     }
 }

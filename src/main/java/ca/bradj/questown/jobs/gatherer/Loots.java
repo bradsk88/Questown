@@ -6,6 +6,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -134,7 +135,7 @@ public class Loots {
 
         ArrayList<ItemStack> rItems = new ArrayList<>();
         int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
-        for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
+        for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
             if (rItems.size() >= max) {
                 break;
             }

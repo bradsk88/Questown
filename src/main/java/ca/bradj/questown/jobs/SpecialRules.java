@@ -59,4 +59,7 @@ public class SpecialRules {
     // cleared. For example, LIE_ON_WORKSPOT sets the villager to the sleeping
     // pose on top of their workspot.
     public static final String CLEAR_POSE = "clear_pose";
+    // If this rule is active during the extraction stage of a job, the
+    // villager's hunger will be filled up by 50% from its current value.
+    public static final String HUNGER_FILL_HALF = "hunger_fill_half";
 }

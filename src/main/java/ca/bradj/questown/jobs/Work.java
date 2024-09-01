@@ -38,4 +38,12 @@ public record Work(
                 priority
         );
     }
+
+    public Work withNeeds(Function<IStatus<?>, Collection<Ingredient>> needz) {
+        return new Work(
+                id, parentID, icon, jobFunc, snapshotFunc,
+                isJobBlock, baseRoom, initialStatus, results, initialRequest, needz, warper,
+                priority
+        );
+    }
 }

@@ -114,6 +114,8 @@
   "tooltips.villagers.job.smelter.status_2.16": "They will deposit them in storage.",
   "tooltips.villagers.job.work_seeker.status_1.EXTRACTING_PRODUCT": "%s is looking at the job board.",
   "tooltips.villagers.job.work_seeker.status_2.EXTRACTING_PRODUCT": "They are checking for requests.",
+  "tooltips.villagers.job.diner.status_1.NO_SUPPLIES": "%s is looking at for food",
+  "tooltips.villagers.job.diner.status_2.NO_SUPPLIES": "and a place to sit down and eat.",
   "tooltips.items.wand.active": "Right-click on doors to register them with town flag [%s %s %s]",
   "quests.build_a": "Build a %s",
   "quests.upgrade": "%s -> %s",

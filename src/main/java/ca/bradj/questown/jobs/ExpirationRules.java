@@ -50,14 +50,14 @@ public class ExpirationRules {
         return this.maxTicksFallbackFn;
     }
 
-    public long maxTicksWithoutSupplies() {
+    public long maxTicksWithoutSuppliesOrJobSite() {
         if (this.realizedSupplyTicks == null) {
             this.realizedSupplyTicks = this.maxTicksWithoutSupplies.get();
         }
         return this.realizedSupplyTicks;
     }
 
-    public long maxInitialTicksWithoutSupplies() {
+    public long maxInitialTicksWithoutSuppliesOrJobSite() {
         if (this.realizedInitTicks == null) {
             this.realizedInitTicks = this.maxInitialTicksWithoutSupplies.get();
         }

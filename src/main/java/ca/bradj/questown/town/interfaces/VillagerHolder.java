@@ -30,13 +30,25 @@ public interface VillagerHolder {
 
     void fillHunger(UUID uuid);
 
+    void fillHunger(
+            UUID uuid,
+            float amount
+    );
+
     void makeAngry(UUID uuid);
 
     boolean isDining(UUID uuid);
 
-    void applyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid);
+    void applyEffect(
+            ResourceLocation effect,
+            Long expireOnTick,
+            UUID uuid
+    );
 
-    int getAffectedTime(UUID uuid, Integer timeToAugment);
+    int getAffectedTime(
+            UUID uuid,
+            Integer timeToAugment
+    );
 
     int getWorkSpeed(UUID uuid);
 
@@ -44,8 +56,16 @@ public interface VillagerHolder {
 
     Collection<JobID> getJobs();
 
-    void changeJobForVillager(UUID villagerUUID, JobID newJob, boolean announce);
-    void changeToNextJobForVillager(UUID villagerUUID, JobID currentJob);
+    void changeJobForVillager(
+            UUID villagerUUID,
+            JobID newJob,
+            boolean announce
+    );
+
+    void changeToNextJobForVillager(
+            UUID villagerUUID,
+            JobID currentJob
+    );
 
     boolean canDine(UUID uuid);
 
@@ -59,7 +79,10 @@ public interface VillagerHolder {
 
     int getDamageTicksLeft(UUID uuid);
 
-    void requestPose(UUID uuid, PoseInPlace pose);
+    void requestPose(
+            UUID uuid,
+            PoseInPlace pose
+    );
 
     Optional<PoseInPlace> getRequestedPose(UUID uuid);
 

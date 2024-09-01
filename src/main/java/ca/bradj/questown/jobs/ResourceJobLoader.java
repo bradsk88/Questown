@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -90,7 +91,7 @@ public class ResourceJobLoader {
                                 "Failed to load work {} using version {}",
                                 id, optional(object, "version", JsonElement::getAsInt), e
                         );
-                        if (Config.CRASH_ON_INVALID_JOBS.get()) {
+                        if (Compat.configGet(Config.CRASH_ON_INVALID_JOBS).get()) {
                             throw e;
                         }
                     }

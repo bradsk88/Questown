@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, BlockPos, MCTownState> {
 
@@ -52,5 +53,13 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
 
     public ImmutableList<MCHeldItem> knowledge() {
         return ImmutableList.copyOf(knowledge);
+    }
+
+    public MCTownState withHungerFilledBy(
+            UUID uuid,
+            Float up
+    ) {
+        // FIXME: Implement this
+        return unchanged();
     }
 }

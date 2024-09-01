@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -49,7 +50,7 @@ public final class TownFlagSubBlocks {
 
         ImmutableMap.Builder<BlockPos, Integer> twoc = ImmutableMap.builder();
         ticksWithoutChild.forEach((bp, v) -> {
-            if (v > Config.FLAG_SUB_BLOCK_REMOVED_TICKS.get()) {
+            if (v > Compat.configGet(Config.FLAG_SUB_BLOCK_REMOVED_TICKS).get()) {
                 dropDrops(sl, bp, dropOnOrphaned.get(bp).apply(flagPos));
                 ticksWithoutParent.remove(bp);
                 return;
@@ -74,7 +75,7 @@ public final class TownFlagSubBlocks {
             return;
         }
         ticksWithoutParent.put(pos, twop + 1);
-        if (twop >= Config.FLAG_SUB_BLOCK_RETENTION_TICKS.get()) {
+        if (twop >= Compat.configGet(Config.FLAG_SUB_BLOCK_RETENTION_TICKS).get()) {
             QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {}", pos);
             sl.removeBlock(pos, true);
             dropDrops(sl, pos, dropOnOrphaned.get(pos).apply(flagPos));
@@ -106,7 +107,7 @@ public final class TownFlagSubBlocks {
             return true;
         }
         Integer newVal = this.pendingTicks.compute(pop, TownFlagSubBlocks::increment);
-        if (newVal > Config.FLAG_SUB_BLOCK_DETECTION_TICKS.get()) {
+        if (newVal > Compat.configGet(Config.FLAG_SUB_BLOCK_DETECTION_TICKS).get()) {
             throw new IllegalStateException("Could not register sub block because wrong entity type: " + e);
         }
         return false;

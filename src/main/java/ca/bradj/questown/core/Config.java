@@ -214,7 +214,7 @@ public class Config {
                 "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
                         "for eating uncomfortably."
-        ).defineInRange("MaxTicksWithoutDiningTable", 2000L, 1L, 24000L);
+        ).defineInRange("MaxTicksWithoutDiningTableV2", 200L, 1L, 24000L);
         DAMAGE_TICKS = BUILDER.comment(
                 "The number of ticks that it will take for one point of damage to heal when no effects are present"
         ).defineInRange("DamageTicks", 1000L, 1L, 24000L);

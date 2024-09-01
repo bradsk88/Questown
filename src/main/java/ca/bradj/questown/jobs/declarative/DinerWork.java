@@ -94,7 +94,7 @@ public class DinerWork {
                         Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )
-        );
+        ).withNeeds(s -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
     }
 
     public static JobID getIdForRoot(String rootId) {
