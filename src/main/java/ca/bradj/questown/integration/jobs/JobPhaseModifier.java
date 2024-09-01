@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class JobPhaseModifier {
 
-    JobPhaseModifier NO_OP = new JobPhaseModifier() {
+    public static JobPhaseModifier NO_OP = new JobPhaseModifier() {
         @Override
         public <X> @Nullable X beforeExtract(
                 X input,

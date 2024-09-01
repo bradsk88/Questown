@@ -17,9 +17,9 @@ public class WorkSpotFromHeldItemSpecialRule extends
     @Override
     public void beforeTick(BeforeTickEvent bxEvent) {
         super.beforeTick(bxEvent);
-        @Nullable MCRoom room = new MCRoom(new Position(0, 0), ImmutableList.of(InclusiveSpaces.from(0, 0).to(1, 1)), 1);
+        @Nullable MCRoom room = new MCRoom(new Position(-538, -525), ImmutableList.of(InclusiveSpaces.from(-538, -526).to(-536, -524)), 63);
 //        for (MCHeldItem i : bxEvent.heldItems()) {
-        // TODO: Get room from item
+        // TODO[ASAP]: Get room from item
 //        }
 
         bxEvent.replaceRoomCheck().accept(before -> () -> {

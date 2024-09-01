@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "id": "organizer/learn",
+  "id": "organizer/fetch",
   "priority": "4000",
-  "parent": null,
+  "parent": "organizer/learn",
   "icon": "minecraft:book",
   "initial_request": null,
   "result": {
@@ -14,7 +14,8 @@
   "room": "questown:store_room",
   "work_states": [
     {
-      "tools": "minecraft:paper"
+      "tools": "minecraft:paper",
+      "work": 50
     }
   ],
   "cooldown_ticks": 25,

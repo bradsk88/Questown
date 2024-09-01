@@ -1,33 +1,43 @@
 package ca.bradj.questown.jobs.special;
 
-import ca.bradj.questown.integration.jobs.BeforeTickEvent;
+import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
-import ca.bradj.roomrecipes.serialization.MCRoom;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.logic.PredicateCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Collection;
 
 public class IngredientsFromHeldItemSpecialRule extends
         JobPhaseModifier {
 
     @Override
-    public void beforeTick(BeforeTickEvent bxEvent) {
-        super.beforeTick(bxEvent);
-        @Nullable MCRoom room = new MCRoom(new Position(0, 0), ImmutableList.of(InclusiveSpaces.from(0, 0).to(1, 1)), 1);
-//        for (MCHeldItem i : bxEvent.heldItems()) {
-        // TODO: Get room from item
-//        }
+    public void beforeInit(BeforeInitEvent bxEvent) {
+        super.beforeInit(bxEvent);
+        bxEvent.replaceIngredients().accept(before -> new PredicateCollection<MCHeldItem>() {
+            @Override
+            public boolean isEmpty() {
+                @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
+                if (ing == null) {
+                    return before.isEmpty();
+                }
+                return ing.isEmpty();
+            }
 
-        bxEvent.replaceRoomCheck().accept(before -> () -> {
-            ImmutableMap.Builder<Integer, Collection<MCRoom>> b = ImmutableMap.builder();
-            bxEvent.states().forEach(state -> {
-                b.put(state, ImmutableList.of(room));
-            });
-            return b.build();
+            @Override
+            public boolean test(MCHeldItem mcHeldItem) {
+                @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
+                if (ing == null) {
+                    return before.test(mcHeldItem);
+                }
+                return ing.test(mcHeldItem.toItem().toItemStack());
+            }
         });
+    }
+
+    private Ingredient getIngredientFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+        // TODO[ASAP]: Implement this
+        return Ingredient.of(Items.BREAD);
     }
 }

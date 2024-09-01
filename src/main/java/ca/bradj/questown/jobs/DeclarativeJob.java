@@ -129,13 +129,13 @@ public class DeclarativeJob extends
         this.maxState = maxState;
         this.location = location;
         Map<Integer, PredicateCollection<MCHeldItem>> ingr = new HashMap<>(Jobs.unMCHeld3(ingredientsRequiredAtStates));
-        for (int i = 0; i < maxState; i++) {
+        for (int i = 0; i <= maxState; i++) {
             int ii = i;
             ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
             List<String> stageRules = UtilClean.getOrDefaultCollection(specialStatusRules, ss, ImmutableList.of());
-            PreInitHook.run(stageRules, journal::getItems, fn -> ingr.put(fn.apply(ingr.get(ii))));
+            PreInitHook.run(stageRules, journal::getItems, fn -> ingr.put(ii, fn.apply(ingr.get(ii))));
         }
-        this.ingredientsRequiredAtStates = ingr.get();
+        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingr);
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = Jobs.unMCHeld3(toolsRequiredAtStates);
         this.workRequiredAtStates = workRequiredAtStates;
@@ -229,9 +229,11 @@ public class DeclarativeJob extends
 
         VisitorMobEntity vme = (VisitorMobEntity) entity;
         ImmutableList<MCHeldItem> heldItems = vme.getJobJournalSnapshot().items();
-        ImmutableSet<Integer> states = ingredientsRequiredAtStates.keySet();
-
-        PreTickHook.run(specialGlobalRules, heldItems, states, fn -> rniot.set(fn.apply(rniot.get())));
+        ImmutableSet.Builder<Integer> b = ImmutableSet.builder();
+        for (int i = 0; i < maxState; i++) {
+            b.add(i);
+        }
+        PreTickHook.run(specialGlobalRules, heldItems, b.build(), fn -> rniot.set(fn.apply(rniot.get())));
 
         this.roomsNeedingIngredientsOrTools = rniot.get().get();
 

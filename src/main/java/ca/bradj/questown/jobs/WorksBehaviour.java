@@ -82,7 +82,10 @@ public class WorksBehaviour {
     public static Function<TownData, ImmutableSet<MCTownItem>> standardProductionResult(
             Supplier<ItemStack> result
     ) {
-        return (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()));
+        return (t) -> {
+            ItemStack i = result.get();
+            return i == null ? ImmutableSet.of() : ImmutableSet.of(MCTownItem.fromMCItemStack(i));
+        };
     }
 
     public static WorkDescription standardDescription(Supplier<@Nullable ItemStack> result) {

@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -19,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -92,7 +92,10 @@ public class TownPossibleWork {
         }
 
         if (!JobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
-            QT.FLAG_LOGGER.trace("Villager will not do {} because there is not enough time left in the day", j.getId().toNiceString());
+            QT.FLAG_LOGGER.trace(
+                    "Villager will not do {} because there is not enough time left in the day",
+                    j.getId().toNiceString()
+            );
             return 0.0;
         }
 
@@ -131,11 +134,11 @@ public class TownPossibleWork {
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
-            final Ingredient ing = dj.ingredientsRequiredAtStates.get(ii);
+            final PredicateCollection<MCHeldItem> ing = dj.ingredientsRequiredAtStates.get(ii);
             if (ing != null) {
                 townHasIngredient = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> ingCont = t.findMatchingContainer(
-                        item -> ing.test(item.toItemStack())
+                        v -> ing.test(MCHeldItem.fromTown(v))
                 );
                 if (ingCont != null) {
                     townHasIngredient = true;
@@ -143,11 +146,11 @@ public class TownPossibleWork {
             }
 
             boolean townHasTool = true;
-            Ingredient tool = dj.toolsRequiredAtStates.get(ii);
+            final PredicateCollection<MCHeldItem> tool = dj.toolsRequiredAtStates.get(ii);
             if (tool != null) {
                 townHasTool = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(
-                        item -> tool.test(item.toItemStack())
+                        v -> tool.test(MCHeldItem.fromTown(v))
                 );
                 if (toolCont != null) {
                     townHasTool = true;

@@ -110,10 +110,18 @@ public class ResourceJobLoader {
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
             }
-            Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
-            if (initReq == null) {
-                throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
-                                                                                                   .getAsString());
+            ResourceLocation initialRequest = optional(
+                    object,
+                    "initial_request",
+                    el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
+            );
+            Item initReq = null;
+            if (initialRequest != null) {
+                initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
+                if (initReq == null) {
+                    throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
+                                                                                                       .getAsString());
+                }
             }
             BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get(
                     "block").getAsString());

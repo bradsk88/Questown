@@ -2,7 +2,7 @@
   "name": "7: Supplies",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
-  "advancement": "questown:first_job_board",
+  "advancement": "questown:first_job_request",
   "pages": [
     {
       "type": "patchouli:text",

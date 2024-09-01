@@ -9,7 +9,7 @@ public class SwitchToOrganizerFetcheSpecialRule extends
 
     @Override
     public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
-        event.requestJobChange().accept(new JobID("organizer", "fetcher"));
+        event.requestJobChange().accept(new JobID("organizer", "fetch"));
         return null;
     }
 }
