@@ -34,9 +34,9 @@ public class JobsClean {
     @NotNull
     static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
-            ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
             Function<Integer, Boolean> anyIngredientsRequiredAtStates,
-            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates,
+            ImmutableMap<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
             Function<Integer, Boolean> anyToolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates
     ) {

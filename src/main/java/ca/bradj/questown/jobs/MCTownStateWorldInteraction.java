@@ -191,6 +191,8 @@ public class MCTownStateWorldInteraction extends
             WorkSpot<Integer, BlockPos> position
     ) {
         PreStateChangeHook.run(rules, (pose) -> {
+        }, (job) -> {
+            // TODO[Warp]: Set Job
         });
     }
 

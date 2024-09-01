@@ -1,9 +1,6 @@
 package ca.bradj.questown.jobs.special;
 
-import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
-import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
-import ca.bradj.questown.integration.jobs.BeforeMoveToNextStateEvent;
-import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
-public class TillWorkspotSpecialRule implements
+public class TillWorkspotSpecialRule extends
         JobPhaseModifier {
     @Override
     public <X> @Nullable X beforeExtract(
@@ -43,6 +40,11 @@ public class TillWorkspotSpecialRule implements
     @Override
     public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
         return null;
+    }
+
+    @Override
+    public void beforeTick(BeforeTickEvent bxEvent) {
+
     }
 
 

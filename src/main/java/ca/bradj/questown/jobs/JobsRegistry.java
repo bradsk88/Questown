@@ -217,15 +217,21 @@ public class JobsRegistry {
 
         Supplier<Work> w = Works.get(p);
         if (w == null) {
-            QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
+            QT.JOB_LOGGER.error("[Satisfaction check] No recognized job for ID: {}", p);
             return false;
         }
-        for (MCTownItem r : w.get().results().apply(town)) {
+
+        Work work = w.get();
+        if (work.initialRequest() == null) {
+            return true;
+        }
+
+        for (MCTownItem r : work.results().apply(town)) {
             if (requestedResult.test(r.toItemStack())) {
                 return true;
             }
         }
-        return requestedResult.test(w.get().initialRequest());
+        return requestedResult.test(work.initialRequest());
     }
 
     public static Function<IStatus<?>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -257,7 +263,7 @@ public class JobsRegistry {
         }
         Supplier<Work> w = Works.get(v);
         if (w == null) {
-            QT.JOB_LOGGER.error("No recognized job for ID: {}", v);
+            QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
         return w.get().initialRequest();
@@ -266,9 +272,12 @@ public class JobsRegistry {
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
         List<Ingredient> list = Works.values().stream()
                                      .map(v -> {
+                                         Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-                                         v.get().results().apply(t).forEach(z -> b.add(z.toItemStack()));
-                                         b.add(v.get().initialRequest());
+                                         work.results().apply(t).forEach(z -> b.add(z.toItemStack()));
+                                         if (work.initialRequest() != null) {
+                                             b.add(work.initialRequest());
+                                         }
                                          return b.build();
                                      })
                                      .flatMap(Collection::stream)

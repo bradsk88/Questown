@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "organizer/learn",
+  "priority": "4000",
+  "parent": null,
+  "icon": "minecraft:book",
+  "initial_request": null,
+  "result": {
+    "type": "item",
+    "item": "minecraft:air",
+    "quantity": 1
+  },
+  "block": "minecraft:chest",
+  "room": "questown:store_room",
+  "work_states": [
+    {
+      "tools": "minecraft:paper"
+    }
+  ],
+  "cooldown_ticks": 25,
+  "special": [
+    {
+      "type": "global",
+      "rules": [
+        "claim_workspot",
+        "workspot_from_held_item"
+      ]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": [
+        "questown:ingredients_from_held_item"
+      ]
+    }
+  ]
+}

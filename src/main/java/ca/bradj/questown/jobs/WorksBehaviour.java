@@ -85,7 +85,7 @@ public class WorksBehaviour {
         return (t) -> ImmutableSet.of(MCTownItem.fromMCItemStack(result.get()));
     }
 
-    public static WorkDescription standardDescription(Supplier<ItemStack> result) {
+    public static WorkDescription standardDescription(Supplier<@Nullable ItemStack> result) {
         return new WorkDescription(
                 WorksBehaviour.standardProductionResult(result),
                 result.get()
@@ -95,7 +95,7 @@ public class WorksBehaviour {
     public static WorkDescription noResultDescription() {
         return new WorkDescription(
                 (td) -> ImmutableSet.of(MCTownItem.Air()),
-                Items.AIR.getDefaultInstance()
+                null
         );
     }
 

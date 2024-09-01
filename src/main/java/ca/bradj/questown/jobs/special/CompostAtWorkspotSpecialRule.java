@@ -2,10 +2,7 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
-import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
-import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
-import ca.bradj.questown.integration.jobs.BeforeMoveToNextStateEvent;
-import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
@@ -18,7 +15,7 @@ import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-public class CompostAtWorkspotSpecialRule implements
+public class CompostAtWorkspotSpecialRule extends
         JobPhaseModifier {
     @Override
     public <X> @Nullable X beforeExtract(
@@ -67,5 +64,10 @@ public class CompostAtWorkspotSpecialRule implements
     @Override
     public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
         return null;
+    }
+
+    @Override
+    public void beforeTick(BeforeTickEvent bxEvent) {
+
     }
 }

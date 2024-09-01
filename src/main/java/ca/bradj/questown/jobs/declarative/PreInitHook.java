@@ -1,28 +1,32 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.SpecialRulesRegistry;
-import ca.bradj.questown.integration.jobs.BeforeMoveToNextStateEvent;
+import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.logic.PredicateCollection;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.world.entity.Pose;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
-public class PreStateChangeHook {
+public class PreInitHook {
 
     public static void run(
             Collection<String> rules,
-            Consumer<Pose> requestPose,
-            Consumer<JobID> requestJobChange
+            Supplier<ImmutableList<MCHeldItem>> heldItems,
+            Consumer<Function<PredicateCollection<MCHeldItem>, PredicateCollection<MCHeldItem>>> ingrReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeMoveToNextStateEvent bxEvent = new BeforeMoveToNextStateEvent(requestPose, requestJobChange);
+        BeforeInitEvent bxEvent = new BeforeInitEvent(heldItems, ingrReplacer);
         processMulti(false, appliers, (o, a) -> {
-            a.beforeMoveToNextState(bxEvent);
+            a.beforeInit(bxEvent);
             return true;
         });
     }

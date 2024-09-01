@@ -16,7 +16,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class UseLastInsertedItemOnBlockSpecialRule implements
+public class UseLastInsertedItemOnBlockSpecialRule extends
         JobPhaseModifier {
     @Override
     public <X> X beforeExtract(
@@ -39,19 +39,6 @@ public class UseLastInsertedItemOnBlockSpecialRule implements
             String msg = "Failed to use item {} on block at {}";
             QT.JOB_LOGGER.error(msg, item, groundPos);
         }
-        return null;
-    }
-
-    @Override
-    public <CONTEXT> @Nullable CONTEXT afterInsertItem(
-            CONTEXT ctxInput,
-            AfterInsertItemEvent event
-    ) {
-        return null;
-    }
-
-    @Override
-    public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
         return null;
     }
 }

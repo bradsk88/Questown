@@ -26,7 +26,7 @@ public record Work(
         ResourceLocation baseRoom,
         IStatus<?> initialStatus,
         Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
-        ItemStack initialRequest,
+        @Nullable ItemStack initialRequest,
         Function<IStatus<?>, Collection<Ingredient>> needs,
         Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
         int priority

@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.PreTickHook;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Util;
@@ -37,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -63,8 +65,8 @@ public abstract class ProductionJob<
     private final ArrayList<DataSlot> locks = new ArrayList<>();
     protected final Container inventory;
     protected final JOURNAL journal;
-    private final IProductionStatusFactory<STATUS> statusFactory;
-    private final Supplier<Claim> claimSupplier;
+    protected final IProductionStatusFactory<STATUS> statusFactory;
+    protected final Supplier<Claim> claimSupplier;
     private final WorkLocation location;
     private ContainerTarget<MCContainer, MCTownItem> successTarget;
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
@@ -76,7 +78,7 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
 
     // FIXME: Stop using this - use a cached supplier instead
-    private Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
+    protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
@@ -349,22 +351,6 @@ public abstract class ProductionJob<
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
     );
-
-    @Override
-    public void tick(
-            TownInterface town,
-            LivingEntity entity,
-            Direction facingPos
-    ) {
-        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
-        Supplier<Map<Integer, Collection<MCRoom>>> rniot = () -> roomsNeedingIngredientsOrTools(
-                town, work::getJobBlockState, (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
-        );
-
-        this.roomsNeedingIngredientsOrTools = rniot.get();
-
-        this.tick(town, work, entity, facingPos, rniot, statusFactory);
-    }
 
     protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
         WorkStatusHandle<BlockPos, MCHeldItem> work;

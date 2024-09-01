@@ -66,5 +66,19 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation(SpecialRules.HUNGER_FILL_HALF),
                 new FillHungerSpecialRule(0.5f)
         );
+
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("switch_to_organizer_fetcher"),
+                new SwitchToOrganizerFetcheSpecialRule()
+        );
+
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("workspot_from_held_item"),
+                new WorkSpotFromHeldItemSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("ingredients_from_held_item"),
+                new IngredientsFromHeldItemSpecialRule()
+        );
     }
 }

@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
@@ -281,6 +282,26 @@ public class Jobs {
             ImmutableMap<Integer, Ingredient> input
     ) {
         return unFn(unMCHeld(input));
+    }
+    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem>> unMCHeld3(
+            ImmutableMap<Integer, Ingredient> input
+    ) {
+
+        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach(
+                (k, v) -> b.put(k, new PredicateCollection<>() {
+                    @Override
+                    public boolean isEmpty() {
+                        return v.isEmpty();
+                    }
+
+                    @Override
+                    public boolean test(MCHeldItem item) {
+                        return v.test(item.get().toItemStack());
+                    }
+                })
+        );
+        return b.build();
     }
 
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(

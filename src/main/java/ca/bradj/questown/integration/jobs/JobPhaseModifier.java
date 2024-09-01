@@ -2,7 +2,7 @@ package ca.bradj.questown.integration.jobs;
 
 import org.jetbrains.annotations.Nullable;
 
-public interface JobPhaseModifier {
+public class JobPhaseModifier {
 
     JobPhaseModifier NO_OP = new JobPhaseModifier() {
         @Override
@@ -27,24 +27,42 @@ public interface JobPhaseModifier {
         ) {
             return null;
         }
+
+        @Override
+        public void beforeTick(BeforeTickEvent bxEvent) {
+
+        }
     };
 
     // Return null if nothing happens.
     // Return either a modified input (via functions available on event) or the
     // original input if something happened.
-    <CONTEXT> @Nullable CONTEXT beforeExtract(
+    public <CONTEXT> @Nullable CONTEXT beforeExtract(
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
-    );
+    ) {
+        return null;
+    }
 
-    <CONTEXT> @Nullable CONTEXT afterInsertItem(
+    public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
             AfterInsertItemEvent event
-    );
+    ) {
+        return null;
+    }
 
     // TOOD: Potentially phase out. Was used for farmer_till but changed that to
     // run beforeExtract for better state management.
-    Void beforeMoveToNextState(
+    public Void beforeMoveToNextState(
             BeforeMoveToNextStateEvent event
-    );
+    ) {
+        return null;
+    }
+
+    public void beforeTick(BeforeTickEvent bxEvent) {
+    }
+
+    public void beforeInit(BeforeInitEvent bxEvent) {
+
+    }
 }

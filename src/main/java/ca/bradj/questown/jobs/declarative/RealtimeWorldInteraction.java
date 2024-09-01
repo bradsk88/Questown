@@ -347,7 +347,8 @@ public class RealtimeWorldInteraction extends
                 pose -> inputs.town().getVillagerHandle().requestPose(inputs.entity().getUUID(), new PoseInPlace(
                         pose,
                         decideSpot(rules, position)
-                ))
+                )),
+                jobId -> inputs.town().getVillagerHandle().changeJobForVillager(inputs.entity().getUUID(), jobId, false)
         );
     }
 
