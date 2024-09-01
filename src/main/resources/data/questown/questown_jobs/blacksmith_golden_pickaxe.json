@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "crafter/golden_pickaxe",
+  "unlocks_title": "blacksmith",
+  "priority": "3000",
+  "parent": "crafter/golden_hoe",
+  "icon": "minecraft:golden_pickaxe",
+  "initial_request": "minecraft:golden_pickaxe",
+  "result": {
+    "type": "item",
+    "item": "minecraft:golden_pickaxe",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "minecraft:golden_ingot",
+      "quantity": 2
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
+}

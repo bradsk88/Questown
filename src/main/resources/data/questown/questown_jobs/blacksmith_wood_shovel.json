@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "crafter/wooden_shovel",
+  "unlocks_title": "blacksmith",
+  "priority": "2999",
+  "parent": "crafter/stick",
+  "icon": "minecraft:wooden_shovel",
+  "initial_request": "minecraft:wooden_shovel",
+  "result": {
+    "type": "item",
+    "item": "minecraft:wooden_shovel",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "#minecraft:planks",
+      "quantity": 1
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
+}

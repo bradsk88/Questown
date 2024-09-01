@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "crafter/diamond_hoe",
+  "unlocks_title": "blacksmith",
+  "priority": "2999",
+  "parent": "crafter/iron_hoe",
+  "icon": "minecraft:diamond_hoe",
+  "initial_request": "minecraft:diamond_hoe",
+  "result": {
+    "type": "item",
+    "item": "minecraft:diamond_hoe",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "minecraft:diamond",
+      "quantity": 1
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
+}

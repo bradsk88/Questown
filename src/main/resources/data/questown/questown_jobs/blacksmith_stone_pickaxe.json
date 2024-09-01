@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "crafter/stone_pickaxe",
+  "unlocks_title": "blacksmith",
+  "priority": "3000",
+  "parent": "crafter/stone_hoe",
+  "icon": "minecraft:stone_pickaxe",
+  "initial_request": "minecraft:stone_pickaxe",
+  "result": {
+    "type": "item",
+    "item": "minecraft:stone_pickaxe",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "minecraft:cobblestone",
+      "quantity": 2
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.axe.scrape",
+    "chance": "100",
+    "duration": 5
+  }
+}
