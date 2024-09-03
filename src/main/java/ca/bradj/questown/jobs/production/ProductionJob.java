@@ -72,9 +72,6 @@ public abstract class ProductionJob<
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
-    // TODO: Support more recipes
-    protected final RecipeProvider recipe;
-
     protected final UUID ownerUUID;
 
     // FIXME: Stop using this - use a cached supplier instead
@@ -96,7 +93,7 @@ public abstract class ProductionJob<
                     town.getRoomHandle(),
                     getWorkStatusHandle(town)::getJobBlockState,
                     bp -> this.isValidWalkTarget(town, bp),
-                    bp -> location.isJobBlock().test(sl::getBlockState, bp),
+                    bp -> isJobBlock(sl, bp),
                     sl.getRandom()
             );
             this.jobSite = js.value();
@@ -110,6 +107,11 @@ public abstract class ProductionJob<
         }
         return jobSite;
     }
+
+    protected abstract boolean isJobBlock(
+            ServerLevel sl,
+            BlockPos bp
+    );
 
     protected boolean isValidWalkTarget(
             TownInterface town,
@@ -138,7 +140,6 @@ public abstract class ProductionJob<
     public ProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
@@ -157,7 +158,6 @@ public abstract class ProductionJob<
         this.ownerUUID = ownerUUID;
         this.specialGlobalRules = specialGlobalRules;
         this.marker = logMarker;
-        this.recipe = recipe;
         this.inventory = sc;
         sc.addListener(this);
 
@@ -268,8 +268,10 @@ public abstract class ProductionJob<
             return ImmutableList.of();
         }
 
-        return recipe.getRecipe(first.get());
+        return getRecipe(first.get());
     }
+
+    protected abstract ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(Integer integer);
 
     @Override
     public BlockPos getLook() {
@@ -513,7 +515,7 @@ public abstract class ProductionJob<
                                                                           .collect(Collectors.toSet());
                 ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
                         statesToFeed.stream()
-                                    .flatMap(v -> recipe.getRecipe(v)
+                                    .flatMap(v -> getRecipe(v)
                                                         .stream())
                                     .toList()
                 );

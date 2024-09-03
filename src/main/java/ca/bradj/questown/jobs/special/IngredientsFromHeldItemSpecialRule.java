@@ -9,13 +9,26 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 public class IngredientsFromHeldItemSpecialRule extends
         JobPhaseModifier {
+
+    private final boolean isTool;
+
+    public IngredientsFromHeldItemSpecialRule(boolean isTool) {
+        this.isTool = isTool;
+    }
 
     @Override
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
-        bxEvent.replaceIngredients().accept(before -> new PredicateCollection<MCHeldItem>() {
+        Consumer<Function<PredicateCollection<MCHeldItem>, PredicateCollection<MCHeldItem>>> target = bxEvent.replaceIngredients();
+        if (isTool) {
+            target = bxEvent.replaceTools();
+        }
+        target.accept(before -> new PredicateCollection<>() {
             @Override
             public boolean isEmpty() {
                 @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());

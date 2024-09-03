@@ -78,7 +78,11 @@ public final class QuestownSpecialRules {
         );
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("ingredients_from_held_item"),
-                new IngredientsFromHeldItemSpecialRule()
+                new IngredientsFromHeldItemSpecialRule(false)
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("tools_from_held_item"),
+                new IngredientsFromHeldItemSpecialRule(true)
         );
     }
 }

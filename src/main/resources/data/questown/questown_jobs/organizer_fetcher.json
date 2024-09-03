@@ -14,8 +14,14 @@
   "room": "questown:store_room",
   "work_states": [
     {
-      "tools": "minecraft:paper",
+      "tools": "minecraft:paper"
+    },
+    {
       "work": 50
+    },
+    {
+      "comment": "this is only here to increase the max state",
+      "ingredients": "minecraft:diamond"
     }
   ],
   "cooldown_ticks": 25,
@@ -23,15 +29,22 @@
     {
       "type": "global",
       "rules": [
-        "claim_workspot",
-        "workspot_from_held_item"
+        "claim_workspot"
       ]
     },
     {
       "type": "processing_state",
       "state": 1,
       "rules": [
-        "questown:ingredients_from_held_item"
+        "questown:tools_from_held_item"
+      ]
+    },
+    {
+      "type": "processing_state",
+      "state": 2,
+      "rules": [
+        "questown:ingredients_from_held_item",
+        "workspot_from_held_item"
       ]
     }
   ]

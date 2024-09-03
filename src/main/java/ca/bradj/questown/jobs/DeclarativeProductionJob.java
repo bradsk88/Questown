@@ -22,7 +22,6 @@ abstract class DeclarativeProductionJob<
     public DeclarativeProductionJob(
             UUID ownerUUID,
             int inventoryCapacity,
-            RecipeProvider recipe,
             Marker logMarker,
             BiFunction<Integer, SignalSource, JOURNAL> journalInit,
             IProductionStatusFactory<STATUS> sFac,
@@ -34,7 +33,6 @@ abstract class DeclarativeProductionJob<
         super(
                 ownerUUID,
                 inventoryCapacity,
-                recipe,
                 logMarker,
                 journalInit,
                 sFac,

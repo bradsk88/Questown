@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
+import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
@@ -70,6 +71,8 @@ public class DeclarativeJob extends
     private final ExpirationRules expiration;
     private final long totalDuration;
     private final int workInterval;
+    private final BiPredicate<ServerLevel, BlockPos> isJobBlock;
+    private final RecipeProvider recipe;
     private Signals signal;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
@@ -93,9 +96,7 @@ public class DeclarativeJob extends
             @Nullable SoundInfo sound
     ) {
         super(
-                ownerUUID, inventoryCapacity, buildRecipe(
-                        ingredientsRequiredAtStates, toolsRequiredAtStates
-                ), marker,
+                ownerUUID, inventoryCapacity, marker,
                 DeclarativeJobs.journalInitializer(jobId),
                 STATUS_FACTORY,
                 specialStatusRules, specialGlobalRules,
@@ -128,13 +129,30 @@ public class DeclarativeJob extends
         );
         this.maxState = maxState;
         this.location = location;
+
         Map<Integer, PredicateCollection<MCHeldItem>> ingr = new HashMap<>(Jobs.unMCHeld3(ingredientsRequiredAtStates));
+        Map<Integer, PredicateCollection<MCHeldItem>> tool = new HashMap<>(Jobs.unMCHeld3(toolsRequiredAtStates));
+        AtomicReference<BiPredicate<ServerLevel, BlockPos>> ijb = new AtomicReference<>(
+                (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp)
+        );
+
         for (int i = 0; i <= maxState; i++) {
             int ii = i;
             ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
             List<String> stageRules = UtilClean.getOrDefaultCollection(specialStatusRules, ss, ImmutableList.of());
-            PreInitHook.run(stageRules, journal::getItems, fn -> ingr.put(ii, fn.apply(ingr.get(ii))));
+            PreInitHook.run(
+                    stageRules,
+                    journal::getItems,
+                    fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
+                    fn -> tool.put(ii, fn.apply(tool.get(ii))),
+                    fn -> ijb.set(ijb.get())
+            );
         }
+        // TODO: Add jobBlock param to .run(...)
+        PreInitHook.run(specialGlobalRules, journal::getItems, fn -> {
+        }, fn -> {}, fn -> ijb.set(fn.apply(ijb.get())));
+        this.isJobBlock = ijb.get();
+
         this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingr);
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
         this.toolsRequiredAtStates = Jobs.unMCHeld3(toolsRequiredAtStates);
@@ -144,6 +162,7 @@ public class DeclarativeJob extends
         this.totalDuration = timeRequiredAtStates.values().stream().reduce(Integer::sum).orElse(0);
         this.logic = new JobLogic<>();
         this.workInterval = workInterval;
+        this.recipe = buildRecipe(ingredientsRequiredAtStates, toolsRequiredAtStates);
     }
 
     @NotNull
@@ -234,6 +253,8 @@ public class DeclarativeJob extends
             b.add(i);
         }
         PreTickHook.run(specialGlobalRules, heldItems, b.build(), fn -> rniot.set(fn.apply(rniot.get())));
+        specialRules.forEach((state, rules) ->
+            PreTickHook.run(rules, heldItems, ImmutableSet.of(state.getProductionState(maxState)), fn -> rniot.set(fn.apply(rniot.get()))));
 
         this.roomsNeedingIngredientsOrTools = rniot.get().get();
 
@@ -380,9 +401,17 @@ public class DeclarativeJob extends
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         return Jobs.roomsWithState(
                 town, rooms,
-                (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp),
+                this::isJobBlock,
                 (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
         );
+    }
+
+    @Override
+    protected boolean isJobBlock(
+            ServerLevel sl,
+            BlockPos bp
+    ) {
+        return isJobBlock.test(sl, bp);
     }
 
     private boolean hasInserted(Integer action) {
@@ -423,7 +452,7 @@ public class DeclarativeJob extends
                             getWorkStatusHandle(town)::getJobBlockState,
                             room.room,
                             bp -> isValidWalkTarget(town, bp),
-                            bp -> location.isJobBlock().test(sl::getBlockState, bp),
+                            bp -> isJobBlock(sl, bp),
                             () -> Direction.getRandom(sl.random)
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
@@ -448,7 +477,7 @@ public class DeclarativeJob extends
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
                         bp -> isValidWalkTarget(town, bp),
-                        bp -> location.isJobBlock().test(sl::getBlockState, bp),
+                        bp -> isJobBlock(sl, bp),
                         () -> Direction.getRandom(sl.random)
                 );
             }
@@ -558,6 +587,11 @@ public class DeclarativeJob extends
                 st, recipe::getRecipe, journal.getItems(),
                 (item) -> this.journal.addItem(MCHeldItem.fromTown(item))
         );
+    }
+
+    @Override
+    protected ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(Integer integer) {
+        return recipe.getRecipe(integer);
     }
 
     Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots(
