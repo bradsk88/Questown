@@ -9,8 +9,10 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -82,7 +84,6 @@ public class Jobs {
         double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
         return d < 0.5;
     }
-
 
 
     public static boolean isOnTopOf(
@@ -178,7 +179,7 @@ public class Jobs {
     public static boolean townHasSupplies(
             TownInterface town,
             ItemsHolder<MCHeldItem> journal,
-            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
+            ImmutableList<? extends Predicate<MCTownItem>> recipe
     ) {
         return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(), recipe, journal.getItems(), item
@@ -196,24 +197,24 @@ public class Jobs {
     ) {
         // TODO: Support multiple tiers of job site (i.e. more than one resource location)
         return town.getRoomHandle().getRoomsMatching(id).stream()
-                .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
-                .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                .filter(v -> InclusiveSpaces.contains(
-                        v.room.getSpaces(),
-                        Positions.FromBlockPos(entityBlockPos)
-                ) || v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                )
-                .findFirst()
-                .orElse(null);
+                   .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
+                   .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
+                   .filter(v -> InclusiveSpaces.contains(
+                                   v.room.getSpaces(),
+                                   Positions.FromBlockPos(entityBlockPos)
+                           ) || v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
+                   )
+                   .findFirst()
+                   .orElse(null);
     }
 
     public static boolean hasNonSupplyItems(
             ItemsHolder<MCHeldItem> journal,
-            ImmutableList<JobsClean.TestFn<MCTownItem>> recipe
+            ImmutableList<Predicate<MCTownItem>> recipe
     ) {
         return journal.getItems().stream()
-                .filter(Predicates.not(Item::isEmpty))
-                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .filter(Predicates.not(Item::isEmpty))
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     public static boolean isUnfinishedTimeWorkPresent(
@@ -223,15 +224,15 @@ public class Jobs {
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
         return rooms.stream()
-                .anyMatch(v -> {
-                    for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                        @Nullable Integer apply = ticksSource.apply(e.getKey());
-                        if (apply != null && apply > 0) {
-                            return true;
+                    .anyMatch(v -> {
+                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
+                            @Nullable Integer apply = ticksSource.apply(e.getKey());
+                            if (apply != null && apply > 0) {
+                                return true;
+                            }
                         }
-                    }
-                    return false;
-                });
+                        return false;
+                    });
     }
 
     public static Collection<Integer> getStatesWithUnfinishedWork(
@@ -258,12 +259,27 @@ public class Jobs {
         return ImmutableList.copyOf(b2);
     }
 
-    public static ImmutableMap<Integer, Function<MCTownItem, Boolean>> unMC(
+    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> unMC(
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, ?>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, (MCTownItem item) -> v.test(item.toItemStack()))
+                (k, v) -> b.put(k, PredicateCollection.wrap(
+                        new IPredicateCollection<MCTownItem>() {
+                            @Override
+                            public boolean isEmpty() {
+                                return v.isEmpty();
+                            }
+
+                            @Override
+                            public boolean test(MCTownItem mcTownItem) {
+                                return false;
+                            }
+                        },
+                        (inner) -> v.isEmpty(),
+                        (inner, item) -> v.test(item.toItemStack()),
+                        String.format("Ingredient2Predicate [%s]", v.toJson())
+                ))
         );
         return b.build();
     }
@@ -283,24 +299,13 @@ public class Jobs {
     ) {
         return unFn(unMCHeld(input));
     }
-    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem>> unMCHeld3(
+
+    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> unMCHeld3(
             ImmutableMap<Integer, Ingredient> input
     ) {
 
-        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach(
-                (k, v) -> b.put(k, new PredicateCollection<>() {
-                    @Override
-                    public boolean isEmpty() {
-                        return v.isEmpty();
-                    }
-
-                    @Override
-                    public boolean test(MCHeldItem item) {
-                        return v.test(item.get().toItemStack());
-                    }
-                })
-        );
+        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, ?>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient(v)));
         return b.build();
     }
 
@@ -327,6 +332,13 @@ public class Jobs {
         input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
         return b.build();
     }
+    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unTown(
+            ImmutableMap<Integer, ? extends Predicate<MCTownItem>> input
+    ) {
+        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, z -> v.test(z.get())));
+        return b.build();
+    }
 
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn3(ImmutableMap<Integer, Function<MCTownItem, Boolean>> input) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
@@ -348,19 +360,23 @@ public class Jobs {
             StateCheck check
     ) {
         return rooms.stream()
-                .filter(v -> {
-                    List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream().filter(
-                            z -> blockCheck.test(town.getServerLevel(), z.getKey())
-                    ).toList();
-                    ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
-                    for (Map.Entry<BlockPos, Block> e : blocks) {
-                        if (check.Check(town.getServerLevel(), e.getKey())) {
-                            return true;
+                    .filter(v -> {
+                        List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream()
+                                                                                               .filter(
+                                                                                                       z -> blockCheck.test(
+                                                                                                               town.getServerLevel(),
+                                                                                                               z.getKey()
+                                                                                                       )
+                                                                                               ).toList();
+                        ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
+                        for (Map.Entry<BlockPos, Block> e : blocks) {
+                            if (check.Check(town.getServerLevel(), e.getKey())) {
+                                return true;
+                            }
                         }
-                    }
-                    return false;
-                })
-                .toList();
+                        return false;
+                    })
+                    .toList();
     }
 
     public interface LootDropper<I> {
@@ -408,7 +424,13 @@ public class Jobs {
                 continue;
             }
 
-            QT.JOB_LOGGER.debug("Gatherer {} is putting {} in {} [{}]", ownerUUID, mct.getShortName(), target.getBlockPos(), mct.toShortString());
+            QT.JOB_LOGGER.debug(
+                    "Gatherer {} is putting {} in {} [{}]",
+                    ownerUUID,
+                    mct.getShortName(),
+                    target.getBlockPos(),
+                    mct.toShortString()
+            );
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {

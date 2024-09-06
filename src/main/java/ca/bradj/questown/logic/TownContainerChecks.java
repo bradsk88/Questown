@@ -81,7 +81,7 @@ public class TownContainerChecks {
             Supplier<Set<STATUS>> roomsToGetSuppliesForByState,
             Map<STATUS, Predicate<ITEM>> ingredientsRequiredAtStates,
             Map<STATUS, Integer> ingredientQtyRequiredAtStates,
-            Map<STATUS, PredicateCollection<ITEM>> toolsRequiredAtStates,
+            Map<STATUS, IPredicateCollection<ITEM>> toolsRequiredAtStates,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInTown,
             Function<STATUS, Collection<String>> specialRules,
             Predicate<ITEM> isWorkResult
@@ -102,7 +102,7 @@ public class TownContainerChecks {
             Supplier<Set<STATUS>> roomsToGetSuppliesForByState,
             Map<STATUS, Predicate<ITEM>> ingredientsRequiredAtStates,
             Map<STATUS, Integer> ingredientQtyRequiredAtStates,
-            Map<STATUS, PredicateCollection<ITEM>> toolsRequiredAtStates,
+            Map<STATUS, IPredicateCollection<ITEM>> toolsRequiredAtStates,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInTown,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInInventory,
             Function<STATUS, Collection<String>> specialRules,
@@ -139,7 +139,7 @@ public class TownContainerChecks {
 
     public static <STATUS, ITEM extends Item<ITEM>> boolean townHasTools(
             Set<STATUS> statesWithRooms,
-            Map<STATUS, PredicateCollection<ITEM>> toolsRequiredAtStates,
+            Map<STATUS, IPredicateCollection<ITEM>> toolsRequiredAtStates,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInTown,
             Function<Predicate<ITEM>, Collection<ITEM>> getItemMatchesInInventory,
             Function<STATUS, Collection<String>> specialRules

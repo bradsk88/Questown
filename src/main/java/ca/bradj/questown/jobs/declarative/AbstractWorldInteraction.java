@@ -5,6 +5,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
@@ -33,9 +34,9 @@ public abstract class AbstractWorldInteraction<
 
     private final List<Runnable> jobCompletedListeners = new ArrayList<>();
 
-    protected final ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates;
+    protected final ImmutableMap<Integer, PredicateCollection<INNER_ITEM, ?>> toolsRequiredAtStates;
     protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates;
     private WithReason<@Nullable WorkPosition<POS>> workspot = new WithReason<>(null, "Never set");
 
     private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
@@ -46,11 +47,11 @@ public abstract class AbstractWorldInteraction<
             int villagerIndex,
             int interval,
             int maxState,
-            ImmutableMap<Integer, Function<INNER_ITEM, Boolean>> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            Map<Integer, PredicateCollection<INNER_ITEM, ?>> toolsRequiredAtStates,
+            Map<Integer, Integer> workRequiredAtStates,
+            Map<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates,
+            Map<Integer, Integer> ingredientQuantityRequiredAtStates,
+            Map<Integer, Integer> timeRequiredAtStates,
             Function<EXTRA, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
@@ -63,9 +64,9 @@ public abstract class AbstractWorldInteraction<
         this.villagerIndex = villagerIndex;
         this.interval = interval;
         this.maxState = maxState;
-        this.toolsRequiredAtStates = toolsRequiredAtStates;
-        this.workRequiredAtStates = workRequiredAtStates;
-        this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
+        this.toolsRequiredAtStates = ImmutableMap.copyOf(toolsRequiredAtStates);
+        this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);
+        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingredientsRequiredAtStates);
         this.specialRules = ImmutableMap.copyOf(specialRules);
 
         AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM, TOWN> self = this;
@@ -113,7 +114,7 @@ public abstract class AbstractWorldInteraction<
             }
         };
 
-        this.workWI = new AbstractWorkWI<>(
+        this.workWI = new AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN>(
                 workRequiredAtStates,
                 (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
                 toolsRequiredAtStates,
@@ -123,23 +124,35 @@ public abstract class AbstractWorldInteraction<
             protected TOWN degradeTool(
                     EXTRA extra,
                     @Nullable TOWN tuwn,
-                    Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+                    PredicateCollection<INNER_ITEM, ?> heldItemBooleanFunction
             ) {
                 return self.degradeTool(extra, tuwn, heldItemBooleanFunction); // TODO: Implement generically and test
             }
 
             @Override
-            protected TOWN setJobBlockStateWithTimer(EXTRA extra, POS bp, State bs, int nextStepTime) {
+            protected TOWN setJobBlockStateWithTimer(
+                    EXTRA extra,
+                    POS bp,
+                    State bs,
+                    int nextStepTime
+            ) {
                 return getWorkStatuses(extra).setJobBlockStateWithTimer(bp, bs, nextStepTime);
             }
 
             @Override
-            protected TOWN setJobBlockState(EXTRA extra, POS bp, State bs) {
+            protected TOWN setJobBlockState(
+                    EXTRA extra,
+                    POS bp,
+                    State bs
+            ) {
                 return getWorkStatuses(extra).setJobBlockState(bp, bs);
             }
 
             @Override
-            protected State getJobBlockState(EXTRA extra, POS bp) {
+            protected State getJobBlockState(
+                    EXTRA extra,
+                    POS bp
+            ) {
                 return self.getWorkStatuses(extra).getJobBlockState(bp);
             }
 
@@ -234,7 +247,7 @@ public abstract class AbstractWorldInteraction<
     protected abstract TOWN degradeTool(
             EXTRA extra,
             @Nullable TOWN tuwn,
-            Function<INNER_ITEM, Boolean> heldItemBooleanFunction
+            PredicateCollection<INNER_ITEM, ?> heldItemBooleanFunction
     );
 
     protected abstract boolean canInsertItem(
@@ -271,7 +284,10 @@ public abstract class AbstractWorldInteraction<
         ));
     }
 
-    protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(EXTRA extra, WorkOutput<TOWN, WorkPosition<POS>> v);
+    protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(
+            EXTRA extra,
+            WorkOutput<TOWN, WorkPosition<POS>> v
+    );
 
     protected abstract ArrayList<WorkPosition<POS>> shuffle(
             EXTRA extra,
@@ -317,10 +333,10 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        Function<INNER_ITEM, Boolean> tool = toolsRequiredAtStates.get(action);
+        PredicateCollection<INNER_ITEM, ?> tool = toolsRequiredAtStates.get(action);
         if (tool != null) {
             Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
-            boolean foundTool = items.stream().anyMatch(i -> tool.apply(i.get()));
+            boolean foundTool = items.stream().anyMatch(i -> tool.test(i.get()));
             if (!foundTool) {
                 return vNull;
             }
@@ -328,11 +344,19 @@ public abstract class AbstractWorldInteraction<
 
         TOWN initTown = getTown(extra);
         if (this.ingredientsRequiredAtStates.get(action) != null) {
-            InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()));
+            InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
+                    extra,
+                    getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
+            );
             if (o != null) {
                 TOWN ctx = o.contextAfterInsert();
                 HELD_ITEM item = o.itemBeforeInsert();
-                @Nullable TOWN out = postInsertHook(ctx, extra, getCurWorkedSpot(extra, ctx, workSpot.jobBlock()), item);
+                @Nullable TOWN out = postInsertHook(
+                        ctx,
+                        extra,
+                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
+                        item
+                );
                 if (out == null) {
                     out = ctx;
                 }
@@ -361,7 +385,11 @@ public abstract class AbstractWorldInteraction<
         return new WorkOutput<>(town != null, town != null, town, workSpot);
     }
 
-    protected abstract WorkedSpot<POS> getCurWorkedSpot(EXTRA extra, TOWN stateSource, POS workSpot);
+    protected abstract WorkedSpot<POS> getCurWorkedSpot(
+            EXTRA extra,
+            TOWN stateSource,
+            POS workSpot
+    );
 
     protected abstract Collection<HELD_ITEM> getHeldItems(
             EXTRA extra,
@@ -369,7 +397,7 @@ public abstract class AbstractWorldInteraction<
     );
 
     @Override
-    public Map<Integer, Function<HELD_ITEM, Boolean>> ingredientsRequiredAtStates() {
+    public Map<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates() {
         return ingredientsRequiredAtStates;
     }
 

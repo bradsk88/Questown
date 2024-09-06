@@ -34,9 +34,17 @@
     },
     {
       "type": "processing_state",
+      "state": 0,
+      "rules": [
+        "workspot_from_held_item"
+      ]
+    },
+    {
+      "type": "processing_state",
       "state": 1,
       "rules": [
-        "questown:tools_from_held_item"
+        "questown:tools_from_held_item",
+        "workspot_from_held_item"
       ]
     },
     {

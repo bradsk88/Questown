@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
@@ -112,7 +113,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public interface InsertionRules<ITEM> {
 
 
-        Map<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates();
+        Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates();
 
         Map<Integer, Integer> ingredientQuantityRequiredAtStates();
 

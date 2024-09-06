@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -47,11 +48,11 @@ public class RealtimeWorldInteraction extends
     public RealtimeWorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
             Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
@@ -64,9 +65,9 @@ public class RealtimeWorldInteraction extends
                 // Not used by this implementation
                 interval,
                 maxState,
-                stripMC2(toolsRequiredAtStates),
+                toolsRequiredAtStates,
                 workRequiredAtStates,
-                stripMC(ingredientsRequiredAtStates),
+                ingredientsRequiredAtStates,
                 ingredientQtyRequiredAtStates,
                 timeRequiredAtStates,
                 claimSpots,
@@ -127,9 +128,9 @@ public class RealtimeWorldInteraction extends
     protected Boolean degradeTool(
             MCExtra mcExtra,
             Boolean tuwn,
-            Function<MCTownItem, Boolean> toolCheck
+            PredicateCollection<MCTownItem, ?> toolCheck
     ) {
-        Optional<MCHeldItem> foundTool = journal.getItems().stream().filter(v -> toolCheck.apply(v.get())).findFirst();
+        Optional<MCHeldItem> foundTool = journal.getItems().stream().filter(v -> toolCheck.test(v.get())).findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toItemStack();

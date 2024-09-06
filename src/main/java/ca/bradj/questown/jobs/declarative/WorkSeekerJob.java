@@ -2,8 +2,10 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableMap;
@@ -66,9 +68,9 @@ public class WorkSeekerJob extends DeclarativeJob {
     @Override
     protected @NotNull RealtimeWorldInteraction initWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.WorkedSpot;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -22,7 +23,7 @@ import java.util.function.Function;
 public abstract class AbstractItemWI<
         POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN
         > implements ItemWI<POS, EXTRA, TOWN, ITEM>, AbstractWorkStatusStore.InsertionRules<ITEM> {
-    private final ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates;
+    private final ImmutableMap<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
@@ -32,16 +33,16 @@ public abstract class AbstractItemWI<
 
     public AbstractItemWI(
             int villagerIndex,
-            ImmutableMap<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates,
+            Map<Integer, Integer> ingredientQtyRequiredAtStates,
+            Map<Integer, Integer> workRequiredAtStates,
             BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates,
             Function<EXTRA, Claim> claimSpots
     ) {
         this.villagerIndex = villagerIndex;
-        this.ingredientsRequiredAtStates = ingredientsRequiredAtStates;
-        this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
-        this.workRequiredAtStates = workRequiredAtStates;
+        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingredientsRequiredAtStates);
+        this.ingredientQtyRequiredAtStates = ImmutableMap.copyOf(ingredientQtyRequiredAtStates);
+        this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);
         this.timeRequiredAtStates = timeRequiredAtStates;
         this.claimSpots = claimSpots;
     }
@@ -144,10 +145,10 @@ public abstract class AbstractItemWI<
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
         boolean canDo = false;
-        Function<ITEM, Boolean> ingredient = rules.ingredientsRequiredAtStates()
-                                                  .get(curValue);
+        PredicateCollection<ITEM, ?> ingredient = rules.ingredientsRequiredAtStates()
+                                                       .get(curValue);
         if (ingredient != null) {
-            canDo = ingredient.apply(item);
+            canDo = ingredient.test(item);
         }
         Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
                                    .getOrDefault(curValue, 0);
@@ -217,7 +218,7 @@ public abstract class AbstractItemWI<
     );
 
     @Override
-    public Map<Integer, Function<ITEM, Boolean>> ingredientsRequiredAtStates() {
+    public Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates() {
         return ingredientsRequiredAtStates;
     }
 

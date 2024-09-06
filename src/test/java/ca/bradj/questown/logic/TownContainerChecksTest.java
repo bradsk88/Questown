@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 public class TownContainerChecksTest {
 
@@ -49,7 +48,7 @@ public class TownContainerChecksTest {
     Predicate<TestItem> isFruit = item -> ImmutableList.of(APPLE, ORANGE).stream()
                                                        .anyMatch(v -> v.name.equals(item.name));
 
-    Function<String, PredicateCollection<TestItem>> required = (item) ->  new PredicateCollection<>() {
+    Function<String, IPredicateCollection<TestItem>> required = (item) ->  new IPredicateCollection<>() {
         @Override
         public boolean isEmpty() {
             return false;
@@ -61,7 +60,7 @@ public class TownContainerChecksTest {
         }
     };
 
-    PredicateCollection<TestItem> toolNotRequired = new PredicateCollection<>() {
+    IPredicateCollection<TestItem> toolNotRequired = new IPredicateCollection<>() {
         @Override
         public boolean isEmpty() {
             return true;

@@ -7,9 +7,9 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.PreTickHook;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.TownContainers;
@@ -38,7 +38,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -134,7 +133,7 @@ public abstract class ProductionJob<
     public abstract Signals getSignal();
 
     public interface RecipeProvider {
-        ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(int workState);
+        ImmutableList<PredicateCollection<MCTownItem, ?>> getRecipe(int workState);
     }
 
     public ProductionJob(
@@ -253,7 +252,7 @@ public abstract class ProductionJob<
     }
 
     @NotNull
-    protected ImmutableList<JobsClean.TestFn<MCTownItem>> convertToCleanFns(
+    protected ImmutableList<PredicateCollection<MCTownItem, ?>> convertToCleanFns(
             Map<Integer, ? extends Collection<MCRoom>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
@@ -271,7 +270,7 @@ public abstract class ProductionJob<
         return getRecipe(first.get());
     }
 
-    protected abstract ImmutableList<JobsClean.TestFn<MCTownItem>> getRecipe(Integer integer);
+    protected abstract ImmutableList<PredicateCollection<MCTownItem, ?>> getRecipe(Integer integer);
 
     @Override
     public BlockPos getLook() {
@@ -289,7 +288,7 @@ public abstract class ProductionJob<
             return null;
         }
 
-            STATUS status = journal.getStatus();
+        STATUS status = journal.getStatus();
 
         // TODO: Allow modders to short-circuit this and set another target (like PreStateChangeHook)
         //  if (target = BeforeTargetSelection.run(...)) {
@@ -513,10 +512,10 @@ public abstract class ProductionJob<
                                                                           )
                                                                           .map(Map.Entry::getKey)
                                                                           .collect(Collectors.toSet());
-                ImmutableList<JobsClean.TestFn<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
+                ImmutableList<Predicate<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
                         statesToFeed.stream()
                                     .flatMap(v -> getRecipe(v)
-                                                        .stream())
+                                            .stream())
                                     .toList()
                 );
                 return Jobs.hasNonSupplyItems(journal, allFillableRecipes);

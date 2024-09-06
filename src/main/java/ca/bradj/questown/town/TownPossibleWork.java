@@ -10,7 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -134,7 +134,7 @@ public class TownPossibleWork {
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
-            final PredicateCollection<MCHeldItem> ing = dj.ingredientsRequiredAtStates.get(ii);
+            final IPredicateCollection<MCHeldItem> ing = dj.ingredientsRequiredAtStates.get(ii);
             if (ing != null) {
                 townHasIngredient = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> ingCont = t.findMatchingContainer(
@@ -146,12 +146,10 @@ public class TownPossibleWork {
             }
 
             boolean townHasTool = true;
-            final PredicateCollection<MCHeldItem> tool = dj.toolsRequiredAtStates.get(ii);
+            final IPredicateCollection<MCTownItem> tool = dj.toolsRequiredAtStates.get(ii);
             if (tool != null) {
                 townHasTool = false;
-                @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(
-                        v -> tool.test(MCHeldItem.fromTown(v))
-                );
+                @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
                 if (toolCont != null) {
                     townHasTool = true;
                 }

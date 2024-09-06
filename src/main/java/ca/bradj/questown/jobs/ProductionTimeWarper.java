@@ -86,8 +86,8 @@ public class ProductionTimeWarper {
             TOWN inState,
             int processingState,
             int villagerIndex,
-            ImmutableMap<Integer, Predicate<H>> ingrRequiredAtStates,
-            ImmutableMap<Integer, Predicate<H>> toolsRequiredAtStates,
+            Map<Integer, ? extends Predicate<H>> ingrRequiredAtStates,
+            Map<Integer, ? extends Predicate<H>> toolsRequiredAtStates,
             Function<I, H> grabber
     ) {
         Predicate<H> ingr = ingrRequiredAtStates.get(processingState);

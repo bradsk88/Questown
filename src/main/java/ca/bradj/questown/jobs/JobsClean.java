@@ -24,21 +24,21 @@ public class JobsClean {
 
     public static <HELD extends HeldItem<HELD, TOWN_ITEM>, TOWN_ITEM extends Item<TOWN_ITEM>> boolean hasNonSupplyItems(
             ItemsHolder<HELD> journal,
-            ImmutableList<TestFn<TOWN_ITEM>> recipe
+            ImmutableList<? extends Predicate<TOWN_ITEM>> recipe
     ) {
         return journal.getItems().stream()
-                .filter(Predicates.not(Item::isEmpty))
-                .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
+                      .filter(Predicates.not(Item::isEmpty))
+                      .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
     @NotNull
     static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
-            ImmutableMap<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
+            Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
             Function<Integer, Boolean> anyIngredientsRequiredAtStates,
-            ImmutableMap<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
+            Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
             Function<Integer, Boolean> anyToolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates
+            Map<Integer, Integer> workRequiredAtStates
     ) {
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
@@ -57,7 +57,7 @@ public class JobsClean {
         };
         ingredientsRequiredAtStates.forEach(fn);
         toolsRequiredAtStates.forEach(fn);
-        for (Map.Entry<Integer, Integer> work: workRequiredAtStates.entrySet()) {
+        for (Map.Entry<Integer, Integer> work : workRequiredAtStates.entrySet()) {
             // If work is require, but no tools or items are required: pretend we have the necessary supply items
             if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
                 b.put(work.getKey(), true);
@@ -69,8 +69,8 @@ public class JobsClean {
     public static <I extends Item<I>> boolean hasNonSupplyItems(
             Collection<I> items,
             int state,
-            ImmutableMap<Integer, Predicate<I>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+            Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
+            Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates
     ) {
         if (items.isEmpty() || items.stream().allMatch(Item::isEmpty)) {
             return false;
@@ -91,7 +91,7 @@ public class JobsClean {
     @NotNull
     private static <I> boolean isNotToolFromAnyStage(
             I i,
-            ImmutableMap<Integer, Predicate<I>> toolsRequiredAtStates
+            Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates
     ) {
         for (Predicate<I> e : toolsRequiredAtStates.values()) {
             if (e.test(i)) {
@@ -102,16 +102,12 @@ public class JobsClean {
         return true;
     }
 
-    public interface TestFn<I extends Item<I>> {
-        boolean test(I item);
-    }
-
     public static <
             I extends Item<I>,
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
-            Collection<TestFn<I>> recipe,
+            Collection<? extends Predicate<I>> recipe,
             Collection<H> currentHeldItems,
             I item
     ) {
@@ -126,8 +122,8 @@ public class JobsClean {
 
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
 
-        ImmutableList<TestFn<I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<TestFn<I>> ingredientsToSatisfy = new ArrayList<>();
+        ImmutableList<Predicate<I>> initial = ImmutableList.copyOf(recipe);
+        ArrayList<Predicate<I>> ingredientsToSatisfy = new ArrayList<>();
         ingredientsToSatisfy.addAll(initial);
 
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
@@ -140,7 +136,7 @@ public class JobsClean {
                 }
             }
         }
-        for (TestFn<I> ingredient : ingredientsToSatisfy) {
+        for (Predicate<I> ingredient : ingredientsToSatisfy) {
             if (ingredient.test(item)) {
                 return true;
             }
@@ -156,7 +152,10 @@ public class JobsClean {
 
         List<TOWN_ITEM> getItems();
 
-        void removeItem(int i, int quantity);
+        void removeItem(
+                int i,
+                int quantity
+        );
     }
 
     public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
