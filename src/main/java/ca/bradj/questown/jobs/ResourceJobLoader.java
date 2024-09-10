@@ -145,44 +145,72 @@ public class ResourceJobLoader {
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
             }
-            Item initReq = ForgeRegistries.ITEMS.getValue(required(object, "initial_request"));
+            ResourceLocation initialRequest = optional(
+                    object,
+                    "initial_request",
+                    el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
+            );
+            Item initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
             if (initReq == null) {
                 throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                    .getAsString());
             }
-            WorkSpecialRules special = loadRulesV1(object);
+            WorkSpecialRules special = loadRulesV2(object);
             boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
-            BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlockV2(
-                    object.getAsJsonObject("block"),
-                    requireAirAbove
-            );
-            int cooldownTicks = requiredInt(object, "cooldown_ticks");
-            WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
-            return WorksBehaviour.productionWork(
-                    iconItem.getDefaultInstance(),
-                    JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
-                    JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                    description(initReq, object),
-                    new WorkLocation(isJobBlock, required(object, "room")),
-                    ResourceJobLoader.workStates(object),
-                    wwi,
-                    special,
-                    loadSoundV1(object)
-            ).withPriority(requiredInt(object, "priority"));
+            if (!object.get("block").isJsonObject()) {
+                throw new IllegalArgumentException("block must be an object");
+            }
+
+            try {
+                BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlockV2(
+                        object.getAsJsonObject("block"),
+                        requireAirAbove
+                );
+                int cooldownTicks = requiredInt(object, "cooldown_ticks");
+                WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
+                return WorksBehaviour.productionWork(
+                        iconItem.getDefaultInstance(),
+                        JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
+                        JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
+                        description(initReq, object),
+                        new WorkLocation(isJobBlock, required(object, "room")),
+                        ResourceJobLoader.workStates(object),
+                        wwi,
+                        special,
+                        loadSoundV1(object)
+                ).withPriority(requiredInt(object, "priority"));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
+            }
         }
 
         private WorkSpecialRules loadRulesV1(JsonObject object) {
             ImmutableList.Builder<String> globals = ImmutableList.builder();
-            globals.add(
-                    SpecialRules.PRIORITIZE_EXTRACTION,
-                    SpecialRules.SHARED_WORK_STATUS
-            );
+            globals.add(SpecialRules.PRIORITIZE_EXTRACTION);
 
             if (!object.has("special")) {
-                return new WorkSpecialRules(
-                        ImmutableMap.of(),
-                        globals.build()
-                );
+                return new WorkSpecialRules(ImmutableMap.of(), globals.build());
+            }
+
+            Map<ProductionStatus, Collection<String>> stages = new HashMap<>();
+            object.get("special").getAsJsonArray().forEach(row -> {
+                JsonObject rowObj = row.getAsJsonObject();
+                JsonArray rules = rowObj.get("rules").getAsJsonArray();
+                rules.forEach(rule -> registerRule(rule, rowObj, globals, stages));
+            });
+
+
+            return new WorkSpecialRules(
+                    ImmutableMap.copyOf(stages),
+                    globals.build()
+            );
+        }
+        private WorkSpecialRules loadRulesV2(JsonObject object) {
+            ImmutableList.Builder<String> globals = ImmutableList.builder();
+            globals.add(SpecialRules.PRIORITIZE_EXTRACTION);
+
+            if (!object.has("special")) {
+                return new WorkSpecialRules(ImmutableMap.of(), globals.build());
             }
 
             Map<ProductionStatus, Collection<String>> stages = new HashMap<>();
@@ -552,19 +580,20 @@ public class ResourceJobLoader {
             Function<JsonElement, X> puller
     ) {
         if (!object.has(k)) {
-            throw new IllegalArgumentException(k + " is required");
+            throw new IllegalArgumentException(k + " is required (missing)");
         }
-        return puller.apply(object.get(k));
+        JsonElement t = object.get(k);
+        if (t.isJsonNull()) {
+            throw new IllegalArgumentException(k + " is required (null)");
+        }
+        return puller.apply(t);
     }
 
     private static ResourceLocation required(
             JsonObject object,
             String k
     ) {
-        if (!object.has(k)) {
-            throw new IllegalArgumentException(k + " is required");
-        }
-        String iconName = object.get(k).getAsString();
-        return new ResourceLocation(iconName);
+        String v = required(object, k, JsonElement::getAsString);
+        return new ResourceLocation(v);
     }
 }

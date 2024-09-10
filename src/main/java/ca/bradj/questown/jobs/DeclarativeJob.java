@@ -30,7 +30,6 @@ import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -245,17 +244,22 @@ public class DeclarativeJob extends
 
         VisitorMobEntity vme = (VisitorMobEntity) entity;
         ImmutableList<MCHeldItem> heldItems = vme.getJobJournalSnapshot().items();
-        ImmutableSet.Builder<Integer> b = ImmutableSet.builder();
-        for (int i = 0; i < maxState; i++) {
-            b.add(i);
-        }
-        PreTickHook.run(specialGlobalRules, heldItems, b.build(), fn -> rniot.set(fn.apply(rniot.get())));
+        Function<BlockPos, @NotNull State> bsFn = bp -> Util.applyOrDefault(
+                bp, p -> town.getWorkStatusHandle(ownerUUID).getJobBlockState(p),
+                State.fresh()
+        );
+        PreTickHook.run(
+                specialGlobalRules,
+                heldItems,
+                fn -> rniot.set(fn.apply(rniot.get())),
+                bsFn
+        );
         specialRules.forEach((state, rules) ->
                 PreTickHook.run(
                         rules,
                         heldItems,
-                        ImmutableSet.of(state.getProductionState(maxState)),
-                        fn -> rniot.set(fn.apply(rniot.get()))
+                        fn -> rniot.set(fn.apply(rniot.get())),
+                        bsFn
                 ));
 
         this.roomsNeedingIngredientsOrTools = rniot.get().get();
@@ -301,7 +305,7 @@ public class DeclarativeJob extends
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         WorkPosition<BlockPos> workSpot = world.getWorkSpot();
         BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);
-        int action = bp == null ? 0 : Util.withNullFallback(work.getJobBlockState(bp), State::processingState, 0);
+        int action = bp == null ? 0 : Util.withFallbackForNullInput(work.getJobBlockState(bp), State::processingState, 0);
         logic.tick(
                 extra,
                 computeState,
@@ -317,7 +321,7 @@ public class DeclarativeJob extends
                         (VisitorMobEntity) entity, entityCurrentJobSite,
                         roomsNeedingIngredientsOrTools
                 ),
-                (tuwn, bpp) -> Util.withNullFallback(
+                (tuwn, bpp) -> Util.withFallbackForNullInput(
                         getWorkStatusHandle(town).getJobBlockState(bpp),
                         State::processingState,
                         0
@@ -748,9 +752,14 @@ public class DeclarativeJob extends
         return JobsClean.getSupplyItemStatuses(
                 journal::getItems,
                 ingredientsRequiredAtStates,
-                s -> !UtilClean.getOrDefault(ingredientsRequiredAtStates, s, PredicateCollection.empty("no ingredient defined")).isEmpty(),
+                s -> !UtilClean.getOrDefault(
+                        ingredientsRequiredAtStates,
+                        s,
+                        PredicateCollection.empty("no ingredient defined")
+                ).isEmpty(),
                 Jobs.unTown(toolsRequiredAtStates),
-                s -> !UtilClean.getOrDefault(toolsRequiredAtStates, s, PredicateCollection.empty("no tool defined")).isEmpty(),
+                s -> !UtilClean.getOrDefault(toolsRequiredAtStates, s, PredicateCollection.empty("no tool defined"))
+                               .isEmpty(),
                 workRequiredAtStates
         );
     }

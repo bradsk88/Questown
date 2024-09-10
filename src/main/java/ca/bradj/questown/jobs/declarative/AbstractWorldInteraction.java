@@ -325,7 +325,7 @@ public abstract class AbstractWorldInteraction<
         ImmutableWorkStateContainer<POS, TOWN> workStatuses = getWorkStatuses(extra);
         State jobBlockState = workStatuses.getJobBlockState(workSpot.jobBlock());
 
-        int action = Util.withNullFallback(jobBlockState, State::processingState, 0);
+        int action = Util.withFallbackForNullInput(jobBlockState, State::processingState, 0);
         if (action >= maxState) {
             if (jobBlockState != null && jobBlockState.workLeft() == 0) {
                 TOWN ex = tryExtractProduct(extra, workSpot.jobBlock());

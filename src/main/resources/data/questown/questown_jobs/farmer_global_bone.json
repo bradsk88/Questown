@@ -27,7 +27,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["claim_workspot", "shared_work_status"]
     },
     {
       "type": "core_state",

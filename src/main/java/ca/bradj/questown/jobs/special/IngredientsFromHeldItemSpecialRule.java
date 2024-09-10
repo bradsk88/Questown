@@ -46,7 +46,7 @@ public class IngredientsFromHeldItemSpecialRule extends
                         }
                         return ing.test(mcHeldItem.toItemStack());
                     },
-                    "Tool from held item"
+                    "Tool from held item, replacing"
             ));
         } else {
             bxEvent.replaceIngredients().accept(before -> PredicateCollection.wrap(
@@ -65,7 +65,7 @@ public class IngredientsFromHeldItemSpecialRule extends
                         }
                         return ing.test(mcHeldItem.toItem().toItemStack());
                     },
-                    "Ingredient from held item"
+                    "Ingredient from held item, replacing"
             ));
         }
     }

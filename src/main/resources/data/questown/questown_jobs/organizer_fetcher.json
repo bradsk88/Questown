@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "organizer/fetch",
   "priority": "4000",
   "parent": "organizer/learn",
@@ -10,14 +10,16 @@
     "item": "minecraft:air",
     "quantity": 1
   },
-  "block": "minecraft:chest",
+  "block": {
+    "id": "minecraft:chest"
+  },
   "room": "questown:store_room",
   "work_states": [
     {
       "tools": "minecraft:paper"
     },
     {
-      "work": 50
+      "work": 25
     },
     {
       "comment": "this is only here to increase the max state",
@@ -43,7 +45,7 @@
       "type": "processing_state",
       "state": 1,
       "rules": [
-        "questown:tools_from_held_item",
+        "tools_from_held_item",
         "workspot_from_held_item"
       ]
     },
@@ -51,7 +53,7 @@
       "type": "processing_state",
       "state": 2,
       "rules": [
-        "questown:ingredients_from_held_item",
+        "ingredients_from_held_item",
         "workspot_from_held_item"
       ]
     }

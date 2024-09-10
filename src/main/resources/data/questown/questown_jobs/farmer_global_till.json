@@ -23,7 +23,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["require_air_above"]
+      "rules": ["require_air_above", "shared_work_status"]
     },
     {
       "type": "core_state",

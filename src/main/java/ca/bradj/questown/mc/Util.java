@@ -14,7 +14,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -90,8 +89,8 @@ public class Util {
     }
 
     public static <X, Y> Y applyOrDefault(
-            Function<X, Y> fn,
             X param,
+            Function<X, Y> fn,
             Y defaultt
     ) {
         Y v = fn.apply(param);
@@ -243,7 +242,7 @@ public class Util {
         fn.accept(input);
     }
 
-    public static <X, Y> Y withNullFallback(X input, Function<X, Y> fn, Y fallback) {
+    public static <X, Y> Y withFallbackForNullInput(X input, Function<X, Y> fn, Y fallback) {
         if (input == null) {
             return fallback;
         }

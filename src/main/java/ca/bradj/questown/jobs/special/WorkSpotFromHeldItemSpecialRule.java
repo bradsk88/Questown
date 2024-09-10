@@ -22,10 +22,11 @@ public class WorkSpotFromHeldItemSpecialRule extends
     public void beforeTick(BeforeTickEvent bxEvent) {
         super.beforeTick(bxEvent);
         @Nullable MCRoom room = getRoomFromHeldItems(bxEvent.heldItems());
+        @Nullable BlockPos pos = getJobBlockPositionFromHeldItems(bxEvent.heldItems());
 
         bxEvent.replaceRoomCheck().accept(before -> () -> {
             ImmutableMap.Builder<Integer, Collection<MCRoom>> b = ImmutableMap.builder();
-            bxEvent.states().forEach(state -> b.put(state, ImmutableList.of(room)));
+            b.put(bxEvent.getJobBlockState().apply(pos).processingState(), ImmutableList.of(room));
             return b.build();
         });
     }
@@ -46,7 +47,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
 //        }
         return new MCRoom(
                 new Position(-538, -525),
-                ImmutableList.of(InclusiveSpaces.from(-538, -526).to(-536, -524)),
+                ImmutableList.of(InclusiveSpaces.from(-538, -527).to(-536, -524)),
                 63
         );
     }

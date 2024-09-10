@@ -259,7 +259,7 @@ public class RealtimeWorldInteraction extends
             BlockPos workSpot
     ) {
         State jobBlockState = getJobBlockState(mcExtra, workSpot);
-        return new WorkedSpot<>(workSpot, Util.withNullFallback(jobBlockState, State::processingState, 0));
+        return new WorkedSpot<>(workSpot, Util.withFallbackForNullInput(jobBlockState, State::processingState, 0));
     }
 
     private void playSound(

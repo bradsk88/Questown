@@ -276,7 +276,7 @@ public class TestWorldInteraction extends
     @Override
     protected WorkedSpot<Position> getCurWorkedSpot(Void unused, Boolean stateSource, Position workSpot) {
         State stateAfterWork = getJobBlockState(null, workSpot);
-        return new WorkedSpot<>(workSpot, Util.withNullFallback(stateAfterWork, State::processingState, 0));
+        return new WorkedSpot<>(workSpot, Util.withFallbackForNullInput(stateAfterWork, State::processingState, 0));
     }
 
     @Override
