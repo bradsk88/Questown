@@ -282,6 +282,7 @@ public class JobsRegistry {
                                      })
                                      .flatMap(Collection::stream)
                                      .map(Ingredient::of)
+                                     .filter(v -> !v.isEmpty())
                                      .map(Ingredients::asWorkRequest)
                                      .collect(Collectors.toSet())
                                      .stream()

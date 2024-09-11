@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends Item<I>> {
@@ -70,6 +71,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
     };
 
     private final Position interactPosition;
+    private final Consumer<I> associate;
 
     public int size() {
         return container.size();
@@ -79,7 +81,10 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return container.getItem(index);
     }
 
-    public void setItem(int index, I item) {
+    public void setItem(
+            int index,
+            I item
+    ) {
         container.setItem(index, item);
     }
 
@@ -101,7 +106,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
                 I itm = container.getItem(i);
                 container.removeItem(i, 1);
                 return new AbstractMap.SimpleEntry<>(
-                        new ContainerTarget<>(position, yPosition, interactPosition, container, check),
+                        new ContainerTarget<>(position, yPosition, interactPosition, container, check, associate),
                         itm.unit()
                 );
             }
@@ -142,7 +147,9 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
     public ImmutableList<I> getItems() {
         ImmutableList.Builder<I> b = ImmutableList.builder();
         for (int i = 0; i < container.size(); i++) {
-            b.add(container.getItem(i));
+            I item = container.getItem(i);
+            associate.accept(item);
+            b.add(item);
         }
         return b.build();
     }
@@ -160,13 +167,15 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
             int yPosition,
             Position interactionPosition,
             @NotNull Container<I> container,
-            ValidCheck check
+            ValidCheck check,
+            Consumer<I> associate
     ) {
         this.position = position;
         this.yPosition = yPosition;
         this.interactPosition = interactionPosition;
         this.container = container;
         this.check = check;
+        this.associate = associate;
     }
 
     public Position getPosition() {

@@ -126,6 +126,11 @@ public class ItemsInit {
             TownWand::new
     );
 
+    public static final RegistryObject<Item> ITEM_REQUEST = ITEMS.register(
+            StockRequestItem.ITEM_ID,
+            StockRequestItem::new
+    );
+
     @SubscribeEvent
     public static void onInteractBlock(PlayerInteractEvent.RightClickBlock event) {
         final var level = event.getWorld();

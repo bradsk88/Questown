@@ -10,6 +10,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
 
@@ -150,4 +151,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         return copy.isEmpty();
     }
 
+    public void setNBT(Consumer<CompoundTag> adder) {
+        adder.accept(nbt);
+    }
 }

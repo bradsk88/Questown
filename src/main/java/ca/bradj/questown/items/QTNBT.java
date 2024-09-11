@@ -73,6 +73,15 @@ public class QTNBT {
         t.putLong(keyify(key), val);
     }
 
+
+    public static void putInt(
+            CompoundTag t,
+            String key,
+            int val
+    ) {
+        t.putInt(key, val);
+    }
+
     public static ResourceLocation getResourceLocation(
             CompoundTag tag,
             String key
@@ -99,5 +108,12 @@ public class QTNBT {
             String key
     ) {
         return t.getLong(keyify(key));
+    }
+
+    public static Integer getInt(
+            CompoundTag itemTag,
+            String key
+    ) {
+        return itemTag.getInt(keyify(key));
     }
 }

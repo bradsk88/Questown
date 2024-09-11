@@ -137,7 +137,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         return new MCHeldItem(delegate, false, prefix, biome);
     }
 
-    public Tag serializeNBT() {
+    public CompoundTag serializeNBT() {
         CompoundTag tag = delegate.serializeNBT();
         tag.putBoolean("locked", locked);
         if (biome != null) {

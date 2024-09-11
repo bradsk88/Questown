@@ -3,6 +3,8 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.items.QTNBT;
+import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -22,7 +24,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class TownContainers {
@@ -52,12 +53,18 @@ public class TownContainers {
         return allContainers.stream().filter(v -> v.hasItem(c));
     }
 
-    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(TownInterface townFlagBlockEntity, ServerLevel level) {
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(
+            TownInterface townFlagBlockEntity,
+            ServerLevel level
+    ) {
         return getAllContainersStream(townFlagBlockEntity, level).toList();
     }
 
-        @NotNull
-    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(TownInterface townFlagBlockEntity, ServerLevel level) {
+    @NotNull
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(
+            TownInterface townFlagBlockEntity,
+            ServerLevel level
+    ) {
         return townFlagBlockEntity
                 .getRoomHandle()
                 .getMatches()
@@ -103,7 +110,8 @@ public class TownContainers {
         if (blockState.isAir()) {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
-                    new MCContainer(ContainerTarget.REMOVED), () -> false
+                    new MCContainer(ContainerTarget.REMOVED), () -> false,
+                    item -> TownContainers.setWorkSpot(p, item)
             );
         }
 
@@ -113,7 +121,8 @@ public class TownContainers {
             );
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
-                    new MCContainer(ContainerTarget.REMOVED), () -> false
+                    new MCContainer(ContainerTarget.REMOVED), () -> false,
+                    item -> TownContainers.setWorkSpot(p, item)
             );
         }
 
@@ -139,8 +148,19 @@ public class TownContainers {
                 p.getY(),
                 interactPos,
                 mcContainer,
-                () -> level.getBlockState(p) == blockState
+                () -> level.getBlockState(p) == blockState,
+                item -> TownContainers.setWorkSpot(p, item)
         );
+    }
+
+    private static void setWorkSpot(BlockPos p, MCTownItem item) {
+        if (item.get() instanceof StockRequestItem) {
+            item.setNBT(tag -> { // FIXME: Do not replace existing
+                QTNBT.putInt(tag, "workspot_x", p.getX());
+                QTNBT.putInt(tag, "workspot_y", p.getY());
+                QTNBT.putInt(tag, "workspot_z", p.getZ());
+            });
+        }
     }
 
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> findClosestMatching(

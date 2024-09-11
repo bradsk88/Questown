@@ -1,15 +1,19 @@
 package ca.bradj.questown.jobs.special;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.items.QTNBT;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +40,10 @@ public class WorkSpotFromHeldItemSpecialRule extends
         super.beforeInit(bxEvent);
 
         bxEvent.jobBlockCheckReplacer().accept(old -> {
-            @NotNull BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
+            @Nullable BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
+            if (room == null) {
+                return (sl, bp) -> false;
+            }
             return (sl, bp) -> room.equals(bp);
         });
     }
@@ -52,10 +59,27 @@ public class WorkSpotFromHeldItemSpecialRule extends
         );
     }
 
-    private static @NotNull BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
-//        for (MCHeldItem i : bxEvent.heldItems()) {
-        // TODO[ASAP]: Get room from item
-//        }
-        return new BlockPos(-537, 63, -526);
+    private static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+        for (MCHeldItem item : mcHeldItems) {
+            CompoundTag tag = item.serializeNBT();
+            if (tag.contains("item")) {
+                CompoundTag itemTag = tag.getCompound("item");
+                Integer x = null, y = null, z = null;
+                if (QTNBT.contains(itemTag, "workspot_x")) {
+                    x  =QTNBT.getInt(itemTag, "workspot_x");
+                }
+                if (QTNBT.contains(itemTag, "workspot_y")) {
+                    y  =QTNBT.getInt(itemTag, "workspot_y");
+                }
+                if (QTNBT.contains(itemTag, "workspot_z")) {
+                    z  =QTNBT.getInt(itemTag, "workspot_z");
+                }
+                if (x == null || y == null || z == null) {
+                    continue;
+                }
+                return new BlockPos(x, y, z);
+            }
+        }
+        return null;
     }
 }

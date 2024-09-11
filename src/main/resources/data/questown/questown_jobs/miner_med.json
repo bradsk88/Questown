@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "miner/coal_half_day",
+  "priority": "2000",
+  "parent": null,
+  "icon": "minecraft:coal",
+  "initial_request": "minecraft:coal",
+  "result": {
+    "type": "biome_loot",
+    "prefix": "jobs/miner",
+    "default": "jobs/miner/default",
+    "attempts": 3
+  },
+  "block": "questown:welcome_mat_block",
+  "room": "questown:special_quest.town_gate",
+  "work_states": [
+    {
+      "tools": "#questown:pickaxes"
+    },
+    {
+      "ingredients": "#questown:villager_food",
+      "quantity": 2
+    },
+    {
+      "time": 4000
+    }
+  ],
+  "cooldown_ticks": 0,
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["remove_from_world"]
+    },
+    {
+      "type": "core_state",
+      "state": "WAITING_FOR_TIMED_STATE",
+      "rules": ["remove_from_world"]
+    }
+  ]
+}
