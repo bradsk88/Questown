@@ -1,14 +1,15 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -69,19 +70,21 @@ public class TownContainers {
                 .getRoomHandle()
                 .getMatches()
                 .stream()
-                .flatMap(v -> v.getContainedBlocks().entrySet().stream())
-                .filter(v -> v.getValue() instanceof ChestBlock)
-                .map(v -> fromChestBlockMaybe(v.getKey(), (ChestBlock) v.getValue(), level))
+                .flatMap(v -> v.getContainedBlocks().entrySet().stream().map(z -> new UtilClean.Pair<>(v.room, z)))
+                .filter(v -> v.b().getValue() instanceof ChestBlock)
+                .map(v -> fromChestBlockMaybe(v.a(), v.b().getKey(), (ChestBlock) v.b().getValue(), level))
                 .filter(Objects::nonNull);
     }
 
     @NotNull
     public static ContainerTarget<MCContainer, MCTownItem> fromChestBlock(
+            MCRoom room,
             BlockPos p,
             ChestBlock block,
             ServerLevel level
     ) {
         ContainerTarget<MCContainer, MCTownItem> maybe = fromChestBlockMaybe(
+                room,
                 p,
                 block,
                 level
@@ -94,6 +97,7 @@ public class TownContainers {
 
     @Nullable
     private static ContainerTarget<MCContainer, MCTownItem> fromChestBlockMaybe(
+            MCRoom room,
             BlockPos p,
             ChestBlock block,
             ServerLevel level
@@ -111,7 +115,7 @@ public class TownContainers {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
-                    item -> TownContainers.setWorkSpot(p, item)
+                    item -> TownContainers.setWorkSpot(room, p, item)
             );
         }
 
@@ -122,7 +126,7 @@ public class TownContainers {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
-                    item -> TownContainers.setWorkSpot(p, item)
+                    item -> TownContainers.setWorkSpot(room, p, item)
             );
         }
 
@@ -149,17 +153,16 @@ public class TownContainers {
                 interactPos,
                 mcContainer,
                 () -> level.getBlockState(p) == blockState,
-                item -> TownContainers.setWorkSpot(p, item)
+                item -> TownContainers.setWorkSpot(room, p, item)
         );
     }
 
-    private static void setWorkSpot(BlockPos p, MCTownItem item) {
+    private static void setWorkSpot(MCRoom room, BlockPos p, MCTownItem item) {
         if (item.get() instanceof StockRequestItem) {
-            item.setNBT(tag -> { // FIXME: Do not replace existing
-                QTNBT.putInt(tag, "workspot_x", p.getX());
-                QTNBT.putInt(tag, "workspot_y", p.getY());
-                QTNBT.putInt(tag, "workspot_z", p.getZ());
-            });
+            if (StockRequestItem.hasNBT()) {
+                return;
+            }
+            item.setNBT(tag -> StockRequestItem.writeToNBT(tag, room, p));
         }
     }
 

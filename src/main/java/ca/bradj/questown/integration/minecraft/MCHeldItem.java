@@ -5,7 +5,6 @@ import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -196,5 +195,9 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     @Override
     public int hashCode() {
         return Objects.hash(delegate, locked);
+    }
+
+    public CompoundTag getItemNBTData() {
+        return delegate.getItemNBT();
     }
 }

@@ -1,20 +1,14 @@
 package ca.bradj.questown.jobs.special;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.QTNBT;
-import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -48,36 +42,25 @@ public class WorkSpotFromHeldItemSpecialRule extends
         });
     }
 
-    private static @NotNull MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
-//        for (MCHeldItem i : bxEvent.heldItems()) {
-        // TODO[ASAP]: Get room from item
-//        }
-        return new MCRoom(
-                new Position(-538, -525),
-                ImmutableList.of(InclusiveSpaces.from(-538, -527).to(-536, -524)),
-                63
-        );
+    private static @Nullable MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+        for (MCHeldItem i : mcHeldItems) {
+            if (i.get().get() instanceof StockRequestItem) {
+                @Nullable MCRoom room = StockRequestItem.getRoom(i.getItemNBTData());
+                if (room != null) {
+                    return room;
+                }
+            }
+        }
+        return null;
     }
 
     private static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
-        for (MCHeldItem item : mcHeldItems) {
-            CompoundTag tag = item.serializeNBT();
-            if (tag.contains("item")) {
-                CompoundTag itemTag = tag.getCompound("item");
-                Integer x = null, y = null, z = null;
-                if (QTNBT.contains(itemTag, "workspot_x")) {
-                    x  =QTNBT.getInt(itemTag, "workspot_x");
+        for (MCHeldItem i : mcHeldItems) {
+            if (i.get().get() instanceof StockRequestItem) {
+                @Nullable BlockPos room = StockRequestItem.getJobBlock(i);
+                if (room != null) {
+                    return room;
                 }
-                if (QTNBT.contains(itemTag, "workspot_y")) {
-                    y  =QTNBT.getInt(itemTag, "workspot_y");
-                }
-                if (QTNBT.contains(itemTag, "workspot_z")) {
-                    z  =QTNBT.getInt(itemTag, "workspot_z");
-                }
-                if (x == null || y == null || z == null) {
-                    continue;
-                }
-                return new BlockPos(x, y, z);
             }
         }
         return null;

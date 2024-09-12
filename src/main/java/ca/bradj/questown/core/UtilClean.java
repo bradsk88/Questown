@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 public class UtilClean {
 
+    public record Pair<A, B>(A a, B b){};
 
     // If you make any changes to the returned map (when mutable), remember to PUT it back into the map.
     private static <K, I, X> Map<I, X> getOrDefaultMap(

@@ -154,4 +154,8 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     public void setNBT(Consumer<CompoundTag> adder) {
         adder.accept(nbt);
     }
+
+    public CompoundTag getItemNBT() {
+        return nbt.copy();
+    }
 }
