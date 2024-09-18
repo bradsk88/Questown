@@ -59,6 +59,6 @@ public class PredicateCollection<OUTER, INNER> implements IPredicateCollection<O
 
     @Override
     public String toString() {
-        return String.format("%s → %s", description, inner);
+        return String.format("%s -> %s", description, inner);
     }
 }

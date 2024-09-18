@@ -86,6 +86,7 @@ public class Questown {
         MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
+        MenuScreens.register(MenuTypesInit.CREATE_STOCK_REQUEST.get(), CreateStockRequestScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
         MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);

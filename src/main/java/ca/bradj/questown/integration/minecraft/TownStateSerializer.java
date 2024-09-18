@@ -151,6 +151,11 @@ public class TownStateSerializer {
             CompoundTag tag,
             ServerLevel level
     ) {
+        if (true) {
+            // FIXME: Remove this next time online
+            return ImmutableList.of();
+        }
+
         ImmutableList.Builder<ContainerTarget<MCContainer, MCTownItem>> cB = ImmutableList.builder();
         ListTag containers = tag.getList("containers", Tag.TAG_COMPOUND);
         for (Tag cTag : containers) {
@@ -177,7 +182,7 @@ public class TownStateSerializer {
                 continue;
             }
             ContainerTarget<MCContainer, MCTownItem> ct = TownContainers.fromChestBlock(
-                    pos, (ChestBlock) bs.getBlock(), level
+                    null, pos, (ChestBlock) bs.getBlock(), level
             );
             cB.add(ct);
             ImmutableList<MCTownItem> stateItems = cItems.build();

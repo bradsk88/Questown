@@ -58,6 +58,12 @@ public class QuestownNetwork {
                 ChangeVillagerJobMessage::handle
         ).add();
         Compat.withConsumer(
+                registerMessage(CreateStockRequestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(CreateStockRequestFromUIMessage::encode).
+                decoder(CreateStockRequestFromUIMessage::decode),
+                CreateStockRequestFromUIMessage::handle
+        ).add();
+        Compat.withConsumer(
                 registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
                 encoder(SyncBlockItemMessage::encode).
                 decoder(SyncBlockItemMessage::decode),
@@ -70,10 +76,10 @@ public class QuestownNetwork {
                 OpenVillagerAdvancementsMenuMessage::handle
         ).add();
         Compat.withConsumer(
-                registerMessage(WandClickedAwayMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(WandClickedAwayMessage::encode).
-                decoder(WandClickedAwayMessage::decode),
-                WandClickedAwayMessage::handle
+                registerMessage(OnScreenTextMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(OnScreenTextMessage::encode).
+                decoder(OnScreenTextMessage::decode),
+                OnScreenTextMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(JobWantedIngredientsMessage.class, NetworkDirection.PLAY_TO_CLIENT).

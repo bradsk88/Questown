@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -181,7 +182,10 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(ItemsInit.TOWN_WAND.get())) {
             converted = Items.STICK.getDefaultInstance();
         }
-        if (itemInHand.getItem().equals(ItemsInit.WELCOME_MAT_BLOCK.get())) {
+        if (ImmutableList.of(
+                ItemsInit.WELCOME_MAT_BLOCK.get(),
+                ItemsInit.STOCK_REQUEST_CLIPBOARD.get()
+        ).contains(itemInHand.getItem())) {
             converted = itemInHand;
         }
         if (Ingredient.of(ItemTags.SIGNS).test(itemInHand)) {

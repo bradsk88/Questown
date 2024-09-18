@@ -126,9 +126,14 @@ public class ItemsInit {
             TownWand::new
     );
 
-    public static final RegistryObject<Item> ITEM_REQUEST = ITEMS.register(
+    public static final RegistryObject<Item> STOCK_REQUEST = ITEMS.register(
             StockRequestItem.ITEM_ID,
             StockRequestItem::new
+    );
+
+    public static final RegistryObject<Item> STOCK_REQUEST_CLIPBOARD = ITEMS.register(
+            StockRequestClipboardItem.ITEM_ID,
+            StockRequestClipboardItem::new
     );
 
     @SubscribeEvent

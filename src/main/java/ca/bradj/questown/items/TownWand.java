@@ -4,7 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.core.network.WandClickedAwayMessage;
+import ca.bradj.questown.core.network.OnScreenTextMessage;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -45,7 +45,10 @@ public class TownWand extends Item {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(level, itemInHand);
         BlockPos doorPos = getClickedPos(level, clickedPos);
         if (doorPos == null) {
-            WandClickedAwayMessage msg = new WandClickedAwayMessage(parent.getTownFlagBasePos());
+            BlockPos bp = parent.getTownFlagBasePos();
+            OnScreenTextMessage msg = new OnScreenTextMessage(
+                    "message.wand.clicked_away", bp.getX(), bp.getY(), bp.getZ()
+            );
             QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(player), msg);
             return;
         }
@@ -89,10 +92,13 @@ public class TownWand extends Item {
         if (!x.consumesAction()) {
             ItemStack item = p_41427_.getItemInHand();
             TownInterface parent = TownFlagBlock.GetParentFromNBT(level, item);
+            BlockPos bp = parent.getTownFlagBasePos();
             QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(
-                            () -> (ServerPlayer) p_41427_.getPlayer()),
-                    new WandClickedAwayMessage(parent.getTownFlagBasePos())
+                    PacketDistributor.PLAYER.with(() -> (ServerPlayer) p_41427_.getPlayer()),
+                    new OnScreenTextMessage(
+                            "message.wand.clicked_away",
+                            bp.getX(), bp.getY(), bp.getZ()
+                    )
             );
         }
         return x;

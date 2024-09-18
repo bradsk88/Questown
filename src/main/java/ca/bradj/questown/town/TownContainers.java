@@ -159,7 +159,7 @@ public class TownContainers {
 
     private static void setWorkSpot(MCRoom room, BlockPos p, MCTownItem item) {
         if (item.get() instanceof StockRequestItem) {
-            if (StockRequestItem.hasNBT()) {
+            if (StockRequestItem.hasRoom()) {
                 return;
             }
             item.setNBT(tag -> StockRequestItem.writeToNBT(tag, room, p));

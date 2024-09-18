@@ -807,7 +807,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return false;
     }
 
-    WorksBehaviour.TownData getTownData() {
+    public WorksBehaviour.TownData getTownData() {
         return new WorksBehaviour.TownData(
                 prefix -> knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix)
         );
