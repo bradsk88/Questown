@@ -87,7 +87,7 @@ public class TownWand extends Item {
         }
         ServerLevel level = (ServerLevel) p_41427_.getLevel();
         if (getClickedPos(level, p_41427_.getClickedPos()) != null) {
-            return x;
+            return InteractionResult.CONSUME;
         }
         if (!x.consumesAction()) {
             ItemStack item = p_41427_.getItemInHand();

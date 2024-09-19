@@ -389,7 +389,8 @@ public class DeclarativeJob extends
             @Override
             public boolean hasSupplies() {
                 Map<Integer, ? extends Collection<MCRoom>> needs = roomsNeedingIngredientsByState();
-                return Jobs.townHasSupplies(town, journal, convertToCleanFns(needs));
+                ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = convertToCleanFns(needs);
+                return Jobs.townHasSupplies(town, journal, neededItems);
             }
 
             @Override

@@ -107,11 +107,11 @@ public class JobsClean {
             H extends HeldItem<H, I>
             > boolean shouldTakeItem(
             int invCapacity,
-            Collection<? extends Predicate<I>> recipe,
+            Collection<? extends Predicate<I>> neededItemsIn,
             Collection<H> currentHeldItems,
             I item
     ) {
-        if (recipe.isEmpty()) {
+        if (neededItemsIn.isEmpty()) {
             return false;
         }
 
@@ -120,12 +120,23 @@ public class JobsClean {
             return false;
         }
 
+        ArrayList<Predicate<I>> neededItems = new ArrayList<>(neededItemsIn);
+
+        removeItemsAlreadyHeld(neededItems, currentHeldItems);
+        return isItemNeeded(neededItems, item);
+    }
+
+    private static <I extends Item<I>> boolean isItemNeeded(Collection<Predicate<I>> itemsNeeded, I item) {
+        for (Predicate<I> ingredient : itemsNeeded) {
+            if (ingredient.test(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static <I extends Item<I>, H extends HeldItem<H, I>> void removeItemsAlreadyHeld(ArrayList<Predicate<I>> ingredientsToSatisfy, Collection<H> currentHeldItems) {
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
-
-        ImmutableList<Predicate<I>> initial = ImmutableList.copyOf(recipe);
-        ArrayList<Predicate<I>> ingredientsToSatisfy = new ArrayList<>();
-        ingredientsToSatisfy.addAll(initial);
-
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
                 if (ingredientsToSatisfy.get(i).test(heldItem.get())) {
@@ -136,12 +147,6 @@ public class JobsClean {
                 }
             }
         }
-        for (Predicate<I> ingredient : ingredientsToSatisfy) {
-            if (ingredient.test(item)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

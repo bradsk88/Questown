@@ -179,10 +179,10 @@ public class Jobs {
     public static boolean townHasSupplies(
             TownInterface town,
             ItemsHolder<MCHeldItem> journal,
-            ImmutableList<? extends Predicate<MCTownItem>> recipe
+            ImmutableList<? extends Predicate<MCTownItem>> isItemNeeded
     ) {
         return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), recipe, journal.getItems(), item
+                journal.getCapacity(), isItemNeeded, journal.getItems(), item
         )) != null;
     }
 

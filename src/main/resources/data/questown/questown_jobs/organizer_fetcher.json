@@ -16,7 +16,7 @@
   "room": "questown:store_room",
   "work_states": [
     {
-      "tools": "minecraft:paper"
+      "tools": "questown:stock_request"
     },
     {
       "work": 25

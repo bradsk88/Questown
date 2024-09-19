@@ -22,6 +22,10 @@ public class WorkSpotFromHeldItemSpecialRule extends
         @Nullable MCRoom room = getRoomFromHeldItems(bxEvent.heldItems());
         @Nullable BlockPos pos = getJobBlockPositionFromHeldItems(bxEvent.heldItems());
 
+        if (room == null || pos == null) {
+            return;
+        }
+
         bxEvent.replaceRoomCheck().accept(before -> () -> {
             ImmutableMap.Builder<Integer, Collection<MCRoom>> b = ImmutableMap.builder();
             b.put(bxEvent.getJobBlockState().apply(pos).processingState(), ImmutableList.of(room));
