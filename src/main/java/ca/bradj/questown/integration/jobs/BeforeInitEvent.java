@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 
 public record BeforeInitEvent(
         Supplier<ImmutableList<MCHeldItem>> heldItems,
-        Consumer<Function<PredicateCollection<MCHeldItem, ?>, PredicateCollection<MCHeldItem, ?>>> replaceIngredients,
-        Consumer<Function<PredicateCollection<MCTownItem, ?>, PredicateCollection<MCTownItem, ?>>> replaceTools,
+        Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> replaceIngredients,
+        Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> replaceTools,
         Consumer<Function<BiPredicate<ServerLevel, BlockPos>, BiPredicate<ServerLevel, BlockPos>>> jobBlockCheckReplacer) {
 }

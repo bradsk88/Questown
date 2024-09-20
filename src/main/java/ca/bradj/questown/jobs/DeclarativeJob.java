@@ -54,9 +54,9 @@ import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
 public class DeclarativeJob extends
         DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
-    public final ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates;
+    public final ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates;
     private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    public final ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates;
+    public final ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates;
     public final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
 
@@ -110,8 +110,8 @@ public class DeclarativeJob extends
         this.jobId = jobId;
 
 
-        Map<Integer, PredicateCollection<MCHeldItem, ?>> ingr = new HashMap<>(Jobs.unMCHeld3(ingredientsRequiredAtStates));
-        Map<Integer, PredicateCollection<MCTownItem, ?>> tool = new HashMap<>(Jobs.unMC(toolsRequiredAtStates));
+        Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingr = new HashMap<>(Jobs.unMCHeld3(ingredientsRequiredAtStates));
+        Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tool = new HashMap<>(Jobs.unMC5(toolsRequiredAtStates));
         AtomicReference<BiPredicate<ServerLevel, BlockPos>> ijb = new AtomicReference<>(
                 (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp)
         );
@@ -185,9 +185,9 @@ public class DeclarativeJob extends
     @NotNull
     protected RealtimeWorldInteraction initWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,

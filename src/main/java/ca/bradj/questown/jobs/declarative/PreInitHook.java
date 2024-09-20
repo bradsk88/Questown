@@ -23,8 +23,8 @@ public class PreInitHook {
     public static void run(
             Collection<String> rules,
             Supplier<ImmutableList<MCHeldItem>> heldItems,
-            Consumer<Function<PredicateCollection<MCHeldItem, ?>, PredicateCollection<MCHeldItem, ?>>> ingrReplacer,
-            Consumer<Function<PredicateCollection<MCTownItem, ?>, PredicateCollection<MCTownItem, ?>>> toolReplacer,
+            Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> ingrReplacer,
+            Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> toolReplacer,
             Consumer<Function<BiPredicate<ServerLevel, BlockPos>, BiPredicate<ServerLevel, BlockPos>>> jobBlockCheckReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);

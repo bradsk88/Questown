@@ -19,10 +19,10 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
     private final ImmutableMap<Integer, PredicateCollection<ITEM, ?>> toolsRequiredAtStates;
     private final BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback;
 
-    public AbstractWorkWI(
+    public <S> AbstractWorkWI(
             Map<Integer, Integer> workRequiredAtStates,
             BiFunction<EXTRA, Integer, Integer> timeRequiredAtStates,
-            Map<Integer, @NotNull PredicateCollection<ITEM, ?>> toolsRequiredAtStates,
+            Map<Integer, ? extends @NotNull PredicateCollection<ITEM, S>> toolsRequiredAtStates,
             BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback
     ) {
         this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);

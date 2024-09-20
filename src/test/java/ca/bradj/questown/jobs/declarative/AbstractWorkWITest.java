@@ -1,9 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
-import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.WorkedSpot;
+import ca.bradj.questown.logic.MonoPredicateCollection;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -17,7 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
+
+import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorkWITest {
 
@@ -28,14 +30,14 @@ class AbstractWorkWITest {
         public TestWorkWI(
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+                ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
                 BiConsumer<Void, WorkSpot<Integer, Position>> scCallback
         ) {
             super(workRequiredAtStates, (x, s) -> Util.getOrDefault(timeRequiredAtStates, s, 0), toolsRequiredAtStates, scCallback);
         }
 
         @Override
-        protected Void degradeTool(Void unused, @Nullable Void tuwn, Function<GathererJournalTest.TestItem, Boolean> testItemBooleanFunction) {
+        protected Void degradeTool(Void unused, @Nullable Void tuwn, PredicateCollection<GathererJournalTest.TestItem, ?> itemBooleanFunction) {
             return null;
         }
 
@@ -136,8 +138,8 @@ class AbstractWorkWITest {
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(
-                        1, (GathererJournalTest.TestItem t) -> true,
-                        2, (GathererJournalTest.TestItem t) -> true
+                        1, alwaysTrue,
+                        2, alwaysTrue
                 ),
                 (a, b) -> {});
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));

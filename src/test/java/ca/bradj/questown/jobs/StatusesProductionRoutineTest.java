@@ -179,6 +179,11 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
+        public String nameV2() {
+            return inner;
+        }
+
+        @Override
         public boolean isUnset() {
             return false;
         }

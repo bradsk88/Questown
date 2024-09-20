@@ -48,11 +48,11 @@ public class RealtimeWorldInteraction extends
     public RealtimeWorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates,
             Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,

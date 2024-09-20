@@ -259,12 +259,38 @@ public class Jobs {
         return ImmutableList.copyOf(b2);
     }
 
-    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> unMC(
+    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, ItemStack>> unMC(
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, ?>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, ItemStack>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, PredicateCollection.wrap(
+                (k, v) -> b.put(k, PredicateCollection.<MCTownItem, ItemStack>wrap(
+                        new IPredicateCollection<ItemStack>() {
+                            @Override
+                            public boolean isEmpty() {
+                                return v.isEmpty();
+                            }
+
+                            @Override
+                            public boolean test(ItemStack mcTownItem) {
+                                return false;
+                            }
+                        },
+                        (inner) -> v.isEmpty(),
+                        (inner, item) -> v.test(item.toItemStack()),
+                        String.format("Ingredient2Predicate [%s]", v.toJson())
+                ))
+        );
+        return b.build();
+    }
+
+    // This name is just irony because there are so many "un" functions
+    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> unMC5(
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
+    ) {
+        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, MCTownItem>> b = ImmutableMap.builder();
+        toolsRequiredAtStates.forEach(
+                (k, v) -> b.put(k, PredicateCollection.<MCTownItem, MCTownItem>wrap(
                         new IPredicateCollection<MCTownItem>() {
                             @Override
                             public boolean isEmpty() {
@@ -300,12 +326,12 @@ public class Jobs {
         return unFn(unMCHeld(input));
     }
 
-    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> unMCHeld3(
+    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> unMCHeld3(
             ImmutableMap<Integer, Ingredient> input
     ) {
 
-        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, ?>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient(v)));
+        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient2(v)));
         return b.build();
     }
 

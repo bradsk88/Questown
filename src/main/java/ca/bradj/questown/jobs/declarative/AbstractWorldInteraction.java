@@ -42,14 +42,14 @@ public abstract class AbstractWorldInteraction<
     private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
 
 
-    public AbstractWorldInteraction(
+    public <S, T> AbstractWorldInteraction(
             JobID jobId,
             int villagerIndex,
             int interval,
             int maxState,
-            Map<Integer, PredicateCollection<INNER_ITEM, ?>> toolsRequiredAtStates,
+            Map<Integer, ? extends PredicateCollection<INNER_ITEM, S>> toolsRequiredAtStates,
             Map<Integer, Integer> workRequiredAtStates,
-            Map<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates,
+            Map<Integer, ? extends PredicateCollection<HELD_ITEM, T>> ingredientsRequiredAtStates,
             Map<Integer, Integer> ingredientQuantityRequiredAtStates,
             Map<Integer, Integer> timeRequiredAtStates,
             Function<EXTRA, Claim> claimSpots,

@@ -68,9 +68,9 @@ public class WorkSeekerJob extends DeclarativeJob {
     @Override
     protected @NotNull RealtimeWorldInteraction initWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,

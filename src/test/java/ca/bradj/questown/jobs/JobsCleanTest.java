@@ -1,19 +1,15 @@
 package ca.bradj.questown.jobs;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.function.Predicate;
 
 class JobsCleanTest {
 
-    ImmutableList<JobsClean.TestFn<TestItem>> bakerRecipe = ImmutableList.of(
+    ImmutableList<Predicate<TestItem>> bakerRecipe = ImmutableList.of(
             item -> "wheat".equals(item.value),
             item -> "wheat".equals(item.value),
             item -> "coal".equals(item.value)

@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkPosition;
+import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
@@ -17,17 +19,19 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
+import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysFalse;
 
 class AbstractWorldInteractionTest {
 
 
     public static TestWorldInteraction noMemoryInventory(
             int i,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsNeeded,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsNeeded,
             ImmutableMap<Integer, Integer> workRequired,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredients,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredients,
             Supplier<Collection<GathererJournalTest.TestItem>> inventory,
             Runnable onInventoryChange
     ) {
@@ -60,6 +64,20 @@ class AbstractWorldInteractionTest {
                 ValidatedInventoryHandle.unvalidated(inventoryHandle), statuses,
                 () -> new Claim(UUID.randomUUID(), 100)
         );
+    }
+
+    private static MonoPredicateCollection<GathererJournalTest.TestItem> exact(String name) {
+        return new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
+            @Override
+            public boolean isEmpty() {
+                return false;
+            }
+
+            @Override
+            public boolean test(GathererJournalTest.TestItem testItem) {
+                return name.equals(testItem.value);
+            }
+        }, "exact");
     }
 
 
@@ -160,7 +178,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(), // No tools required
                 ImmutableMap.of(), // No work required
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -187,7 +205,7 @@ class AbstractWorldInteractionTest {
                         0, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -218,7 +236,7 @@ class AbstractWorldInteractionTest {
                         0, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -243,7 +261,7 @@ class AbstractWorldInteractionTest {
                         0, 1 // 1 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required
+                        0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -269,7 +287,7 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -301,7 +319,7 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -332,7 +350,7 @@ class AbstractWorldInteractionTest {
                         1, 100 // 100 work required
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -361,7 +379,7 @@ class AbstractWorldInteractionTest {
                         2, 0 // No work requred at stage 2
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -383,13 +401,13 @@ class AbstractWorldInteractionTest {
         TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
-                        0, (i) -> false // Villager does not have the needed tool
+                        0, alwaysFalse // Villager does not have the needed tool
                 ),
                 ImmutableMap.of(
                         0, 1 // Work required at stage 0
                 ),
                 ImmutableMap.of(
-                        0, (i) -> true // Villager has all the items needed
+                        0, alwaysTrue // Villager has all the items needed
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("")),
                 () -> inserted.set(true)
@@ -409,7 +427,7 @@ class AbstractWorldInteractionTest {
         TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
-                        0, (i) -> true // Villager has the needed tool
+                        0, alwaysTrue // Villager has the needed tool
                 ),
                 ImmutableMap.of(
                         // No work required
@@ -439,9 +457,9 @@ class AbstractWorldInteractionTest {
         TestWorldInteraction wi = noMemoryInventory(
                 2,
                 ImmutableMap.of(
-                        0, (i) -> true, // Villager has the needed tools
-                        1, (i) -> true, // Villager has the needed tools
-                        2, (i) -> true // Villager has the needed tools
+                        0, alwaysTrue, // Villager has the needed tools
+                        1, alwaysTrue, // Villager has the needed tools
+                        2, alwaysTrue // Villager has the needed tools
                 ),
                 ImmutableMap.of(
                         0, 0, // No work required at stage 0
@@ -449,7 +467,7 @@ class AbstractWorldInteractionTest {
                         2, 0 // No work required at stage 2
                 ),
                 ImmutableMap.of(
-                        0, (i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
                 () -> inserted.set(true)
@@ -471,13 +489,13 @@ class AbstractWorldInteractionTest {
         TestWorldInteraction wi = new TestWorldInteraction(
                 2,
                 ImmutableMap.of(
-                        1, (GathererJournalTest.TestItem i) -> false // Villager does not have the tool
+                        1, alwaysFalse // Villager does not have the tool
                 ),
                 ImmutableMap.of(
                         // No work required
                 ),
                 ImmutableMap.of(
-                        0, (GathererJournalTest.TestItem i) -> "grapes".equals(i.value) // Grapes required at stage 0
+                        0, exact("grapes") // Grapes required at stage 0
                 ),
                 ImmutableMap.of(
                         0, 1

@@ -21,7 +21,7 @@ public class PredicateCollection<OUTER, INNER> implements IPredicateCollection<O
     private final BiPredicate<IPredicateCollection<INNER>, OUTER> test;
     private final String description;
 
-    private PredicateCollection(
+    PredicateCollection(
             IPredicateCollection<INNER> toWrap,
             Predicate<IPredicateCollection<INNER>> isEmpty,
             BiPredicate<IPredicateCollection<INNER>, OUTER> test,
@@ -42,9 +42,9 @@ public class PredicateCollection<OUTER, INNER> implements IPredicateCollection<O
         return new PredicateCollection<>(toWrap, isEmpty, test, description);
     }
 
-    public static <T> PredicateCollection<T, ?> empty(String msg) {
+    public static <T, S> PredicateCollection<T, S> empty(String msg) {
         //noinspection unchecked
-        return new PredicateCollection<T, Object>(EMPTY, IPredicateCollection::isEmpty, Predicate::test, msg);
+        return new PredicateCollection<T, S>(EMPTY, IPredicateCollection::isEmpty, (p, i) -> false, msg);
     }
 
     @Override

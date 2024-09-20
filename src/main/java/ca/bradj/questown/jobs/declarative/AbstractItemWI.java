@@ -31,9 +31,9 @@ public abstract class AbstractItemWI<
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
 
-    public AbstractItemWI(
+    public <S> AbstractItemWI(
             int villagerIndex,
-            Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates,
+            Map<Integer, ? extends PredicateCollection<ITEM, S>> ingredientsRequiredAtStates,
             Map<Integer, Integer> ingredientQtyRequiredAtStates,
             Map<Integer, Integer> workRequiredAtStates,
             BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates,

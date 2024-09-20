@@ -186,12 +186,14 @@ class ProductionTimeWarperTest {
                 new TestItem("bread")
         );
         int containerCapacity = 1;
-        @NotNull ImmutableList<ContainerTarget<ContainerTarget.Container<TestItem>, TestItem>> containers = ImmutableList.of(
+        @NotNull ImmutableList<ContainerTarget<TestContainer<TestItem>, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {
+                        }
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -211,7 +213,8 @@ class ProductionTimeWarperTest {
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -231,7 +234,8 @@ class ProductionTimeWarperTest {
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -252,13 +256,15 @@ class ProductionTimeWarperTest {
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 ),
                 new ContainerTarget<>(
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -279,13 +285,15 @@ class ProductionTimeWarperTest {
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 ),
                 new ContainerTarget<>(
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
-                        () -> true
+                        () -> true,
+                        item -> {}
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);

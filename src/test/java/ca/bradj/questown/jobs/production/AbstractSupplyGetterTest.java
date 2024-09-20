@@ -3,6 +3,8 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobsClean;
 import ca.bradj.questown.jobs.StatusesProductionRoutineTest;
+import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -25,6 +27,20 @@ class AbstractSupplyGetterTest {
 
     }
 
+    private static MonoPredicateCollection<GathererJournalTest.TestItem> itemMustMatch(GathererJournalTest.TestItem item) {
+        return new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
+            @Override
+            public boolean isEmpty() {
+                return false;
+            }
+
+            @Override
+            public boolean test(GathererJournalTest.TestItem testItem) {
+                return item.equals(testItem);
+            }
+        }, "item must match " + item.getShortName());
+    }
+
     @Test
     void tryGetSupplies_ShouldGrabExactlyOneItem_OnFirstAttempt() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
@@ -35,8 +51,8 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, JobsClean.TestFn<GathererJournalTest.TestItem>> recipe = ImmutableMap.of(
-                0, (item) -> neededItem.get().equals(item)
+        final Map<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> recipe = ImmutableMap.of(
+                0, itemMustMatch(neededItem.get())
         );
 
         JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
@@ -96,10 +112,10 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, Collection<JobsClean.TestFn<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
+        final Map<Integer, Collection<MonoPredicateCollection<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
                 0, ImmutableList.of(
-                        (item) -> neededItem.get().equals(item),
-                        (item) -> neededItem.get().equals(item)
+                        itemMustMatch(neededItem.get()),
+                        itemMustMatch(neededItem.get())
                 )
         );
 
@@ -160,9 +176,9 @@ class AbstractSupplyGetterTest {
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
-        final Map<Integer, Collection<JobsClean.TestFn<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
+        final Map<Integer, Collection<MonoPredicateCollection<GathererJournalTest.TestItem>>> recipe = ImmutableMap.of(
                 0, ImmutableList.of(
-                        (item) -> neededItem.get().equals(item)
+                        itemMustMatch(neededItem.get())
                 )
         );
 

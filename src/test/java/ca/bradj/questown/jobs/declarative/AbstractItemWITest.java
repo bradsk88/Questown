@@ -1,8 +1,9 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
-import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.WorkedSpot;
+import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -15,9 +16,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
+@SuppressWarnings({"rawtypes", "unchecked", "deprecation"})
 class AbstractItemWITest {
 
     public static final Position arbitraryPosition = new Position(1, 2);
@@ -38,12 +39,10 @@ class AbstractItemWITest {
         }
     }
 
-    ;
-
     private static class TestItemWI extends AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
         private final Map<Position, StateWithTimer> map = new HashMap<>();
 
-        private final ImmutableWorkStateContainer<Position, TestTownState> statuses = new ImmutableWorkStateContainer<Position, TestTownState>() {
+        private final ImmutableWorkStateContainer<Position, TestTownState> statuses = new ImmutableWorkStateContainer<>() {
             @Override
             public @Nullable State getJobBlockState(Position bp) {
                 StateWithTimer stateWithTimer = map.get(bp);
@@ -106,7 +105,7 @@ class AbstractItemWITest {
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
 
         public TestItemWI(
-                ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
+                ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
                 ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
                 ImmutableMap<Integer, Integer> workRequiredAtStates,
                 ImmutableMap<Integer, Integer> timeRequiredAtStates,
@@ -145,7 +144,6 @@ class AbstractItemWITest {
                 GathererJournalTest.TestItem item,
                 Position bp
         ) {
-            // TODO: Any other logic needed here?
             return true;
         }
 
@@ -177,6 +175,37 @@ class AbstractItemWITest {
         }
     }
 
+    public static final MonoPredicateCollection<GathererJournalTest.TestItem> alwaysTrue = new MonoPredicateCollection<>(
+            new IPredicateCollection() {
+                @Override
+                public boolean test(Object testItem) {
+                    return true;// All items accepted as input,
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return false;
+                }
+            },
+            "predicate defined in test setup"
+    );
+
+    @SuppressWarnings("rawtypes")
+    public static final MonoPredicateCollection<GathererJournalTest.TestItem> alwaysFalse = new MonoPredicateCollection<GathererJournalTest.TestItem>(
+            new IPredicateCollection() {
+                @Override
+                public boolean test(Object testItem) {
+                    return true;// All items accepted as input,
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return false;
+                }
+            },
+            "predicate defined in test setup"
+    );
+
     @Test
     void tryInsertIngredients_shouldReturnNoStateUpdates_IfInventoryEmpty() {
         TestInvHandle inventory = new TestInvHandle(
@@ -184,7 +213,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items accepted as input
+                        0, alwaysTrue
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -302,7 +331,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items accepted as input
+                        0, alwaysTrue // All items accepted as input
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -330,7 +359,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> false // All items in inventory are not wanted
+                        0, alwaysFalse // All items in inventory are not wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -358,7 +387,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> false // All items in inventory are not wanted
+                        0, alwaysFalse // All items in inventory are not wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -386,7 +415,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items in inventory are wanted
+                        0, alwaysTrue // All items in inventory are wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -413,7 +442,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items in inventory are wanted
+                        0, alwaysTrue // All items in inventory are wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -444,7 +473,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items in inventory are wanted
+                        0, alwaysTrue // All items in inventory are wanted
                 ),
                 ImmutableMap.of(
                         0, 1 // Want up to 1 item
@@ -475,7 +504,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items in inventory were wanted at current stage (0)
+                        0, alwaysTrue // All items in inventory were wanted at current stage (0)
                         // Next stage (1) has no item requirements
                 ),
                 ImmutableMap.of(
@@ -510,7 +539,7 @@ class AbstractItemWITest {
         );
         TestItemWI wi = new TestItemWI(
                 ImmutableMap.of(
-                        0, (item) -> true // All items in inventory were wanted at current stage (0)
+                        0, alwaysTrue // All items in inventory were wanted at current stage (0)
                         // Next stage (1) has no item requirements
                 ),
                 ImmutableMap.of(
