@@ -463,10 +463,10 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork() {
+    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndOnlyAvailableSuppliesAreInTown() {
         boolean canDoWork = false;
         boolean hasSupplies = true;
-        boolean suppliesInInventory = true;
+        boolean suppliesInInventory = false;
 
         boolean hasNonSupplyItems = false;
         boolean townHasSpace = true;
@@ -485,7 +485,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
     @Test
-    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndNoSuppliesAvailable() {
+    void StatusShouldBe_NoSupplies_WhenThereIsNowhereToWork_AndNoSuppliesAvailable() {
         boolean canDoWork = false;
         boolean hasSupplies = false;
         boolean suppliesInInventory = false;
@@ -504,6 +504,6 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
+        Assertions.assertEquals(TestStatus.NO_SUPPLIES, s);
     }
 }

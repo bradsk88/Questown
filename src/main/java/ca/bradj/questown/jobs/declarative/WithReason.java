@@ -62,6 +62,10 @@ public class WithReason<S> {
         return new WithReason<>(false, messageIfFalse, argsForBothMessages);
     }
 
+    public static <T> WithReason<T> always(T val, String msg, Object... msgArgs) {
+        return new WithReason<>(val, msg, msgArgs);
+    }
+
     public WithReason<S> wrap(String s) {
         return new WithReason<>(
                 value,
@@ -79,5 +83,10 @@ public class WithReason<S> {
 
     public String reason() {
         return reason;
+    }
+
+    @Override
+    public String toString() {
+        return value == null ? "null" : value + " because " + reason;
     }
 }
