@@ -10,7 +10,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class LZCD<T> implements ILZCD<T> {
@@ -56,10 +58,15 @@ public class LZCD<T> implements ILZCD<T> {
         this.ifCondFail = ifCondFail;
     }
 
-    public static <T> LZCD<T> noDeps(String name, Supplier<T> o) {
+    public static <T> LZCD<T> noDeps(String name, Supplier<T> o, Predicate<T> isNull) {
         return new LZCD<>(name, new ILZCD<T>() {
             private Populated<T> populated = null;
             private T val;
+
+            @Override
+            public boolean isValueNull(T val) {
+                return isNull.test(val);
+            }
 
             @Override
             public T resolve() {
@@ -75,15 +82,20 @@ public class LZCD<T> implements ILZCD<T> {
                 populated = new Populated<>(name, resolve(), ImmutableMap.of(), null);
                 return populated;
             }
-        }, ImmutableList.of(), leaf(() -> null));
+        }, ImmutableList.of(), leaf(() -> null, (v) -> true));
     }
 
-    public static <T> ILZCD<T> leaf(Supplier<T> o) {
+    public static <T> ILZCD<T> leaf(Supplier<T> o, Predicate<T> isNull) {
         return new ILZCD<T>() {
 
             private Populated<T> populated = null;
             @Nullable
             T value = null;
+
+            @Override
+            public boolean isValueNull(T value) {
+                return isNull.test(value);
+            }
 
             @Override
             public T resolve() {
@@ -103,16 +115,27 @@ public class LZCD<T> implements ILZCD<T> {
     }
 
     public T resolve() {
-        if (this.value != null) {
+        if (!isValueNull(this.value)) {
             return this.value;
         }
-        Supplier<T> r = () -> {
-            this.value = wrapped.resolve();
-            return value;
+
+        AtomicReference<T> cached = new AtomicReference<>();
+
+        Supplier<T> cacher = () -> {
+            if (cached.get() == null) {
+                cached.set(wrapped.resolve());
+            }
+            return cached.get();
         };
+
         int condPassed = 0;
         for (ILZCD<Dependency<T>> d : conditions) {
-            boolean v = d.resolve().apply(r).value();
+            Dependency<T> resolve = d.resolve();
+            if (resolve == null) {
+                continue;
+            }
+            WithReason<Boolean> apply = resolve.apply(cacher);
+            boolean v = apply.value();
             if (!v) {
                 continue;
             }
@@ -121,11 +144,15 @@ public class LZCD<T> implements ILZCD<T> {
         if (condPassed < conditions.size()) {
             return ifCondFail.resolve();
         }
-        T t = r.get();
-        if (t == null) {
+        this.value = cacher.get();
+        if (value == null) {
             return ifCondFail.resolve();
         }
-        return t;
+        return value;
+    }
+
+    public boolean isValueNull(T value) {
+        return value == null;
     }
 
 

@@ -7,16 +7,11 @@ import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang3.function.TriFunction;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class JobStatuses {
@@ -45,143 +40,87 @@ public class JobStatuses {
             IStatusFactory<STATUS> factory
     ) {
         Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
-        BiFunction<String, Supplier<Boolean>, LZCD<LZCD.Dependency<STATUS>>> prePopAble = (name, s) -> LZCD.noDeps(
-                name,
-                () -> new LZCD.Dependency<STATUS>() {
-                    private WithReason<Boolean> value;
-
-                    @Override
-                    public LZCD.Populated<WithReason<Boolean>> populate() {
-                        // TODO: Pass dependencies as inputs to usualRoutine
-                        this.value = WithReason.always(s.get(), "input");
-                        return new LZCD.Populated<>(
-                                name,
-                                value,
-                                ImmutableMap.of(),
-                                null
-                        );
-                    }
-
-                    @Override
-                    public String describe() {
-                        String v = value == null ? "<?>" : value.toString();
-                        return name + '=' + v;
-                    }
-
-                    @Override
-                    public WithReason<Boolean> apply(Supplier<STATUS> statusSupplier) {
-                        populate();
-                        return this.value;
-                    }
-                }
-        );
-        BiFunction<String, Function<STATUS, Boolean>, LZCD<LZCD.Dependency<STATUS>>> input = (name, s) -> LZCD.noDeps(
-                name,
-                () -> new LZCD.Dependency<STATUS>() {
-                    @Override
-                    public LZCD.Populated<WithReason<Boolean>> populate() {
-                        // Cannot be pre-populated
-                        return new LZCD.Populated<>(
-                                name,
-                                WithReason.always(null, "cannot be pre-computed"),
-                                ImmutableMap.of(),
-                                null
-                        );
-                        // TODO: Pass dependencies as inputs to usualRoutine
-                    }
-
-                    @Override
-                    public String describe() {
-                        return name + "=<?>";
-                    }
-
-                    @Override
-                    public WithReason<Boolean> apply(Supplier<STATUS> statusSupplier) {
-                        return WithReason.always(s.apply(statusSupplier.get()), "input");
-                    }
-                }
-        );
 
         // TODO: Move "reason" out to dependency
-        LZCD<LZCD.Dependency<STATUS>> dHasWorkItems = prePopAble.apply(
+        LZCD<LZCD.Dependency<STATUS>> dHasWorkItems = prePopAble(
                 "hasWorkItems",
                 () -> supplyItemStatus.containsValue(true)
         );
-        LZCD<LZCD.Dependency<STATUS>> dHasNonWorkItems = prePopAble.apply(
+        LZCD<LZCD.Dependency<STATUS>> dHasNonWorkItems = prePopAble(
                 "hasNonWorkItems",
                 inventory::hasNonSupplyItems
         );
-        LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble.apply(
+        LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 "hasAnyItems",
                 () -> supplyItemStatus.containsValue(true) || inventory.hasNonSupplyItems()
         );
-        LZCD<LZCD.Dependency<STATUS>> dInventoryEmpty = prePopAble.apply(
+        LZCD<LZCD.Dependency<STATUS>> dInventoryEmpty = prePopAble(
                 "inventory empty",
                 () -> !supplyItemStatus.containsValue(true) || !inventory.hasNonSupplyItems()
         );
-        LZCD<LZCD.Dependency<STATUS>> dInventoryFull = prePopAble.apply(
+        LZCD<LZCD.Dependency<STATUS>> dInventoryFull = prePopAble(
                 "inventory full",
                 inventory::inventoryFull
         );
-        ILZCD<LZCD.Dependency<STATUS>> dPrioritizeExtraction = prePopAble.apply(
+        ILZCD<LZCD.Dependency<STATUS>> dPrioritizeExtraction = prePopAble(
                 "prioritizing extraction",
                 () -> prioritizeExtraction
         );
-        ILZCD<LZCD.Dependency<STATUS>> dStatusNotGoing = input.apply(
+        ILZCD<LZCD.Dependency<STATUS>> dStatusNotGoing = input(
                 "not going to jobsite",
                 s -> !factory.goingToJobSite().equals(s)
         );
-        ILZCD<LZCD.Dependency<STATUS>> dTownHasSpace = prePopAble.apply(
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasSpace = prePopAble(
                 "town has space",
                 town::hasSpace
         );
-        ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = prePopAble.apply(
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = prePopAble(
                 "town has supplies",
                 town::hasSupplies
         );
-        ILZCD<LZCD.Dependency<STATUS>> dHasPlaceToUseSupplies = prePopAble.apply(
+        ILZCD<LZCD.Dependency<STATUS>> dHasPlaceToUseSupplies = prePopAble(
                 "town has places to use supplies",
                 town::canUseMoreSupplies
         );
         LZCD<STATUS> root = new LZCD<>(
                 "work without items",
-                LZCD.leaf(job::tryChoosingItemlessWork),
+                LZCD.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
                         dPrioritizeExtraction,
                         dStatusNotGoing
                 ),
                 LZCD.oneDep(
                         "use items",
-                        LZCD.leaf(() -> job.tryUsingSupplies(supplyItemStatus)),
+                        LZCD.leaf(() -> job.tryUsingSupplies(supplyItemStatus), Objects::isNull),
                         dHasWorkItems,
                         new LZCD<>(
                                 "drop loot when hands full",
-                                LZCD.leaf(factory::droppingLoot),
+                                leaf(factory::droppingLoot),
                                 ImmutableList.of(
                                         dInventoryFull,
                                         dTownHasSpace
                                 ),
                                 LZCD.oneDep(
                                         "stop when no space and hands full",
-                                        LZCD.leaf(factory::noSpace),
+                                        leaf(factory::noSpace),
                                         dInventoryFull,
                                         new LZCD<>(
                                                 "drop loot from non-full hands before starting more work",
-                                                LZCD.leaf(factory::droppingLoot),
+                                                leaf(factory::droppingLoot),
                                                 ImmutableList.of(
                                                         dHasNonWorkItems,
                                                         dTownHasSpace
                                                 ),
                                                 new LZCD<>(
                                                         "get work supplies",
-                                                        LZCD.leaf(factory::collectingSupplies),
+                                                        leaf(factory::collectingSupplies),
                                                         ImmutableList.of(
                                                                 dTownHasSupplies,
                                                                 dHasPlaceToUseSupplies
                                                         ),
                                                         new LZCD<>(
                                                                 "drop loot when no work supplies available",
-                                                                LZCD.leaf(factory::droppingLoot),
+                                                                leaf(factory::droppingLoot),
                                                                 ImmutableList.of(
                                                                         dHasNonWorkItems,
                                                                         dHasPlaceToUseSupplies,
@@ -189,25 +128,25 @@ public class JobStatuses {
                                                                 ),
                                                                 new LZCD<>(
                                                                         "drop loot when no work possible",
-                                                                        LZCD.leaf(factory::droppingLoot),
+                                                                        leaf(factory::droppingLoot),
                                                                         ImmutableList.of(
                                                                                 dHasAnyItems,
                                                                                 dTownHasSpace
                                                                         ),
                                                                         new LZCD<>(
                                                                                 "stop when nowhere to work and town has items",
-                                                                                LZCD.leaf(factory::noJobSite),
+                                                                                leaf(factory::noJobSite),
                                                                                 ImmutableList.of(
                                                                                         dTownHasSupplies,
                                                                                         dInventoryEmpty
                                                                                 ),
                                                                                 new LZCD<>(
                                                                                         "stop when no space and holding any items",
-                                                                                        LZCD.leaf(factory::noSpace),
+                                                                                        leaf(factory::noSpace),
                                                                                         ImmutableList.of(
                                                                                                 dHasAnyItems
                                                                                         ),
-                                                                                        LZCD.leaf(factory::noSupplies)
+                                                                                        leaf(factory::noSupplies)
                                                                                 )
                                                                         )
                                                                 )
@@ -218,8 +157,11 @@ public class JobStatuses {
                         )
                 )
         );
-        JobStatusObject<STATUS> jso = new JobStatusObject<>(ImmutableList.of(root));
-        return jso.get();
+        return nullIfUnchanged(currentStatus, root.resolve());
+    }
+
+    private static <STATUS extends IStatus<STATUS>> @NotNull ILZCD<STATUS> leaf(Supplier<STATUS> factory) {
+        return LZCD.leaf(factory, Objects::isNull);
     }
 
     /**
@@ -393,5 +335,71 @@ public class JobStatuses {
             return null;
         }
         return newStatus;
+    }
+
+    private static <STATUS> LZCD<LZCD.Dependency<STATUS>> prePopAble(
+            String name, Supplier<Boolean> s
+    ) {
+        return LZCD.noDeps(
+                name,
+                () -> new LZCD.Dependency<STATUS>() {
+                    private WithReason<Boolean> value;
+
+                    @Override
+                    public LZCD.Populated<WithReason<Boolean>> populate() {
+                        // TODO: Pass dependencies as inputs to usualRoutine
+                        this.value = WithReason.always(s.get(), "input");
+                        return new LZCD.Populated<>(
+                                name,
+                                value,
+                                ImmutableMap.of(),
+                                null
+                        );
+                    }
+
+                    @Override
+                    public String describe() {
+                        String v = value == null ? "<?>" : value.toString();
+                        return name + '=' + v;
+                    }
+
+                    @Override
+                    public WithReason<Boolean> apply(Supplier<STATUS> statusSupplier) {
+                        populate();
+                        return this.value;
+                    }
+                }, v -> false
+        );
+    }
+
+    private static <STATUS> LZCD<LZCD.Dependency<STATUS>> input(
+            String name, Function<STATUS, Boolean> s
+    ) {
+        return LZCD.noDeps(
+                name,
+                () -> new LZCD.Dependency<>() {
+                    @Override
+                    public LZCD.Populated<WithReason<Boolean>> populate() {
+                        // Cannot be pre-populated
+                        return new LZCD.Populated<>(
+                                name,
+                                WithReason.always(null, "cannot be pre-computed"),
+                                ImmutableMap.of(),
+                                null
+                        );
+                        // TODO: Pass dependencies as inputs to usualRoutine
+                    }
+
+                    @Override
+                    public String describe() {
+                        return name + "=<?>";
+                    }
+
+                    @Override
+                    public WithReason<Boolean> apply(Supplier<STATUS> statusSupplier) {
+                        return WithReason.always(s.apply(statusSupplier.get()), "input");
+                    }
+                }, v -> false
+        );
     }
 }
