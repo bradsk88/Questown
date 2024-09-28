@@ -195,7 +195,7 @@ class AbstractItemWITest {
             new IPredicateCollection() {
                 @Override
                 public boolean test(Object testItem) {
-                    return true;// All items accepted as input,
+                    return false;// No items accepted as input,
                 }
 
                 @Override

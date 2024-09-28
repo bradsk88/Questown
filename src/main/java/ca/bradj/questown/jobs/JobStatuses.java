@@ -74,6 +74,10 @@ public class JobStatuses {
                 "town has space",
                 town::hasSpace
         );
+        ILZCD<LZCD.Dependency<STATUS>> dTimerActive = prePopAble(
+                "town has active timer for this job",
+                town::isTimerActive
+        );
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = prePopAble(
                 "town has supplies",
                 town::hasSupplies
@@ -134,19 +138,26 @@ public class JobStatuses {
                                                                                 dTownHasSpace
                                                                         ),
                                                                         new LZCD<>(
-                                                                                "stop when nowhere to work and town has items",
-                                                                                leaf(factory::noJobSite),
+                                                                                "wait for next stage is timer is active",
+                                                                                leaf(factory::waitingForTimedState),
                                                                                 ImmutableList.of(
-                                                                                        dTownHasSupplies,
-                                                                                        dInventoryEmpty
+                                                                                        dTimerActive
                                                                                 ),
                                                                                 new LZCD<>(
-                                                                                        "stop when no space and holding any items",
-                                                                                        leaf(factory::noSpace),
+                                                                                        "stop when nowhere to work and town has items",
+                                                                                        leaf(factory::noJobSite),
                                                                                         ImmutableList.of(
-                                                                                                dHasAnyItems
+                                                                                                dTownHasSupplies,
+                                                                                                dInventoryEmpty
                                                                                         ),
-                                                                                        leaf(factory::noSupplies)
+                                                                                        new LZCD<>(
+                                                                                                "stop when no space and holding any items",
+                                                                                                leaf(factory::noSpace),
+                                                                                                ImmutableList.of(
+                                                                                                        dHasAnyItems
+                                                                                                ),
+                                                                                                leaf(factory::noSupplies)
+                                                                                        )
                                                                                 )
                                                                         )
                                                                 )

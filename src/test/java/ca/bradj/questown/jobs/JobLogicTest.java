@@ -500,6 +500,7 @@ class JobLogicTest {
         Assertions.assertTrue(world.states.getJobBlockState(ARBITRARY_WORKSPOT.jobBlock()).hasWorkLeft());
     }
 
+    @Disabled("Not implemented")
     @Test
     void tick_shouldNotSetJobState_IfFirstStepRequiresItemsOrWork() {
         Assertions.fail("Not implemented");
