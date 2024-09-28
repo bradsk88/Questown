@@ -21,8 +21,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysFalse;
+import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorldInteractionTest {
 
@@ -58,6 +58,7 @@ class AbstractWorldInteractionTest {
         };
 
         ImmutableWorkStateContainer<Position, Boolean> statuses = AbstractWorldInteractionTest.testWorkStateContainer();
+        //noinspection deprecation
         return new TestWorldInteraction(
                 i, toolsNeeded, workRequired, ingredients,
                 alwaysOneBuilder.build(), alwaysZeroBuilder.build(),
@@ -67,7 +68,7 @@ class AbstractWorldInteractionTest {
     }
 
     private static MonoPredicateCollection<GathererJournalTest.TestItem> exact(String name) {
-        return new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
+        return new MonoPredicateCollection<>(new IPredicateCollection<>() {
             @Override
             public boolean isEmpty() {
                 return false;
@@ -84,8 +85,7 @@ class AbstractWorldInteractionTest {
     @NotNull
     private static ImmutableWorkStateContainer<Position, Boolean> testWorkStateContainer() {
         HashMap<Position, State> ztate = new HashMap<>();
-
-        ImmutableWorkStateContainer<Position, Boolean> statuses = new ImmutableWorkStateContainer<Position, Boolean>() {
+        return new ImmutableWorkStateContainer<>() {
             @Override
             public @Nullable State getJobBlockState(Position bp) {
                 return ztate.get(bp);
@@ -143,7 +143,6 @@ class AbstractWorldInteractionTest {
             }
 
         };
-        return statuses;
     }
 
     @Test
@@ -228,7 +227,6 @@ class AbstractWorldInteractionTest {
 
     @Test
     void Test_ShouldInsertThenProcessForToollessJob() {
-        AtomicBoolean inserted = new AtomicBoolean(false);
         TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
@@ -239,7 +237,7 @@ class AbstractWorldInteractionTest {
                         0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
-                () -> inserted.set(true)
+                () -> {}
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
         wi.tryWorking(null, arbitrarySpot(0)); // Process
@@ -253,7 +251,6 @@ class AbstractWorldInteractionTest {
 
     @Test
     void Test_ShouldInsertThenProcessThenExtractForToollessJob() {
-        AtomicBoolean inserted = new AtomicBoolean(false);
         TestWorldInteraction wi = noMemoryInventory(
                 0, // max state (only one state here)
                 ImmutableMap.of(), // No tools required
@@ -261,10 +258,10 @@ class AbstractWorldInteractionTest {
                         0, 1 // 1 work required
                 ),
                 ImmutableMap.of(
-                        0, exact("grapes") // Grapes required
+                        0, exact("apples") // Grapes required
                 ),
-                () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
-                () -> inserted.set(true)
+                () -> ImmutableList.of(new GathererJournalTest.TestItem("apples")),
+                () -> {}
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
 
@@ -376,7 +373,7 @@ class AbstractWorldInteractionTest {
                 ImmutableMap.of(
                         0, 0, // No work required at stage 0
                         1, 1, // 1 work required at stage 1
-                        2, 0 // No work requred at stage 2
+                        2, 0 // No work required at stage 2
                 ),
                 ImmutableMap.of(
                         0, exact("grapes") // Grapes required at stage 0
