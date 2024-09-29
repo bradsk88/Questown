@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.special;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
@@ -11,7 +12,10 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorkSpotFromHeldItemSpecialRule extends
         JobPhaseModifier {
@@ -27,9 +31,12 @@ public class WorkSpotFromHeldItemSpecialRule extends
         }
 
         bxEvent.replaceRoomCheck().accept(before -> () -> {
-            ImmutableMap.Builder<Integer, Collection<MCRoom>> b = ImmutableMap.builder();
-            b.put(bxEvent.getJobBlockState().apply(pos).processingState(), ImmutableList.of(room));
-            return b.build();
+            Map<Integer, Collection<MCRoom>> b = new HashMap<>();
+            int state = bxEvent.getJobBlockState().apply(pos).processingState();
+            Collection<MCRoom> stateRooms = UtilClean.getOrDefaultCollection(b, state, new ArrayList<>(), true);
+            stateRooms.add(room);
+            b.put(state, ImmutableList.copyOf(stateRooms));
+            return ImmutableMap.copyOf(b);
         });
     }
 

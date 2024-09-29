@@ -46,6 +46,9 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem fromMCItemStack(ItemStack item) {
+        if (item.isEmpty()) {
+            return MCHeldItem.Air();
+        }
         return new MCHeldItem(
                 MCTownItem.fromMCItemStack(item),
                 false,
@@ -61,7 +64,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem fromTown(MCTownItem mcTownItem) {
-        return fromMCItemStack(mcTownItem.toItemStack());
+        return new MCHeldItem(mcTownItem.copy(), false, null, null);
     }
 
     public static MCHeldItem fromTown(ItemStack itemstack) {

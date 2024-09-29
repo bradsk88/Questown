@@ -42,8 +42,8 @@ public class JobTownStates {
         private final Map<Integer, LZCD.Dependency<Void>> rooms;
         private final Map<Integer, LZCD.Populated<WithReason<@Nullable Boolean>>> roomCache = new HashMap<>();
 
-        public <ROOM extends Room> SupplyNeed(Map<Integer, LZCD.Dependency<Void>> integerCollectionMap) {
-            this.rooms = integerCollectionMap;
+        public SupplyNeed(Map<Integer, LZCD.Dependency<Void>> rooms) {
+            this.rooms = rooms;
         }
 
         @Override

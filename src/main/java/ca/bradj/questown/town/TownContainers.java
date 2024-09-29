@@ -164,6 +164,9 @@ public class TownContainers {
     }
 
     private static void setWorkSpot(MCRoom room, BlockPos p, MCTownItem item) {
+        if (item.get().getDefaultInstance().isEmpty()) {
+            return;
+        }
         if (item.get() instanceof StockRequestItem) {
             if (StockRequestItem.hasRoom()) {
                 return;

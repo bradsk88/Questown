@@ -433,7 +433,7 @@ public class MCTownStateWorldInteraction extends
             Supplier<Collection<MCHeldItem>> heldItems,
             Supplier<Integer> state
     ) {
-        return new EntityInvStateProvider<Integer>() {
+        return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
                 Collection<MCHeldItem> items = heldItems.get();
@@ -455,7 +455,7 @@ public class MCTownStateWorldInteraction extends
                 return JobsClean.getSupplyItemStatuses(
                         heldItems,
                         ingredientsRequiredAtStates(),
-                        (s) -> true, // TODO: Time warp: Implement this?
+                        (s) -> true, // TODO[WARP]: Implement this?
                         Jobs.unTown(toolsRequiredAtStates),
                         (s) -> true,
                         workRequiredAtStates

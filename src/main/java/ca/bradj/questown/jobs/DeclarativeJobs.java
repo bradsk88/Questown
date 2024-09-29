@@ -172,29 +172,15 @@ public class DeclarativeJobs {
             ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
             ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools
     ) {
-        return new LZCD.Dependency<Void>() {
-            @Override
-            public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
-                return doPopulate(false);
-            }
+        return new LZCD.SimpleDependency("town has supplies") {
 
             @Override
             public String describe() {
-                return "TODO"; // TODO
+                return "TODO"; // TODO?
             }
 
             @Override
-            public String getName() {
-                return "Town has supplies";
-            }
-
-            @Override
-            public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
-                LZCD.Populated<WithReason<Boolean>> pop = doPopulate(true);
-                return pop.value();
-            }
-
-            private LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+            protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
                 ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
                 Map<Integer, LZCD.Dependency<Void>> needs = roomStatuses.get();
                 b.put("room needs", needs);
@@ -230,6 +216,9 @@ public class DeclarativeJobs {
                     Position position = Positions.FromBlockPos(c.getBlockPos());
                     String dPos = position.getUIString();
                     for (MCTownItem i : c.getItems()) {
+                        if (i.isEmpty()) {
+                            continue;
+                        }
                         if (b2.get(dPos) != null && Boolean.TRUE.equals(b2.get(dPos))) {
                             continue;
                         }
@@ -509,7 +498,7 @@ public class DeclarativeJobs {
 
         @Override
         public String describe() {
-            return "TODO"; // TODO
+            return "TODO"; // TODO:
         }
 
         @Override

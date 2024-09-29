@@ -907,9 +907,7 @@ public class DeclarativeJob extends
                         .stream()
                         .map(v -> v.room)
                         .toList();
-                b.get(state).addAll(
-                        list
-                );
+                b.get(state).addAll(list);
             }
         });
         return ImmutableMap.copyOf(b);

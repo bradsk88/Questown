@@ -24,7 +24,6 @@ public class LZCD<T> implements ILZCD<T> {
 
     public interface Dependency<T> extends Function<Supplier<T>, WithReason<Boolean>> {
         Populated<WithReason<@Nullable Boolean>> populate();
-
         String describe();
 
         String getName();
@@ -194,5 +193,31 @@ public class LZCD<T> implements ILZCD<T> {
                 }).toList()),
                 ifCondFail
         );
+    }
+
+    public static abstract class SimpleDependency implements Dependency<Void> {
+        public SimpleDependency(String name) {
+            this.name = name;
+        }
+
+        private final String name;
+
+        @Override
+        public Populated<WithReason<@Nullable Boolean>> populate() {
+            return doPopulate(false);
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
+            LZCD.Populated<WithReason<Boolean>> pop = doPopulate(true);
+            return pop.value();
+        }
+
+        protected abstract Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue);
     }
 }

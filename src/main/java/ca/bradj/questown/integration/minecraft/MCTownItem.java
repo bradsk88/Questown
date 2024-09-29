@@ -40,6 +40,10 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         this.nbt = nbt;
     }
 
+    public MCTownItem copy() {
+        return new MCTownItem(item, quantity, nbt.copy());
+    }
+
     @Override
     public boolean isEmpty() {
         return Items.AIR.equals(item);
