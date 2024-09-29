@@ -4,7 +4,9 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
@@ -72,12 +74,23 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
     @Override
     public String toShortString() {
+        return toShortString(true);
+    }
+
+    @Override
+    public String toShortString(boolean includeAir) {
         ImmutableList.Builder<String> names = ImmutableList.builder();
         for (int i = 0; i < container.getContainerSize(); i++) {
-            if (ForgeRegistries.ITEMS.getKey(container.getItem(i).getItem()) == null) {
+            Item item = container.getItem(i).getItem();
+            if (Items.AIR.equals(item)) {
+                if (!includeAir) {
+                    continue;
+                }
+            }
+            if (ForgeRegistries.ITEMS.getKey(item) == null) {
                 names.add("<No ID>");
             } else {
-                names.add(ForgeRegistries.ITEMS.getKey(container.getItem(i).getItem()).getPath());
+                names.add(ForgeRegistries.ITEMS.getKey(item).getPath());
             }
         }
         return String.join(", ", names.build());

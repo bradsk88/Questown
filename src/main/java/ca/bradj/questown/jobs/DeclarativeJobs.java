@@ -11,7 +11,6 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.logic.PredicateCollection;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.TownContainers;
@@ -19,7 +18,6 @@ import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
-import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -139,7 +137,8 @@ public class DeclarativeJobs {
 
     public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
             ResourceLocation roomId,
-            @NotNull Integer maxState, RoomsHolder roomHandle,
+            @NotNull Integer maxState,
+            RoomsHolder roomHandle,
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
@@ -167,59 +166,110 @@ public class DeclarativeJobs {
     }
 
     public static LZCD.Dependency<Void> supplies(
-            Supplier<Map<Integer, LZCD.Dependency<Void>>> roomsV2,
-            PredicateCollection<MCTownItem, MCTownItem> isWorkItem
+            ServerLevel level,
+            Supplier<Map<Integer, LZCD.Dependency<Void>>> roomStatuses,
+            TownInterface rooms,
+            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
+            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools
     ) {
-        Map<Integer, LZCD.Dependency<Void>> needs = roomsV2.get();
-//        ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = convertToCleanFns(needs);
-//        return Jobs.townHasSupplies(town, journal, neededItems);
         return new LZCD.Dependency<Void>() {
             @Override
             public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
-                return null;
+                return doPopulate(false);
             }
 
             @Override
             public String describe() {
-                return "";
+                return "TODO"; // TODO
             }
 
             @Override
             public String getName() {
-                return "";
+                return "Town has supplies";
             }
 
             @Override
             public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
-                return doPopulate(true).value();
+                LZCD.Populated<WithReason<Boolean>> pop = doPopulate(true);
+                return pop.value();
             }
 
-            private LZCD.Populated<Boolean> doPopulate(boolean stopOnTrue) {
+            private LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
                 ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
-                List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(town, town.getServerLevel());
+                Map<Integer, LZCD.Dependency<Void>> needs = roomStatuses.get();
+                b.put("room needs", needs);
+
+                List<PredicateCollection<MCHeldItem, MCHeldItem>> neededIngredients = needs.
+                        entrySet().
+                        stream().
+                        filter(v -> v.getValue().apply(() -> null).value()).
+                        map(v -> ingredients.get(v.getKey())).
+                        filter(Objects::nonNull).
+                        toList();
+                b.put("relevant ingredients", neededIngredients);
+                List<PredicateCollection<MCTownItem, MCTownItem>> neededTools = needs.
+                        entrySet().
+                        stream().
+                        filter(v -> v.getValue().apply(() -> null).value()).
+                        map(v -> tools.get(v.getKey())).
+                        filter(Objects::nonNull).
+                        toList();
+                b.put("relevant tools", neededTools);
+
+                List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
+                        rooms,
+                        level
+                );
                 b.put("containers", containers);
 
-                boolean found = false;
-                ImmutableMap.Builder<String, Object> b2 = ImmutableMap.builder();
+                @Nullable WithReason<Boolean> found = null;
+                Map<String, Object> b2 = new HashMap<>();
 
                 for (ContainerTarget<MCContainer, MCTownItem> c : containers) {
 
                     Position position = Positions.FromBlockPos(c.getBlockPos());
                     String dPos = position.getUIString();
                     for (MCTownItem i : c.getItems()) {
-                        boolean result = isWorkItem.test(i);
-                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString()));
-                        if (result && stopOnTrue) {
-                            found = true;
-                            break;
+                        if (b2.get(dPos) != null && Boolean.TRUE.equals(b2.get(dPos))) {
+                            continue;
+                        }
+                        MCHeldItem iHeld = MCHeldItem.fromTown(i);
+                        Optional<?> matchedIngredient = neededIngredients.
+                                stream().
+                                filter(ing -> ing.test(iHeld)).
+                                findFirst();
+                        String result = matchedIngredient.map(Object::toString).orElse("No match");
+                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        if (matchedIngredient.isPresent()) {
+                            found = WithReason.always(true, i.getShortName() + " matches " + matchedIngredient.get());
+                            if (stopOnTrue) {
+                                break;
+                            }
+                        }
+                        Optional<?> matchedTool = neededTools.
+                                stream().
+                                filter(ing -> ing.test(i)).
+                                findFirst();
+                        result = matchedTool.map(Object::toString).orElse("No match");
+                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        if (matchedTool.isPresent()) {
+                            found = WithReason.always(true, i.getShortName() + " matches " + matchedTool.get());
+                            if (stopOnTrue) {
+                                break;
+                            }
                         }
                     }
-                    if (found && stopOnTrue) {
+                    if (found != null && stopOnTrue) {
                         break;
                     }
-                };
-                b.put("supply checks", b2.build());
-                b.put("predicate", isWorkItem);
+                }
+
+                if (found == null) {
+                    found = WithReason.always(false, "No matches found for " + ingredients + " in any containers");
+                }
+
+                b.put("supply checks", ImmutableMap.copyOf(b2));
+                b.put("predicate", ingredients);
                 return new LZCD.Populated<>(
                         "town has supplies",
                         found,
@@ -418,7 +468,10 @@ public class DeclarativeJobs {
         private final int state;
         private LZCD.Populated<WithReason<Boolean>> value;
 
-        public RoomStates(int state, Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs) {
+        public RoomStates(
+                int state,
+                Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
+        ) {
             this.inputs = inputs;
             this.name = NAME + " " + state;
             this.state = state;
@@ -431,7 +484,11 @@ public class DeclarativeJobs {
             }
             UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
             Map<BlockPos, Integer> spotStates = v.a();
-            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream().filter(z -> Integer.compare(state, z.getValue()) == 0).findFirst();
+            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()
+                                                                         .filter(z -> Integer.compare(
+                                                                                 state,
+                                                                                 z.getValue()
+                                                                         ) == 0).findFirst();
             WithReason<Boolean> hasSpot = foundSpot.map(
                     zz -> WithReason.always(true, "town has workspot with state at " + foundSpot.get().getKey())
             ).orElse(

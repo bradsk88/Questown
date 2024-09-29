@@ -15,8 +15,7 @@ public class JobTownStates {
         return new TownStateProvider() {
             @Override
             public LZCD.Dependency<Void> hasSupplies() {
-                // FIXME: Not working for fetcher
-                return new JobStatusesHelpers.PrePopDep<>("town has supplies", town::hasSupplies);
+                return town.hasSuppliesV2();
             }
 
             @Override

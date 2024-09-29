@@ -40,7 +40,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         bxEvent.jobBlockCheckReplacer().accept(old -> {
             @Nullable BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
             if (room == null) {
-                return (sl, bp) -> false;
+                return old;
             }
             return (sl, bp) -> room.equals(bp);
         });

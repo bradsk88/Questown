@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -58,16 +59,21 @@ public class TownContainers {
             TownInterface townFlagBlockEntity,
             ServerLevel level
     ) {
+        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level).toList();
+    }
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(
+            RoomsHolder townFlagBlockEntity,
+            ServerLevel level
+    ) {
         return getAllContainersStream(townFlagBlockEntity, level).toList();
     }
 
     @NotNull
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(
-            TownInterface townFlagBlockEntity,
+            RoomsHolder townFlagBlockEntity,
             ServerLevel level
     ) {
         return townFlagBlockEntity
-                .getRoomHandle()
                 .getMatches()
                 .stream()
                 .flatMap(v -> v.getContainedBlocks().entrySet().stream().map(z -> new UtilClean.Pair<>(v.room, z)))

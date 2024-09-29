@@ -364,7 +364,12 @@ public class MCTownStateWorldInteraction extends
 
             @Override
             public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
-                return Map.of();
+                return Map.of(); // TODO[Warp]: Implement
+            }
+
+            @Override
+            public LZCD.Dependency<Void> hasSuppliesV2() {
+                return null; // TODO[Warp]: Implement
             }
 
             @Override
