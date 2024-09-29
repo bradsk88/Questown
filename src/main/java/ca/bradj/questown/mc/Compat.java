@@ -3,6 +3,7 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.rooms.TownPosition;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -139,5 +141,9 @@ public class Compat {
 
     public static <X> Supplier<X> configGet(ForgeConfigSpec.ConfigValue<X> cfg) {
         return cfg::get;
+    }
+
+    public static TownPosition townPos(BlockPos blockPos) {
+        return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY());
     }
 }

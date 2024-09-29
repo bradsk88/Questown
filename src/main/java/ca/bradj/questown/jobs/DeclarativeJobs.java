@@ -1,20 +1,29 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
+import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,10 +36,7 @@ import net.minecraftforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.*;
 
 public class DeclarativeJobs {
@@ -158,6 +164,70 @@ public class DeclarativeJobs {
             b.put(i, new RoomStates(i, e));
         }
         return b.build();
+    }
+
+    public static LZCD.Dependency<Void> supplies(
+            Supplier<Map<Integer, LZCD.Dependency<Void>>> roomsV2,
+            PredicateCollection<MCTownItem, MCTownItem> isWorkItem
+    ) {
+        Map<Integer, LZCD.Dependency<Void>> needs = roomsV2.get();
+//        ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = convertToCleanFns(needs);
+//        return Jobs.townHasSupplies(town, journal, neededItems);
+        return new LZCD.Dependency<Void>() {
+            @Override
+            public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+                return null;
+            }
+
+            @Override
+            public String describe() {
+                return "";
+            }
+
+            @Override
+            public String getName() {
+                return "";
+            }
+
+            @Override
+            public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
+                return doPopulate(true).value();
+            }
+
+            private LZCD.Populated<Boolean> doPopulate(boolean stopOnTrue) {
+                ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
+                List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(town, town.getServerLevel());
+                b.put("containers", containers);
+
+                boolean found = false;
+                ImmutableMap.Builder<String, Object> b2 = ImmutableMap.builder();
+
+                for (ContainerTarget<MCContainer, MCTownItem> c : containers) {
+
+                    Position position = Positions.FromBlockPos(c.getBlockPos());
+                    String dPos = position.getUIString();
+                    for (MCTownItem i : c.getItems()) {
+                        boolean result = isWorkItem.test(i);
+                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString()));
+                        if (result && stopOnTrue) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found && stopOnTrue) {
+                        break;
+                    }
+                };
+                b.put("supply checks", b2.build());
+                b.put("predicate", isWorkItem);
+                return new LZCD.Populated<>(
+                        "town has supplies",
+                        found,
+                        b.build(),
+                        null
+                );
+            }
+        };
     }
 
     private record HandlerInputs(

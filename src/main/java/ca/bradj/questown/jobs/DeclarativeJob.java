@@ -37,6 +37,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.common.util.Lazy;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -295,7 +296,7 @@ public class DeclarativeJob extends
             }
         };
 
-        JobTownProvider<MCRoom> jtp = makeTownProvider(town, work, roomsNeedingIngredientsOrTools);
+        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(town, work, roomsNeedingIngredientsOrTools);
 
         Supplier<ProductionStatus> computeState = getStateComputer(
                 statusFactory,
@@ -329,11 +330,15 @@ public class DeclarativeJob extends
         );
     }
 
-    private @NotNull JobTownProvider<MCRoom> makeTownProvider(
+    private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools
     ) {
+        Lazy<Map<Integer, LZCD.Dependency<Void>>> roomsV2 = Lazy.of(() ->
+                DeclarativeJobs.rooms(location.baseRoom(), maxState, town.getRoomHandle(), work)
+        );
+
         return new JobTownProvider<>() {
             private final Function<BlockPos, State> getJobBlockState = work::getJobBlockState;
 
@@ -352,7 +357,7 @@ public class DeclarativeJob extends
 
             @Override
             public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
-                return DeclarativeJobs.rooms(location.baseRoom(), maxState, town.getRoomHandle(), work);
+                return roomsV2.get();
             }
 
             @Override
@@ -367,11 +372,11 @@ public class DeclarativeJob extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> town.getRoomHandle()
-                                  .getRoomsMatching(location.baseRoom())
-                                  .stream()
-                                  .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
-                                                                                    .keySet())
-                                  .toList(),
+                                .getRoomsMatching(location.baseRoom())
+                                .stream()
+                                .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
+                                        .keySet())
+                                .toList(),
                         getJobBlockState,
                         (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
@@ -396,6 +401,11 @@ public class DeclarativeJob extends
                 Map<Integer, ? extends Collection<MCRoom>> needs = roomsNeedingIngredientsByState();
                 ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = convertToCleanFns(needs);
                 return Jobs.townHasSupplies(town, journal, neededItems);
+            }
+
+            @Override
+            public LZCD.Dependency<Void> hasSuppliesV2() {
+                return DeclarativeJobs.supplies(roomsV2, town, journal);
             }
 
             @Override
@@ -590,7 +600,7 @@ public class DeclarativeJob extends
                     int quantity
             ) {
                 suppliesTarget.getContainer()
-                              .removeItem(i, quantity);
+                        .removeItem(i, quantity);
             }
         };
         getter.tryGetSupplies(
@@ -623,14 +633,14 @@ public class DeclarativeJob extends
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
         jobSite.getSpaces()
-               .stream()
-               .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
-                                                .stream())
-               .forEach(v -> {
-                   BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
-                   tryAdd.accept(pos);
-                   tryAdd.accept(pos.above());
-               });
+                .stream()
+                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
+                        .stream())
+                .forEach(v -> {
+                    BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
+                    tryAdd.accept(pos);
+                    tryAdd.accept(pos.above());
+                });
         if (b.isEmpty()) {
             // TODO: We need an "isJobBlock" AND "isJobBlockReady" predicate
             // QT.JOB_LOGGER.warn("No work spots found in job site. This is probably an issue with the job's JSON definition.");
@@ -705,7 +715,7 @@ public class DeclarativeJob extends
     private Direction getDoorDirectionFromCenter(Room jobSite) {
         Optional<XWall> backXWall = jobSite.getBackXWall();
         if (backXWall.isPresent() && backXWall.get()
-                                              .getZ() > jobSite.doorPos.z) {
+                .getZ() > jobSite.doorPos.z) {
             return Direction.NORTH;
         }
         if (backXWall.isPresent()) {
@@ -715,7 +725,7 @@ public class DeclarativeJob extends
 
         Optional<ZWall> backZWall = jobSite.getBackZWall();
         if (backZWall.isPresent() && backZWall.get()
-                                              .getX() > jobSite.doorPos.x) {
+                .getX() > jobSite.doorPos.x) {
             return Direction.WEST;
         }
         if (backZWall.isPresent()) {
@@ -750,7 +760,7 @@ public class DeclarativeJob extends
     @Override
     public String getStatusToSyncToClient() {
         return journal.getStatus()
-                      .name();
+                .name();
     }
 
     @Override
@@ -765,7 +775,7 @@ public class DeclarativeJob extends
                 ).isEmpty(),
                 Jobs.unTown(toolsRequiredAtStates),
                 s -> !UtilClean.getOrDefault(toolsRequiredAtStates, s, PredicateCollection.empty("no tool defined"))
-                               .isEmpty(),
+                        .isEmpty(),
                 workRequiredAtStates
         );
     }
@@ -849,29 +859,29 @@ public class DeclarativeJob extends
 
             Integer stateQty = ingredientQtyRequiredAtStates.get(state);
             Stream<MCRoom> roomz = matches.stream()
-                                          .filter(room -> {
-                                              for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
-                                                                                      .entrySet()) {
-                                                  State jobBlockState = work.apply(e.getKey());
-                                                  if (jobBlockState == null) {
-                                                      continue;
-                                                  }
-                                                  if (!canClaim.test(e.getKey())) {
-                                                      continue;
-                                                  }
-                                                  if (jobBlockState.ingredientCount() < stateQty) {
-                                                      return true;
-                                                  }
-                                              }
-                                              return false;
-                                          })
-                                          .map(v -> v.room);
+                    .filter(room -> {
+                        for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
+                                .entrySet()) {
+                            State jobBlockState = work.apply(e.getKey());
+                            if (jobBlockState == null) {
+                                continue;
+                            }
+                            if (!canClaim.test(e.getKey())) {
+                                continue;
+                            }
+                            if (jobBlockState.ingredientCount() < stateQty) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    })
+                    .map(v -> v.room);
             b.put(state, Lists.newArrayList(roomz.toList()));
         });
         HashMap<Integer, IPredicateCollection<?>> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values()
-                                 .stream()
-                                 .anyMatch(v -> !v.isEmpty())) {
+                .stream()
+                .anyMatch(v -> !v.isEmpty())) {
             for (int i = 0; i < maxState; i++) {
                 stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, PredicateCollection.empty("no tool defined")));
             }
