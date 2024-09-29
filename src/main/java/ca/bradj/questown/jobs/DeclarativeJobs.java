@@ -1,31 +1,37 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraftforge.common.util.Lazy;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
+import java.util.Optional;
+import java.util.function.*;
 
 public class DeclarativeJobs {
 
@@ -123,6 +129,35 @@ public class DeclarativeJobs {
                 MCHeldItem::Air,
                 STATUS_FACTORY
         );
+    }
+
+    public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
+            ResourceLocation roomId,
+            @NotNull Integer maxState, RoomsHolder roomHandle,
+            WorkStatusHandle<BlockPos, MCHeldItem> work
+    ) {
+        ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+        Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = Lazy.of(() -> {
+
+            ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
+            Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
+            Collection<RoomRecipeMatch<MCRoom>> rooms = roomHandle.getRoomsMatching(roomId);
+
+            rooms.forEach(match -> match.containedBlocks.forEach((bp, bv) -> {
+                State jobBlockState = work.getJobBlockState(bp);
+                if (jobBlockState == null) {
+                    return;
+                }
+                spotStatuses.put(bp, jobBlockState.processingState());
+                Util.addOrInitialize(roomStatuses, match.room, jobBlockState.processingState());
+            }));
+            return new UtilClean.Pair<>(spotStatuses.build(), roomStatuses);
+        });
+
+        for (int i = 0; i < maxState; i++) {
+            b.put(i, new RoomStates(i, e));
+        }
+        return b.build();
     }
 
     private record HandlerInputs(
@@ -302,5 +337,62 @@ public class DeclarativeJobs {
                 return fakeRoom;
             }
         };
+    }
+
+    private static class RoomStates implements LZCD.Dependency<Void> {
+
+        private static final String NAME = "rooms contain workstate";
+
+        private final Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
+        private final String name;
+        private final int state;
+        private LZCD.Populated<WithReason<Boolean>> value;
+
+        public RoomStates(int state, Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs) {
+            this.inputs = inputs;
+            this.name = NAME + " " + state;
+            this.state = state;
+        }
+
+        @Override
+        public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+            if (value != null) {
+                return value;
+            }
+            UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
+            Map<BlockPos, Integer> spotStates = v.a();
+            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream().filter(z -> Integer.compare(state, z.getValue()) == 0).findFirst();
+            WithReason<Boolean> hasSpot = foundSpot.map(
+                    zz -> WithReason.always(true, "town has workspot with state at " + foundSpot.get().getKey())
+            ).orElse(
+                    WithReason.always(false, "no spots found")
+            );
+
+            ImmutableMap.Builder<String, Object> css = ImmutableMap.builder();
+            spotStates.forEach((k, vv) -> css.put(k.toShortString(), vv));
+            ImmutableMap.Builder<String, Object> crs = ImmutableMap.builder();
+            v.b().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
+
+            this.value = new LZCD.Populated<>(name, hasSpot, ImmutableMap.of(
+                    "spots", css.build(),
+                    "rooms", crs.build()
+            ), null);
+            return value;
+        }
+
+        @Override
+        public String describe() {
+            return "TODO"; // TODO
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
+            return this.populate().value();
+        }
     }
 }

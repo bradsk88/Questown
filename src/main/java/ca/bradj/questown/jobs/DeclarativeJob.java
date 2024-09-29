@@ -351,6 +351,11 @@ public class DeclarativeJob extends
             }
 
             @Override
+            public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+                return DeclarativeJobs.rooms(location.baseRoom(), maxState, town.getRoomHandle(), work);
+            }
+
+            @Override
             public boolean isUnfinishedTimeWorkPresent() {
                 return Jobs.isUnfinishedTimeWorkPresent(
                         town.getRoomHandle(), location.baseRoom(),

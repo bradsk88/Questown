@@ -8,6 +8,8 @@ public interface JobTownProvider<ROOM> extends TownProvider {
 
     Map<Integer, Collection<ROOM>> roomsNeedingIngredientsByState();
 
+    Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2();
+
     boolean isUnfinishedTimeWorkPresent();
 
     Collection<Integer> getStatesWithUnfinishedItemlessWork();

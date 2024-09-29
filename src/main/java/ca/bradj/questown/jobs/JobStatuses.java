@@ -41,7 +41,6 @@ public class JobStatuses {
     ) {
         Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
 
-        // TODO: Move "reason" out to dependency
         LZCD<LZCD.Dependency<STATUS>> dHasWorkItems = prePopAble(
                 "hasWorkItems",
                 () -> supplyItemStatus.containsValue(true)
@@ -70,22 +69,10 @@ public class JobStatuses {
                 "not going to jobsite",
                 s -> !factory.goingToJobSite().equals(s)
         );
-        ILZCD<LZCD.Dependency<STATUS>> dTownHasSpace = prePopAble(
-                "town has space",
-                town::hasSpace
-        );
-        ILZCD<LZCD.Dependency<STATUS>> dTimerActive = prePopAble(
-                "town has active timer for this job",
-                town::isTimerActive
-        );
-        ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = prePopAble(
-                "town has supplies",
-                town::hasSupplies
-        );
-        ILZCD<LZCD.Dependency<STATUS>> dHasPlaceToUseSupplies = prePopAble(
-                "town has places to use supplies",
-                town::canUseMoreSupplies
-        );
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasSpace = fromVoid(town.hasSpace());
+        ILZCD<LZCD.Dependency<STATUS>> dTimerActive = fromVoid(town.isTimerActive());
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = fromVoid(town.hasSupplies());
+        ILZCD<LZCD.Dependency<STATUS>> dHasPlaceToUseSupplies = fromVoid(town.canUseMoreSupplies());
         LZCD<STATUS> root = new LZCD<>(
                 "work without items",
                 LZCD.leaf(job::tryChoosingItemlessWork, Objects::isNull),
@@ -171,6 +158,17 @@ public class JobStatuses {
         return nullIfUnchanged(currentStatus, root.resolve());
     }
 
+    private static <STATUS extends IStatus<STATUS>> ILZCD<LZCD.Dependency<STATUS>> fromVoid(
+            LZCD.Dependency<Void> dep
+    ) {
+        //noinspection unchecked,rawtypes
+        return LZCD.noDeps(
+                dep.getName(),
+                () -> (LZCD.Dependency) dep,
+                Objects::isNull
+        );
+    }
+
     private static <STATUS extends IStatus<STATUS>> @NotNull ILZCD<STATUS> leaf(Supplier<STATUS> factory) {
         return LZCD.leaf(factory, Objects::isNull);
     }
@@ -202,31 +200,7 @@ public class JobStatuses {
         }
         STATUS status = usualRoutine(
                 currentStatus, prioritizeExtraction, inventory,
-                new TownStateProvider() {
-                    @Override
-                    public boolean hasSupplies() {
-                        return town.hasSupplies();
-                    }
-
-                    @Override
-                    public boolean hasSpace() {
-                        return town.hasSpace();
-                    }
-
-
-                    @Override
-                    public boolean isTimerActive() {
-                        return town.isUnfinishedTimeWorkPresent();
-                    }
-
-                    @Override
-                    public boolean canUseMoreSupplies() {
-                        return !town.roomsNeedingIngredientsByState()
-                                .entrySet()
-                                .stream()
-                                .allMatch(v -> v.getValue().isEmpty());
-                    }
-                },
+                JobTownStates.forTown(town),
                 new Job<>() {
                     @Override
                     public @Nullable STATUS tryChoosingItemlessWork() {
@@ -375,6 +349,11 @@ public class JobStatuses {
                     }
 
                     @Override
+                    public String getName() {
+                        return name;
+                    }
+
+                    @Override
                     public WithReason<Boolean> apply(Supplier<STATUS> statusSupplier) {
                         populate();
                         return this.value;
@@ -404,6 +383,11 @@ public class JobStatuses {
                     @Override
                     public String describe() {
                         return name + "=<?>";
+                    }
+
+                    @Override
+                    public String getName() {
+                        return name;
                     }
 
                     @Override

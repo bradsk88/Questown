@@ -363,6 +363,11 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
+            public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+                return Map.of();
+            }
+
+            @Override
             public boolean isUnfinishedTimeWorkPresent() {
                 return false;
             }

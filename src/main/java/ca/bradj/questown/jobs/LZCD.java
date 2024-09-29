@@ -6,10 +6,7 @@ import com.google.common.collect.ImmutableMap;
 
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -20,7 +17,7 @@ public class LZCD<T> implements ILZCD<T> {
     public record Populated<T>(
             String name,
             @Nullable T value,
-            Map<String, String> conditions,
+            Map<String, Object> conditions,
             Populated<T> ifCondFailOrNull
     ) {
     }
@@ -29,6 +26,8 @@ public class LZCD<T> implements ILZCD<T> {
         Populated<WithReason<@Nullable Boolean>> populate();
 
         String describe();
+
+        String getName();
     }
 
     public final String name;
@@ -157,12 +156,12 @@ public class LZCD<T> implements ILZCD<T> {
 
 
     public Populated<T> populate() {
-        Map<String, String> b = new HashMap<>();
+        Map<String, Object> b = new HashMap<>();
         for (ILZCD<Dependency<T>> d : conditions) {
             d.populate();
             Dependency<T> resolve = d.resolve();
             Populated<WithReason<Boolean>> v = resolve.populate();
-            b.put(resolve.describe(), v.toString());
+            b.put(resolve.describe(), v);
         }
 
         T resolve = wrapped.resolve();
