@@ -59,6 +59,9 @@ public class IngredientsFromHeldItemSpecialRule extends
                         return ing.isEmpty();
                     },
                     (IPredicateCollection<MCHeldItem> inner, MCHeldItem mcHeldItem) -> {
+                        if (mcHeldItem.isEmpty()) {
+                            return false;
+                        }
                         @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
                         if (ing == null) {
                             return before.test(mcHeldItem);

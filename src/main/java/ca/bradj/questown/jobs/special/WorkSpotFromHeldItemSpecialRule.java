@@ -31,7 +31,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         }
 
         bxEvent.replaceRoomCheck().accept(before -> () -> {
-            Map<Integer, Collection<MCRoom>> b = new HashMap<>();
+            Map<Integer, Collection<MCRoom>> b = new HashMap<>(before.get());
             int state = bxEvent.getJobBlockState().apply(pos).processingState();
             Collection<MCRoom> stateRooms = UtilClean.getOrDefaultCollection(b, state, new ArrayList<>(), true);
             stateRooms.add(room);
@@ -68,7 +68,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
     private static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
-                @Nullable BlockPos room = StockRequestItem.getJobBlock(i);
+                @Nullable BlockPos room = StockRequestItem.getJobBlock(i.getItemNBTData());
                 if (room != null) {
                     return room;
                 }

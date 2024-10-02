@@ -78,6 +78,8 @@
   "tooltips.villagers.job.production.status_2.19": "Check the journal for more info.",
   "tooltips.villagers.job.production.status_1.NO_JOBSITE": "%s has nowhere to work.",
   "tooltips.villagers.job.production.status_2.NO_JOBSITE": "Or they might be looking for tools.",
+  "tooltips.villagers.job.production.status_1.GOING_TO_JOBSITE": "%s is going to work.",
+  "tooltips.villagers.job.production.status_2.GOING_TO_JOBSITE": "",
   "tooltips.villagers.job.blacksmith.status_1.0": "%s is placing down parts",
   "tooltips.villagers.job.blacksmith.status_2.0": "for the pickaxe handle",
   "tooltips.villagers.job.blacksmith.status_1.1": "%s is placing down parts",

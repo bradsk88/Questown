@@ -168,7 +168,7 @@ public class TownContainers {
             return;
         }
         if (item.get() instanceof StockRequestItem) {
-            if (StockRequestItem.hasRoom()) {
+            if (StockRequestItem.hasRoom(item.getItemNBT())) {
                 return;
             }
             item.setNBT(tag -> StockRequestItem.writeToNBT(tag, room, p));

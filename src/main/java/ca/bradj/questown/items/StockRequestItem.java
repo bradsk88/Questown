@@ -2,9 +2,10 @@ package ca.bradj.questown.items;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.Ingredients;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.requests.WorkRequestSerializer;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import ca.bradj.roomrecipes.serialization.RoomSerializer;
@@ -26,7 +27,10 @@ public class StockRequestItem extends Item {
         super(Questown.DEFAULT_ITEM_PROPS);
     }
 
-    public static void writeToNBT(CompoundTag tag, WorkRequest item) {
+    public static void writeToNBT(
+            CompoundTag tag,
+            WorkRequest item
+    ) {
         QTNBT.put(tag, "request", WorkRequestSerializer.INSTANCE.serialize(item));
     }
 
@@ -34,6 +38,7 @@ public class StockRequestItem extends Item {
         CompoundTag reqTag = QTNBT.getCompound(tag, "request");
         return WorkRequestSerializer.INSTANCE.deserialize(reqTag);
     }
+
     public static boolean hasRequest(CompoundTag tag) {
         if (tag == null) {
             return false;
@@ -53,16 +58,20 @@ public class StockRequestItem extends Item {
         QTNBT.putInt(tag, "workspot_room_y", room.yCoord);
     }
 
-    public static boolean hasRoom() {
-        // TODO: Implement
-        return false;
+    public static boolean hasRoom(CompoundTag tag) {
+        boolean x = QTNBT.contains(tag, "workspot_x");
+        boolean y = QTNBT.contains(tag, "workspot_y");
+        boolean z = QTNBT.contains(tag, "workspot_z");
+        boolean room = QTNBT.contains(tag, "workspot_room");
+        boolean room_y = QTNBT.contains(tag, "workspot_room_y");
+        return x && y && z && room && room_y;
     }
 
     public static @Nullable MCRoom getRoom(CompoundTag tag) {
-        if (!tag.contains("workspot_room")) {
+        if (!QTNBT.contains(tag, "workspot_room")) {
             return null;
         }
-        if (!tag.contains("workspot_room_y")) {
+        if (!QTNBT.contains(tag, "workspot_room_y")) {
             return null;
         }
         Integer y = QTNBT.getInt(tag, "workspot_room_y");
@@ -70,9 +79,8 @@ public class StockRequestItem extends Item {
         Room room = RoomSerializer.INSTANCE.deserializeNBT(roomTag);
         return new MCRoom(room.doorPos, room.getSpaces(), y);
     }
-    public static @Nullable BlockPos getJobBlock(MCHeldItem item) {
-        CompoundTag tag = item.getItemNBTData();
-        CompoundTag itemTag = tag.getCompound("item");
+
+    public static @Nullable BlockPos getJobBlock(CompoundTag itemTag) {
         Integer x = null, y = null, z = null;
         if (QTNBT.contains(itemTag, "workspot_x")) {
             x = QTNBT.getInt(itemTag, "workspot_x");
@@ -90,9 +98,21 @@ public class StockRequestItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack p_41421_, @Nullable Level p_41422_, List<Component> tooltips, TooltipFlag p_41424_) {
-        if (hasRequest(p_41421_.getTag())) {
-            tooltips.add(Ingredients.getName(getRequest(p_41421_.getTag()).asIngredient()));
+    public void appendHoverText(
+            ItemStack p_41421_,
+            @Nullable Level p_41422_,
+            List<Component> tooltips,
+            TooltipFlag p_41424_
+    ) {
+        CompoundTag tag = p_41421_.getTag();
+        if (hasRequest(tag)) {
+            tooltips.add(Ingredients.getName(getRequest(tag).asIngredient()));
+        }
+        if (p_41424_.isAdvanced()) {
+            if (hasRoom(tag)) {
+                tooltips.add(Compat.literal("Room Door: " + getRoom(tag).doorPos.getUIString()));
+                tooltips.add(Compat.literal("Job Block: " + Positions.FromBlockPos(getJobBlock(tag)).getUIString()));
+            }
         }
         super.appendHoverText(p_41421_, p_41422_, tooltips, p_41424_);
     }

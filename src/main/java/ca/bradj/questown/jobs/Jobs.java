@@ -362,7 +362,7 @@ public class Jobs {
             ImmutableMap<Integer, ? extends Predicate<MCTownItem>> input
     ) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.test(z.get())));
+        input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
         return b.build();
     }
 
