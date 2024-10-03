@@ -394,7 +394,7 @@ public class DeclarativeJobs {
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,
-                                fakeRoom,
+                                new RoomRecipeMatch<>(fakeRoom, new ResourceLocation("fake"), ImmutableList.of()),
                                 fakePos,
                                 outState.containers
                         ),

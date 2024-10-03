@@ -4,10 +4,13 @@ import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.WorkLocation;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -22,12 +25,16 @@ public class PreTickHook {
 
     public static void run(
             Collection<String> rules,
+            WorkLocation location,
             ImmutableList<MCHeldItem> heldItems,
-            Consumer<Function<Supplier<Map<Integer, Collection<MCRoom>>>, Supplier<Map<Integer, Collection<MCRoom>>>>> roomsReplacer,
+            Consumer<Function<
+                    Supplier<Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>>,
+                    Supplier<Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>>
+                    >> roomsReplacer,
             Function<BlockPos, @NotNull State> state
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeTickEvent bxEvent = new BeforeTickEvent(heldItems, roomsReplacer, state);
+        BeforeTickEvent bxEvent = new BeforeTickEvent(location, heldItems, roomsReplacer, state);
         processMulti(false, appliers, (o, a) -> {
             a.beforeTick(bxEvent);
             return true;

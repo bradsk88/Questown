@@ -3,6 +3,10 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -238,9 +242,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        Map<Integer, ? extends Collection<ROOM>> roomNeedsMap = town.roomsNeedingIngredientsByState();
-
-                        roomNeedsMap = sanitizeRoomNeeds(roomNeedsMap);
+                        RoomsNeedingIngredientsOrTools<ROOM, ?> roomNeedsMap = town.roomsNeedingIngredientsByState().floor();
 
                         boolean foundWork = false;
 
@@ -254,7 +256,7 @@ public class JobStatuses {
                                     .isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
-                                    if (roomNeedsMap.get(s).contains(location)) {
+                                    if (roomNeedsMap.get(s).stream().anyMatch(v -> location.equals(v.getRoom()))) {
                                         return factory.fromJobBlockState(s);
                                     }
                                 }
@@ -279,38 +281,6 @@ public class JobStatuses {
         }
         return status;
     }
-
-    public static <ROOM extends Room> Map<Integer, ? extends Collection<ROOM>> sanitizeRoomNeeds(
-            Map<Integer, ? extends Collection<ROOM>> roomNeedsMap
-    ) {
-        // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
-        // show up as "needing" 0.
-        Map<Integer, Collection<ROOM>> b = new HashMap<>();
-        roomNeedsMap.forEach((k, rooms) -> {
-            ImmutableSet.Builder<ROOM> allPrevRooms = ImmutableSet.builder();
-            for (int i = 0; i < k; i++) {
-                Collection<ROOM> elements = b.get(i);
-                if (elements == null) {
-                    elements = ImmutableList.of();
-                }
-                allPrevRooms.addAll(elements);
-            }
-            ImmutableSet<ROOM> prevRooms = allPrevRooms.build();
-            ImmutableList.Builder<ROOM> bld = ImmutableList.builder();
-            rooms.forEach(room -> {
-                if (prevRooms.contains(room)) {
-                    return;
-                }
-                bld.add(room);
-            });
-            ImmutableList<ROOM> build = bld.build();
-            if (!build.isEmpty()) {
-                b.put(k, build);
-            }
-        });
-        return ImmutableMap.copyOf(b);
-    }
-
 
     private static <S> S nullIfUnchanged(
             S oldStatus,

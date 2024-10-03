@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.declarative.PreExtractHook;
 import ca.bradj.questown.jobs.declarative.PreStateChangeHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.PredicateCollections;
@@ -21,6 +22,7 @@ import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.TownVillagerMoods;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -321,7 +323,7 @@ public class MCTownStateWorldInteraction extends
 
     public JobTownProvider<MCRoom> asTownJobs(
             @NotNull State workStates,
-            MCRoom mcRoom,
+            RoomRecipeMatch<MCRoom> mcRoom,
             BlockPos roomBlock,
             @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers
     ) {
@@ -329,7 +331,7 @@ public class MCTownStateWorldInteraction extends
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
                 if (workStates.processingState() == maxState) {
-                    return ImmutableList.of(mcRoom);
+                    return ImmutableList.of(mcRoom.room);
                 }
                 return ImmutableList.of();
             }
@@ -337,29 +339,29 @@ public class MCTownStateWorldInteraction extends
             @Override
             public Collection<MCRoom> roomsAtState(Integer state) {
                 if (workStates.processingState() == state) {
-                    return ImmutableList.of(mcRoom);
+                    return ImmutableList.of(mcRoom.room);
                 }
                 return ImmutableList.of();
             }
 
             @Override
-            public Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsByState() {
+            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsByState() {
                 int curState = workStates.processingState();
                 PredicateCollection<MCHeldItem, ?> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
                 }
 
                 PredicateCollection<MCTownItem, ?> toolChk = toolsRequiredAtStates.get(curState);
                 if (toolChk != null) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
                 }
 
                 if (workStates.workLeft() > 0) {
-                    return ImmutableMap.of(curState, ImmutableList.of(mcRoom));
+                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
                 }
 
-                return ImmutableMap.of();
+                return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of());
             }
 
             @Override

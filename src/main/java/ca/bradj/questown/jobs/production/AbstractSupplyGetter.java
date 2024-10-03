@@ -20,7 +20,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
     public void tryGetSupplies(
             STATUS status,
             int upToAmount,
-            Supplier<Map<Integer, Collection<ROOM>>> roomsNeedingIngredientsOrTools,
+            Supplier<Map<Integer, ? extends Collection<ROOM>>> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,

@@ -13,16 +13,17 @@ import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.TownContainers;
-import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
@@ -42,7 +43,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
 
@@ -74,7 +74,7 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
 
     // FIXME: Stop using this - use a cached supplier instead
-    protected Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools;
+    protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
@@ -89,7 +89,7 @@ public abstract class ProductionJob<
                 return null;
             }
             WithReason<@Nullable BlockPos> js = findJobSite(
-                    town.getRoomHandle(),
+                    roomsNeedingIngredientsOrTools,
                     getWorkStatusHandle(town)::getJobBlockState,
                     bp -> this.isValidWalkTarget(town, bp),
                     bp -> isJobBlock(sl, bp),
@@ -253,7 +253,7 @@ public abstract class ProductionJob<
 
     @NotNull
     protected ImmutableList<PredicateCollection<MCTownItem, ?>> convertToCleanFns(
-            Map<Integer, ? extends Collection<MCRoom>> statusMap
+            Map<Integer, ? extends Collection<?>> statusMap
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<Integer> first = statusMap.entrySet()
@@ -340,14 +340,14 @@ public abstract class ProductionJob<
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
-            RoomsHolder town,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> blocks,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Predicate<BlockPos> isJobBlock,
             Random rand
     );
 
-    public abstract Map<Integer, Collection<MCRoom>> roomsNeedingIngredientsOrTools(
+    public abstract Map<Integer, Collection<RoomRecipeMatch<MCRoom>>> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -368,7 +368,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            Supplier<Map<Integer, Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 
@@ -377,7 +377,7 @@ public abstract class ProductionJob<
             BlockPos pos
     ) {
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), convertToCleanFns(roomsNeedingIngredientsOrTools),
+                journal.getCapacity(), roomsNeedingIngredientsOrTools.cleanFns(),
                 journal.getItems(), item
         );
 
@@ -504,14 +504,7 @@ public abstract class ProductionJob<
             @Override
             public boolean hasNonSupplyItems() {
 
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.entrySet()
-                                                                          .stream()
-                                                                          .filter(
-                                                                                  v -> !v.getValue()
-                                                                                         .isEmpty()
-                                                                          )
-                                                                          .map(Map.Entry::getKey)
-                                                                          .collect(Collectors.toSet());
+                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.getNonEmptyStates();
                 ImmutableList<Predicate<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
                         statesToFeed.stream()
                                     .flatMap(v -> getRecipe(v)

@@ -6,10 +6,13 @@ import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -31,13 +34,32 @@ public class WorkSpotFromHeldItemSpecialRule extends
         }
 
         bxEvent.replaceRoomCheck().accept(before -> () -> {
-            Map<Integer, Collection<MCRoom>> b = new HashMap<>(before.get());
+            Map<Integer, Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>(before.get());
             int state = bxEvent.getJobBlockState().apply(pos).processingState();
-            Collection<MCRoom> stateRooms = UtilClean.getOrDefaultCollection(b, state, new ArrayList<>(), true);
-            stateRooms.add(room);
+            Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> stateRooms = UtilClean.getOrDefaultCollection(
+                    b, state, new ArrayList<>(), true
+            );
+            stateRooms.add(match(bxEvent, pos));
             b.put(state, ImmutableList.copyOf(stateRooms));
             return ImmutableMap.copyOf(b);
         });
+    }
+
+    private static @NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Object> match(
+            BeforeTickEvent bxEvent,
+            @Nullable BlockPos pos
+    ) {
+        return new IRoomRecipeMatch<>() {
+            @Override
+            public ResourceLocation getRecipeID() {
+                return bxEvent.locInfo().baseRoom();
+            }
+
+            @Override
+            public ImmutableMap<BlockPos, Object> getContainedBlocks() {
+                return ImmutableMap.of(pos, true);
+            }
+        };
     }
 
     @Override
