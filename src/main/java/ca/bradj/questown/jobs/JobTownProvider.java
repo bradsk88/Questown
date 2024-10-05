@@ -9,7 +9,7 @@ import java.util.Map;
 public interface JobTownProvider<ROOM> extends TownProvider {
     Collection<ROOM> roomsWithCompletedProduct();
 
-    RoomsNeedingIngredientsOrTools<ROOM, ?> roomsNeedingIngredientsByState();
+    RoomsNeedingIngredientsOrTools<ROOM, ?, ?> roomsNeedingIngredientsByState();
 
     Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2();
     LZCD.Dependency<Void> hasSuppliesV2();

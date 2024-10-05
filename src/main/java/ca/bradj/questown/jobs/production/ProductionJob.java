@@ -74,7 +74,7 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
 
     // FIXME: Stop using this - use a cached supplier instead
-    protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools;
+    protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
     protected final ImmutableList<String> specialGlobalRules;
@@ -340,14 +340,14 @@ public abstract class ProductionJob<
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> blocks,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> blocks,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Predicate<BlockPos> isJobBlock,
             Random rand
     );
 
-    public abstract Map<Integer, Collection<RoomRecipeMatch<MCRoom>>> roomsNeedingIngredientsOrTools(
+    public abstract RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -368,7 +368,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 

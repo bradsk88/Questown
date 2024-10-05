@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.WorkLocation;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -28,8 +29,8 @@ public class PreTickHook {
             WorkLocation location,
             ImmutableList<MCHeldItem> heldItems,
             Consumer<Function<
-                    Supplier<Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>>,
-                    Supplier<Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>>
+                    RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos>,
+                    RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos>
                     >> roomsReplacer,
             Function<BlockPos, @NotNull State> state
     ) {

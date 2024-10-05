@@ -345,7 +345,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsByState() {
+            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsByState() {
                 int curState = workStates.processingState();
                 PredicateCollection<MCHeldItem, ?> ings = ingredientsRequiredAtStates().get(curState);
                 if (ings != null) {

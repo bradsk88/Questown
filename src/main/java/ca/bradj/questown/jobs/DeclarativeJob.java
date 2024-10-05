@@ -243,8 +243,8 @@ public class DeclarativeJob extends
             Direction facingPos
     ) {
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
-        AtomicReference<Supplier<? extends Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>>> rniot = new AtomicReference<>(
-                () -> roomsNeedingIngredientsOrTools(
+        AtomicReference<RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos>> rniot = new AtomicReference<>(
+                roomsNeedingIngredientsOrTools(
                         town, work::getJobBlockState, (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
                 )
         );
@@ -259,10 +259,7 @@ public class DeclarativeJob extends
                 specialGlobalRules,
                 location,
                 heldItems,
-                fn -> {
-                    Supplier<Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>> mapSupplier1 = () -> rniot.get().get();
-                    rniot.set(fn.apply(mapSupplier1));
-                },
+                fn -> rniot.set(fn.apply(rniot.get())),
                 bsFn
         );
         specialRules.forEach((state, rules) ->
@@ -270,17 +267,12 @@ public class DeclarativeJob extends
                         rules,
                         location,
                         heldItems,
-                        fn -> {
-                            Supplier<Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>>> mapSupplier = () -> rniot.get().get();
-                            rniot.set(fn.apply(mapSupplier));
-                        },
+                        fn -> rniot.set(fn.apply(rniot.get())),
                         bsFn
                 ));
 
 
-        ImmutableMap.Builder<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = ImmutableMap.builder();
-        rniot.get().get().forEach((k, v) -> b.put(k, v));
-        this.roomsNeedingIngredientsOrTools = new RoomsNeedingIngredientsOrTools<>(b.build());
+        this.roomsNeedingIngredientsOrTools = new RoomsNeedingIngredientsOrTools<>(rniot.get().get());
 
         this.tick(town, work, entity, facingPos, this.roomsNeedingIngredientsOrTools, statusFactory);
     }
@@ -292,7 +284,7 @@ public class DeclarativeJob extends
             LivingEntity entity,
             Direction facingPos,
             // Change this to a supplier whose value is cached for one tick
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
@@ -354,7 +346,7 @@ public class DeclarativeJob extends
     private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
             TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         Lazy<Map<Integer, LZCD.Dependency<Void>>> roomsV2 = Lazy.of(() ->
                 DeclarativeJobs.rooms(location.baseRoom(), maxState, town.getRoomHandle(), work)
@@ -372,7 +364,7 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsByState() {
+            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsByState() {
                 return roomsNeedingIngredientsOrTools;
             }
 
@@ -419,7 +411,7 @@ public class DeclarativeJob extends
 
             @Override
             public boolean hasSupplies() {
-                RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> needs = roomsNeedingIngredientsByState();
+                RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> needs = roomsNeedingIngredientsByState();
                 ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = needs.cleanFns();
                 return Jobs.townHasSupplies(town, journal, neededItems);
             }
@@ -478,7 +470,7 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
             RoomRecipeMatch<MCRoom> entityCurrentJobSite,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> roomsNeedingIngredientsOrTools
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         DeclarativeJob self = this;
         return new JobLogic.JLWorld<>() {
@@ -814,7 +806,7 @@ public class DeclarativeJob extends
 
     @Override
     protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation> blocksSrc,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> blocksSrc,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
@@ -823,9 +815,7 @@ public class DeclarativeJob extends
         // TODO: Use tags to support more tiers of work rooms
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
 
-        List<? extends RoomWithBlocks<MCRoom, BlockPos, ?>> rooms = new ArrayList<>(
-                blocksSrc.values().stream().flatMap(Collection::stream).toList()
-        );
+        ArrayList<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = new ArrayList<>(blocksSrc.getMatches());
         // TODO: Sort by distance and choose the closest (maybe also coordinate
         //  with other workers who need the same type of job site)
         // For now, we use randomization
@@ -833,8 +823,8 @@ public class DeclarativeJob extends
 
         boolean roomFoundButNotBlock = false;
 
-        for (RoomWithBlocks<MCRoom, BlockPos, ?> match : rooms) {
-            for (Map.Entry<BlockPos, ?> blocks : match.containedBlocks.entrySet()
+        for (IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> match : rooms) {
+            for (Map.Entry<BlockPos, ?> blocks : match.getContainedBlocks().entrySet()
             ) {
                 BlockPos blockPos = blocks.getKey();
                 @Nullable Integer blockState = JobBlock.getState(work, blockPos);
@@ -848,7 +838,7 @@ public class DeclarativeJob extends
 
                 Supplier<BlockPos> is = () -> findInteractionSpot(
                         blockPos,
-                        match.room,
+                        match.getRoom(),
                         isValidWalkTarget,
                         () -> Direction.getRandom(rand)
                 );
@@ -871,7 +861,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public Map<Integer, Collection<RoomRecipeMatch<MCRoom>>> roomsNeedingIngredientsOrTools(
+    public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -923,7 +913,7 @@ public class DeclarativeJob extends
                 b.get(state).addAll(list);
             }
         });
-        return ImmutableMap.copyOf(b);
+        return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.copyOf(b));
     }
 
     @Override

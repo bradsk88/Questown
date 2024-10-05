@@ -242,7 +242,7 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        RoomsNeedingIngredientsOrTools<ROOM, ?> roomNeedsMap = town.roomsNeedingIngredientsByState().floor();
+                        RoomsNeedingIngredientsOrTools<ROOM, ?, ?> roomNeedsMap = town.roomsNeedingIngredientsByState().floor();
 
                         boolean foundWork = false;
 

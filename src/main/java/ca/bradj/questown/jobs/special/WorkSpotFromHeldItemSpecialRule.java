@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -33,26 +34,32 @@ public class WorkSpotFromHeldItemSpecialRule extends
             return;
         }
 
-        bxEvent.replaceRoomCheck().accept(before -> () -> {
-            Map<Integer, Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>(before.get());
+        bxEvent.replaceRoomCheck().accept(before -> {
+            Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>(before.get());
             int state = bxEvent.getJobBlockState().apply(pos).processingState();
             Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> stateRooms = UtilClean.getOrDefaultCollection(
                     b, state, new ArrayList<>(), true
             );
-            stateRooms.add(match(bxEvent, pos));
+            stateRooms.add(match(bxEvent, pos, room));
             b.put(state, ImmutableList.copyOf(stateRooms));
-            return ImmutableMap.copyOf(b);
+            return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.copyOf(b));
         });
     }
 
     private static @NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Object> match(
             BeforeTickEvent bxEvent,
-            @Nullable BlockPos pos
+            @Nullable BlockPos pos,
+            @Nullable MCRoom room
     ) {
         return new IRoomRecipeMatch<>() {
             @Override
             public ResourceLocation getRecipeID() {
                 return bxEvent.locInfo().baseRoom();
+            }
+
+            @Override
+            public MCRoom getRoom() {
+                return room;
             }
 
             @Override
