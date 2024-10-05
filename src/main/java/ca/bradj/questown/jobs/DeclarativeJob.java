@@ -293,6 +293,7 @@ public class DeclarativeJob extends
                 town,
                 location.baseRoom(),
                 entity.blockPosition()
+                // FIXME: add "roomsNeedingIngredientsOrTools" as parameter and only return job site if it is one of those
         );
 
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
@@ -341,6 +342,11 @@ public class DeclarativeJob extends
                         0
                 )
         );
+    }
+
+    @Override
+    protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
+        return roomsNeedingIngredientsOrTools.cleanFns(ingredientsRequiredAtStates::get, toolsRequiredAtStates::get);
     }
 
     private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
@@ -412,7 +418,10 @@ public class DeclarativeJob extends
             @Override
             public boolean hasSupplies() {
                 RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> needs = roomsNeedingIngredientsByState();
-                ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = needs.cleanFns();
+                ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = needs.cleanFns(
+                        ingredientsRequiredAtStates::get,
+                        toolsRequiredAtStates::get
+                );
                 return Jobs.townHasSupplies(town, journal, neededItems);
             }
 
@@ -548,7 +557,7 @@ public class DeclarativeJob extends
                 if (logic.isWrappingUp()) {
                     return;
                 }
-                self.tryGetSupplies(roomsNeedingIngredientsOrTools::getRooms, entity.blockPosition());
+                self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());
             }
 
             @Override
@@ -591,7 +600,7 @@ public class DeclarativeJob extends
     }
 
     private void tryGetSupplies(
-            Supplier<Map<Integer, ? extends Collection<MCRoom>>> roomsNeedingIngredientsOrTools,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos
     ) {
         if (suppliesTarget == null) {

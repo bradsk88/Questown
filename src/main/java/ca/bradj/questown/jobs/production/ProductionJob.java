@@ -377,7 +377,7 @@ public abstract class ProductionJob<
             BlockPos pos
     ) {
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
-                journal.getCapacity(), roomsNeedingIngredientsOrTools.cleanFns(),
+                journal.getCapacity(), cleanRooms(),
                 journal.getItems(), item
         );
 
@@ -396,6 +396,8 @@ public abstract class ProductionJob<
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
+
+    protected abstract Collection<? extends Predicate<MCTownItem>> cleanRooms();
 
     @Override
     public boolean shouldDisappear(

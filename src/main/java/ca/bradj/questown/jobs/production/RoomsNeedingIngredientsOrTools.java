@@ -1,16 +1,16 @@
 package ca.bradj.questown.jobs.production;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
@@ -29,15 +29,39 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
     }
 
     public Map<Integer, Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> get() {
-        return null;
+        return inner;
     }
 
-    public Map<Integer, Collection<ROOM>> getRooms() {
-        return null;
-    }
+    public ImmutableList<PredicateCollection<MCTownItem, ?>> cleanFns(
+            Function<Integer, PredicateCollection<MCHeldItem, ?>> items,
+            Function<Integer, PredicateCollection<MCTownItem, ?>> tools
+    ) {
+        // TODO: Be smarter? We're just finding the first room that needs stuff.
+        Optional<Integer> first = inner.entrySet()
+                                           .stream()
+                                           .filter(v -> !v.getValue()
+                                                          .isEmpty())
+                                           .map(Map.Entry::getKey)
+                                           .findFirst();
 
-    public ImmutableList<PredicateCollection<MCTownItem, ?>> cleanFns() {
-        return null;
+        if (first.isEmpty()) {
+            return ImmutableList.of();
+        }
+        int s = first.get();
+
+        ImmutableList.Builder<PredicateCollection<MCTownItem, ?>> bb = ImmutableList.builder();
+        PredicateCollection<MCHeldItem, ?> ingr = items.apply(s);
+        if (ingr != null) {
+            bb.add(PredicateCollections.townify(ingr));
+        }
+        // Hold on to tools required for this state and all previous states
+        for (int i = 0; i <= s; i++) {
+            PredicateCollection<MCTownItem, ?> tool = tools.apply(i);
+            if (tool != null) {
+                bb.add(tool);
+            }
+        }
+        return bb.build();
     }
 
     public Set<Integer> getNonEmptyStates() {
@@ -83,11 +107,11 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
     }
 
     public boolean containsKey(Integer s) {
-        return false;
+        return inner.containsKey(s);
     }
 
     public Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> get(Integer s) {
-        return null;
+        return inner.get(s);
     }
 
     public ImmutableList<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> getMatches() {
