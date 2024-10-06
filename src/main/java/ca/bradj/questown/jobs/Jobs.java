@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
@@ -18,8 +19,10 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
@@ -190,22 +193,26 @@ public class Jobs {
         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
     }
 
-    public static RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
-            TownInterface town,
-            ResourceLocation id,
-            BlockPos entityBlockPos
+    public static @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
+            BlockPos entityBlockPos,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         // TODO: Support multiple tiers of job site (i.e. more than one resource location)
-        return town.getRoomHandle().getRoomsMatching(id).stream()
-                   .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
-                   .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                   .filter(v -> InclusiveSpaces.contains(
-                                   v.room.getSpaces(),
-                                   Positions.FromBlockPos(entityBlockPos)
-                           ) || v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                   )
-                   .findFirst()
-                   .orElse(null);
+        Predicate<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> containsEntity = v ->
+        {
+            Position ebp = Positions.FromBlockPos(entityBlockPos);
+            boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), ebp);
+            return contains || v.getRoom().getDoorPos().equals(ebp);
+        };
+        IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in = roomsNeedingIngredientsOrTools
+                .getMatches()
+                .stream()
+                .filter(v -> v.getRoom().yCoord > entityBlockPos.getY() - 5)
+                .filter(v -> v.getRoom().yCoord < entityBlockPos.getY() + 5)
+                .filter(containsEntity)
+                .findFirst()
+                .orElse(null);
+        return in == null ? null : RoomRecipeMatches.unsafe(in);
     }
 
     public static boolean hasNonSupplyItems(

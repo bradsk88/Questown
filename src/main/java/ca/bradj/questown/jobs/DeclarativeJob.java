@@ -290,10 +290,8 @@ public class DeclarativeJob extends
         MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
 
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
-                town,
-                location.baseRoom(),
-                entity.blockPosition()
-                // FIXME: add "roomsNeedingIngredientsOrTools" as parameter and only return job site if it is one of those
+                entity.blockPosition(),
+                roomsNeedingIngredientsOrTools
         );
 
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
@@ -308,11 +306,7 @@ public class DeclarativeJob extends
 
         JobTownProvider<MCRoom> jtp = makeTownProviderForTick(town, work, roomsNeedingIngredientsOrTools);
 
-        Supplier<ProductionStatus> computeState = getStateComputer(
-                statusFactory,
-                jtp,
-                elp
-        );
+        Supplier<ProductionStatus> computeState = getStateComputer(statusFactory, jtp, elp);
         this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
         WorkPosition<BlockPos> workSpot = world.getWorkSpot();
         BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);

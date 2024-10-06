@@ -35,7 +35,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         }
 
         bxEvent.replaceRoomCheck().accept(before -> {
-            Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>(before.get());
+            Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>();
             int state = bxEvent.getJobBlockState().apply(pos).processingState();
             Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> stateRooms = UtilClean.getOrDefaultCollection(
                     b, state, new ArrayList<>(), true
