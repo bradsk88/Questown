@@ -355,7 +355,8 @@ public abstract class AbstractWorldInteraction<
                         ctx,
                         extra,
                         getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
-                        item
+                        item,
+                        maxState
                 );
                 if (out == null) {
                     out = ctx;
@@ -450,9 +451,11 @@ public abstract class AbstractWorldInteraction<
             @NotNull TOWN ctx,
             EXTRA inputs,
             WorkedSpot<POS> position,
-            HELD_ITEM item
+            HELD_ITEM item,
+            int maxState
     ) {
-        Collection<String> rules = specialRules.get(ProductionStatus.fromJobBlockStatus(position.stateAfterWork()));
+        ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.stateAfterWork(), maxState);
+        Collection<String> rules = specialRules.get(o);
         if (rules == null || rules.isEmpty()) {
             return ctx;
         }

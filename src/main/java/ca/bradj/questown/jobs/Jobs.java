@@ -365,6 +365,7 @@ public class Jobs {
         input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
         return b.build();
     }
+
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unTown(
             ImmutableMap<Integer, ? extends Predicate<MCTownItem>> input
     ) {
@@ -387,29 +388,29 @@ public class Jobs {
     }
 
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
-            TownInterface town,
-            Collection<RoomRecipeMatch<MCRoom>> rooms,
+            ServerLevel town,
+            Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
             BiPredicate<ServerLevel, BlockPos> blockCheck,
             StateCheck check
     ) {
-        return rooms.stream()
-                    .filter(v -> {
-                        List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream()
-                                                                                               .filter(
-                                                                                                       z -> blockCheck.test(
-                                                                                                               town.getServerLevel(),
-                                                                                                               z.getKey()
-                                                                                                       )
-                                                                                               ).toList();
-                        ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
-                        for (Map.Entry<BlockPos, Block> e : blocks) {
-                            if (check.Check(town.getServerLevel(), e.getKey())) {
-                                return true;
-                            }
+        return rooms
+                .stream()
+                .filter(v -> {
+                    List<Map.Entry<BlockPos, Block>> containedJobBlocks = v
+                            .getContainedBlocks()
+                            .entrySet().stream()
+                            .filter(z -> blockCheck.test(town, z.getKey()))
+                            .toList();
+                    ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
+                    for (Map.Entry<BlockPos, Block> e : blocks) {
+                        if (check.Check(town, e.getKey())) {
+                            return true;
                         }
-                        return false;
-                    })
-                    .toList();
+                    }
+                    return false;
+                })
+                .map(RoomRecipeMatches::unsafe)
+                .toList();
     }
 
     public interface LootDropper<I> {

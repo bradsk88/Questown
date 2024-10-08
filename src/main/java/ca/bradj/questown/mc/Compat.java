@@ -20,9 +20,11 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -55,10 +57,12 @@ public class Compat {
                 pitchUpOrDown
         );
     }
+
     public static void playSound(
             ServerLevel serverLevel,
             BlockPos pos,
-            SoundEvent sound, SoundSource source
+            SoundEvent sound,
+            SoundSource source
     ) {
         float volume = 0.5f;
         float pitchUpOrDown = 1.0F + (serverLevel.random.nextFloat() - serverLevel.random.nextFloat()) * 0.4F;
@@ -76,11 +80,18 @@ public class Compat {
         return new TranslatableComponent(key);
     }
 
-    public static TranslatableComponent translatable(String key, Object... args) {
+    public static TranslatableComponent translatable(
+            String key,
+            Object... args
+    ) {
         return new TranslatableComponent(key, args);
     }
 
-    public static TranslatableComponent translatableStyled(String s, Style style, Object... args) {
+    public static TranslatableComponent translatableStyled(
+            String s,
+            Style style,
+            Object... args
+    ) {
         TranslatableComponent v = translatable(s, args);
         v.setStyle(style);
         return v;
@@ -90,7 +101,10 @@ public class Compat {
         return new TextComponent(x);
     }
 
-    public static <X> ArrayList<X> shuffle(Collection<X> c, ServerLevel serverLevel) {
+    public static <X> ArrayList<X> shuffle(
+            Collection<X> c,
+            ServerLevel serverLevel
+    ) {
         ArrayList<X> list = new ArrayList<>(c);
         int size = list.size();
         for (int i = size; i > 1; --i) {
@@ -99,7 +113,10 @@ public class Compat {
         return list;
     }
 
-    public static int nextInt(@Nullable ServerLevel server, int i) {
+    public static int nextInt(
+            @Nullable ServerLevel server,
+            int i
+    ) {
         return server.getRandom().nextInt(i);
     }
 
@@ -122,7 +139,11 @@ public class Compat {
         return e.getTileData();
     }
 
-    public static void openScreen(ServerPlayer sender, MenuProvider menuProvider, Consumer<FriendlyByteBuf> consumer) {
+    public static void openScreen(
+            ServerPlayer sender,
+            MenuProvider menuProvider,
+            Consumer<FriendlyByteBuf> consumer
+    ) {
         NetworkHooks.openGui(sender, menuProvider, consumer);
     }
 
@@ -130,7 +151,10 @@ public class Compat {
         return DeferredRegister.create(ForgeRegistries.CONTAINERS, modid);
     }
 
-    public static void enqueueOrLog(ParallelDispatchEvent event, Runnable staticInitialize) {
+    public static void enqueueOrLog(
+            ParallelDispatchEvent event,
+            Runnable staticInitialize
+    ) {
         event.enqueueWork(staticInitialize).exceptionally(
                 ex -> {
                     QT.INIT_LOGGER.error("Enqueued work failed", ex);
@@ -145,5 +169,30 @@ public class Compat {
 
     public static TownPosition townPos(BlockPos blockPos) {
         return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY());
+    }
+
+    public static void insertInNextOpenSlot(
+            IItemHandler iItemHandler,
+            ItemStack inserted,
+            int targetSize
+    ) {
+        if (inserted.getOrCreateTag().isEmpty()) {
+            for (int i = 0; i < iItemHandler.getSlots(); i++) {
+                ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
+                if (stackInSlot.getOrCreateTag().isEmpty() && stackInSlot.sameItem(inserted)) {
+                    if (stackInSlot.getCount() < targetSize) {
+                        iItemHandler.insertItem(i, inserted, false);
+                        return;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < iItemHandler.getSlots(); i++) {
+            ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
+            if (stackInSlot.isEmpty()) {
+                iItemHandler.insertItem(i, inserted, false);
+                return;
+            }
+        }
     }
 }

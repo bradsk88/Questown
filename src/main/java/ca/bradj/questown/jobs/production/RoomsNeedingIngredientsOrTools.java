@@ -115,6 +115,6 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
     }
 
     public ImmutableList<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> getMatches() {
-        return ImmutableList.copyOf(inner.values().stream().flatMap(Collection::stream).iterator());
+        return ImmutableList.copyOf(inner.values().stream().flatMap(Collection::stream).distinct().iterator());
     }
 }

@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public interface RoomsHolder {
@@ -16,7 +17,7 @@ public interface RoomsHolder {
 
     Collection<MCRoom> getFarms();
 
-    Collection<RoomRecipeMatch<MCRoom>> getMatches();
+    Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include);
 
     Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr);
 

@@ -382,7 +382,7 @@ public abstract class ProductionJob<
         );
 
         Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
-                town, checkFn, pos
+                town, checkFn, pos, this::shouldCheckContainerForSupplies
         );
 
         if (this.suppliesTarget != null) {
@@ -396,6 +396,8 @@ public abstract class ProductionJob<
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
+
+    protected abstract boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom);
 
     protected abstract Collection<? extends Predicate<MCTownItem>> cleanRooms();
 

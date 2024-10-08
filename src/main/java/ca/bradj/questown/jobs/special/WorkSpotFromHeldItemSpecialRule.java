@@ -8,6 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -46,6 +47,27 @@ public class WorkSpotFromHeldItemSpecialRule extends
         });
     }
 
+    @Override
+    public void beforeInit(BeforeInitEvent bxEvent) {
+        super.beforeInit(bxEvent);
+
+        bxEvent.jobBlockCheckReplacer().accept(old -> {
+            @Nullable BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
+            if (room == null) {
+                return old;
+            }
+            return (sl, bp) -> room.equals(bp);
+        });
+
+        bxEvent.supplyRoomCheckReplacer().accept(old -> {
+            @Nullable MCRoom room = getRoomFromHeldItems(bxEvent.heldItems().get());
+            if (room == null) {
+                return old;
+            }
+            return room::equals;
+        });
+    }
+
     private static @NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Object> match(
             BeforeTickEvent bxEvent,
             @Nullable BlockPos pos,
@@ -67,19 +89,6 @@ public class WorkSpotFromHeldItemSpecialRule extends
                 return ImmutableMap.of(pos, true);
             }
         };
-    }
-
-    @Override
-    public void beforeInit(BeforeInitEvent bxEvent) {
-        super.beforeInit(bxEvent);
-
-        bxEvent.jobBlockCheckReplacer().accept(old -> {
-            @Nullable BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
-            if (room == null) {
-                return old;
-            }
-            return (sl, bp) -> room.equals(bp);
-        });
     }
 
     private static @Nullable MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {

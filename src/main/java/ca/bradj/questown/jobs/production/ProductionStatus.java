@@ -120,9 +120,21 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     };
     public final String name;
 
+    /**
+     * @deprecated
+     * @param s
+     * @return
+     */
     public static ProductionStatus fromJobBlockStatus(int s) {
+        return fromJobBlockStatus(s, Integer.MAX_VALUE);
+    }
+
+    public static ProductionStatus fromJobBlockStatus(int s, int maxState) {
         if (s >= firstNonCustomIndex) {
             throw new IllegalStateException("Not a valid job block status: " + s);
+        }
+        if (s == maxState) {
+            return EXTRACTING_PRODUCT;
         }
         return new ProductionStatus("state:" + s, s);
     }

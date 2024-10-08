@@ -56,6 +56,13 @@
         "ingredients_from_held_item",
         "workspot_from_held_item"
       ]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": [
+        "add_item_to_container"
+      ]
     }
   ]
 }

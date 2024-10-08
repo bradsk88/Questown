@@ -24,7 +24,6 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.rooms.XWall;
@@ -39,7 +38,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.util.Lazy;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -63,6 +61,7 @@ public class DeclarativeJob extends
     public final ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates;
     public final ImmutableMap<Integer, Integer> workRequiredAtStates;
     private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
+//    private final Predicate<RoomRecipeMatch<MCRoom>> containerCheck;
 
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
@@ -120,6 +119,7 @@ public class DeclarativeJob extends
         AtomicReference<BiPredicate<ServerLevel, BlockPos>> ijb = new AtomicReference<>(
                 (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp)
         );
+        AtomicReference<Predicate<MCRoom>> conChk = new AtomicReference<>(room -> true);
 
         for (int i = 0; i <= maxState; i++) {
             int ii = i;
@@ -130,14 +130,23 @@ public class DeclarativeJob extends
                     journal::getItems,
                     fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
                     fn -> tool.put(ii, fn.apply(tool.get(ii))),
-                    fn -> ijb.set(fn.apply(ijb.get()))
+                    fn -> ijb.set(fn.apply(ijb.get())),
+                    fn -> conChk.set(fn.apply(conChk.get()))
             );
         }
         // TODO: Add jobBlock param to .run(...)
-        PreInitHook.run(specialGlobalRules, journal::getItems, fn -> {
-        }, fn -> {
-        }, fn -> ijb.set(fn.apply(ijb.get())));
+        PreInitHook.run(
+                specialGlobalRules,
+                journal::getItems,
+                fn -> {
+                },
+                fn -> {
+                },
+                fn -> ijb.set(fn.apply(ijb.get())),
+                fn -> conChk.set(fn.apply(conChk.get()))
+        );
         this.isJobBlock = ijb.get();
+//        this.containerCheck = conChk.get();
 
         this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingr);
         this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
@@ -339,6 +348,11 @@ public class DeclarativeJob extends
     }
 
     @Override
+    protected boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom) {
+        return containerCheck.test(mcRoom);
+    }
+
+    @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
         return roomsNeedingIngredientsOrTools.cleanFns(ingredientsRequiredAtStates::get, toolsRequiredAtStates::get);
     }
@@ -349,7 +363,7 @@ public class DeclarativeJob extends
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         Lazy<Map<Integer, LZCD.Dependency<Void>>> roomsV2 = Lazy.of(() ->
-                DeclarativeJobs.rooms(location.baseRoom(), maxState, town.getRoomHandle(), work)
+                DeclarativeJobs.rooms(maxState, roomsNeedingIngredientsOrTools, work)
         );
 
         return new JobTownProvider<>() {
@@ -406,7 +420,7 @@ public class DeclarativeJob extends
 
             @Override
             public Collection<MCRoom> roomsAtState(Integer state) {
-                return roomsWithState(town, getJobBlockState, state).stream().map(v -> v.room).toList();
+                return roomsNeedingIngredientsOrTools.get().get(state).stream().map(IRoomRecipeMatch::getRoom).toList();
             }
 
             @Override
@@ -444,7 +458,7 @@ public class DeclarativeJob extends
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         return Jobs.roomsWithState(
-                town, rooms,
+                town.getServerLevel(), rooms,
                 this::isJobBlock,
                 (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
         );
@@ -877,26 +891,8 @@ public class DeclarativeJob extends
                 return;
             }
             Collection<RoomRecipeMatch<MCRoom>> matches = roomsWithState(town, work, state);
-
             Integer stateQty = ingredientQtyRequiredAtStates.get(state);
-            Stream<RoomRecipeMatch<MCRoom>> roomz = matches.stream()
-                                                           .filter(room -> {
-                                                               for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
-                                                                                                       .entrySet()) {
-                                                                   State jobBlockState = work.apply(e.getKey());
-                                                                   if (jobBlockState == null) {
-                                                                       continue;
-                                                                   }
-                                                                   if (!canClaim.test(e.getKey())) {
-                                                                       continue;
-                                                                   }
-                                                                   if (jobBlockState.ingredientCount() < stateQty) {
-                                                                       return true;
-                                                                   }
-                                                               }
-                                                               return false;
-                                                           });
-            b.put(state, Lists.newArrayList(roomz.toList()));
+            b.put(state, getRoomsWhereWorkCanBeDone(work, canClaim, matches, stateQty));
         });
         HashMap<Integer, IPredicateCollection<?>> stateTools = new HashMap<>();
         if (toolsRequiredAtStates.values()
@@ -917,6 +913,33 @@ public class DeclarativeJob extends
             }
         });
         return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.copyOf(b));
+    }
+
+    private static @NotNull ArrayList<RoomRecipeMatch<MCRoom>> getRoomsWhereWorkCanBeDone(
+            Function<BlockPos, State> work,
+            Predicate<BlockPos> canClaim,
+            Collection<RoomRecipeMatch<MCRoom>> matches,
+            Integer stateQty
+    ) {
+        Stream<RoomRecipeMatch<MCRoom>> roomz = matches
+                .stream()
+                .filter(room -> {
+                    for (Map.Entry<BlockPos, ?> e : room.getContainedBlocks().entrySet()) {
+                        State jobBlockState = work.apply(e.getKey());
+                        if (jobBlockState == null) {
+                            continue;
+                        }
+                        if (!canClaim.test(e.getKey())) {
+                            continue;
+                        }
+                        if (jobBlockState.ingredientCount() < stateQty) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+        ArrayList<RoomRecipeMatch<MCRoom>> value = Lists.newArrayList(roomz.toList());
+        return value;
     }
 
     @Override

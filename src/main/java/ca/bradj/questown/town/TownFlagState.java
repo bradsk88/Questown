@@ -62,7 +62,7 @@ public class TownFlagState {
         long dayTime = parent.getServerLevel().getDayTime();
         return new MCTownState(
                 vB.build(),
-                TownContainers.findAllMatching(parent, item -> true).toList(),
+                TownContainers.findAllMatching(parent, item -> true, room -> true).toList(),
                 // TODO[ASAP]: Store statuses for all villagers
                 parent.getWorkStatusHandle(null).getAll(),
                 ImmutableMap.of(), // TODO: Store timers from world
@@ -233,7 +233,8 @@ public class TownFlagState {
         // TODO: Run less often?
         Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllMatching(
                 e,
-                item -> true
+                item -> true,
+                room -> true
         ).iterator();
 
         boolean changes = checkForContainerChanges(level, matchIter);

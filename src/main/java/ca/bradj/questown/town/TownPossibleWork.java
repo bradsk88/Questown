@@ -118,7 +118,7 @@ public class TownPossibleWork {
                 Collection<RoomRecipeMatch<MCRoom>> rooms = t.getRoomHandle()
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
-                        t, rooms,
+                        t.getServerLevel(), rooms,
                         (sl, bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
                         (sl, bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );

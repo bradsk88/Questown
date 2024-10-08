@@ -10,15 +10,16 @@ import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -136,9 +137,8 @@ public class DeclarativeJobs {
     }
 
     public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
-            ResourceLocation roomId,
             @NotNull Integer maxState,
-            RoomsHolder roomHandle,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomHandle,
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
@@ -146,15 +146,15 @@ public class DeclarativeJobs {
 
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
             Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
-            Collection<RoomRecipeMatch<MCRoom>> rooms = roomHandle.getRoomsMatching(roomId);
+            List<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = roomHandle.getMatches();
 
-            rooms.forEach(match -> match.containedBlocks.forEach((bp, bv) -> {
+            rooms.forEach(match -> match.getContainedBlocks().forEach((bp, bv) -> {
                 State jobBlockState = work.getJobBlockState(bp);
                 if (jobBlockState == null) {
                     return;
                 }
                 spotStatuses.put(bp, jobBlockState.processingState());
-                Util.addOrInitialize(roomStatuses, match.room, jobBlockState.processingState());
+                Util.addOrInitialize(roomStatuses, match.getRoom(), jobBlockState.processingState());
             }));
             return new UtilClean.Pair<>(spotStatuses.build(), roomStatuses);
         });

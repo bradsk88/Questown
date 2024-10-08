@@ -4,18 +4,13 @@ import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
-import ca.bradj.questown.mc.PredicateCollections;
 import com.google.common.collect.ImmutableList;
-import joptsimple.internal.Strings;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class IngredientsFromHeldItemSpecialRule extends
         JobPhaseModifier {
@@ -35,13 +30,19 @@ public class IngredientsFromHeldItemSpecialRule extends
                     (IPredicateCollection<MCTownItem> inner) -> {
                         @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
                         if (ing == null) {
-                            return inner.isEmpty();
+                            if (before == null) {
+                                return true;
+                            }
+                            return before.isEmpty();
                         }
                         return ing.isEmpty();
                     },
                     (IPredicateCollection<MCTownItem> inner, MCTownItem mcHeldItem) -> {
                         @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
                         if (ing == null) {
+                            if (before == null) {
+                                return false;
+                            }
                             return before.test(mcHeldItem);
                         }
                         return ing.test(mcHeldItem.toItemStack());
@@ -74,7 +75,14 @@ public class IngredientsFromHeldItemSpecialRule extends
     }
 
     private Ingredient getIngredientFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
-        // TODO[ASAP]: Implement this
-        return Ingredient.of(Items.BREAD);
+        for (MCHeldItem i : mcHeldItems) {
+            if (i.get().get() instanceof StockRequestItem) {
+                WorkRequest req = StockRequestItem.getRequest(i.getItemNBTData());
+                if (req != null) {
+                    return req.asIngredient();
+                }
+            }
+        }
+        return null;
     }
 }
