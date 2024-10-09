@@ -451,7 +451,8 @@ public class MCTownStateWorldInteraction extends
                         (s) -> true, // TODO[WARP]: Implement this?
                         Jobs.unTown(checks.getAllRequiredTools()),
                         (s) -> true,
-                        checks.getAllRequiredWork()
+                        checks.getAllRequiredWork(),
+                        maxState
                 );
             }
         };

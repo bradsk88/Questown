@@ -91,7 +91,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         };
     }
 
-    private static @Nullable MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+    public static @Nullable MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
                 @Nullable MCRoom room = StockRequestItem.getRoom(i.getItemNBTData());
@@ -103,7 +103,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         return null;
     }
 
-    private static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+    public static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
                 @Nullable BlockPos room = StockRequestItem.getJobBlock(i.getItemNBTData());

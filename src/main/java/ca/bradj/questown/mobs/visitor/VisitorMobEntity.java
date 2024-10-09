@@ -362,6 +362,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 () -> this.workToUndo = null
         ));
+        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
+                () -> this.town.getPossibleWork().invalidate()
+        ));
     }
 
     @Override

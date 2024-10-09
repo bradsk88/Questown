@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.HealingStore;
 import ca.bradj.questown.town.TownHealingHandle;
+import ca.bradj.questown.town.TownPossibleWork;
 import ca.bradj.questown.town.WorkHandle;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
+    TownPossibleWork getPossibleWork();
+
     @Nullable
     ServerLevel getServerLevel();
 

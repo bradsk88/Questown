@@ -2,13 +2,23 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.town.TownContainers;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class RequireTwoFreeSpotsSpecialRule extends
@@ -35,22 +45,51 @@ public class RequireTwoFreeSpotsSpecialRule extends
                 return false;
             }
             IItemHandler handler = resolve.get();
-            return hasTwoFreeSlots(handler, before, block);
+            if (hasTwoFreeSlots(handler.getSlots(), handler::getStackInSlot)) {
+                return before.test(block);
+            }
+            return false;
+        });
+        bxEvent.supplyRoomCheckReplacer().accept(before -> room -> {
+            @Nullable BlockPos jBlock = WorkSpotFromHeldItemSpecialRule
+                    .getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
+            for (Map.Entry<BlockPos, Block> b : room.getContainedBlocks().entrySet()) {
+                if (jBlock != null && !jBlock.equals(b.getKey())) {
+                    return before.test(room);
+                }
+                if (!(b.getValue() instanceof ChestBlock cb)) {
+                    continue;
+                }
+                ServerLevel serverLevel = bxEvent.level().get();
+                Container cont = ChestBlock.getContainer(
+                        cb,
+                        serverLevel.getBlockState(b.getKey()),
+                        serverLevel,
+                        b.getKey(),
+                        true
+                );
+                if (cont == null) {
+                    continue;
+                }
+                if (hasTwoFreeSlots(cont.getContainerSize(), cont::getItem)) {
+                    return before.test(room);
+                }
+            }
+            return false;
         });
     }
 
     private static boolean hasTwoFreeSlots(
-            IItemHandler handler,
-            Predicate<BlockPos> before,
-            BlockPos pos
+            int slots,
+            Function<Integer, ItemStack> getStack
     ) {
         int emptySpots = 0;
-        for (int i = 0; i < handler.getSlots(); i++) {
-            if (handler.getStackInSlot(i).isEmpty()) {
+        for (int i = 0; i < slots; i++) {
+            if (getStack.apply(i).isEmpty()) {
                 emptySpots++;
             }
             if (emptySpots > 1) {
-                return before.test(pos);
+                return true;
             }
         }
         return false;

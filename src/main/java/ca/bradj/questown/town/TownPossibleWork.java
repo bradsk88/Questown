@@ -109,6 +109,9 @@ public class TownPossibleWork {
             TownFlagBlockEntity t,
             DeclarativeJob dj
     ) {
+        if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
+            return dj.getMaxState();
+        }
         boolean townHasJobSite = false;
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
@@ -120,7 +123,7 @@ public class TownPossibleWork {
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
                         rooms,
-                        (bp) -> dj.getChecks().isJobBlock(bp),
+                        (bp) -> dj.location().isJobBlock().test(t.getServerLevel()::getBlockState, bp),
                         (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {

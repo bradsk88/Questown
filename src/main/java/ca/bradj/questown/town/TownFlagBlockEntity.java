@@ -149,6 +149,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownRoomsHandle roomsHandle = new TownRoomsHandle();
     final TownMessages messages = new TownMessages();
 
+    @Override
     public TownPossibleWork getPossibleWork() {
         return possibleWork;
     }

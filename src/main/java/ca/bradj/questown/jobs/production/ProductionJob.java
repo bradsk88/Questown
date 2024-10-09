@@ -78,7 +78,7 @@ public abstract class ProductionJob<
     protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
-    protected final ImmutableList<String> specialGlobalRules;
+    public final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
 
     public @Nullable BlockPos getJobSite(

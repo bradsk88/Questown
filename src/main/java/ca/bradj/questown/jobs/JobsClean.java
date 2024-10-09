@@ -32,14 +32,23 @@ public class JobsClean {
     }
 
     @NotNull
-    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+    static <I extends Item<I>> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
             Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
             Function<Integer, Boolean> anyIngredientsRequiredAtStates,
             Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
             Function<Integer, Boolean> anyToolsRequiredAtStates,
-            Map<Integer, Integer> workRequiredAtStates
+            Map<Integer, Integer> workRequiredAtStates,
+            int maxState
     ) {
+        if (journal.get().stream().allMatch(Item::isEmpty)) {
+            ImmutableMap.Builder<Integer, Boolean> b = ImmutableMap.builder();
+            for (int i = 0; i < maxState; i++) {
+                b.put(i, false);
+            }
+            return b.build();
+        }
+
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
             if (ingr == null) {

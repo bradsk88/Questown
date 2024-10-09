@@ -806,9 +806,16 @@ public class DeclarativeJob extends
                         PredicateCollection.empty("no ingredient defined")
                 ).isEmpty(),
                 Jobs.unTown(checks.getAllRequiredTools()),
-                s -> !UtilClean.getOrDefault(checks.getAllRequiredTools(), s, PredicateCollection.empty("no tool defined"))
-                               .isEmpty(),
-                checks.getAllRequiredWork()
+                s -> {
+                    PredicateCollection<MCTownItem, MCTownItem> toool = UtilClean.getOrDefault(
+                            checks.getAllRequiredTools(),
+                            s,
+                            PredicateCollection.empty("no tool defined")
+                    );
+                    return !toool.isEmpty();
+                },
+                checks.getAllRequiredWork(),
+                maxState
         );
     }
 

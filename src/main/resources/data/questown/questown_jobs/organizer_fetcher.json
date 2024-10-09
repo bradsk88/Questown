@@ -32,7 +32,8 @@
       "type": "global",
       "rules": [
         "claim_workspot",
-        "require_two_free_spots"
+        "require_two_free_spots",
+        "always_consider"
       ]
     },
     {
