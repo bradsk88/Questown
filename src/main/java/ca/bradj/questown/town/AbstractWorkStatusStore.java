@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -112,10 +111,9 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     public interface InsertionRules<ITEM> {
 
+        @Nullable PredicateCollection<ITEM, ?> getIngredientsRequiredAtState(Integer state);
 
-        Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates();
-
-        Map<Integer, Integer> ingredientQuantityRequiredAtStates();
+        @Nullable Integer getIngredientQuantityRequiredAtState(int state, @Nullable Integer orDefault);
 
     }
 

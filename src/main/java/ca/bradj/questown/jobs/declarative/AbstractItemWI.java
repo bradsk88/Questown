@@ -8,42 +8,30 @@ import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
-import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.util.TriConsumer;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public abstract class AbstractItemWI<
         POS, EXTRA, ITEM extends HeldItem<ITEM, ?>, TOWN
         > implements ItemWI<POS, EXTRA, TOWN, ITEM>, AbstractWorkStatusStore.InsertionRules<ITEM> {
-    private final ImmutableMap<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
     private final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     private final List<TriConsumer<EXTRA, POS, ITEM>> itemInsertedListener = new ArrayList<>();
+    private final ItemWorkChecks<EXTRA, ITEM, ?> checks;
 
     public <S> AbstractItemWI(
             int villagerIndex,
-            Map<Integer, ? extends PredicateCollection<ITEM, S>> ingredientsRequiredAtStates,
-            Map<Integer, Integer> ingredientQtyRequiredAtStates,
-            Map<Integer, Integer> workRequiredAtStates,
-            BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates,
+            ItemWorkChecks<EXTRA, ITEM, ?> checks,
             Function<EXTRA, Claim> claimSpots
     ) {
         this.villagerIndex = villagerIndex;
-        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingredientsRequiredAtStates);
-        this.ingredientQtyRequiredAtStates = ImmutableMap.copyOf(ingredientQtyRequiredAtStates);
-        this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);
-        this.timeRequiredAtStates = timeRequiredAtStates;
+        this.checks = checks;
         this.claimSpots = claimSpots;
     }
 
@@ -56,19 +44,16 @@ public abstract class AbstractItemWI<
         int curState = ws.stateAfterWork();
         State state = getWorkStatuses(extra).getJobBlockState(bp);
         if (state == null || state.isFresh()) {
-            Integer initWork = workRequiredAtStates.get(curState);
-            if (initWork == null) {
-                initWork = 0;
-            }
-            state = State.fresh()
-                         .setWorkLeft(initWork);
+            Integer initWork = checks.getWorkForStep(curState, 0);
+            //noinspection DataFlowIssue
+            state = State.fresh().setWorkLeft(initWork);
         }
 
         if (state.processingState() != curState) {
             return null;
         }
 
-        Integer qty = ingredientQtyRequiredAtStates.get(state.processingState());
+        Integer qty = checks.getQuantityForStep(state.processingState(), null);
         if (qty != null && qty == state.ingredientCount()) {
             return null;
         }
@@ -88,13 +73,8 @@ public abstract class AbstractItemWI<
             if (!canInsertItem(extra, item, bp)) {
                 continue;
             }
-            Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                    curState + 1, 0
-            );
-            if (nextStepWork == null) {
-                nextStepWork = 0;
-            }
-            Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
+            int nextStepWork = checks.getWorkForStep(curState + 1, 0);
+            int nextStepTime = checks.getTimeForStep(extra, curState + 1, 0);
             final int ii = i;
             TOWN town = tryInsertItem(extra, this, state, item, bp, nextStepWork, nextStepTime,
                     (uxtra, tuwn) -> setHeldItem(uxtra, tuwn, villagerIndex, ii, item.shrink())
@@ -138,23 +118,19 @@ public abstract class AbstractItemWI<
             State oldState,
             ITEM item,
             POS bp,
-            Integer workInNextStep,
-            Integer timeInNextStep,
+            int workInNextStep,
+            int timeInNextStep,
             BiFunction<EXTRA, TOWN, TOWN> shrinkItem
     ) {
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
         boolean canDo = false;
-        PredicateCollection<ITEM, ?> ingredient = rules.ingredientsRequiredAtStates()
-                                                       .get(curValue);
+        PredicateCollection<ITEM, ?> ingredient = rules.getIngredientsRequiredAtState(curValue);
         if (ingredient != null) {
             canDo = ingredient.test(item);
         }
-        Integer qtyRequired = rules.ingredientQuantityRequiredAtStates()
-                                   .getOrDefault(curValue, 0);
-        if (qtyRequired == null) {
-            qtyRequired = 0;
-        }
+        //noinspection DataFlowIssue
+        int qtyRequired = rules.getIngredientQuantityRequiredAtState(curValue, 0);
         int curCount = oldState.ingredientCount();
         if (canDo && curCount > qtyRequired) {
             QT.BLOCK_LOGGER.error(
@@ -180,11 +156,11 @@ public abstract class AbstractItemWI<
     private static <POS, TOWN> TOWN maybeUpdateBlockState(
             State oldState,
             POS bp,
-            Integer workInNextStep,
-            Integer timeInNextStep,
+            int workInNextStep,
+            int timeInNextStep,
             boolean canDo,
             int count,
-            Integer qtyRequired,
+            int qtyRequired,
             ImmutableWorkStateContainer<POS, TOWN> ws
     ) {
         if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
@@ -218,13 +194,13 @@ public abstract class AbstractItemWI<
     );
 
     @Override
-    public Map<Integer, PredicateCollection<ITEM, ?>> ingredientsRequiredAtStates() {
-        return ingredientsRequiredAtStates;
+    public @Nullable Integer getIngredientQuantityRequiredAtState(int state, @Nullable Integer orDefault) {
+        return checks.getQuantityForStep(state, orDefault);
     }
 
     @Override
-    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return ingredientQtyRequiredAtStates;
+    public @Nullable PredicateCollection<ITEM, ?> getIngredientsRequiredAtState(Integer state) {
+        return checks.getIngredientsForStep(state);
     }
 
     public void addItemInsertionListener(TriConsumer<EXTRA, POS, ITEM> listener) {

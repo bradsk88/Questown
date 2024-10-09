@@ -11,7 +11,9 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -846,7 +848,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             JobID jobName,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(jobName, f.getJobJournalSnapshot()
+        f.setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, f.getJobJournalSnapshot()
                                                           .items(), visitorUUID));
     }
 

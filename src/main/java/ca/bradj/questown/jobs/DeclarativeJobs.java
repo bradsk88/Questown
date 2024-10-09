@@ -169,8 +169,8 @@ public class DeclarativeJobs {
             ServerLevel level,
             Supplier<Map<Integer, LZCD.Dependency<Void>>> roomStatuses,
             TownInterface rooms,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools
+            Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
+            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools
     ) {
         return new LZCD.SimpleDependency("town has supplies") {
 
@@ -426,7 +426,7 @@ public class DeclarativeJobs {
                 long start = referenceTick;
                 long max = referenceTick + ticksPassed;
 
-                // TODO[ASAP]: Factor in timers and "walk time"
+                // TODO[WARP]: Factor in timers and "walk time"
                 int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
                 int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
                 for (long i = start; i <= max; i += stepInterval) {

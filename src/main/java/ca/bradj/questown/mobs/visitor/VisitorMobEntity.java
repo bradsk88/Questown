@@ -1194,7 +1194,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Snapshot journal
     ) {
         this.town = town;
-        setJob(JobsRegistry.getInitializedJob(journal.jobId(), journal, uuid));
+        //noinspection unchecked
+        setJob(JobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(
                 getJob().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );

@@ -8,7 +8,6 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -56,7 +55,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
             if (room == null) {
                 return old;
             }
-            return (sl, bp) -> room.equals(bp);
+            return room::equals;
         });
 
         bxEvent.supplyRoomCheckReplacer().accept(old -> {
@@ -64,7 +63,8 @@ public class WorkSpotFromHeldItemSpecialRule extends
             if (room == null) {
                 return old;
             }
-            return room::equals;
+            // Exclude the work spot as a supply source
+            return m -> !m.room.equals(room);
         });
     }
 

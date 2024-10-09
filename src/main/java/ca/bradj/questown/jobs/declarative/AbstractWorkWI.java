@@ -4,30 +4,20 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.workstatus.State;
-import com.google.common.collect.ImmutableMap;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 
 public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
-    private final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final BiFunction<EXTRA, Integer, @NotNull Integer> timeRequiredAtStates;
-    private final ImmutableMap<Integer, PredicateCollection<ITEM, ?>> toolsRequiredAtStates;
     private final BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback;
+    private final WorkChecks<EXTRA, ITEM> checks;
 
-    public <S> AbstractWorkWI(
-            Map<Integer, Integer> workRequiredAtStates,
-            BiFunction<EXTRA, Integer, Integer> timeRequiredAtStates,
-            Map<Integer, ? extends @NotNull PredicateCollection<ITEM, S>> toolsRequiredAtStates,
+    public AbstractWorkWI(
+            WorkChecks<EXTRA, ITEM> checks,
             BiConsumer<EXTRA, WorkSpot<Integer, POS>> preStateChangeCallback
     ) {
-        this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);
-        this.timeRequiredAtStates = timeRequiredAtStates;
-        this.toolsRequiredAtStates = ImmutableMap.copyOf(toolsRequiredAtStates);
+        this.checks = checks;
         this.preStateChangeCallback = preStateChangeCallback;
     }
 
@@ -37,16 +27,14 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
     ) {
         POS bp = ws.workPosition();
         Integer curState = ws.stateAfterWork();
-        Integer nextStepWork = workRequiredAtStates.getOrDefault(
-                curState + 1, 0
-        );
-        if (nextStepWork == null) {
-            nextStepWork = 0;
+        int nextStepWork = checks.getWorkForStep(curState + 1, 0);
+        Integer nextStepTime = checks.getTimeForStep(extra, curState + 1);
+        if (nextStepTime == null) {
+            nextStepTime = 0;
         }
-        Integer nextStepTime = timeRequiredAtStates.apply(extra, curState + 1);
         TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = updatedTown != null;
-        PredicateCollection<ITEM, ?> itemBooleanFunction = toolsRequiredAtStates.get(curState);
+        PredicateCollection<ITEM, ?> itemBooleanFunction = checks.getToolsForStep(curState);
         if (didWork && itemBooleanFunction != null) {
             return degradeTool(extra, updatedTown, itemBooleanFunction);
         }
@@ -55,7 +43,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     protected abstract TOWN degradeTool(
             EXTRA extra,
-            @Nullable TOWN tuwn,
+            @Nullable TOWN town,
             PredicateCollection<ITEM, ?> itemBooleanFunction
     );
 
@@ -108,10 +96,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
     private State initForState(Integer curState) {
-        Integer work = workRequiredAtStates.get(curState);
-        if (work == null) {
-            work = 0;
-        }
+        int work = checks.getWorkForStep(curState, 0);
         return State.fresh().setWorkLeft(work).setProcessing(curState);
     }
 }

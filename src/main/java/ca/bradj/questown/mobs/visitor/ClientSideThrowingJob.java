@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
@@ -58,7 +59,7 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     }
 
     @Override
-    public void initialize(Snapshot<MCHeldItem> journal) {
+    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
 
     }
 

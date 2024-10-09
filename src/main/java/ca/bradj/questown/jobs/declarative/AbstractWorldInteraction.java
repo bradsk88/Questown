@@ -28,15 +28,13 @@ public abstract class AbstractWorldInteraction<
     private final AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN> workWI;
     protected final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
+    protected final DeclarativeJobChecks<EXTRA, HELD_ITEM, INNER_ITEM, ?, POS> checks;
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
 
     private final List<Runnable> jobCompletedListeners = new ArrayList<>();
 
-    protected final ImmutableMap<Integer, PredicateCollection<INNER_ITEM, ?>> toolsRequiredAtStates;
-    protected final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates;
     private WithReason<@Nullable WorkPosition<POS>> workspot = new WithReason<>(null, "Never set");
 
     private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
@@ -47,37 +45,25 @@ public abstract class AbstractWorldInteraction<
             int villagerIndex,
             int interval,
             int maxState,
-            Map<Integer, ? extends PredicateCollection<INNER_ITEM, S>> toolsRequiredAtStates,
-            Map<Integer, Integer> workRequiredAtStates,
-            Map<Integer, ? extends PredicateCollection<HELD_ITEM, T>> ingredientsRequiredAtStates,
-            Map<Integer, Integer> ingredientQuantityRequiredAtStates,
-            Map<Integer, Integer> timeRequiredAtStates,
+            DeclarativeJobChecks<EXTRA, HELD_ITEM, INNER_ITEM, ?, POS> checks,
             Function<EXTRA, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
-        if (toolsRequiredAtStates.isEmpty() && workRequiredAtStates.isEmpty() && ingredientQuantityRequiredAtStates.isEmpty() && timeRequiredAtStates.isEmpty()) {
+        if (checks.isInsufficient()) {
             QT.JOB_LOGGER.error(
                     "{} requires no tools, work, time, or ingredients. This will lead to strange game behaviour.",
                     jobId
             );
         }
+        this.checks = checks;
         this.villagerIndex = villagerIndex;
         this.interval = interval;
         this.maxState = maxState;
-        this.toolsRequiredAtStates = ImmutableMap.copyOf(toolsRequiredAtStates);
-        this.workRequiredAtStates = ImmutableMap.copyOf(workRequiredAtStates);
-        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingredientsRequiredAtStates);
         this.specialRules = ImmutableMap.copyOf(specialRules);
 
         AbstractWorldInteraction<EXTRA, POS, INNER_ITEM, HELD_ITEM, TOWN> self = this;
-        this.itemWI = new AbstractItemWI<>(
-                villagerIndex,
-                ingredientsRequiredAtStates,
-                ingredientQuantityRequiredAtStates,
-                workRequiredAtStates,
-                (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
-                claimSpots
-        ) {
+        ItemWorkChecks<EXTRA, HELD_ITEM, INNER_ITEM> itemChecks = asItemChecks();
+        this.itemWI = new AbstractItemWI<>(villagerIndex, itemChecks, claimSpots) {
             @Override
             protected TOWN setHeldItem(
                     EXTRA uxtra,
@@ -114,10 +100,8 @@ public abstract class AbstractWorldInteraction<
             }
         };
 
-        this.workWI = new AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN>(
-                workRequiredAtStates,
-                (x, s) -> getAffectedTime(x, timeRequiredAtStates.getOrDefault(s, 0)),
-                toolsRequiredAtStates,
+        this.workWI = new AbstractWorkWI<>(
+                itemChecks,
                 this::preStateChangeHooks
         ) {
             @Override
@@ -162,6 +146,68 @@ public abstract class AbstractWorldInteraction<
             }
         };
         this.claimSpots = claimSpots;
+    }
+
+    private ItemWorkChecks<EXTRA, HELD_ITEM, INNER_ITEM> asItemChecks() {
+        return new ItemWorkChecks<>() {
+            @Override
+            public boolean isWorkRequiredAtStep(int action) {
+                return checks.isWorkRequiredAtStep(action);
+            }
+
+            @Override
+            public @Nullable Integer getQuantityForStep(
+                    int i,
+                    @Nullable Integer orDefault
+            ) {
+                return checks.getQuantityForStep(i, orDefault);
+            }
+
+            @Override
+            public @Nullable PredicateCollection<HELD_ITEM, HELD_ITEM> getIngredientsForStep(int i) {
+                return checks.getIngredientsForStep(i);
+            }
+
+            @Override
+            public int getWorkForStep(
+                    int stepState,
+                    int orDefault
+            ) {
+                return checks.getWorkForStep(stepState, orDefault);
+            }
+
+            @Override
+            public @Nullable Integer getWorkForStep(int stepState) {
+                return checks.getWorkForStep(stepState);
+            }
+
+            @Override
+            public @Nullable Integer getTimeForStep(
+                    EXTRA extra,
+                    int stepState
+            ) {
+                Integer timeForStep = checks.getTimeForStep(extra, stepState);
+                if (timeForStep == null) {
+                    return null;
+                }
+                return getAffectedTime(extra, timeForStep);
+            }
+
+            @Override
+            public int getTimeForStep(
+                    EXTRA extra,
+                    int stepState,
+                    int orDefault
+            ) {
+                @Nullable Integer v = getTimeForStep(extra, stepState);
+                return v == null ? 0 : v;
+            }
+
+            @Override
+            public PredicateCollection<INNER_ITEM, ?> getToolsForStep(Integer curState) {
+                return checks.getToolsForStep(curState);
+            }
+        };
     }
 
     protected TOWN tryGiveItems(
@@ -333,7 +379,7 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        PredicateCollection<INNER_ITEM, ?> tool = toolsRequiredAtStates.get(action);
+        PredicateCollection<INNER_ITEM, ?> tool = checks.getToolsForStep(action);
         if (tool != null) {
             Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
             boolean foundTool = items.stream().anyMatch(i -> tool.test(i.get()));
@@ -343,7 +389,7 @@ public abstract class AbstractWorldInteraction<
         }
 
         TOWN initTown = getTown(extra);
-        if (this.ingredientsRequiredAtStates.get(action) != null) {
+        if (this.checks.getIngredientsForStep(action) != null) {
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
                     getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
@@ -365,9 +411,9 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
-        if (this.workRequiredAtStates.containsKey(action)) {
-            Integer work = this.workRequiredAtStates.get(action);
-            if (work != null && work > 0) {
+        if (this.checks.isWorkRequiredAtStep(action)) {
+            Integer work = this.checks.getWorkForStep(action, 0);
+            if (work > 0) {
                 if (action == 0) {
                     if (jobBlockState == null) {
                         jobBlockState = State.fresh();
@@ -398,8 +444,11 @@ public abstract class AbstractWorldInteraction<
     );
 
     @Override
-    public Map<Integer, PredicateCollection<HELD_ITEM, ?>> ingredientsRequiredAtStates() {
-        return ingredientsRequiredAtStates;
+    public @Nullable Integer getIngredientQuantityRequiredAtState(
+            int state,
+            @Nullable Integer orDefault
+    ) {
+        return checks.getQuantityForStep(state, 0);
     }
 
     protected TOWN tryExtractProduct(
@@ -570,5 +619,10 @@ public abstract class AbstractWorldInteraction<
 
     public void setWorkSpot(WithReason<@Nullable WorkPosition<POS>> o) {
         this.workspot = o;
+    }
+
+    @Override
+    public @Nullable PredicateCollection<HELD_ITEM, ?> getIngredientsRequiredAtState(Integer state) {
+        return checks.getIngredientsForStep(state);
     }
 }

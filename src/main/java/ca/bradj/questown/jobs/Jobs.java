@@ -45,7 +45,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -367,7 +366,7 @@ public class Jobs {
     }
 
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unTown(
-            ImmutableMap<Integer, ? extends Predicate<MCTownItem>> input
+            Map<Integer, ? extends Predicate<MCTownItem>> input
     ) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
@@ -380,18 +379,10 @@ public class Jobs {
         return b.build();
     }
 
-    public interface StateCheck {
-        boolean Check(
-                ServerLevel sl,
-                BlockPos bp
-        );
-    }
-
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
-            ServerLevel town,
             Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
-            BiPredicate<ServerLevel, BlockPos> blockCheck,
-            StateCheck check
+            Predicate<BlockPos> isCorrectBlock,
+            Predicate<BlockPos> hasCorrectState
     ) {
         return rooms
                 .stream()
@@ -399,11 +390,11 @@ public class Jobs {
                     List<Map.Entry<BlockPos, Block>> containedJobBlocks = v
                             .getContainedBlocks()
                             .entrySet().stream()
-                            .filter(z -> blockCheck.test(town, z.getKey()))
+                            .filter(z -> isCorrectBlock.test(z.getKey()))
                             .toList();
                     ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
                     for (Map.Entry<BlockPos, Block> e : blocks) {
-                        if (check.Check(town, e.getKey())) {
+                        if (hasCorrectState.test(e.getKey())) {
                             return true;
                         }
                     }

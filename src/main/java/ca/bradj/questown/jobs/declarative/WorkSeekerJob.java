@@ -5,9 +5,10 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -68,11 +69,7 @@ public class WorkSeekerJob extends DeclarativeJob {
     @Override
     protected @NotNull RealtimeWorldInteraction initWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
@@ -82,11 +79,7 @@ public class WorkSeekerJob extends DeclarativeJob {
         return new RealtimeWorldInteraction(
                 journal,
                 maxState,
-                ingredientsRequiredAtStates,
-                ingredientsQtyRequiredAtStates,
-                workRequiredAtStates,
-                timeRequiredAtStates,
-                toolsRequiredAtStates,
+                checks,
                 specialRules,
                 resultGenerator,
                 claimSpots,
@@ -98,7 +91,7 @@ public class WorkSeekerJob extends DeclarativeJob {
 
             @Override
             protected Boolean tryExtractProduct(
-                    MCExtra extra,
+                    @NotNull MCExtra extra,
                     BlockPos position
             ) {
                 getWorkCooldown--;

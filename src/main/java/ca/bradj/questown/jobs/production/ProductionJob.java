@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -92,7 +93,7 @@ public abstract class ProductionJob<
                     roomsNeedingIngredientsOrTools,
                     getWorkStatusHandle(town)::getJobBlockState,
                     bp -> this.isValidWalkTarget(town, bp),
-                    bp -> isJobBlock(sl, bp),
+                    this::isJobBlock,
                     sl.getRandom()
             );
             this.jobSite = js.value();
@@ -108,7 +109,6 @@ public abstract class ProductionJob<
     }
 
     protected abstract boolean isJobBlock(
-            ServerLevel sl,
             BlockPos bp
     );
 
@@ -364,7 +364,7 @@ public abstract class ProductionJob<
     }
 
     protected abstract void tick(
-            TownInterface town,
+            MCExtra extra,
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
@@ -452,7 +452,7 @@ public abstract class ProductionJob<
     }
 
     @Override
-    public void initialize(Snapshot<MCHeldItem> journal) {
+    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
         this.journal.initialize((SNAPSHOT) journal);
     }
 

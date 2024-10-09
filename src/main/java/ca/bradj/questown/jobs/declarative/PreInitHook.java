@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -23,8 +24,8 @@ public class PreInitHook {
             Supplier<ImmutableList<MCHeldItem>> heldItems,
             Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> ingrReplacer,
             Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> toolReplacer,
-            Consumer<Function<BiPredicate<ServerLevel, BlockPos>, BiPredicate<ServerLevel, BlockPos>>> jobBlockCheckReplacer,
-            Consumer<Function<Predicate<MCRoom>, Predicate<MCRoom>>> supplyRoomCheckReplacer
+            Consumer<Function<Predicate<BlockPos>, Predicate<BlockPos>>> jobBlockCheckReplacer,
+            Consumer<Function<Predicate<RoomRecipeMatch<MCRoom>>, Predicate<RoomRecipeMatch<MCRoom>>>> supplyRoomCheckReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         BeforeInitEvent bxEvent = new BeforeInitEvent(heldItems, ingrReplacer, toolReplacer, jobBlockCheckReplacer, supplyRoomCheckReplacer);

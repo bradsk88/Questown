@@ -56,12 +56,7 @@ import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
 public class DeclarativeJob extends
         DeclarativeProductionJob<ProductionStatus, SimpleSnapshot<ProductionStatus, MCHeldItem>, ProductionJournal<MCTownItem, MCHeldItem>> {
 
-    public final ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
-    public final ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates;
-    public final ImmutableMap<Integer, Integer> workRequiredAtStates;
-    private final ImmutableMap<Integer, Integer> timeRequiredAtStates;
-//    private final Predicate<RoomRecipeMatch<MCRoom>> containerCheck;
+    private final DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks;
 
     private static final Marker marker = MarkerManager.getMarker("DJob");
     private final RealtimeWorldInteraction world;
@@ -73,7 +68,6 @@ public class DeclarativeJob extends
     private final ExpirationRules expiration;
     private final long totalDuration;
     private final int workInterval;
-    private final BiPredicate<ServerLevel, BlockPos> isJobBlock;
     private final RecipeProvider recipe;
     private Signals signal;
 
@@ -111,56 +105,19 @@ public class DeclarativeJob extends
                 location
         );
         this.jobId = jobId;
-
-
-        Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingr = new HashMap<>(Jobs.unMCHeld3(
-                ingredientsRequiredAtStates));
-        Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tool = new HashMap<>(Jobs.unMC5(toolsRequiredAtStates));
-        AtomicReference<BiPredicate<ServerLevel, BlockPos>> ijb = new AtomicReference<>(
-                (sl, bp) -> location.isJobBlock().test(sl::getBlockState, bp)
+        this.checks = new DeclarativeJobChecks<>(
+                Jobs.unMCHeld3(ingredientsRequiredAtStates),
+                ingredientsQtyRequiredAtStates,
+                Jobs.unMC5(toolsRequiredAtStates),
+                workRequiredAtStates,
+                timeRequiredAtStates,
+                (r) -> true,
+                (p) -> isJobBlock(p)
         );
-        AtomicReference<Predicate<MCRoom>> conChk = new AtomicReference<>(room -> true);
-
-        for (int i = 0; i <= maxState; i++) {
-            int ii = i;
-            ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
-            List<String> stageRules = UtilClean.getOrDefaultCollection(specialStatusRules, ss, ImmutableList.of());
-            PreInitHook.run(
-                    stageRules,
-                    journal::getItems,
-                    fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
-                    fn -> tool.put(ii, fn.apply(tool.get(ii))),
-                    fn -> ijb.set(fn.apply(ijb.get())),
-                    fn -> conChk.set(fn.apply(conChk.get()))
-            );
-        }
-        // TODO: Add jobBlock param to .run(...)
-        PreInitHook.run(
-                specialGlobalRules,
-                journal::getItems,
-                fn -> {
-                },
-                fn -> {
-                },
-                fn -> ijb.set(fn.apply(ijb.get())),
-                fn -> conChk.set(fn.apply(conChk.get()))
-        );
-        this.isJobBlock = ijb.get();
-//        this.containerCheck = conChk.get();
-
-        this.ingredientsRequiredAtStates = ImmutableMap.copyOf(ingr);
-        this.ingredientQtyRequiredAtStates = ingredientsQtyRequiredAtStates;
-        this.toolsRequiredAtStates = ImmutableMap.copyOf(tool);
-        this.workRequiredAtStates = workRequiredAtStates;
-        this.timeRequiredAtStates = timeRequiredAtStates;
 
         this.world = initWorldInteraction(
                 maxState,
-                this.ingredientsRequiredAtStates,
-                this.ingredientQtyRequiredAtStates,
-                this.toolsRequiredAtStates,
-                this.workRequiredAtStates,
-                this.timeRequiredAtStates,
+                this.checks,
                 resultGenerator,
                 specialStatusRules,
                 extra -> {
@@ -181,6 +138,55 @@ public class DeclarativeJob extends
         this.recipe = buildRecipe(this);
     }
 
+    @Override
+    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
+        super.initialize(level, journal);
+
+
+        Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingr = new HashMap<>(checks.getAllRequiredIngredients());
+        Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tool = new HashMap<>(checks.getAllRequiredTools());
+        AtomicReference<Predicate<BlockPos>> ijb = new AtomicReference<>(
+                (bp) -> location.isJobBlock().test(level::getBlockState, bp)
+        );
+        AtomicReference<Predicate<RoomRecipeMatch<MCRoom>>> conChk = new AtomicReference<>(room -> true);
+
+        DeclarativeJob self = this;
+
+        for (int i = 0; i <= maxState; i++) {
+            int ii = i;
+            ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
+            List<String> stageRules = UtilClean.getOrDefaultCollection(specialRules, ss, ImmutableList.of());
+            PreInitHook.run(
+                    stageRules,
+                    () -> self.journal.getItems(),
+                    fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
+                    fn -> tool.put(ii, fn.apply(tool.get(ii))),
+                    fn -> ijb.set(fn.apply(ijb.get())),
+                    fn -> conChk.set(fn.apply(conChk.get()))
+            );
+        }
+
+        PreInitHook.run(
+                specialGlobalRules,
+                () -> self.journal.getItems(),
+                fn -> {
+                },
+                fn -> {
+                },
+                fn -> ijb.set(fn.apply(ijb.get())),
+                fn -> conChk.set(fn.apply(conChk.get()))
+        );
+        this.checks.initialize(
+                ingr,
+                checks.getAllRequiredQuantity(),
+                tool,
+                checks.getAllRequiredWork(),
+                checks.getAllRequiredTime(),
+                (c) -> conChk.get().test(c),
+                (p) -> ijb.get().test(p)
+        );
+    }
+
     @NotNull
     public static Claim makeClaim(UUID ownerUUID) {
         return new Claim(ownerUUID, Config.BLOCK_CLAIMS_TICK_LIMIT.get());
@@ -199,11 +205,7 @@ public class DeclarativeJob extends
     @NotNull
     protected RealtimeWorldInteraction initWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientsQtyRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> toolsRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
@@ -213,11 +215,7 @@ public class DeclarativeJob extends
         return new RealtimeWorldInteraction(
                 journal,
                 maxState,
-                ingredientsRequiredAtStates,
-                ingredientsQtyRequiredAtStates,
-                workRequiredAtStates,
-                timeRequiredAtStates,
-                toolsRequiredAtStates,
+                checks,
                 specialRules,
                 resultGenerator,
                 claimSpots,
@@ -229,13 +227,13 @@ public class DeclarativeJob extends
     public static RecipeProvider buildRecipe(DeclarativeJob self) {
         return s -> {
             ImmutableList.Builder<PredicateCollection<MCTownItem, ?>> bb = ImmutableList.builder();
-            PredicateCollection<MCHeldItem, ?> ingr = self.ingredientsRequiredAtStates.get(s);
+            PredicateCollection<MCHeldItem, ?> ingr = self.checks.getIngredientsForStep(s);
             if (ingr != null) {
                 bb.add(PredicateCollections.townify(ingr));
             }
             // Hold on to tools required for this state and all previous states
             for (int i = 0; i <= s; i++) {
-                PredicateCollection<MCTownItem, ?> tool = self.toolsRequiredAtStates.get(i);
+                PredicateCollection<MCTownItem, ?> tool = self.checks.getToolsForStep(i);
                 if (tool != null) {
                     bb.add(tool);
                 }
@@ -283,12 +281,13 @@ public class DeclarativeJob extends
 
         this.roomsNeedingIngredientsOrTools = new RoomsNeedingIngredientsOrTools<>(rniot.get().get());
 
-        this.tick(town, work, entity, facingPos, this.roomsNeedingIngredientsOrTools, statusFactory);
+        MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
+        this.tick(extra, work, entity, facingPos, this.roomsNeedingIngredientsOrTools, statusFactory);
     }
 
     @Override
     protected void tick(
-            TownInterface town,
+            MCExtra extra,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             LivingEntity entity,
             Direction facingPos,
@@ -296,8 +295,6 @@ public class DeclarativeJob extends
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
-
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
                 entity.blockPosition(),
                 roomsNeedingIngredientsOrTools
@@ -313,10 +310,10 @@ public class DeclarativeJob extends
             }
         };
 
-        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(town, work, roomsNeedingIngredientsOrTools);
+        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
 
         Supplier<ProductionStatus> computeState = getStateComputer(statusFactory, jtp, elp);
-        this.signal = Signals.fromDayTime(Util.getDayTime(town.getServerLevel()));
+        this.signal = Signals.fromDayTime(Util.getDayTime(extra.town().getServerLevel()));
         WorkPosition<BlockPos> workSpot = world.getWorkSpot();
         BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);
         int action = bp == null ? 0 : Util.withFallbackForNullInput(
@@ -333,14 +330,14 @@ public class DeclarativeJob extends
                 workSpot != null && hasInserted(action),
                 !inventory.isEmpty(),
                 expiration,
-                new JobLogic.JobDetails(maxState, workRequiredAtStates.get(0), workInterval),
+                new JobLogic.JobDetails(maxState, checks.getWorkForStep(0), workInterval),
                 this.asLogicWorld(
-                        extra, town, work,
+                        extra, work,
                         (VisitorMobEntity) entity, entityCurrentJobSite,
                         roomsNeedingIngredientsOrTools
                 ),
                 (tuwn, bpp) -> Util.withFallbackForNullInput(
-                        getWorkStatusHandle(town).getJobBlockState(bpp),
+                        getWorkStatusHandle(extra.town()).getJobBlockState(bpp),
                         State::processingState,
                         0
                 )
@@ -349,16 +346,16 @@ public class DeclarativeJob extends
 
     @Override
     protected boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom) {
-        return containerCheck.test(mcRoom);
+        return checks.shouldCheckContainerForSupplies(mcRoom);
     }
 
     @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
-        return roomsNeedingIngredientsOrTools.cleanFns(ingredientsRequiredAtStates::get, toolsRequiredAtStates::get);
+        return roomsNeedingIngredientsOrTools.cleanFns(checks::getIngredientsForStep, checks::getToolsForStep);
     }
 
     private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
-            TownInterface town,
+            MCExtra extra,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
@@ -371,7 +368,7 @@ public class DeclarativeJob extends
 
             @Override
             public Collection<MCRoom> roomsWithCompletedProduct() {
-                return roomsWithState(town, getJobBlockState, maxState)
+                return roomsWithState(extra.town(), getJobBlockState, maxState)
                         .stream()
                         .map(v -> v.room)
                         .toList();
@@ -390,7 +387,7 @@ public class DeclarativeJob extends
             @Override
             public boolean isUnfinishedTimeWorkPresent() {
                 return Jobs.isUnfinishedTimeWorkPresent(
-                        town.getRoomHandle(), location.baseRoom(),
+                        extra.town().getRoomHandle(), location.baseRoom(),
                         work::getTimeToNextState
                 );
             }
@@ -398,7 +395,7 @@ public class DeclarativeJob extends
             @Override
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
-                        () -> town.getRoomHandle()
+                        () -> extra.town().getRoomHandle()
                                   .getRoomsMatching(location.baseRoom())
                                   .stream()
                                   .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
@@ -409,7 +406,7 @@ public class DeclarativeJob extends
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
-                    IPredicateCollection<MCTownItem> toolsReq = toolsRequiredAtStates.get(s);
+                    IPredicateCollection<MCTownItem> toolsReq = checks.getToolsForStep(s);
                     if (toolsReq != null && !toolsReq.isEmpty()) {
                         return;
                     }
@@ -427,26 +424,26 @@ public class DeclarativeJob extends
             public boolean hasSupplies() {
                 RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> needs = roomsNeedingIngredientsByState();
                 ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = needs.cleanFns(
-                        ingredientsRequiredAtStates::get,
-                        toolsRequiredAtStates::get
+                        checks::getIngredientsForStep,
+                        checks::getToolsForStep
                 );
-                return Jobs.townHasSupplies(town, journal, neededItems);
+                return Jobs.townHasSupplies(extra.town(), journal, neededItems);
             }
 
             @Override
             public LZCD.Dependency<Void> hasSuppliesV2() {
                 return DeclarativeJobs.supplies(
-                        town.getServerLevel(),
+                        extra.town().getServerLevel(),
                         roomsV2,
-                        town,
-                        ingredientsRequiredAtStates,
-                        toolsRequiredAtStates
+                        extra.town(),
+                        checks.getAllRequiredIngredients(),
+                        checks.getAllRequiredTools()
                 );
             }
 
             @Override
             public boolean hasSpace() {
-                return Jobs.townHasSpace(town);
+                return Jobs.townHasSpace(extra.town());
             }
         };
     }
@@ -458,23 +455,21 @@ public class DeclarativeJob extends
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         return Jobs.roomsWithState(
-                town.getServerLevel(), rooms,
-                this::isJobBlock,
-                (sl, bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
+                rooms,
+                checks::isJobBlock,
+                (bp) -> state.equals(JobBlock.getState(getJobBlockState, bp))
         );
     }
 
     @Override
-    protected boolean isJobBlock(
-            ServerLevel sl,
-            BlockPos bp
-    ) {
-        return isJobBlock.test(sl, bp);
+    protected boolean isJobBlock(BlockPos bp) {
+        return checks.isJobBlock(bp);
     }
 
     private boolean hasInserted(Integer action) {
         for (int i = 1; i < action; i++) {
-            if (Util.getOrDefault(ingredientQtyRequiredAtStates, i - 1, 0) > 0) {
+            //noinspection DataFlowIssue
+            if (checks.getQuantityForStep(i -1, 0) > 0) {
                 return true;
             }
         }
@@ -483,13 +478,13 @@ public class DeclarativeJob extends
 
     private JobLogic.JLWorld<MCExtra, Boolean, BlockPos> asLogicWorld(
             MCExtra extra,
-            TownInterface town,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
             RoomRecipeMatch<MCRoom> entityCurrentJobSite,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         DeclarativeJob self = this;
+        TownInterface town = extra.town();
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
@@ -510,7 +505,7 @@ public class DeclarativeJob extends
                             getWorkStatusHandle(town)::getJobBlockState,
                             room.room,
                             bp -> isValidWalkTarget(town, bp),
-                            bp -> isJobBlock(sl, bp),
+                            bp -> isJobBlock(bp),
                             () -> Direction.getRandom(sl.random)
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
@@ -535,7 +530,7 @@ public class DeclarativeJob extends
                 return self.listAllWorkSpots(
                         work::getJobBlockState, entityCurrentJobSite.room,
                         bp -> isValidWalkTarget(town, bp),
-                        bp -> isJobBlock(sl, bp),
+                        bp -> isJobBlock(bp),
                         () -> Direction.getRandom(sl.random)
                 );
             }
@@ -803,16 +798,16 @@ public class DeclarativeJob extends
     protected Map<Integer, Boolean> getSupplyItemStatus() {
         return JobsClean.getSupplyItemStatuses(
                 journal::getItems,
-                ingredientsRequiredAtStates,
+                checks.getAllRequiredIngredients(),
                 s -> !UtilClean.getOrDefault(
-                        ingredientsRequiredAtStates,
+                        checks.getAllRequiredIngredients(),
                         s,
                         PredicateCollection.empty("no ingredient defined")
                 ).isEmpty(),
-                Jobs.unTown(toolsRequiredAtStates),
-                s -> !UtilClean.getOrDefault(toolsRequiredAtStates, s, PredicateCollection.empty("no tool defined"))
+                Jobs.unTown(checks.getAllRequiredTools()),
+                s -> !UtilClean.getOrDefault(checks.getAllRequiredTools(), s, PredicateCollection.empty("no tool defined"))
                                .isEmpty(),
-                workRequiredAtStates
+                checks.getAllRequiredWork()
         );
     }
 
@@ -885,21 +880,21 @@ public class DeclarativeJob extends
     ) {
         // TODO: Reduce duplication with MCTownStateWorldInteraction.hasSupplies
         HashMap<Integer, List<RoomRecipeMatch<MCRoom>>> b = new HashMap<>();
-        ingredientsRequiredAtStates.forEach((state, ingrs) -> {
+        checks.getAllRequiredIngredients().forEach((state, ingrs) -> {
             if (ingrs.isEmpty()) {
                 b.put(state, new ArrayList<>());
                 return;
             }
             Collection<RoomRecipeMatch<MCRoom>> matches = roomsWithState(town, work, state);
-            Integer stateQty = ingredientQtyRequiredAtStates.get(state);
+            Integer stateQty = checks.getQuantityForStep(state, null);
             b.put(state, getRoomsWhereWorkCanBeDone(work, canClaim, matches, stateQty));
         });
         HashMap<Integer, IPredicateCollection<?>> stateTools = new HashMap<>();
-        if (toolsRequiredAtStates.values()
+        if (checks.getAllRequiredTools().values()
                                  .stream()
                                  .anyMatch(v -> !v.isEmpty())) {
             for (int i = 0; i < maxState; i++) {
-                stateTools.put(i, toolsRequiredAtStates.getOrDefault(i, PredicateCollection.empty("no tool defined")));
+                stateTools.put(i, checks.getAllRequiredTools().getOrDefault(i, PredicateCollection.empty("no tool defined")));
             }
         }
         stateTools.keySet().forEach((state) -> {
@@ -977,5 +972,9 @@ public class DeclarativeJob extends
 
     public WorkLocation location() {
         return location;
+    }
+
+    public DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> getChecks() {
+        return checks;
     }
 }

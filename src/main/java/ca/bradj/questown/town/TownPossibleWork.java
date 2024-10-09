@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -109,6 +110,7 @@ public class TownPossibleWork {
             DeclarativeJob dj
     ) {
         boolean townHasJobSite = false;
+        ServerLevel sl = t.getServerLevel();
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
@@ -118,9 +120,9 @@ public class TownPossibleWork {
                 Collection<RoomRecipeMatch<MCRoom>> rooms = t.getRoomHandle()
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
-                        t.getServerLevel(), rooms,
-                        (sl, bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
-                        (sl, bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
+                        rooms,
+                        (bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {
                     townHasJobSite = true;
@@ -134,7 +136,7 @@ public class TownPossibleWork {
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
-            final IPredicateCollection<MCHeldItem> ing = dj.ingredientsRequiredAtStates.get(ii);
+            final IPredicateCollection<MCHeldItem> ing = dj.getChecks().getIngredientsForStep(ii);
             if (ing != null) {
                 townHasIngredient = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> ingCont = t.findMatchingContainer(
@@ -146,7 +148,7 @@ public class TownPossibleWork {
             }
 
             boolean townHasTool = true;
-            final IPredicateCollection<MCTownItem> tool = dj.toolsRequiredAtStates.get(ii);
+            final IPredicateCollection<MCTownItem> tool = dj.getChecks().getToolsForStep(ii);
             if (tool != null) {
                 townHasTool = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);

@@ -10,18 +10,15 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,12 +27,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class WorksBehaviour {
-    private static final ResourceLocation NOT_REQUIRED_BECAUSE_BLOCKLESS_JOB = null;
-    static final BiPredicate NOT_REQUIRED_BECUASE_HAS_NO_JOB_BLOCK = (sl, bp) -> false;
-    private static final ItemStack NOT_REQUIRED_BECAUSE_NO_JOB_QUEST = ItemStack.EMPTY;
 
     public static Warper<ServerLevel, MCTownState> productionWarper(
             JobID id,
@@ -51,7 +47,8 @@ public class WorksBehaviour {
                 id,
                 warpInput.villagerIndex(),
                 pauseForAction,
-                states,
+                states.maxState(),
+                fromStates(states),
                 resultGenerator,
                 claimSpots,
                 specialRules
@@ -59,10 +56,16 @@ public class WorksBehaviour {
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
 
-    public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> singleItemOutput(
-            Supplier<ItemStack> result
-    ) {
-        return (s, j) -> ImmutableSet.of(MCHeldItem.fromMCItemStack(result.get()));
+    private static DeclarativeJobChecks<MCTownStateWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
+        return new DeclarativeJobChecks<>(
+                Jobs.unMCHeld3(states.ingredientsRequired()),
+                states.ingredientQtyRequired(),
+                Jobs.unMC5(states.toolsRequired()),
+                states.workRequired(),
+                states.timeRequired(),
+                (r) -> true,
+                (b) -> true // TODO: Should only return true if job block exists in town
+        );
     }
 
     public static BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> noOutput() {
@@ -102,26 +105,11 @@ public class WorksBehaviour {
         );
     }
 
-    public static WorkWorldInteractions standardWorldInteractions(
-            int pauseForAction,
-            Supplier<ItemStack> result
-    ) {
-        return new WorkWorldInteractions(
-            pauseForAction,
-            singleItemOutput(result.get()::copy)
-        );
-    }
-
-
     public interface JobFunc extends Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
     public interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
-
-    }
-
-    public interface BlockCheckFunc extends Function<Block, Boolean> {
 
     }
 

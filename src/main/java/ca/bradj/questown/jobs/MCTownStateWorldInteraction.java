@@ -5,16 +5,12 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.PostInsertHook;
-import ca.bradj.questown.jobs.declarative.PreExtractHook;
-import ca.bradj.questown.jobs.declarative.PreStateChangeHook;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.Effect;
@@ -38,10 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 public class MCTownStateWorldInteraction extends
         AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
@@ -54,24 +47,27 @@ public class MCTownStateWorldInteraction extends
     }
 
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
-    private final Map<Integer, Integer> ingredientQuantityRequiredAtStates;
 
     public MCTownStateWorldInteraction(
             JobID jobId,
             int villagerIndex,
             int interval,
-            WorkStates states,
+            int maxState,
+            DeclarativeJobChecks<Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
         super(
-                jobId, villagerIndex, interval, states.maxState(), Jobs.unMC(states.toolsRequired()),
-                states.workRequired(), PredicateCollections.fromMCIngredientMap(states.ingredientsRequired()),
-                states.ingredientQtyRequired(), states.timeRequired(), claimSpots, specialRules
+                jobId,
+                villagerIndex,
+                interval,
+                maxState,
+                checks,
+                claimSpots,
+                specialRules
         );
         this.resultGenerator = resultGenerator;
-        this.ingredientQuantityRequiredAtStates = states.ingredientQtyRequired();
     }
 
     @Override
@@ -312,11 +308,6 @@ public class MCTownStateWorldInteraction extends
         return true;
     }
 
-    @Override
-    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return ingredientQuantityRequiredAtStates;
-    }
-
     public void injectTicks(int interval) {
         ticksSinceLastAction += interval;
     }
@@ -347,12 +338,12 @@ public class MCTownStateWorldInteraction extends
             @Override
             public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsByState() {
                 int curState = workStates.processingState();
-                PredicateCollection<MCHeldItem, ?> ings = ingredientsRequiredAtStates().get(curState);
+                PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
                 if (ings != null) {
                     return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
                 }
 
-                PredicateCollection<MCTownItem, ?> toolChk = toolsRequiredAtStates.get(curState);
+                PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
                 if (toolChk != null) {
                     return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
                 }
@@ -391,7 +382,7 @@ public class MCTownStateWorldInteraction extends
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(
                         state -> {
-                            if (toolsRequiredAtStates.get(state) == null) {
+                            if (checks.getToolsForStep(state) == null) {
                                 b.add(state);
                             }
                         }
@@ -403,7 +394,7 @@ public class MCTownStateWorldInteraction extends
             public boolean hasSupplies() {
                 // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
                 int curState = workStates.processingState();
-                PredicateCollection<MCHeldItem, ?> ings = ingredientsRequiredAtStates().get(curState);
+                PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
                 if (ings != null) {
                     for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
                         if (container.hasItem(i -> ings.test(MCHeldItem.fromTown(i)))) {
@@ -411,7 +402,7 @@ public class MCTownStateWorldInteraction extends
                         }
                     }
                 }
-                PredicateCollection<MCTownItem, ?> toolChk = toolsRequiredAtStates.get(curState);
+                PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
                 if (toolChk != null) {
                     for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
                         if (container.hasItem(toolChk::test)) {
@@ -447,8 +438,8 @@ public class MCTownStateWorldInteraction extends
                 return JobsClean.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),
-                        ingredientsRequiredAtStates(),
-                        Jobs.unTown(toolsRequiredAtStates)
+                        checks.getAllRequiredIngredients(),
+                        Jobs.unTown(checks.getAllRequiredTools())
                 );
             }
 
@@ -456,11 +447,11 @@ public class MCTownStateWorldInteraction extends
             public Map<Integer, Boolean> getSupplyItemStatus() {
                 return JobsClean.getSupplyItemStatuses(
                         heldItems,
-                        ingredientsRequiredAtStates(),
+                        checks.getAllRequiredIngredients(),
                         (s) -> true, // TODO[WARP]: Implement this?
-                        Jobs.unTown(toolsRequiredAtStates),
+                        Jobs.unTown(checks.getAllRequiredTools()),
                         (s) -> true,
-                        workRequiredAtStates
+                        checks.getAllRequiredWork()
                 );
             }
         };
@@ -479,8 +470,8 @@ public class MCTownStateWorldInteraction extends
             MCTownState inState,
             int processingState
     ) {
-        Map<Integer, ? extends Predicate<MCHeldItem>> ingr = ingredientsRequiredAtStates();
-        Map<Integer, ? extends Predicate<MCHeldItem>> tool = Jobs.unTown(toolsRequiredAtStates);
+        Map<Integer, ? extends Predicate<MCHeldItem>> ingr = checks.getAllRequiredIngredients();
+        Map<Integer, ? extends Predicate<MCHeldItem>> tool = Jobs.unTown(checks.getAllRequiredTools());
         return ProductionTimeWarper.simulateCollectSupplies(
                 inState, processingState, villagerIndex, ingr, tool, MCHeldItem::fromTown
         );

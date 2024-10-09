@@ -37,7 +37,7 @@ class AbstractWorkWITest {
         }
 
         @Override
-        protected Void degradeTool(Void unused, @Nullable Void tuwn, PredicateCollection<GathererJournalTest.TestItem, ?> itemBooleanFunction) {
+        protected Void degradeTool(Void unused, @Nullable Void town, PredicateCollection<GathererJournalTest.TestItem, ?> itemBooleanFunction) {
             return null;
         }
 

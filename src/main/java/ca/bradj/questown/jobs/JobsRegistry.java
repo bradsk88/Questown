@@ -359,22 +359,25 @@ public class JobsRegistry {
     private static ImmutableMap<String, Jerb> jobs;
 
     public static Job<MCHeldItem, ? extends Snapshot<?>, ? extends IStatus<?>> getInitializedJob(
+            ServerLevel level,
             JobID jobName,
             @NotNull Snapshot<MCHeldItem> journal,
             UUID ownerUUID
     ) {
-        return getInitializedJob(jobName, journal, null, ownerUUID);
+        return getInitializedJob(level, jobName, journal, null, ownerUUID);
     }
 
     public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
+            ServerLevel level,
             JobID jobName,
             ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        return getInitializedJob(jobName, null, heldItems, ownerUUID);
+        return getInitializedJob(level, jobName, null, heldItems, ownerUUID);
     }
 
     private static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
+            ServerLevel level,
             JobID jobName,
             @Nullable Snapshot<MCHeldItem> journal,
             @Nullable ImmutableList<MCHeldItem> heldItems,
@@ -400,7 +403,7 @@ public class JobsRegistry {
             }
         }
         if (journal != null) {
-            j.initialize(journal);
+            j.initialize(level, journal);
         }
         return j;
     }
