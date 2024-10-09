@@ -13,7 +13,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Collection;
-import java.util.function.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
@@ -21,6 +24,7 @@ public class PreInitHook {
 
     public static void run(
             Collection<String> rules,
+            Supplier<ServerLevel> level,
             Supplier<ImmutableList<MCHeldItem>> heldItems,
             Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> ingrReplacer,
             Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> toolReplacer,
@@ -28,7 +32,7 @@ public class PreInitHook {
             Consumer<Function<Predicate<RoomRecipeMatch<MCRoom>>, Predicate<RoomRecipeMatch<MCRoom>>>> supplyRoomCheckReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeInitEvent bxEvent = new BeforeInitEvent(heldItems, ingrReplacer, toolReplacer, jobBlockCheckReplacer, supplyRoomCheckReplacer);
+        BeforeInitEvent bxEvent = new BeforeInitEvent(level, heldItems, ingrReplacer, toolReplacer, jobBlockCheckReplacer, supplyRoomCheckReplacer);
         processMulti(false, appliers, (o, a) -> {
             a.beforeInit(bxEvent);
             return true;

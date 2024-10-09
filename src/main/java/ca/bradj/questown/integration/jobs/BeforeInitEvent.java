@@ -7,6 +7,7 @@ import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public record BeforeInitEvent(
+        Supplier<ServerLevel> level,
         Supplier<ImmutableList<MCHeldItem>> heldItems,
         Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> replaceIngredients,
         Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> replaceTools,

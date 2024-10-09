@@ -88,5 +88,9 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("add_item_to_container"),
                 new AddItemToContainerSpecialRule()
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("require_two_free_spots"),
+                new RequireTwoFreeSpotsSpecialRule()
+        );
     }
 }

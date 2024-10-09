@@ -40,7 +40,9 @@ public class AddItemToContainerSpecialRule extends
             return ctxOut;
         }
         int amount = 1; // TODO: Implement "stacker"
-        Compat.insertInNextOpenSlot(res.get(), event.inserted(), amount);
+        if (!Compat.insertInNextOpenSlot(res.get(), event.inserted(), amount)) {
+            QT.JOB_LOGGER.error("Item lost due to not enough space in target container @ {}: {}", ws, event.inserted());
+        }
         return ctxOut;
     }
 }

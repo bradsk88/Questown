@@ -110,7 +110,6 @@ public class TownPossibleWork {
             DeclarativeJob dj
     ) {
         boolean townHasJobSite = false;
-        ServerLevel sl = t.getServerLevel();
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
@@ -121,7 +120,7 @@ public class TownPossibleWork {
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
                         rooms,
-                        (bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        (bp) -> dj.getChecks().isJobBlock(bp),
                         (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {

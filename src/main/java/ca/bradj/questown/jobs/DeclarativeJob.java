@@ -112,7 +112,7 @@ public class DeclarativeJob extends
                 workRequiredAtStates,
                 timeRequiredAtStates,
                 (r) -> true,
-                (p) -> isJobBlock(p)
+                (p) -> false
         );
 
         this.world = initWorldInteraction(
@@ -142,7 +142,6 @@ public class DeclarativeJob extends
     public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
         super.initialize(level, journal);
 
-
         Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingr = new HashMap<>(checks.getAllRequiredIngredients());
         Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tool = new HashMap<>(checks.getAllRequiredTools());
         AtomicReference<Predicate<BlockPos>> ijb = new AtomicReference<>(
@@ -158,7 +157,8 @@ public class DeclarativeJob extends
             List<String> stageRules = UtilClean.getOrDefaultCollection(specialRules, ss, ImmutableList.of());
             PreInitHook.run(
                     stageRules,
-                    () -> self.journal.getItems(),
+                    () -> level,
+                    self.journal::getItems,
                     fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
                     fn -> tool.put(ii, fn.apply(tool.get(ii))),
                     fn -> ijb.set(fn.apply(ijb.get())),
@@ -168,7 +168,8 @@ public class DeclarativeJob extends
 
         PreInitHook.run(
                 specialGlobalRules,
-                () -> self.journal.getItems(),
+                () -> level,
+                self.journal::getItems,
                 fn -> {
                 },
                 fn -> {

@@ -171,7 +171,7 @@ public class Compat {
         return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY());
     }
 
-    public static void insertInNextOpenSlot(
+    public static boolean insertInNextOpenSlot(
             IItemHandler iItemHandler,
             ItemStack inserted,
             int targetSize
@@ -182,7 +182,7 @@ public class Compat {
                 if (stackInSlot.getOrCreateTag().isEmpty() && stackInSlot.sameItem(inserted)) {
                     if (stackInSlot.getCount() < targetSize) {
                         iItemHandler.insertItem(i, inserted, false);
-                        return;
+                        return true;
                     }
                 }
             }
@@ -191,8 +191,9 @@ public class Compat {
             ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
             if (stackInSlot.isEmpty()) {
                 iItemHandler.insertItem(i, inserted, false);
-                return;
+                return true;
             }
         }
+        return false;
     }
 }
