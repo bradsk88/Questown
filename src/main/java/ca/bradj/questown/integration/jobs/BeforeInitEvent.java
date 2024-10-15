@@ -9,17 +9,13 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 public record BeforeInitEvent(
         Supplier<ServerLevel> level,
-        Supplier<ImmutableList<MCHeldItem>> heldItems,
         Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> replaceIngredients,
         Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> replaceTools,
-        Consumer<Function<Predicate<BlockPos>, Predicate<BlockPos>>> jobBlockCheckReplacer,
+        Consumer<Function<Predicate<BlockPos>, BiPredicate<ImmutableList<MCHeldItem>, BlockPos>>> jobBlockCheckReplacer,
         Consumer<Function<Predicate<RoomRecipeMatch<MCRoom>>, Predicate<RoomRecipeMatch<MCRoom>>>> supplyRoomCheckReplacer
 ) {
 }

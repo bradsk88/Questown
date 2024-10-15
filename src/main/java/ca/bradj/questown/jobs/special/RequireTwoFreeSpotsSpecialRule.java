@@ -31,7 +31,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
     @Override
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
-        bxEvent.jobBlockCheckReplacer().accept(before -> (block) -> {
+        bxEvent.jobBlockCheckReplacer().accept(before -> (heldItems, block) -> {
             BlockEntity entity = bxEvent.level().get().getBlockEntity(block);
             if (entity == null) {
                 return false;

@@ -105,6 +105,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
                 ProductionStatus.NO_JOBSITE
         ).contains(status)) {
             noSuppliesTicks++;
+        } else if (status.isWorkingOnProduction() && worldBeforeTick.getWorkSpot() == null) {
+            noSuppliesTicks++;
         } else {
             noSuppliesTicks = 0;
         }

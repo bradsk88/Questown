@@ -159,6 +159,7 @@ public class JobStatuses {
                         )
                 )
         );
+        root.initializeAll();
         return nullIfUnchanged(currentStatus, root.resolve());
     }
 

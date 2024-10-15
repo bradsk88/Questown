@@ -161,7 +161,10 @@ public class DeclarativeJob extends
                     self.journal::getItems,
                     fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
                     fn -> tool.put(ii, fn.apply(tool.get(ii))),
-                    fn -> ijb.set(fn.apply(ijb.get())),
+                    fn -> {
+                        BiPredicate<ImmutableList<MCHeldItem>, BlockPos> wrapped = fn.apply(ijb.get());
+                        ijb.set(withItems(wrapped, self));
+                    },
                     fn -> conChk.set(fn.apply(conChk.get()))
             );
         }
@@ -174,7 +177,10 @@ public class DeclarativeJob extends
                 },
                 fn -> {
                 },
-                fn -> ijb.set(fn.apply(ijb.get())),
+                fn -> {
+                    BiPredicate<ImmutableList<MCHeldItem>, BlockPos> wrapped = fn.apply(ijb.get());
+                    ijb.set(withItems(wrapped, self));
+                },
                 fn -> conChk.set(fn.apply(conChk.get()))
         );
         this.checks.initialize(
@@ -186,6 +192,13 @@ public class DeclarativeJob extends
                 (c) -> conChk.get().test(c),
                 (p) -> ijb.get().test(p)
         );
+    }
+
+    private Predicate<BlockPos> withItems(
+            BiPredicate<ImmutableList<MCHeldItem>, BlockPos> t,
+            DeclarativeJob self
+    ) {
+        return b -> t.test(self.journal.getItems(), b);
     }
 
     @NotNull

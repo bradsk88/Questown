@@ -13,10 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Collection;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
@@ -28,7 +25,7 @@ public class PreInitHook {
             Supplier<ImmutableList<MCHeldItem>> heldItems,
             Consumer<Function<PredicateCollection<MCHeldItem, MCHeldItem>, PredicateCollection<MCHeldItem, MCHeldItem>>> ingrReplacer,
             Consumer<Function<PredicateCollection<MCTownItem, MCTownItem>, PredicateCollection<MCTownItem, MCTownItem>>> toolReplacer,
-            Consumer<Function<Predicate<BlockPos>, Predicate<BlockPos>>> jobBlockCheckReplacer,
+            Consumer<Function<Predicate<BlockPos>, BiPredicate<ImmutableList<MCHeldItem>, BlockPos>>> jobBlockCheckReplacer,
             Consumer<Function<Predicate<RoomRecipeMatch<MCRoom>>, Predicate<RoomRecipeMatch<MCRoom>>>> supplyRoomCheckReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);

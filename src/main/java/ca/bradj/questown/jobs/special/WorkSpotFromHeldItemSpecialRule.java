@@ -50,12 +50,12 @@ public class WorkSpotFromHeldItemSpecialRule extends
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
 
-        bxEvent.jobBlockCheckReplacer().accept(old -> {
-            @Nullable BlockPos room = getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
-            if (room == null) {
-                return old;
+        bxEvent.jobBlockCheckReplacer().accept((old) -> (heldItems, blockUnderTest) -> {
+            @Nullable BlockPos block = getJobBlockPositionFromHeldItems(heldItems);
+            if (block == null) {
+                return old.test(blockUnderTest);
             }
-            return room::equals;
+            return block.equals(blockUnderTest);
         });
 
         bxEvent.supplyRoomCheckReplacer().accept(old -> {

@@ -20,16 +20,21 @@ public class LZCD<T> implements ILZCD<T> {
             Map<String, Object> conditions,
             Populated<T> ifCondFailOrNull
     ) {
+
     }
 
     public interface Dependency<T> extends Function<Supplier<T>, WithReason<Boolean>> {
+
         Populated<WithReason<@Nullable Boolean>> populate();
+
         String describe();
 
         String getName();
+
     }
 
     public final String name;
+
     private final ILZCD<T> wrapped;
     private final Collection<? extends ILZCD<Dependency<T>>> conditions;
     private final ILZCD<T> ifCondFail;
@@ -56,10 +61,25 @@ public class LZCD<T> implements ILZCD<T> {
         this.ifCondFail = ifCondFail;
     }
 
-    public static <T> LZCD<T> noDeps(String name, Supplier<T> o, Predicate<T> isNull) {
+    @Override
+    public void initializeAll() {
+        this.value = null;
+        this.conditions.forEach(ILZCD::initializeAll);
+    }
+
+    public static <T> LZCD<T> noDeps(
+            String name,
+            Supplier<T> o,
+            Predicate<T> isNull
+    ) {
         return new LZCD<>(name, new ILZCD<T>() {
             private Populated<T> populated = null;
             private T val;
+
+            @Override
+            public void initializeAll() {
+                val = null;
+            }
 
             @Override
             public boolean isValueNull(T val) {
@@ -83,12 +103,20 @@ public class LZCD<T> implements ILZCD<T> {
         }, ImmutableList.of(), leaf(() -> null, (v) -> true));
     }
 
-    public static <T> ILZCD<T> leaf(Supplier<T> o, Predicate<T> isNull) {
+    public static <T> ILZCD<T> leaf(
+            Supplier<T> o,
+            Predicate<T> isNull
+    ) {
         return new ILZCD<T>() {
 
             private Populated<T> populated = null;
             @Nullable
             T value = null;
+
+            @Override
+            public void initializeAll() {
+                value = null;
+            }
 
             @Override
             public boolean isValueNull(T value) {
@@ -124,7 +152,7 @@ public class LZCD<T> implements ILZCD<T> {
                 cached.set(wrapped.resolve());
             }
             return cached.get();
-        };
+        }; // TODO: Encapsulate in function
 
         int condPassed = 0;
         for (ILZCD<Dependency<T>> d : conditions) {
