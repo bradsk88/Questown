@@ -50,21 +50,21 @@ public class WorkSpotFromHeldItemSpecialRule extends
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
 
-        bxEvent.jobBlockCheckReplacer().accept((old) -> (heldItems, blockUnderTest) -> {
+        bxEvent.jobBlockCheckReplacer().accept((old) -> (heldItems, bs, blockUnderTest) -> {
             @Nullable BlockPos block = getJobBlockPositionFromHeldItems(heldItems);
             if (block == null) {
-                return old.test(blockUnderTest);
+                return old.test(heldItems, bs, blockUnderTest);
             }
             return block.equals(blockUnderTest);
         });
 
-        bxEvent.supplyRoomCheckReplacer().accept(old -> {
-            @Nullable MCRoom room = getRoomFromHeldItems(bxEvent.heldItems().get());
+        bxEvent.supplyRoomCheckReplacer().accept(old -> (heldItems, match) -> {
+            @Nullable MCRoom room = getRoomFromHeldItems(heldItems);
             if (room == null) {
-                return old;
+                return old.test(heldItems, match);
             }
             // Exclude the work spot as a supply source
-            return m -> !m.room.equals(room);
+            return !match.room.equals(room);
         });
     }
 
@@ -91,7 +91,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         };
     }
 
-    public static @Nullable MCRoom getRoomFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+    public static @Nullable MCRoom getRoomFromHeldItems(Collection<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
                 @Nullable MCRoom room = StockRequestItem.getRoom(i.getItemNBTData());
@@ -103,7 +103,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
         return null;
     }
 
-    public static @Nullable BlockPos getJobBlockPositionFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+    public static @Nullable BlockPos getJobBlockPositionFromHeldItems(Collection<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
                 @Nullable BlockPos room = StockRequestItem.getJobBlock(i.getItemNBTData());

@@ -2,8 +2,6 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.questown.items.StockRequestItem;
-import ca.bradj.questown.town.TownContainers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -19,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 public class RequireTwoFreeSpotsSpecialRule extends
         JobPhaseModifier {
@@ -31,7 +28,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
     @Override
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
-        bxEvent.jobBlockCheckReplacer().accept(before -> (heldItems, block) -> {
+        bxEvent.jobBlockCheckReplacer().accept(before -> (heldItems, bs, block) -> {
             BlockEntity entity = bxEvent.level().get().getBlockEntity(block);
             if (entity == null) {
                 return false;
@@ -46,16 +43,16 @@ public class RequireTwoFreeSpotsSpecialRule extends
             }
             IItemHandler handler = resolve.get();
             if (hasTwoFreeSlots(handler.getSlots(), handler::getStackInSlot)) {
-                return before.test(block);
+                return before.test(heldItems, bs, block);
             }
             return false;
         });
-        bxEvent.supplyRoomCheckReplacer().accept(before -> room -> {
+        bxEvent.supplyRoomCheckReplacer().accept(before -> (heldItems, room) -> {
             @Nullable BlockPos jBlock = WorkSpotFromHeldItemSpecialRule
-                    .getJobBlockPositionFromHeldItems(bxEvent.heldItems().get());
+                    .getJobBlockPositionFromHeldItems(heldItems);
             for (Map.Entry<BlockPos, Block> b : room.getContainedBlocks().entrySet()) {
                 if (jBlock != null && !jBlock.equals(b.getKey())) {
-                    return before.test(room);
+                    return before.test(heldItems, room);
                 }
                 if (!(b.getValue() instanceof ChestBlock cb)) {
                     continue;
@@ -72,7 +69,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
                     continue;
                 }
                 if (hasTwoFreeSlots(cont.getContainerSize(), cont::getItem)) {
-                    return before.test(room);
+                    return before.test(heldItems, room);
                 }
             }
             return false;

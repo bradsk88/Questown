@@ -4,6 +4,9 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
+import ca.bradj.questown.integration.jobs.JobCheckReplacer;
+import ca.bradj.questown.integration.jobs.SupplyRoomCheckReplacer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.*;
@@ -139,66 +142,58 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
+    public void initialize(
+            ServerLevel level,
+            Snapshot<MCHeldItem> journal
+    ) {
         super.initialize(level, journal);
 
-        Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingr = new HashMap<>(checks.getAllRequiredIngredients());
-        Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tool = new HashMap<>(checks.getAllRequiredTools());
-        AtomicReference<Predicate<BlockPos>> ijb = new AtomicReference<>(
-                (bp) -> location.isJobBlock().test(level::getBlockState, bp)
-        );
-        AtomicReference<Predicate<RoomRecipeMatch<MCRoom>>> conChk = new AtomicReference<>(room -> true);
+        Map<Integer, ItemCheckReplacer<MCHeldItem>> ingr = new HashMap<>();
+        Map<Integer, ItemCheckReplacer<MCTownItem>> tool = new HashMap<>();
+
+        Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> jobIngrs = checks.getAllRequiredIngredients();
+        Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> jobTools = checks.getAllRequiredTools();
+        PredicateCollection noCheck = PredicateCollection.empty("no requirements");
+        for (int i = 0; i < maxState; i++) {
+            ingr.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)));
+            tool.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)));
+        }
+
+        JobCheckReplacer globalJCR = new JobCheckReplacer(location.isJobBlock());
+        SupplyRoomCheckReplacer globalSRCR = new SupplyRoomCheckReplacer();
 
         DeclarativeJob self = this;
 
         for (int i = 0; i <= maxState; i++) {
-            int ii = i;
             ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
             List<String> stageRules = UtilClean.getOrDefaultCollection(specialRules, ss, ImmutableList.of());
             PreInitHook.run(
                     stageRules,
                     () -> level,
-                    self.journal::getItems,
-                    fn -> ingr.put(ii, fn.apply(ingr.get(ii))),
-                    fn -> tool.put(ii, fn.apply(tool.get(ii))),
-                    fn -> {
-                        BiPredicate<ImmutableList<MCHeldItem>, BlockPos> wrapped = fn.apply(ijb.get());
-                        ijb.set(withItems(wrapped, self));
-                    },
-                    fn -> conChk.set(fn.apply(conChk.get()))
+                    ingr.get(i),
+                    tool.get(i),
+                    globalJCR,
+                    globalSRCR
             );
         }
 
         PreInitHook.run(
                 specialGlobalRules,
                 () -> level,
-                self.journal::getItems,
-                fn -> {
-                },
-                fn -> {
-                },
-                fn -> {
-                    BiPredicate<ImmutableList<MCHeldItem>, BlockPos> wrapped = fn.apply(ijb.get());
-                    ijb.set(withItems(wrapped, self));
-                },
-                fn -> conChk.set(fn.apply(conChk.get()))
+                ItemCheckReplacer.doNotReplace(),
+                ItemCheckReplacer.doNotReplace(),
+                globalJCR,
+                globalSRCR
         );
         this.checks.initialize(
-                ingr,
+                ItemCheckReplacer.withItems(ingr, self.journal::getItems),
                 checks.getAllRequiredQuantity(),
-                tool,
+                ItemCheckReplacer.withItems(tool, self.journal::getItems),
                 checks.getAllRequiredWork(),
                 checks.getAllRequiredTime(),
-                (c) -> conChk.get().test(c),
-                (p) -> ijb.get().test(p)
+                SupplyRoomCheckReplacer.withItems(globalSRCR, self.journal::getItems),
+                JobCheckReplacer.withItemsAndLevel(globalJCR, self.journal::getItems, level::getBlockState)
         );
-    }
-
-    private Predicate<BlockPos> withItems(
-            BiPredicate<ImmutableList<MCHeldItem>, BlockPos> t,
-            DeclarativeJob self
-    ) {
-        return b -> t.test(self.journal.getItems(), b);
     }
 
     @NotNull
@@ -410,11 +405,11 @@ public class DeclarativeJob extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> extra.town().getRoomHandle()
-                                  .getRoomsMatching(location.baseRoom())
-                                  .stream()
-                                  .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
-                                                                                    .keySet())
-                                  .toList(),
+                                   .getRoomsMatching(location.baseRoom())
+                                   .stream()
+                                   .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks()
+                                                                                     .keySet())
+                                   .toList(),
                         getJobBlockState,
                         (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
@@ -483,7 +478,7 @@ public class DeclarativeJob extends
     private boolean hasInserted(Integer action) {
         for (int i = 1; i < action; i++) {
             //noinspection DataFlowIssue
-            if (checks.getQuantityForStep(i -1, 0) > 0) {
+            if (checks.getQuantityForStep(i - 1, 0) > 0) {
                 return true;
             }
         }
@@ -912,10 +907,13 @@ public class DeclarativeJob extends
         });
         HashMap<Integer, IPredicateCollection<?>> stateTools = new HashMap<>();
         if (checks.getAllRequiredTools().values()
-                                 .stream()
-                                 .anyMatch(v -> !v.isEmpty())) {
+                  .stream()
+                  .anyMatch(v -> !v.isEmpty())) {
             for (int i = 0; i < maxState; i++) {
-                stateTools.put(i, checks.getAllRequiredTools().getOrDefault(i, PredicateCollection.empty("no tool defined")));
+                stateTools.put(
+                        i,
+                        checks.getAllRequiredTools().getOrDefault(i, PredicateCollection.empty("no tool defined"))
+                );
             }
         }
         stateTools.keySet().forEach((state) -> {

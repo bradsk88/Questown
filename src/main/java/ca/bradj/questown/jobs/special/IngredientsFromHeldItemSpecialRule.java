@@ -1,16 +1,16 @@
 package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
+import ca.bradj.questown.integration.jobs.ItemCheck;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.logic.IPredicateCollection;
-import ca.bradj.questown.logic.PredicateCollection;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
 
 public class IngredientsFromHeldItemSpecialRule extends
         JobPhaseModifier {
@@ -25,56 +25,64 @@ public class IngredientsFromHeldItemSpecialRule extends
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
         if (isTool) {
-            bxEvent.replaceTools().accept(before -> PredicateCollection.wrap(
-                    before,
-                    (IPredicateCollection<MCTownItem> inner) -> {
-                        @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
-                        if (ing == null) {
-                            if (before == null) {
-                                return true;
-                            }
-                            return before.isEmpty();
+            bxEvent.replaceTools().replace(before -> new ItemCheck<>() {
+                @Override
+                public boolean isEmpty(Collection<MCHeldItem> heldItems) {
+                    @Nullable Ingredient ing = getIngredientFromHeldItems(heldItems);
+                    if (ing == null) {
+                        if (before == null) {
+                            return true;
                         }
-                        return ing.isEmpty();
-                    },
-                    (IPredicateCollection<MCTownItem> inner, MCTownItem mcHeldItem) -> {
-                        @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
-                        if (ing == null) {
-                            if (before == null) {
-                                return false;
-                            }
-                            return before.test(mcHeldItem);
-                        }
-                        return ing.test(mcHeldItem.toItemStack());
-                    },
-                    "Tool from held item, replacing"
-            ));
-        } else {
-            bxEvent.replaceIngredients().accept(before -> PredicateCollection.wrap(
-                    before,
-                    (IPredicateCollection<MCHeldItem> inner) -> {
-                        @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
-                        if (ing == null) {
-                            return inner.isEmpty();
-                        }
-                        return ing.isEmpty();
-                    },
-                    (IPredicateCollection<MCHeldItem> inner, MCHeldItem mcHeldItem) -> {
-                        if (mcHeldItem.isEmpty()) {
+                        return before.isEmpty(heldItems);
+                    }
+                    return ing.isEmpty();
+                }
+
+                @Override
+                public boolean test(
+                        Collection<MCHeldItem> heldItems,
+                        MCTownItem item
+                ) {
+                    @Nullable Ingredient ing = getIngredientFromHeldItems(heldItems);
+                    if (ing == null) {
+                        if (before == null) {
                             return false;
                         }
-                        @Nullable Ingredient ing = getIngredientFromHeldItems(bxEvent.heldItems().get());
-                        if (ing == null) {
-                            return before.test(mcHeldItem);
-                        }
-                        return ing.test(mcHeldItem.toItem().toItemStack());
-                    },
-                    "Ingredient from held item, replacing"
-            ));
+                        return before.test(heldItems, item);
+                    }
+                    return ing.test(item.toItemStack());
+                }
+            });
+        } else {
+            bxEvent.replaceIngredients().replace(before -> new ItemCheck<>() {
+                @Override
+                public boolean isEmpty(Collection<MCHeldItem> heldItems) {
+                    @Nullable Ingredient ing = getIngredientFromHeldItems(heldItems);
+                    if (ing == null) {
+                        return before.isEmpty(heldItems);
+                    }
+                    return ing.isEmpty();
+                }
+
+                @Override
+                public boolean test(
+                        Collection<MCHeldItem> heldItems,
+                        MCHeldItem item
+                ) {
+                    if (item.isEmpty()) {
+                        return false;
+                    }
+                    @Nullable Ingredient ing = getIngredientFromHeldItems(heldItems);
+                    if (ing == null) {
+                        return before.test(heldItems, item);
+                    }
+                    return ing.test(item.toItem().toItemStack());
+                }
+            });
         }
     }
 
-    private Ingredient getIngredientFromHeldItems(ImmutableList<MCHeldItem> mcHeldItems) {
+    private Ingredient getIngredientFromHeldItems(Collection<MCHeldItem> mcHeldItems) {
         for (MCHeldItem i : mcHeldItems) {
             if (i.get().get() instanceof StockRequestItem) {
                 WorkRequest req = StockRequestItem.getRequest(i.getItemNBTData());
