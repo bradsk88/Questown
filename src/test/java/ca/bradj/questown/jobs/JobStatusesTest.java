@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -8,10 +9,12 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestReporter;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 class JobStatusesTest {
 
@@ -173,14 +176,32 @@ class JobStatusesTest {
     }
 
     record ConstTown(
-            boolean hasSupplies,
-            boolean hasSpace,
-            boolean canUseMoreSupplies,
-            boolean isTimerActive
+            LZCD.Dependency<Void> hasSupplies,
+            LZCD.Dependency<Void> hasSpace,
+            LZCD.Dependency<Void> canUseMoreSupplies,
+            LZCD.Dependency<Void> isTimerActive
     ) implements TownStateProvider {
 
-        ConstTown(boolean hasSupplies, boolean hasSpace, boolean canUseMoreSupplies) {
-            this(hasSupplies, hasSpace, canUseMoreSupplies, false);
+        ConstTown(
+                boolean hasSupplies,
+                boolean hasSpace,
+                boolean canUseMoreSupplies
+        ) {
+            this(make(hasSupplies), make(hasSpace), make(canUseMoreSupplies), make(false));
+        }
+
+        private static LZCD.Dependency<Void> make(boolean v) {
+            return new LZCD.SimpleDependency("test") {
+                @Override
+                protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                    return new LZCD.Populated<>("test", WithReason.always(v, "test"), ImmutableMap.of(), null);
+                }
+
+                @Override
+                public String describe() {
+                    return "test";
+                }
+            };
         }
     }
 
@@ -438,31 +459,6 @@ class JobStatusesTest {
     }
 
     @Test
-    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfBothAreNeeded() {
-        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
-        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-                0, ImmutableList.of(sameRoom),
-                1, ImmutableList.of(sameRoom)
-        ));
-
-        Assertions.assertEquals(1, s.size());
-        Assertions.assertNotNull(s.get(0));
-    }
-
-    @Test
-    void sanitizeRoomNeeds_ShouldPrioritizeLowerStates_IfAllAreNeeded() {
-        Room sameRoom = new Room(new Position(1, 2), new InclusiveSpace(new Position(0, 0), new Position(3, 3)));
-        Map<Integer, ? extends Collection<Room>> s = JobStatuses.sanitizeRoomNeeds(ImmutableMap.of(
-                0, ImmutableList.of(sameRoom),
-                1, ImmutableList.of(sameRoom),
-                2, ImmutableList.of(sameRoom)
-        ));
-
-        Assertions.assertEquals(1, s.size());
-        Assertions.assertNotNull(s.get(0));
-    }
-
-    @Test
     void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndOnlyAvailableSuppliesAreInTown() {
         boolean canDoWork = false;
         boolean hasSupplies = true;
@@ -484,6 +480,7 @@ class JobStatusesTest {
         );
         Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
+
     @Test
     void StatusShouldBe_NoSupplies_WhenThereIsNowhereToWork_AndNoSuppliesAvailable() {
         boolean canDoWork = false;

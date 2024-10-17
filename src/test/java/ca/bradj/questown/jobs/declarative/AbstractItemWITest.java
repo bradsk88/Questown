@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.DeclarativeJobChecks;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.IPredicateCollection;
@@ -39,7 +40,8 @@ class AbstractItemWITest {
         }
     }
 
-    private static class TestItemWI extends AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
+    private static class TestItemWI extends
+            AbstractItemWI<Position, Void, GathererJournalTest.TestItem, TestTownState> {
         private final Map<Position, StateWithTimer> map = new HashMap<>();
 
         private final ImmutableWorkStateContainer<Position, TestTownState> statuses = new ImmutableWorkStateContainer<>() {
@@ -113,23 +115,37 @@ class AbstractItemWITest {
         ) {
             super(
                     -1,
-                    ingredientsRequiredAtStates,
-                    ingredientQtyRequiredAtStates,
-                    workRequiredAtStates,
-                    (x, i) -> Util.getOrDefault(timeRequiredAtStates, i, 0),
+                    new DeclarativeJobChecks<>(
+                            ingredientsRequiredAtStates,
+                            ingredientQtyRequiredAtStates,
+                            ImmutableMap.of(),
+                            workRequiredAtStates,
+                            timeRequiredAtStates,
+                            room -> true,
+                            block -> true
+                    ),
                     (v) -> new Claim(UUID.randomUUID(), 100)
             );
             this.inventory = inventory;
         }
 
         @Override
-        protected TestTownState setHeldItem(Void uxtra, TestTownState tuwn, int villagerIndex, int itemIndex, GathererJournalTest.TestItem item) {
+        protected TestTownState setHeldItem(
+                Void uxtra,
+                TestTownState tuwn,
+                int villagerIndex,
+                int itemIndex,
+                GathererJournalTest.TestItem item
+        ) {
             inventory.set(itemIndex, item);
             return TestTownState.updateVillagerItems();
         }
 
         @Override
-        protected Collection<GathererJournalTest.TestItem> getHeldItems(Void unused, int villagerIndex) {
+        protected Collection<GathererJournalTest.TestItem> getHeldItems(
+                Void unused,
+                int villagerIndex
+        ) {
             return inventory.getItems();
         }
 
@@ -428,7 +444,10 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        InsertResult<TestTownState, GathererJournalTest.TestItem> res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        InsertResult<TestTownState, GathererJournalTest.TestItem> res = wi.tryInsertIngredients(
+                null,
+                new WorkedSpot<>(arbitraryPosition, 0)
+        );
         Assertions.assertNotNull(res);
         Assertions.assertTrue(res.contextAfterInsert().updatedHeldItems);
     }

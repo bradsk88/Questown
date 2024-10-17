@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.DeclarativeJobChecks;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.WorkedSpot;
@@ -33,28 +34,55 @@ class AbstractWorkWITest {
                 ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
                 BiConsumer<Void, WorkSpot<Integer, Position>> scCallback
         ) {
-            super(workRequiredAtStates, (x, s) -> Util.getOrDefault(timeRequiredAtStates, s, 0), toolsRequiredAtStates, scCallback);
+            super(
+                    new DeclarativeJobChecks<>(
+                            ImmutableMap.of(),
+                            ImmutableMap.of(),
+                            toolsRequiredAtStates,
+                            workRequiredAtStates,
+                            timeRequiredAtStates,
+                            room -> true,
+                            block -> true
+                    ),
+                    scCallback
+            );
         }
 
         @Override
-        protected Void degradeTool(Void unused, @Nullable Void town, PredicateCollection<GathererJournalTest.TestItem, ?> itemBooleanFunction) {
+        protected Void degradeTool(
+                Void unused,
+                @Nullable Void town,
+                PredicateCollection<GathererJournalTest.TestItem, ?> itemBooleanFunction
+        ) {
             return null;
         }
 
         @Override
-        protected Void setJobBlockStateWithTimer(Void unused, Position bp, State bs, int nextStepTime) {
+        protected Void setJobBlockStateWithTimer(
+                Void unused,
+                Position bp,
+                State bs,
+                int nextStepTime
+        ) {
             state.put(bp, bs);
             throw new UnsupportedOperationException("Timers not supported by this test suite");
         }
 
         @Override
-        protected Void setJobBlockState(Void unused, Position bp, State bs) {
+        protected Void setJobBlockState(
+                Void unused,
+                Position bp,
+                State bs
+        ) {
             state.put(bp, bs);
             return null;
         }
 
         @Override
-        protected State getJobBlockState(Void unused, Position bp) {
+        protected State getJobBlockState(
+                Void unused,
+                Position bp
+        ) {
             return state.get(bp);
         }
 
@@ -73,7 +101,8 @@ class AbstractWorkWITest {
                 ),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                (a, b) -> {}
+                (a, b) -> {
+                }
         );
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
         Assertions.assertEquals(
@@ -103,7 +132,8 @@ class AbstractWorkWITest {
                 ),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                (a, b) -> calledBack.add(b));
+                (a, b) -> calledBack.add(b)
+        );
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
@@ -122,7 +152,8 @@ class AbstractWorkWITest {
                 ),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                (a, b) -> calledBack.add(b)) {
+                (a, b) -> calledBack.add(b)
+        ) {
             @Override
             protected int getWorkSpeedOf10(Void unused) {
                 return 5; // Makes work degrade in steps less than integer
@@ -141,7 +172,9 @@ class AbstractWorkWITest {
                         1, alwaysTrue,
                         2, alwaysTrue
                 ),
-                (a, b) -> {});
+                (a, b) -> {
+                }
+        );
         wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
         Assertions.assertEquals(
                 State.freshAtState(1),

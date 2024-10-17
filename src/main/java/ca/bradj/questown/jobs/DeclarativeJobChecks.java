@@ -22,9 +22,9 @@ public class DeclarativeJobChecks<EXTRA, HELD_ITEM, TOWN_ITEM, ROOM extends IRoo
     private boolean initialized = false;
 
     public DeclarativeJobChecks(
-            Map<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> ingredientsRequiredAtStates,
+            Map<Integer, ? extends PredicateCollection<HELD_ITEM, HELD_ITEM>> ingredientsRequiredAtStates,
             Map<Integer, Integer> ingredientsQtyRequiredAtStates,
-            Map<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> toolsRequiredAtStates,
+            Map<Integer, ? extends PredicateCollection<TOWN_ITEM, TOWN_ITEM>> toolsRequiredAtStates,
             Map<Integer, Integer> workRequiredAtStates,
             Map<Integer, Integer> timeRequiredAtStates,
             Predicate<ROOM> includeSupplyRoom,

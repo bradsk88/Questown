@@ -100,6 +100,11 @@ class TownStateTest {
         public String toShortString() {
             return String.join(", ", items.stream().map(v -> v.value).toList());
         }
+
+        @Override
+        public String toShortString(boolean includeAir) {
+            return toShortString();
+        }
     }
 
     private TestTownState townState;

@@ -355,5 +355,10 @@ class ProductionTimeWarperTest {
         public String toShortString() {
             return delegate.toString();
         }
+
+        @Override
+        public String toShortString(boolean includeAir) {
+            return toShortString();
+        }
     }
 }

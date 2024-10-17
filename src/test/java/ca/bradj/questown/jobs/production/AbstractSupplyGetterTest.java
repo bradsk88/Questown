@@ -5,11 +5,13 @@ import ca.bradj.questown.jobs.JobsClean;
 import ca.bradj.questown.jobs.StatusesProductionRoutineTest;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.MonoPredicateCollection;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +25,8 @@ class AbstractSupplyGetterTest {
             new InclusiveSpace(new Position(3, 4), new Position(5, 6))
     );
 
-    private static class TestSupplyGetter extends AbstractSupplyGetter<StatusesProductionRoutineTest.PTestStatus, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room> {
+    private static class TestSupplyGetter extends
+            AbstractSupplyGetter<StatusesProductionRoutineTest.PTestStatus, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room> {
 
     }
 
@@ -41,13 +44,31 @@ class AbstractSupplyGetterTest {
         }, "item must match " + item.getShortName());
     }
 
+    private static RoomsNeedingIngredientsOrTools<Room, String, Position> ARBITRARY_RNIOT = new RoomsNeedingIngredientsOrTools<>(
+            ImmutableMap.of(
+                    0, ImmutableList.of(new IRoomRecipeMatch<Room, String, Position, Object>() {
+                        @Override
+                        public String getRecipeID() {
+                            return "test match";
+                        }
+
+                        @Override
+                        public Room getRoom() {
+                            return ARBITRARY_ROOM;
+                        }
+
+                        @Override
+                        public ImmutableMap<Position, Object> getContainedBlocks() {
+                            return ImmutableMap.of(new Position(0, 0), null);
+                        }
+                    })
+            ));
+
     @Test
     void tryGetSupplies_ShouldGrabExactlyOneItem_OnFirstAttempt() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
-        );
+
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
@@ -85,7 +106,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                () -> roomsNeedingIngOrTool,
+                ARBITRARY_RNIOT,
                 suppliesTarget,
                 (state) -> ImmutableList.of(recipe.get(state)),
                 ImmutableList.of(
@@ -106,9 +127,6 @@ class AbstractSupplyGetterTest {
     void tryGetSupplies_ShouldGrabExactlyOneItem_OnFirstAttempt_IfRecipeCallsForTwoItems() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
-        );
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
@@ -149,7 +167,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                () -> roomsNeedingIngOrTool,
+                ARBITRARY_RNIOT,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(
@@ -170,9 +188,6 @@ class AbstractSupplyGetterTest {
     void tryGetSupplies_ShouldNotGrabMore_OnSecondAttempt_IfRecipeCallsForOneItem() {
         // Grabbing more is a level-up ability. We can implement support once leveling up exists.
         TestSupplyGetter g = new TestSupplyGetter();
-        ImmutableMap<Integer, Collection<Room>> roomsNeedingIngOrTool = ImmutableMap.of(
-                0, ImmutableList.of(ARBITRARY_ROOM)
-        );
         Supplier<GathererJournalTest.TestItem> neededItem = () -> new GathererJournalTest.TestItem("Map");
         final Map<Integer, Integer> removedFromSlots = new HashMap<>();
 
@@ -212,7 +227,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                () -> roomsNeedingIngOrTool,
+                ARBITRARY_RNIOT,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(
@@ -229,7 +244,7 @@ class AbstractSupplyGetterTest {
         g.tryGetSupplies(
                 StatusesProductionRoutineTest.PTestStatus.FACTORY.collectingSupplies(),
                 6, // Standard inventory size
-                () -> roomsNeedingIngOrTool,
+                ARBITRARY_RNIOT,
                 suppliesTarget,
                 (state) -> recipe.get(state),
                 ImmutableList.of(
