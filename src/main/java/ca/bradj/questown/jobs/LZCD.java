@@ -64,7 +64,13 @@ public class LZCD<T> implements ILZCD<T> {
     @Override
     public void initializeAll() {
         this.value = null;
-        this.conditions.forEach(ILZCD::initializeAll);
+        this.wrapped.initializeAll();
+        if (this.ifCondFail != null) {
+            this.ifCondFail.initializeAll();
+        }
+        for (ILZCD<Dependency<T>> condition : this.conditions) {
+            condition.initializeAll();
+        }
     }
 
     public static <T> LZCD<T> noDeps(
@@ -79,6 +85,7 @@ public class LZCD<T> implements ILZCD<T> {
             @Override
             public void initializeAll() {
                 val = null;
+                populated = null;
             }
 
             @Override

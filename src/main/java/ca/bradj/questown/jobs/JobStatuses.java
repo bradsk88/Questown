@@ -4,17 +4,16 @@ import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
-import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -37,6 +36,18 @@ public class JobStatuses {
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutine(
             STATUS currentStatus,
+            boolean prioritizeExtraction,
+            EntityInvStateProvider<SUP_CAT> inventory,
+            TownStateProvider town,
+            Job<STATUS, SUP_CAT> job,
+            IStatusFactory<STATUS> factory
+    ) {
+        LZCD<STATUS> root = usualRoutineRoot(prioritizeExtraction, inventory, town, job, factory);
+        root.initializeAll();
+        return nullIfUnchanged(currentStatus, root.resolve());
+    }
+
+    public static <STATUS extends IStatus<STATUS>, SUP_CAT> @NotNull LZCD<STATUS> usualRoutineRoot(
             boolean prioritizeExtraction,
             EntityInvStateProvider<SUP_CAT> inventory,
             TownStateProvider town,
@@ -159,8 +170,7 @@ public class JobStatuses {
                         )
                 )
         );
-        root.initializeAll();
-        return nullIfUnchanged(currentStatus, root.resolve());
+        return root;
     }
 
     private static <STATUS extends IStatus<STATUS>> ILZCD<LZCD.Dependency<STATUS>> fromVoid(

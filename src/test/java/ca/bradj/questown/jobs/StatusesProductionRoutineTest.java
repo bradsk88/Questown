@@ -79,12 +79,12 @@ public class StatusesProductionRoutineTest {
             return new LZCD.SimpleDependency("test dep") {
                 @Override
                 protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                    return null;
+                    return new LZCD.Populated<>("test", WithReason.always(stopOnTrue, "test dep"), ImmutableMap.of(), null);
                 }
 
                 @Override
                 public String describe() {
-                    return "";
+                    return "test dep";
                 }
             };
         }
@@ -764,7 +764,17 @@ public class StatusesProductionRoutineTest {
 
         @Override
         public LZCD.Dependency<Void> hasSuppliesV2() {
-            return null;
+            return new LZCD.SimpleDependency("test") {
+                @Override
+                protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                    return new LZCD.Populated<>("test", WithReason.always(stopOnTrue, "test"), ImmutableMap.of(), null);
+                }
+
+                @Override
+                public String describe() {
+                    return "test";
+                }
+            };
         }
 
         @Override

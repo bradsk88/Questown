@@ -91,7 +91,7 @@ public class DeclarativeJobChecks<EXTRA, HELD_ITEM, TOWN_ITEM, ROOM extends IRoo
             int stepState,
             int orDefault
     ) {
-        return 0;
+        return UtilClean.getOrDefault(workRequiredAtStates, stepState, orDefault);
     }
 
     @Override

@@ -6,6 +6,7 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -502,5 +503,64 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.NO_SUPPLIES, s);
+    }
+
+    @Test
+    void usualRoutineRoot() {
+        @NotNull LZCD<TestStatus> root = JobStatuses.<TestStatus, String>usualRoutineRoot(
+                true,
+                new EntityInvStateProvider<String>() {
+                    @Override
+                    public boolean inventoryFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasNonSupplyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public Map<String, Boolean> getSupplyItemStatus() {
+                        return Map.of();
+                    }
+                },
+                new TownStateProvider() {
+                    @Override
+                    public LZCD.Dependency<Void> hasSupplies() {
+                        return null;
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> hasSpace() {
+                        return null;
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> isTimerActive() {
+                        return null;
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> canUseMoreSupplies() {
+                        return null;
+                    }
+                },
+                new JobStatuses.Job<>() {
+                    @Override
+                    public @Nullable JobStatusesTest.TestStatus tryChoosingItemlessWork() {
+                        return null;
+                    }
+
+                    @Override
+                    public @Nullable JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        );
+        root.populate();
+        root.initializeAll();
+        Assertions.assertNull(root.value);
     }
 }
