@@ -136,6 +136,10 @@ public abstract class ProductionJob<
         this.jobSite = null;
     }
 
+    public boolean isDropping() {
+        return dropping;
+    }
+
     public interface RecipeProvider {
         ImmutableList<PredicateCollection<MCTownItem, ?>> getRecipe(int workState);
     }

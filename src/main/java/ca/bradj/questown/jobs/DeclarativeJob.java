@@ -551,6 +551,11 @@ public class DeclarativeJob extends
             }
 
             @Override
+            public void clearInsertedSupplies() {
+                world.clearInsertedSupplies(extra);
+            }
+
+            @Override
             public boolean canDropLoot() {
                 return logic.isWrappingUp() && !hasAnyLootToDrop();
             }
@@ -561,8 +566,9 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public void tryDropLoot() {
+            public boolean tryDropLoot() {
                 self.tryDropLoot(entity.blockPosition());
+                return self.isDropping();
             }
 
             @Override

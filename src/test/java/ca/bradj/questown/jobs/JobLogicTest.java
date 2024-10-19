@@ -118,8 +118,9 @@ class JobLogicTest {
         }
 
         @Override
-        public void tryDropLoot() {
+        public boolean tryDropLoot() {
 
+            return false;
         }
 
         @Override

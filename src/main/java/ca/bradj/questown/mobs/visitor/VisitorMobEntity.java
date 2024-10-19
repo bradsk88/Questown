@@ -332,6 +332,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.sleepListeners.add(l);
     }
 
+    public void clearWorkToUndo() {
+        this.workToUndo = null;
+    }
+
     public record WorkToUndo(
             JobID jobID,
             BlockPos pos,

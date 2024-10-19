@@ -39,7 +39,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean canDropLoot();
 
-        void tryDropLoot();
+        boolean tryDropLoot();
 
         void tryGetSupplies();
 
@@ -56,6 +56,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         void changeToNextJob();
 
         boolean setWorkLeftAtFreshState(int workRequiredAtFirstState);
+
+        void clearInsertedSupplies();
     }
 
     private WorkPosition<POS> workSpot;
@@ -119,6 +121,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
+                worldBeforeTick.clearInsertedSupplies();
             }
             return;
         }
@@ -173,7 +176,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
             );
         }
 
-        worldBeforeTick.tryDropLoot();
+        if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
+            this.workSpot = null;
+        }
         worldBeforeTick.tryGetSupplies();
 
         if (wrappingUp) {

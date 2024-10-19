@@ -291,6 +291,10 @@ public class RealtimeWorldInteraction extends
         return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
     }
 
+    public void clearInsertedSupplies(MCExtra extra) {
+        extra.entity().clearWorkToUndo();
+    }
+
     @Override
     protected @Nullable Boolean preExtractHook(
             Boolean didAnything,
