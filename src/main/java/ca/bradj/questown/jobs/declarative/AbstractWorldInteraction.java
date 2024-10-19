@@ -380,7 +380,7 @@ public abstract class AbstractWorldInteraction<
         }
 
         PredicateCollection<INNER_ITEM, ?> tool = checks.getToolsForStep(action);
-        if (tool != null) {
+        if (tool != null && !tool.isEmpty()) {
             Collection<HELD_ITEM> items = getHeldItems(extra, villagerIndex);
             boolean foundTool = items.stream().anyMatch(i -> tool.test(i.get()));
             if (!foundTool) {

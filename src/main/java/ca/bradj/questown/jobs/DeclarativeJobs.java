@@ -169,7 +169,8 @@ public class DeclarativeJobs {
             Supplier<Map<Integer, LZCD.Dependency<Void>>> roomStatuses,
             TownInterface rooms,
             Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
-            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools
+            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
+            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom
     ) {
         return new LZCD.SimpleDependency("town has supplies") {
 
@@ -203,7 +204,8 @@ public class DeclarativeJobs {
 
                 List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
                         rooms,
-                        level
+                        level,
+                        shouldGetSuppliesFromRoom
                 );
                 b.put("containers", containers);
 

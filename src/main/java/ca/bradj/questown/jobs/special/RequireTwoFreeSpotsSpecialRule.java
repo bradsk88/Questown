@@ -49,7 +49,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
         });
         bxEvent.supplyRoomCheckReplacer().accept(before -> (heldItems, room) -> {
             @Nullable BlockPos jBlock = WorkSpotFromHeldItemSpecialRule
-                    .getJobBlockPositionFromHeldItems(heldItems);
+                    .getJobBlockPositionFromHeldItems(heldItems); // TODO: If holding stock request, skip this rule
             for (Map.Entry<BlockPos, Block> b : room.getContainedBlocks().entrySet()) {
                 if (jBlock != null && !jBlock.equals(b.getKey())) {
                     return before.test(heldItems, room);

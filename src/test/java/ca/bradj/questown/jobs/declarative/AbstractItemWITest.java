@@ -105,6 +105,7 @@ class AbstractItemWITest {
             }
         };
         private final InventoryHandle<GathererJournalTest.TestItem> inventory;
+        boolean checkedItems = false;
 
         public TestItemWI(
                 ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
@@ -146,6 +147,7 @@ class AbstractItemWITest {
                 Void unused,
                 int villagerIndex
         ) {
+            this.checkedItems = true;
             return inventory.getItems();
         }
 
@@ -295,6 +297,7 @@ class AbstractItemWITest {
         Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
+        Assertions.assertFalse(wi.checkedItems);
         Assertions.assertNull(res);
     }
 

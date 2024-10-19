@@ -105,7 +105,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
                 ProductionStatus.NO_JOBSITE
         ).contains(status)) {
             noSuppliesTicks++;
-        } else if (status.isWorkingOnProduction() && worldBeforeTick.getWorkSpot() == null) {
+        } else if (status.isWorkingOnProduction() && workSpot == null) {
             noSuppliesTicks++;
         } else {
             noSuppliesTicks = 0;
@@ -124,7 +124,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (this.grabbedInsertedSupplies) {
-            worldBeforeTick.seekFallbackWork();
+            worldBeforeTick.changeToNextJob();
             return;
         }
 

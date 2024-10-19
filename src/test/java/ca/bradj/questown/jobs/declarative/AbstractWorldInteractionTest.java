@@ -237,7 +237,8 @@ class AbstractWorldInteractionTest {
                         0, exact("grapes") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("grapes")),
-                () -> {}
+                () -> {
+                }
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
         wi.tryWorking(null, arbitrarySpot(0)); // Process
@@ -261,7 +262,8 @@ class AbstractWorldInteractionTest {
                         0, exact("apples") // Grapes required
                 ),
                 () -> ImmutableList.of(new GathererJournalTest.TestItem("apples")),
-                () -> {}
+                () -> {
+                }
         );
         wi.tryWorking(null, arbitrarySpot(0)); // Insert (see test above)
 
@@ -528,14 +530,65 @@ class AbstractWorldInteractionTest {
         Assertions.assertEquals(State.fresh().incrProcessing(), state);
     }
 
+    /**
+     * @deprecated State does nothing, use the version with no args.
+     */
     @NotNull
+    @Deprecated
     private static WorkPosition<Position> arbitrarySpot(int state) {
         return new WorkPosition<>(new Position(1, 2), new Position(0, 1));
     }
 
+    private static WorkPosition<Position> arbitrarySpot() {
+        return arbitrarySpot(0);
+    }
 
     @Test
-    void Test_ShouldNotResetWorkStates_WhenGrabbingInsertedSupplies() {
+    void tryWorking_ShouldInsertIngredient_WhenToolsRequiredAtEarlierState_ButOnlyIngredientsRequiredNow() throws ItemCountMismatch {
+        AtomicBoolean inserted = new AtomicBoolean(false);
+        TestWorldInteraction wi = new TestWorldInteraction(
+                3,
+                ImmutableMap.of(
+                        0, alwaysTrue,
+                        1, alwaysTrue,
+                        2, new MonoPredicateCollection<>(
+                                MonoPredicateCollection.empty("no tools required"),
+                                "no tools required"
+                        )
+                ),
+                ImmutableMap.of(
+                        1, 10 // Work required in a previous state
+                ),
+                ImmutableMap.of(
+                        2, exact("grapes") // Grapes required at stage 2
+                ),
+                ImmutableMap.of(
+                        2, 1
+                ),
+                ImmutableMap.of(
+                        // No timers
+                ),
+                new ValidatedInventoryHandle<>(new InventoryHandle<GathererJournalTest.TestItem>() {
+                    @Override
+                    public Collection<GathererJournalTest.TestItem> getItems() {
+                        return ImmutableList.of(new GathererJournalTest.TestItem("grapes"));
+                    }
 
+                    @Override
+                    public void set(
+                            int ii,
+                            GathererJournalTest.TestItem shrink
+                    ) {
+                        inserted.set(true);
+                    }
+                }, 1),
+                testWorkStateContainer(),
+                () -> new Claim(UUID.randomUUID(), 100)
+        );
+
+        wi.setJobBlockState(null, true, arbitrarySpot().jobBlock(), State.freshAtState(2));
+        wi.tryWorking(null, arbitrarySpot());
+        Assertions.assertTrue(inserted.get());
     }
+
 }

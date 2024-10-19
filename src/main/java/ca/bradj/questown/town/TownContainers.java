@@ -62,7 +62,15 @@ public class TownContainers {
             TownInterface townFlagBlockEntity,
             ServerLevel level
     ) {
-        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level, (x) -> true).toList();
+        return getAllContainers(townFlagBlockEntity, level, (x) -> true);
+    }
+
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainers(
+            TownInterface townFlagBlockEntity,
+            ServerLevel level,
+            Predicate<RoomRecipeMatch<MCRoom>> include
+    ) {
+        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level, include).toList();
     }
 
     @NotNull

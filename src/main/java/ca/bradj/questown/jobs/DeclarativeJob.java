@@ -446,7 +446,8 @@ public class DeclarativeJob extends
                         roomsV2,
                         extra.town(),
                         checks.getAllRequiredIngredients(),
-                        checks.getAllRequiredTools()
+                        checks.getAllRequiredTools(),
+                        checks::shouldCheckContainerForSupplies
                 );
             }
 
@@ -647,7 +648,10 @@ public class DeclarativeJob extends
                 journal.getStatus(), journal.getCapacity(),
                 roomsNeedingIngredientsOrTools,
                 st, recipe::getRecipe, journal.getItems(),
-                (item) -> this.journal.addItem(MCHeldItem.fromTown(item))
+                (item) -> {
+                    this.journal.addItem(MCHeldItem.fromTown(item));
+                    this.clearJobSite();
+                }
         );
     }
 

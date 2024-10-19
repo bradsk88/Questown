@@ -132,6 +132,10 @@ public abstract class ProductionJob<
     @Override
     public abstract Signals getSignal();
 
+    protected void clearJobSite() {
+        this.jobSite = null;
+    }
+
     public interface RecipeProvider {
         ImmutableList<PredicateCollection<MCTownItem, ?>> getRecipe(int workState);
     }
