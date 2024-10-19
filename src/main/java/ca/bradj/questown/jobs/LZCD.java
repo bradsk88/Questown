@@ -3,16 +3,45 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class LZCD<T> implements ILZCD<T> {
+
+    public static class ConstantDep extends SimpleDependency {
+        private final Populated<WithReason<Boolean>> value;
+
+        public ConstantDep(
+                String name,
+                boolean value
+        ) {
+            super(name);
+            this.value = new LZCD.Populated<>(
+                    "test supplies",
+                    WithReason.always(value, "input"),
+                    ImmutableMap.of(),
+                    null
+            );
+        }
+
+        @Override
+        protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+            return value;
+        }
+
+        @Override
+        public String describe() {
+            return "constant: " + getName();
+        }
+    }
 
     public record Populated<T>(
             String name,
@@ -35,10 +64,10 @@ public class LZCD<T> implements ILZCD<T> {
 
     public final String name;
 
-    private final ILZCD<T> wrapped;
-    private final Collection<? extends ILZCD<Dependency<T>>> conditions;
-    private final ILZCD<T> ifCondFail;
-    protected @Nullable T value = null;
+    final ILZCD<T> wrapped;
+    final Collection<? extends ILZCD<Dependency<T>>> conditions;
+    final ILZCD<T> ifCondFail;
+    @Nullable T value = null;
 
     public static <T> LZCD<T> oneDep(
             String name,
@@ -220,11 +249,11 @@ public class LZCD<T> implements ILZCD<T> {
                 "(%s=%s) if [%s] else (%s)",
                 name, v,
                 String.join(",", conditions.stream().map(z -> {
-                    Dependency<T> resolve = z.resolve();
+                    Populated<Dependency<T>> resolve = z.populate();
                     if (resolve == null) {
                         return "null";
                     }
-                    return resolve.describe();
+                    return resolve.toString();
                 }).toList()),
                 ifCondFail
         );

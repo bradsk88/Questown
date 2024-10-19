@@ -1,21 +1,15 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.roomrecipes.core.Room;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
-import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestReporter;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 class JobStatusesTest {
 
@@ -192,17 +186,7 @@ class JobStatusesTest {
         }
 
         private static LZCD.Dependency<Void> make(boolean v) {
-            return new LZCD.SimpleDependency("test") {
-                @Override
-                protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                    return new LZCD.Populated<>("test", WithReason.always(v, "test"), ImmutableMap.of(), null);
-                }
-
-                @Override
-                public String describe() {
-                    return "test";
-                }
-            };
+            return new LZCD.ConstantDep("test", v);
         }
     }
 
@@ -506,8 +490,8 @@ class JobStatusesTest {
     }
 
     @Test
-    void usualRoutineRoot() {
-        @NotNull LZCD<TestStatus> root = JobStatuses.<TestStatus, String>usualRoutineRoot(
+    void usualRoutineRoot_initializeAll_shouldClearSupplies() {
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(
                 true,
                 new EntityInvStateProvider<String>() {
                     @Override
@@ -528,39 +512,72 @@ class JobStatusesTest {
                 new TownStateProvider() {
                     @Override
                     public LZCD.Dependency<Void> hasSupplies() {
-                        return null;
+                        return new LZCD.ConstantDep("test supplies", true);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> hasSpace() {
-                        return null;
+                        return new LZCD.ConstantDep("test space available", true);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> isTimerActive() {
-                        return null;
+                        return new LZCD.ConstantDep("test timer active", false);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> canUseMoreSupplies() {
-                        return null;
+                        return new LZCD.ConstantDep("test can use stuff", true);
                     }
                 },
                 new JobStatuses.Job<>() {
                     @Override
-                    public @Nullable JobStatusesTest.TestStatus tryChoosingItemlessWork() {
-                        return null;
+                    public JobStatusesTest.TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.ITEMLESS_WORK;
                     }
 
                     @Override
-                    public @Nullable JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
-                        return null;
+                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
+                        return TestStatus.ITEM_WORK;
                     }
                 },
                 TestStatus.FACTORY
         );
         root.populate();
+
+        LZCD<LZCD.Dependency<TestStatus>> hasSupplies = getHasSupplies(root);
+        Assertions.assertNotNull(hasSupplies);
+
         root.initializeAll();
-        Assertions.assertNull(root.value);
+
+        hasSupplies = getHasSupplies(root);
+        Assertions.assertNull(hasSupplies.value);
+    }
+
+    private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
+        if (!(root.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+            throw new ClassCastException("Expected root.ifCondFail to be LZCD");
+        }
+        if (!(useItems.ifCondFail instanceof LZCD<TestStatus> dropLoot)) {
+            throw new ClassCastException("Expected useItems.ifCondFail to be LZCD");
+        }
+        if (!(dropLoot.ifCondFail instanceof LZCD<TestStatus> stopNoSpace)) {
+            throw new ClassCastException("Expected dropLoot.ifCondFail to be LZCD");
+        }
+        if (!(stopNoSpace.ifCondFail instanceof LZCD<TestStatus> dropBeforeWork)) {
+            throw new ClassCastException("Expected stopNoSpace.ifCondFail to be LZCD");
+        }
+        if (!(dropBeforeWork.ifCondFail instanceof LZCD<TestStatus> getWorkSupplies)) {
+            throw new ClassCastException("Expected dropBeforeWork.ifCondFail to be LZCD");
+        }
+        if (getWorkSupplies.conditions.size() != 2) {
+            throw new IllegalStateException("Expected getWorkSupplies.conditions to be size 2");
+        }
+        List<ILZCD<LZCD.Dependency<TestStatus>>> conds = ImmutableList.copyOf(getWorkSupplies.conditions);
+        ILZCD<LZCD.Dependency<TestStatus>> hasSupplies = conds.get(0);
+        if (!(hasSupplies instanceof LZCD<LZCD.Dependency<TestStatus>> hs)) {
+            throw new ClassCastException("Expected hasSupplies to be LZCD");
+        }
+        return hs;
     }
 }
