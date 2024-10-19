@@ -6,7 +6,6 @@ import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -100,8 +99,6 @@ public class JobsClean {
         return items.stream().anyMatch(v -> !ings.test(v));
     }
 
-
-    @NotNull
     private static <I> boolean isNotToolFromAnyStage(
             I i,
             Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates
@@ -139,7 +136,10 @@ public class JobsClean {
         return isItemNeeded(neededItems, item);
     }
 
-    private static <I extends Item<I>> boolean isItemNeeded(Collection<Predicate<I>> itemsNeeded, I item) {
+    private static <I extends Item<I>> boolean isItemNeeded(
+            Collection<Predicate<I>> itemsNeeded,
+            I item
+    ) {
         for (Predicate<I> ingredient : itemsNeeded) {
             if (ingredient.test(item)) {
                 return true;
@@ -148,7 +148,10 @@ public class JobsClean {
         return false;
     }
 
-    private static <I extends Item<I>, H extends HeldItem<H, I>> void removeItemsAlreadyHeld(ArrayList<Predicate<I>> ingredientsToSatisfy, Collection<H> currentHeldItems) {
+    private static <I extends Item<I>, H extends HeldItem<H, I>> void removeItemsAlreadyHeld(
+            ArrayList<Predicate<I>> ingredientsToSatisfy,
+            Collection<H> currentHeldItems
+    ) {
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
@@ -167,7 +170,11 @@ public class JobsClean {
             Predicate<POS> isCorrectBlock,
             Predicate<POS> hasCorrectState
     ) {
-        @NotNull List<WithReason<@Nullable MATCH>> filtered = filterByPredicates(rooms, isCorrectBlock, hasCorrectState);
+        @NotNull List<WithReason<@Nullable MATCH>> filtered = filterByPredicates(
+                rooms,
+                isCorrectBlock,
+                hasCorrectState
+        );
         List<MATCH> values = filtered.stream().map(v -> v.value).filter(Objects::nonNull).toList();
         return ImmutableList.copyOf(values);
     }
@@ -184,35 +191,38 @@ public class JobsClean {
         return out;
     }
 
-    @SuppressWarnings("unchecked")
     private static <MATCH extends IRoomRecipeMatch<?, ?, POS, ?>, POS> WithReason<@Nullable MATCH> describeFilteredRoom(
             MATCH room,
             Predicate<POS> isCorrectBlock,
             Predicate<POS> hasCorrectState
     ) {
-        List<WithReason<?>> containedJobBlocks = room
-                .getContainedBlocks()
-                .entrySet().stream()
-                .map(z -> isCorrectBlock.test(z.getKey()) ? WithReason.always(
-                        z,
-                        "correct block"
-                ) : WithReason.always(null, "not correct block"))
-                .toList();
-        ImmutableSet<WithReason<?>> uniqueBlocks = ImmutableSet.copyOf(containedJobBlocks.stream().filter(v -> v.value != null).toList());
-        if (uniqueBlocks.isEmpty()) {
-            return WithReason.always(null, "None of the blocks are job blocks");
-        }
-        for (WithReason<?> e : uniqueBlocks) {
-            if (e.value == null) {
+        Map<POS, ?> allContainedBlocks = room.getContainedBlocks();
+        HashSet<POS> allUniquePos = new HashSet<>(allContainedBlocks.keySet());
+        List<WithReason<POS>> allTestedPos = new ArrayList<>();
+        for (POS p : allUniquePos) {
+            if (isCorrectBlock.test(p)) {
+                allTestedPos.add(WithReason.always(p, "is correct block: " + isCorrectBlock));
                 continue;
             }
-            //noinspection rawtypes
-            Map.Entry val = (Map.Entry) e.value;
-            if (hasCorrectState.test((POS) val.getKey())) {
-                return WithReason.always(room, val.getKey() + " had correct state");
+            allTestedPos.add(WithReason.always(null, "is not correct block: " + isCorrectBlock));
+        }
+        if (allTestedPos.isEmpty()) {
+            return WithReason.always(null, "None of the blocks are job blocks");
+        }
+        List<POS> allTestedNonNullPos = allTestedPos.stream().filter(v -> v.value != null).map(v -> v.value).toList();
+        for (POS e : allTestedNonNullPos) {
+            if (e == null) {
+                continue;
+            }
+            if (hasCorrectState.test(e)) {
+                return WithReason.always(room, e + " had correct state");
             }
         }
-        return WithReason.always(null, "None of the job blocks has correct state: [" + String.join(", ", uniqueBlocks.stream().map(v -> v.value.toString()).toList()) + "]");
+        return WithReason.always(
+                null,
+                "None of the job blocks has correct state: [" +
+                        String.join(", ", allTestedNonNullPos.stream().map(Object::toString).toList()) + "]"
+        );
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {
