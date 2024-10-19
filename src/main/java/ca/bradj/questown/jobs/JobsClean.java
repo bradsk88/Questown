@@ -1,10 +1,14 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
@@ -156,6 +160,59 @@ public class JobsClean {
                 }
             }
         }
+    }
+
+    public static <ROOM, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> ImmutableList<MATCH> roomsWithState(
+            Collection<MATCH> rooms,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        @NotNull List<WithReason<@Nullable MATCH>> filtered = filterByPredicates(rooms, isCorrectBlock, hasCorrectState);
+        List<MATCH> values = filtered.stream().map(v -> v.value).filter(Objects::nonNull).toList();
+        return ImmutableList.copyOf(values);
+    }
+
+    private static <ROOM, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> @NotNull List<WithReason<@Nullable MATCH>> filterByPredicates(
+            Collection<MATCH> rooms,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        ArrayList<WithReason<@Nullable MATCH>> out = new ArrayList<>();
+        for (MATCH room : rooms) {
+            out.add(describeFilteredRoom(room, isCorrectBlock, hasCorrectState));
+        }
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <MATCH extends IRoomRecipeMatch<?, ?, POS, ?>, POS> WithReason<@Nullable MATCH> describeFilteredRoom(
+            MATCH room,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        List<WithReason<?>> containedJobBlocks = room
+                .getContainedBlocks()
+                .entrySet().stream()
+                .map(z -> isCorrectBlock.test(z.getKey()) ? WithReason.always(
+                        z,
+                        "correct block"
+                ) : WithReason.always(null, "not correct block"))
+                .toList();
+        ImmutableSet<WithReason<?>> uniqueBlocks = ImmutableSet.copyOf(containedJobBlocks.stream().filter(v -> v.value != null).toList());
+        if (uniqueBlocks.isEmpty()) {
+            return WithReason.always(null, "None of the blocks are job blocks");
+        }
+        for (WithReason<?> e : uniqueBlocks) {
+            if (e.value == null) {
+                continue;
+            }
+            //noinspection rawtypes
+            Map.Entry val = (Map.Entry) e.value;
+            if (hasCorrectState.test((POS) val.getKey())) {
+                return WithReason.always(room, val.getKey() + " had correct state");
+            }
+        }
+        return WithReason.always(null, "None of the job blocks has correct state: [" + String.join(", ", uniqueBlocks.stream().map(v -> v.value.toString()).toList()) + "]");
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

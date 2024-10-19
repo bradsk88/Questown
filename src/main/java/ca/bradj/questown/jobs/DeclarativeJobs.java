@@ -142,8 +142,7 @@ public class DeclarativeJobs {
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
-        Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = Lazy.of(() -> {
-
+        Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
             Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
             List<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = roomHandle.getMatches();
@@ -157,7 +156,7 @@ public class DeclarativeJobs {
                 Util.addOrInitialize(roomStatuses, match.getRoom(), jobBlockState.processingState());
             }));
             return new UtilClean.Pair<>(spotStatuses.build(), roomStatuses);
-        });
+        };
 
         for (int i = 0; i < maxState; i++) {
             b.put(i, new RoomStates(i, e));
@@ -452,14 +451,14 @@ public class DeclarativeJobs {
 
         private static final String NAME = "rooms contain workstate";
 
-        private final Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
+        private final Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
         private final String name;
         private final int state;
         private LZCD.Populated<WithReason<Boolean>> value;
 
         public RoomStates(
                 int state,
-                Lazy<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
+                Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
         ) {
             this.inputs = inputs;
             this.name = NAME + " " + state;
@@ -468,9 +467,10 @@ public class DeclarativeJobs {
 
         @Override
         public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
-            if (value != null) {
-                return value;
-            }
+            // TODO[Performance]: Cache?
+//            if (value != null) {
+//                return value;
+//            }
             UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
             Map<BlockPos, Integer> spotStates = v.a();
             Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()

@@ -87,6 +87,6 @@ public class WithReason<S> {
 
     @Override
     public String toString() {
-        return value == null ? "null" : value + " because " + reason;
+        return (value == null ? "null" : value) + " because " + reason;
     }
 }

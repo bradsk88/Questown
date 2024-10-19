@@ -384,24 +384,9 @@ public class Jobs {
             Predicate<BlockPos> isCorrectBlock,
             Predicate<BlockPos> hasCorrectState
     ) {
-        return rooms
-                .stream()
-                .filter(v -> {
-                    List<Map.Entry<BlockPos, Block>> containedJobBlocks = v
-                            .getContainedBlocks()
-                            .entrySet().stream()
-                            .filter(z -> isCorrectBlock.test(z.getKey()))
-                            .toList();
-                    ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
-                    for (Map.Entry<BlockPos, Block> e : blocks) {
-                        if (hasCorrectState.test(e.getKey())) {
-                            return true;
-                        }
-                    }
-                    return false;
-                })
-                .map(RoomRecipeMatches::unsafe)
-                .toList();
+        return JobsClean.roomsWithState(
+                rooms, isCorrectBlock, hasCorrectState
+        ).stream().map(RoomRecipeMatches::unsafe).toList();
     }
 
     public interface LootDropper<I> {
