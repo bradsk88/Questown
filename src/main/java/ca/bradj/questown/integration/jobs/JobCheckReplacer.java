@@ -15,7 +15,7 @@ public class JobCheckReplacer {
     private JobCheck inner;
 
     public JobCheckReplacer(BiPredicate<Function<BlockPos, BlockState>, BlockPos> jobBlock) {
-        this.inner = (heldItems, blockState, block) -> jobBlock.test((unused) -> blockState, block);
+        this.inner = (heldItems, bsf, block) -> jobBlock.test(bsf, block);
     }
 
     public void accept(Function<JobCheck, JobCheck> replacer) {
@@ -27,6 +27,6 @@ public class JobCheckReplacer {
             Supplier<? extends Collection<MCHeldItem>> items,
             Function<BlockPos, BlockState> level
     ) {
-        return p -> jcr.inner.test(items.get(), level.apply(p), p);
+        return p -> jcr.inner.test(items.get(), level, p);
     }
 }

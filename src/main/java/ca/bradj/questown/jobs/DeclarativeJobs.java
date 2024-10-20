@@ -185,21 +185,24 @@ public class DeclarativeJobs {
                 Map<Integer, LZCD.Dependency<Void>> needs = roomStatuses.get();
                 b.put("room needs", needs);
 
-                List<PredicateCollection<MCHeldItem, MCHeldItem>> neededIngredients = needs.
-                        entrySet().
-                        stream().
-                        filter(v -> v.getValue().apply(() -> null).value()).
-                        map(v -> ingredients.get(v.getKey())).
-                        filter(Objects::nonNull).
-                        toList();
+                List<PredicateCollection<MCHeldItem, MCHeldItem>> neededIngredients = new ArrayList<>();
+                List<PredicateCollection<MCTownItem, MCTownItem>> neededTools = new ArrayList<>();
+                for (Map.Entry<Integer, LZCD.Dependency<Void>> v : needs.entrySet()) {
+                    if (!v.getValue().apply(() -> null).value) {
+                        continue;
+                    }
+                    PredicateCollection<MCHeldItem, MCHeldItem> ingt = ingredients.get(v.getKey());
+                    if (ingt != null) {
+                        neededIngredients.add(ingt);
+                    }
+                    PredicateCollection<MCTownItem, MCTownItem> tool = tools.get(v.getKey());
+                    if (tool != null) {
+                        neededTools.add(tool);
+                    }
+
+                }
+
                 b.put("relevant ingredients", neededIngredients);
-                List<PredicateCollection<MCTownItem, MCTownItem>> neededTools = needs.
-                        entrySet().
-                        stream().
-                        filter(v -> v.getValue().apply(() -> null).value()).
-                        map(v -> tools.get(v.getKey())).
-                        filter(Objects::nonNull).
-                        toList();
                 b.put("relevant tools", neededTools);
 
                 List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
