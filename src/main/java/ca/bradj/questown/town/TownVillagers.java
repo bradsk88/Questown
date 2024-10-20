@@ -52,10 +52,6 @@ public class TownVillagers {
             List<Ingredient> i = requestedResults.stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();
-            if (i.isEmpty()) {
-                // For checking jobs that don't require a request
-                i = ImmutableList.of(Ingredient.EMPTY);
-            }
             for (Ingredient requestedResult : i) {
                 // TODO: Think about how work chains work.
                 //  E.g. If a blacksmith needs iron ingots to do a requested job,

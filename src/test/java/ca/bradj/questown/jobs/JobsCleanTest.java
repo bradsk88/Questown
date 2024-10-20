@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -124,5 +125,16 @@ class JobsCleanTest {
                 pos -> false
         );
         Assertions.assertEquals(0, out.size());
+    }
+
+    @Test
+    void getEntityCurrentJobSite_shouldNotReturnNull_WhenAllRequirementsEmpty_IfResultsAreAvailable() {
+        IRoomRecipeMatch<Room, String, Position, ?> site = JobsClean.getEntityCurrentJobSite(
+                new Position(0, 0),
+                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
+                ImmutableList.of(arbitaryRoomMatch1),
+                (room) -> true
+        );
+        Assertions.assertNotNull(site);
     }
 }

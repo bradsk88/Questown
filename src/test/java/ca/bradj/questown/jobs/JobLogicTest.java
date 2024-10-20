@@ -103,6 +103,10 @@ class JobLogicTest {
         }
 
         @Override
+        public void clearInsertedSupplies() {
+        }
+
+        @Override
         public WorkPosition<Position> getWorkSpot() {
             return this.workspot;
         }

@@ -2,7 +2,11 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -223,6 +227,35 @@ public class JobsClean {
                 "None of the job blocks has correct state: [" +
                         String.join(", ", allTestedNonNullPos.stream().map(Object::toString).toList()) + "]"
         );
+    }
+
+    // TODO[ASAP]: Test "should not return null if entity is in room with finished product"
+    public static <ROOM extends Room, RECIPE, POS, MATCH extends IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> MATCH getEntityCurrentJobSite(
+            Position entityBlockPos,
+            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
+            Collection<MATCH> roomsWithCompletedProduct,
+            Predicate<ROOM> additionalPosCheck
+    ) {
+        for (MATCH room : roomsWithCompletedProduct) {
+            if (InclusiveSpaces.contains(room.getRoom().getSpaces(), entityBlockPos)) {
+                return room;
+            }
+        }
+
+        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
+        Predicate<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> containsEntity = v ->
+        {
+            boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), entityBlockPos);
+            return contains || v.getRoom().getDoorPos().equals(entityBlockPos);
+        };
+        //noinspection unchecked
+        return (MATCH) roomsNeedingIngredientsOrTools
+                .getMatches()
+                .stream()
+                .filter(v -> additionalPosCheck.test(v.getRoom()))
+                .filter(containsEntity)
+                .findFirst()
+                .orElse(null);
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

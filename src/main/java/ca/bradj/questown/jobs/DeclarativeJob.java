@@ -304,9 +304,12 @@ public class DeclarativeJob extends
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
+
         RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
                 entity.blockPosition(),
-                roomsNeedingIngredientsOrTools
+                roomsNeedingIngredientsOrTools,
+                jtp.roomsWithCompletedProduct()
         );
 
         EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
@@ -318,8 +321,6 @@ public class DeclarativeJob extends
                 return entityCurrentJobSite.room;
             }
         };
-
-        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
 
         Supplier<ProductionStatus> computeState = getStateComputer(statusFactory, jtp, elp);
         this.signal = Signals.fromDayTime(Util.getDayTime(extra.town().getServerLevel()));

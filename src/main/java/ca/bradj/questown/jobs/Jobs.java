@@ -194,23 +194,14 @@ public class Jobs {
 
     public static @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
             BlockPos entityBlockPos,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
+            Collection<RoomRecipeMatch<MCRoom>> roomsWithCompletedProduct
     ) {
-        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
-        Predicate<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> containsEntity = v ->
-        {
-            Position ebp = Positions.FromBlockPos(entityBlockPos);
-            boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), ebp);
-            return contains || v.getRoom().getDoorPos().equals(ebp);
-        };
-        IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in = roomsNeedingIngredientsOrTools
-                .getMatches()
-                .stream()
-                .filter(v -> v.getRoom().yCoord > entityBlockPos.getY() - 5)
-                .filter(v -> v.getRoom().yCoord < entityBlockPos.getY() + 5)
-                .filter(containsEntity)
-                .findFirst()
-                .orElse(null);
+        IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in = JobsClean.getEntityCurrentJobSite(
+                Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
+                roomsWithCompletedProduct,
+                (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5)
+        );
         return in == null ? null : RoomRecipeMatches.unsafe(in);
     }
 
