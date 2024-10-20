@@ -967,6 +967,11 @@ public class DeclarativeJob extends
         return totalDuration;
     }
 
+    @Override
+    public Collection<String> getGlobalSpecialRules() {
+        return specialGlobalRules;
+    }
+
     public int getMaxState() {
         return maxState;
     }

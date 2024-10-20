@@ -47,6 +47,13 @@ import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWor
 
 public class JobsRegistry {
 
+    public static boolean canAlwaysStart(
+            UUID uuid,
+            JobID p
+    ) {
+        return Works.get(p).get().jobFunc().apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
+    }
+
     private record SpecialJob(
             Predicate<JobID> idTest,
             BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,

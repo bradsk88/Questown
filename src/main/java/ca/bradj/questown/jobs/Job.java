@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -87,4 +88,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     BlockPos getLook();
 
     boolean isWorking();
+
+    Collection<String> getGlobalSpecialRules();
 }

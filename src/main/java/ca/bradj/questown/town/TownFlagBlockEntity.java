@@ -777,8 +777,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> JobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
+        Predicate<JobID> canAlwaysStart = p -> JobsRegistry.canAlwaysStart(uuid, p);
         JobID work = TownVillagers.chooseFromList(
-                canFit, requestedResults, td, possibleWork.getFor(villager.getJobId())
+                canFit, canAlwaysStart, requestedResults, td, possibleWork.getFor(villager.getJobId())
         );
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
@@ -791,7 +792,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         preferredBuffer = 0;
 
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, requestedResults, td);
+        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
             return true;

@@ -20,16 +20,18 @@ public class TownVillagers {
     public static @Nullable JobID getPreferredWork(
             JobID villagerCurrentJob,
             Predicate<JobID> canFitInDay,
+            Predicate<JobID> canAlwaysStart,
             ImmutableList<WorkRequest> requestedResults,
             WorksBehaviour.TownData td
     ) {
         List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(villagerCurrentJob));
 
-        return chooseFromList(canFitInDay, requestedResults, td, preference);
+        return chooseFromList(canFitInDay, canAlwaysStart, requestedResults, td, preference);
     }
 
     public static @Nullable JobID chooseFromList(
             Predicate<JobID> canFitInDay,
+            Predicate<JobID> canAlwaysStart,
             ImmutableList<WorkRequest> requestedResults,
             WorksBehaviour.TownData td,
             Collection<JobID> preferenceIn
@@ -44,6 +46,9 @@ public class TownVillagers {
         Collections.shuffle(preference);
 
         for (JobID p : preference) {
+            if (canAlwaysStart.test(p)) {
+                return p;
+            }
             if (!canFitInDay.test(p)) {
                 QT.FLAG_LOGGER.trace("Villager will not do {} because there is not enough time left in the day", p);
                 continue;

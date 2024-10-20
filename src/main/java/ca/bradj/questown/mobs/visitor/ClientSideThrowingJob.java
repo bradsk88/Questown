@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -168,5 +169,10 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     @Override
     public boolean isWorking() {
         return false;
+    }
+
+    @Override
+    public Collection<String> getGlobalSpecialRules() {
+        throw new UnsupportedOperationException("Client Side");
     }
 }
