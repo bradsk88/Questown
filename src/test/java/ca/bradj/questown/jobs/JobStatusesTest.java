@@ -580,4 +580,64 @@ class JobStatusesTest {
         }
         return hs;
     }
+
+
+    @Test
+    void usualRoutineRoot_resolve_shouldReturnGoingToJob_IfItemWorkIsGTJ_AndItemlessWorkIsNull() {
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(
+                true,
+                new EntityInvStateProvider<String>() {
+                    @Override
+                    public boolean inventoryFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasNonSupplyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public Map<String, Boolean> getSupplyItemStatus() {
+                        return Map.of();
+                    }
+                },
+                new TownStateProvider() {
+                    @Override
+                    public LZCD.Dependency<Void> hasSupplies() {
+                        return new LZCD.ConstantDep("test supplies", false);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> hasSpace() {
+                        return new LZCD.ConstantDep("test space available", true);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> isTimerActive() {
+                        return new LZCD.ConstantDep("test timer active", false);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> canUseMoreSupplies() {
+                        return new LZCD.ConstantDep("test can use stuff", true);
+                    }
+                },
+                new JobStatuses.Job<>() {
+                    @Override
+                    public JobStatusesTest.TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.GOING_TO_JOB;
+                    }
+
+                    @Override
+                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        );
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.FACTORY.goingToJobSite(), val);
+    }
+
 }

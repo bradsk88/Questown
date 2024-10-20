@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -256,6 +257,67 @@ public class JobsClean {
                 .findFirst()
                 .map(IRoomRecipeMatch::getRoom)
                 .orElse(null);
+    }
+
+    public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
+            int maxState,
+            boolean prioritizeExtraction,
+            Map<Integer, Boolean> statusItems,
+            Collection<ROOM> roomsWithFinishedProduct,
+            Function<ROOM, BLOCK> getPositionWithin,
+            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, BLOCK> blocksSrc,
+            Function<BLOCK, State> work,
+            Predicate<BLOCK> isJobBlock,
+            BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot
+    ) {
+        if (prioritizeExtraction && !roomsWithFinishedProduct.isEmpty()) {
+            return WithReason.always(
+                    getPositionWithin.apply(roomsWithFinishedProduct.iterator().next()),
+                    "prioritizing extraction and room has result"
+            );
+        }
+
+        ArrayList<IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?>> rooms = new ArrayList<>(blocksSrc.getMatches());
+        // TODO: Sort by distance and choose the closest (maybe also coordinate
+        //  with other workers who need the same type of job site)
+        // For now, we use randomization
+        Collections.shuffle(rooms);
+
+        boolean roomFoundButNotBlock = false;
+
+        for (IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?> match : rooms) {
+            for (Map.Entry<BLOCK, ?> blocks : match.getContainedBlocks().entrySet()
+            ) {
+                BLOCK blockPos = blocks.getKey();
+                State blockState = work.apply(blockPos);
+                if (blockState == null) {
+                    blockState = State.freshAtState(0);
+                }
+                if (!isJobBlock.test(blockPos)) {
+                    roomFoundButNotBlock = true;
+                    continue;
+                }
+
+                Supplier<BLOCK> is = () -> findInteractionSpot.apply(
+                        blockPos,
+                        match.getRoom()
+                );
+
+                if (maxState == blockState.processingState()) {
+                    return new WithReason<>(is.get(), "Found extractable product");
+                }
+                boolean shouldGo = statusItems.getOrDefault(blockState.processingState(), false);
+                if (shouldGo) {
+                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
+                }
+            }
+        }
+
+        if (roomFoundButNotBlock) {
+            return new WithReason<>(null, "Job site found, but no usable job blocks");
+        }
+
+        return new WithReason<>(null, "No job sites");
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

@@ -90,6 +90,7 @@ public abstract class ProductionJob<
                 return null;
             }
             WithReason<@Nullable BlockPos> js = findJobSite(
+                    town,
                     roomsNeedingIngredientsOrTools,
                     getWorkStatusHandle(town)::getJobBlockState,
                     bp -> this.isValidWalkTarget(town, bp),
@@ -325,8 +326,8 @@ public abstract class ProductionJob<
             }
         }
 
-        if (journal.getStatus()
-                   .isCollectingSupplies()) {
+        STATUS s = journal.getStatus();
+        if (s.isCollectingSupplies()) {
             setupForGetSupplies(town, entityBlockPos);
             if (suppliesTarget != null) {
                 this.setLookTarget(suppliesTarget.getBlockPos());
@@ -348,6 +349,7 @@ public abstract class ProductionJob<
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
+            TownInterface town,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> blocks,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,

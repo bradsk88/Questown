@@ -845,6 +845,7 @@ public class DeclarativeJob extends
 
     @Override
     protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
+            TownInterface town,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> blocksSrc,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isValidWalkTarget,
@@ -853,50 +854,20 @@ public class DeclarativeJob extends
     ) {
         // TODO: Use tags to support more tiers of work rooms
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
-
-        ArrayList<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = new ArrayList<>(blocksSrc.getMatches());
-        // TODO: Sort by distance and choose the closest (maybe also coordinate
-        //  with other workers who need the same type of job site)
-        // For now, we use randomization
-        Collections.shuffle(rooms);
-
-        boolean roomFoundButNotBlock = false;
-
-        for (IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> match : rooms) {
-            for (Map.Entry<BlockPos, ?> blocks : match.getContainedBlocks().entrySet()
-            ) {
-                BlockPos blockPos = blocks.getKey();
-                @Nullable Integer blockState = JobBlock.getState(work, blockPos);
-                if (blockState == null) {
-                    blockState = 0;
-                }
-                if (!isJobBlock.test(blockPos)) {
-                    roomFoundButNotBlock = true;
-                    continue;
-                }
-
-                Supplier<BlockPos> is = () -> findInteractionSpot(
-                        blockPos,
-                        match.getRoom(),
-                        isValidWalkTarget,
-                        () -> Direction.getRandom(rand)
-                );
-
-                if (maxState.equals(blockState)) {
-                    return new WithReason<>(is.get(), "Found extractable product");
-                }
-                boolean shouldGo = statusItems.getOrDefault(blockState, false);
-                if (shouldGo) {
-                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
-                }
-            }
-        }
-
-        if (roomFoundButNotBlock) {
-            return new WithReason<>(null, "Job site found, but no usable job blocks");
-        }
-
-        return new WithReason<>(null, "No job sites");
+        return JobsClean.findJobSite(
+                maxState,
+                prioritizesExtraction(),
+                statusItems,
+                roomsWithState(town, work, maxState)
+                        .stream()
+                        .map(v -> v.room)
+                        .toList(),
+                (MCRoom room) -> Positions.ToBlock(room.getDoorPos(), room.yCoord),
+                blocksSrc,
+                work,
+                isJobBlock,
+                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, () -> Direction.getRandom(rand))
+        );
     }
 
     @Override

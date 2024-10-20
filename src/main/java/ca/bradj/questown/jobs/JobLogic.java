@@ -102,6 +102,11 @@ public class JobLogic<EXTRA, TOWN, POS> {
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
 
+        if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
+            this.workSpot = null;
+            return;
+        }
+
         if (ImmutableList.of(
                 ProductionStatus.NO_SUPPLIES,
                 ProductionStatus.NO_JOBSITE
@@ -160,11 +165,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
-        if (worldBeforeTick.canDropLoot()) {
-            worldBeforeTick.changeToNextJob();
-            return;
-        }
-
         if (isEntityInJobSite && status.isWorkingOnProduction()) {
             doTryWorking(
                     extra,
@@ -178,6 +178,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
+            return;
         }
         worldBeforeTick.tryGetSupplies();
 

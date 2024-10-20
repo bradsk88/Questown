@@ -99,66 +99,71 @@ public class JobStatuses {
                         "use items",
                         LZCD.leaf(() -> job.tryUsingSupplies(supplyItemStatus), Objects::isNull),
                         dHasWorkItems,
-                        new LZCD<>(
-                                "drop loot when hands full",
-                                leaf(factory::droppingLoot),
-                                ImmutableList.of(
-                                        dInventoryFull,
-                                        dTownHasSpace
-                                ),
-                                LZCD.oneDep(
-                                        "stop when no space and hands full",
-                                        leaf(factory::noSpace),
-                                        dInventoryFull,
-                                        new LZCD<>(
-                                                "drop loot from non-full hands before starting more work",
-                                                leaf(factory::droppingLoot),
-                                                ImmutableList.of(
-                                                        dHasNonWorkItems,
-                                                        dTownHasSpace
-                                                ),
+                        LZCD.oneDep(
+                                "work in different room without items",
+                                LZCD.leaf(job::tryChoosingItemlessWork, Objects::isNull),
+                                dPrioritizeExtraction,
+                                new LZCD<>(
+                                        "drop loot when hands full",
+                                        leaf(factory::droppingLoot),
+                                        ImmutableList.of(
+                                                dInventoryFull,
+                                                dTownHasSpace
+                                        ),
+                                        LZCD.oneDep(
+                                                "stop when no space and hands full",
+                                                leaf(factory::noSpace),
+                                                dInventoryFull,
                                                 new LZCD<>(
-                                                        "get work supplies",
-                                                        leaf(factory::collectingSupplies),
+                                                        "drop loot from non-full hands before starting more work",
+                                                        leaf(factory::droppingLoot),
                                                         ImmutableList.of(
-                                                                dTownHasSupplies,
-                                                                dHasPlaceToUseSupplies
+                                                                dHasNonWorkItems,
+                                                                dTownHasSpace
                                                         ),
                                                         new LZCD<>(
-                                                                "drop loot when no work supplies available",
-                                                                leaf(factory::droppingLoot),
+                                                                "get work supplies",
+                                                                leaf(factory::collectingSupplies),
                                                                 ImmutableList.of(
-                                                                        dHasNonWorkItems,
-                                                                        dHasPlaceToUseSupplies,
-                                                                        dTownHasSpace
+                                                                        dTownHasSupplies,
+                                                                        dHasPlaceToUseSupplies
                                                                 ),
                                                                 new LZCD<>(
-                                                                        "drop loot when no work possible",
+                                                                        "drop loot when no work supplies available",
                                                                         leaf(factory::droppingLoot),
                                                                         ImmutableList.of(
-                                                                                dHasAnyItems,
+                                                                                dHasNonWorkItems,
+                                                                                dHasPlaceToUseSupplies,
                                                                                 dTownHasSpace
                                                                         ),
                                                                         new LZCD<>(
-                                                                                "wait for next stage is timer is active",
-                                                                                leaf(factory::waitingForTimedState),
+                                                                                "drop loot when no work possible",
+                                                                                leaf(factory::droppingLoot),
                                                                                 ImmutableList.of(
-                                                                                        dTimerActive
+                                                                                        dHasAnyItems,
+                                                                                        dTownHasSpace
                                                                                 ),
                                                                                 new LZCD<>(
-                                                                                        "stop when nowhere to work and town has items",
-                                                                                        leaf(factory::noJobSite),
+                                                                                        "wait for next stage is timer is active",
+                                                                                        leaf(factory::waitingForTimedState),
                                                                                         ImmutableList.of(
-                                                                                                dTownHasSupplies,
-                                                                                                dInventoryEmpty
+                                                                                                dTimerActive
                                                                                         ),
                                                                                         new LZCD<>(
-                                                                                                "stop when no space and holding any items",
-                                                                                                leaf(factory::noSpace),
+                                                                                                "stop when nowhere to work and town has items",
+                                                                                                leaf(factory::noJobSite),
                                                                                                 ImmutableList.of(
-                                                                                                        dHasAnyItems
+                                                                                                        dTownHasSupplies,
+                                                                                                        dInventoryEmpty
                                                                                                 ),
-                                                                                                leaf(factory::noSupplies)
+                                                                                                new LZCD<>(
+                                                                                                        "stop when no space and holding any items",
+                                                                                                        leaf(factory::noSpace),
+                                                                                                        ImmutableList.of(
+                                                                                                                dHasAnyItems
+                                                                                                        ),
+                                                                                                        leaf(factory::noSupplies)
+                                                                                                )
                                                                                         )
                                                                                 )
                                                                         )
@@ -253,18 +258,22 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        RoomsNeedingIngredientsOrTools<ROOM, ?, ?> roomNeedsMap = town.roomsNeedingIngredientsByState().floor();
+                        RoomsNeedingIngredientsOrTools<ROOM, ?, ?> roomNeedsMap = town.roomsNeedingIngredientsByState()
+                                                                                      .floor();
 
                         boolean foundWork = false;
 
                         List<Integer> orderedWithSupplies = job.getAllWorkStatesSortedByPreference()
-                                .stream()
-                                .filter(work -> supplyItemStatus.getOrDefault(work, false))
-                                .toList();
+                                                               .stream()
+                                                               .filter(work -> supplyItemStatus.getOrDefault(
+                                                                       work,
+                                                                       false
+                                                               ))
+                                                               .toList();
 
                         for (Integer s : orderedWithSupplies) {
                             if (roomNeedsMap.containsKey(s) && !roomNeedsMap.get(s)
-                                    .isEmpty()) { // TODO: Unit test the second leg of this condition
+                                                                            .isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
                                     if (roomNeedsMap.get(s).stream().anyMatch(v -> location.equals(v.getRoom()))) {
@@ -304,7 +313,8 @@ public class JobStatuses {
     }
 
     private static <STATUS> LZCD<LZCD.Dependency<STATUS>> prePopAble(
-            String name, Supplier<Boolean> s
+            String name,
+            Supplier<Boolean> s
     ) {
         return LZCD.noDeps(
                 name,
@@ -344,7 +354,8 @@ public class JobStatuses {
     }
 
     private static <STATUS> LZCD<LZCD.Dependency<STATUS>> input(
-            String name, Function<STATUS, Boolean> s
+            String name,
+            Function<STATUS, Boolean> s
     ) {
         return LZCD.noDeps(
                 name,
