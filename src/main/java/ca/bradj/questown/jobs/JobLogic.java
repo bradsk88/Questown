@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 public class JobLogic<EXTRA, TOWN, POS> {
 
     private int worked = 0;
+    private int ticksWithoutNextJob = 0;
 
     public boolean hasWorkedRecently() {
         return worked > 0;
@@ -99,6 +100,19 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
+        if (ticksWithoutNextJob > 500) { // TODO: Config
+            QT.JOB_LOGGER.debug(
+                    "{} gave up waiting for different work after {} ticks ({})",
+                    entityCurrentJob.rootId(),
+                    ticksWithoutNextJob,
+                    entityCurrentJob.jobId()
+            );
+            // TODO: Visual indicator that something is wrong
+            worldBeforeTick.changeJob(expiration.noSuppliesFallbackFn().apply(entityCurrentJob));
+            return;
+        }
+
+
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
 
@@ -133,6 +147,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (this.grabbedInsertedSupplies) {
             worldBeforeTick.changeToNextJob();
+            ticksWithoutNextJob++;
             return;
         }
 
@@ -186,6 +201,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
             worldBeforeTick.changeToNextJob();
+            ticksWithoutNextJob++;
         }
     }
 
