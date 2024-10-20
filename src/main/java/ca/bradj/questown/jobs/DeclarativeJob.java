@@ -306,7 +306,7 @@ public class DeclarativeJob extends
     ) {
         JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
 
-        RoomRecipeMatch<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
+        MCRoom entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
                 entity.blockPosition(),
                 roomsNeedingIngredientsOrTools,
                 jtp.roomsWithCompletedProduct()
@@ -318,7 +318,7 @@ public class DeclarativeJob extends
                 if (entityCurrentJobSite == null) {
                     return null;
                 }
-                return entityCurrentJobSite.room;
+                return entityCurrentJobSite;
             }
         };
 
@@ -491,7 +491,7 @@ public class DeclarativeJob extends
             MCExtra extra,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
-            RoomRecipeMatch<MCRoom> entityCurrentJobSite,
+            MCRoom entityCurrentJobSite,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         DeclarativeJob self = this;
@@ -539,7 +539,7 @@ public class DeclarativeJob extends
                     return ImmutableMap.of();
                 }
                 return self.listAllWorkSpots(
-                        work::getJobBlockState, entityCurrentJobSite.room,
+                        work::getJobBlockState, entityCurrentJobSite,
                         bp -> isValidWalkTarget(town, bp),
                         bp -> isJobBlock(bp),
                         () -> Direction.getRandom(sl.random)

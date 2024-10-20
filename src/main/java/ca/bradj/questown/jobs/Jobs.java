@@ -192,17 +192,17 @@ public class Jobs {
         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
     }
 
-    public static @Nullable RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
+    public static @Nullable MCRoom getEntityCurrentJobSite(
             BlockPos entityBlockPos,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-            Collection<RoomRecipeMatch<MCRoom>> roomsWithCompletedProduct
+            Collection<MCRoom> roomsWithCompletedProduct
     ) {
-        IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in = JobsClean.getEntityCurrentJobSite(
+        MCRoom in = JobsClean.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
                 (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5)
         );
-        return in == null ? null : RoomRecipeMatches.unsafe(in);
+        return in;
     }
 
     public static boolean hasNonSupplyItems(

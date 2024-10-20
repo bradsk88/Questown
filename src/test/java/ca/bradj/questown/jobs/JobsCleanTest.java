@@ -15,6 +15,7 @@ import java.util.function.Predicate;
 
 class JobsCleanTest {
 
+    public static final Predicate<Room> ONLY_CHECK_XZ_COORDINATES = (room) -> true;
     ImmutableList<Predicate<TestItem>> bakerRecipe = ImmutableList.of(
             item -> "wheat".equals(item.value),
             item -> "wheat".equals(item.value),
@@ -88,6 +89,29 @@ class JobsCleanTest {
             );
         }
     };
+    public static final Position positionInsideArbitraryRoomMatch1 = arbitaryRoomMatch1.getContainedBlocks().keySet()
+                                                                                       .iterator().next();
+
+
+    private static IRoomRecipeMatch<Room, String, Position, String> arbitaryRoomMatch2 = new IRoomRecipeMatch<>() {
+
+        @Override
+        public String getRecipeID() {
+            return "test 1";
+        }
+
+        @Override
+        public Room getRoom() {
+            return new Room(new Position(100, 100), InclusiveSpaces.from(100, 0).to(200, 100));
+        }
+
+        @Override
+        public ImmutableMap<Position, String> getContainedBlocks() {
+            return ImmutableMap.of(
+                    new Position(150, 50), "chest"
+            );
+        }
+    };
 
     @Test
     void roomsWithState_shouldReturnAllRoomsIfBothChecksPass() {
@@ -128,13 +152,48 @@ class JobsCleanTest {
     }
 
     @Test
-    void getEntityCurrentJobSite_shouldNotReturnNull_WhenAllRequirementsEmpty_IfResultsAreAvailable() {
-        IRoomRecipeMatch<Room, String, Position, ?> site = JobsClean.getEntityCurrentJobSite(
-                new Position(0, 0),
+    void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityInRoom() {
+        Room site = JobsClean.getEntityCurrentJobSite(
+                positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
-                ImmutableList.of(arbitaryRoomMatch1),
-                (room) -> true
+                ImmutableList.of(arbitaryRoomMatch1.getRoom()),
+                ONLY_CHECK_XZ_COORDINATES
         );
-        Assertions.assertNotNull(site);
+        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site);
+    }
+
+    @Test
+    void getEntityCurrentJobSite_shouldReturnNull_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityNotInRoom() {
+        Room site = JobsClean.getEntityCurrentJobSite(
+                new Position(-100, -100),
+                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
+                ImmutableList.of(arbitaryRoomMatch1.getRoom()),
+                ONLY_CHECK_XZ_COORDINATES
+        );
+        Assertions.assertNull(site);
+    }
+    @Test
+    void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
+        Room site = JobsClean.getEntityCurrentJobSite(
+                positionInsideArbitraryRoomMatch1,
+                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
+                        0, ImmutableList.of(arbitaryRoomMatch1) // There is a room needing supplies at state 0
+                )),
+                ImmutableList.of(), // There are no finished results to grab
+                ONLY_CHECK_XZ_COORDINATES
+        );
+        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site);
+    }
+    @Test
+    void getEntityCurrentJobSite_shouldReturnNull_WhenRoomWithRequirementsExists_AndResultsAreNotAvailable_IfEntityInADifferentRoom() {
+        Room site = JobsClean.getEntityCurrentJobSite(
+                positionInsideArbitraryRoomMatch1,
+                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
+                        0, ImmutableList.of(arbitaryRoomMatch2) // There is a room needing supplies at state 0 (but the entity is in another room)
+                )),
+                ImmutableList.of(), // There are no finished results to grab
+                ONLY_CHECK_XZ_COORDINATES
+        );
+        Assertions.assertNull(site);
     }
 }

@@ -230,14 +230,14 @@ public class JobsClean {
     }
 
     // TODO[ASAP]: Test "should not return null if entity is in room with finished product"
-    public static <ROOM extends Room, RECIPE, POS, MATCH extends IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> MATCH getEntityCurrentJobSite(
+    public static <ROOM extends Room, RECIPE, POS> ROOM getEntityCurrentJobSite(
             Position entityBlockPos,
             RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
-            Collection<MATCH> roomsWithCompletedProduct,
+            Collection<ROOM> roomsWithCompletedProduct,
             Predicate<ROOM> additionalPosCheck
     ) {
-        for (MATCH room : roomsWithCompletedProduct) {
-            if (InclusiveSpaces.contains(room.getRoom().getSpaces(), entityBlockPos)) {
+        for (ROOM room : roomsWithCompletedProduct) {
+            if (InclusiveSpaces.contains(room.getSpaces(), entityBlockPos)) {
                 return room;
             }
         }
@@ -248,13 +248,13 @@ public class JobsClean {
             boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), entityBlockPos);
             return contains || v.getRoom().getDoorPos().equals(entityBlockPos);
         };
-        //noinspection unchecked
-        return (MATCH) roomsNeedingIngredientsOrTools
+        return roomsNeedingIngredientsOrTools
                 .getMatches()
                 .stream()
                 .filter(v -> additionalPosCheck.test(v.getRoom()))
                 .filter(containsEntity)
                 .findFirst()
+                .map(IRoomRecipeMatch::getRoom)
                 .orElse(null);
     }
 
