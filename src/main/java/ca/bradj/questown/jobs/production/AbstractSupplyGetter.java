@@ -13,11 +13,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, TOWN_ITEM>, ROOM extends Room> {
 
-    public void tryGetSupplies(
+    public boolean tryGetSupplies(
             STATUS status,
             int upToAmount,
             RoomsNeedingIngredientsOrTools<?, ?, ?> roomsNeedingIngredientsOrTools,
@@ -27,7 +26,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             Consumer<TOWN_ITEM> taker) {
         // TODO: Introduce this status for farmer
         if (!status.isCollectingSupplies()) {
-            return;
+            return false;
         }
 
         Optional<Integer> first = roomsNeedingIngredientsOrTools.get().entrySet()
@@ -38,10 +37,10 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
 
         if (first.isEmpty()) {
             QT.JOB_LOGGER.warn("Trying to try container items when no rooms need items");
-            return;
+            return false;
         }
 
-        JobsClean.<POS, TOWN_ITEM>tryTakeContainerItems(
+        return JobsClean.<POS, TOWN_ITEM>tryTakeContainerItems(
                 taker, suppliesTarget,
                 item -> JobsClean.<TOWN_ITEM, HELD_ITEM>shouldTakeItem(
                         upToAmount, recipe.apply(first.get()), currentHeldItems, item

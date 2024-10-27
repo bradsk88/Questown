@@ -22,13 +22,10 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -298,10 +295,15 @@ public class Jobs {
                             public boolean test(MCTownItem mcTownItem) {
                                 return false;
                             }
+
+                            @Override
+                            public String toString() {
+                                return v.toJson().toString();
+                            }
                         },
                         (inner) -> v.isEmpty(),
                         (inner, item) -> v.test(item.toItemStack()),
-                        String.format("Ingredient2Predicate [%s]", v.toJson())
+                        "Ingredient2Predicate"
                 ))
         );
         return b.build();

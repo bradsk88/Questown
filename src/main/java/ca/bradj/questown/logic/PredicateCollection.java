@@ -44,7 +44,12 @@ public class PredicateCollection<OUTER, INNER> implements IPredicateCollection<O
 
     public static <T, S> PredicateCollection<T, S> empty(String msg) {
         //noinspection unchecked
-        return new PredicateCollection<T, S>(EMPTY, IPredicateCollection::isEmpty, (p, i) -> false, msg);
+        return new PredicateCollection<T, S>(EMPTY, IPredicateCollection::isEmpty, (p, i) -> false, msg) {
+            @Override
+            public String toString() {
+                return msg;
+            }
+        };
     }
 
     @Override

@@ -34,6 +34,11 @@ public class ItemCheckReplacer<ITEM> {
             ) {
                 return check.test(item);
             }
+
+            @Override
+            public String toString() {
+                return check.toString();
+            }
         };
     }
 
@@ -61,6 +66,11 @@ public class ItemCheckReplacer<ITEM> {
             @Override
             public boolean test(ITEM item) {
                 return inner.test(items.get(), item);
+            }
+
+            @Override
+            public String toString() {
+                return inner.toString();
             }
         }, IPredicateCollection::isEmpty, Predicate::test, "wrapped with items supplier");
     }

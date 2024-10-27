@@ -61,6 +61,11 @@ public class PredicateCollections {
                     public boolean test(MCTownItem itemStack) {
                         return v.test(MCHeldItem.fromTown(itemStack));
                     }
+
+                    @Override
+                    public String toString() {
+                        return v.toString();
+                    }
                 },
                 IPredicateCollection::isEmpty,
                 Predicate::test,

@@ -95,6 +95,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
+        QT.BLOCK_LOGGER.debug("Removed state from {}", bp);
         return true;
     }
 
