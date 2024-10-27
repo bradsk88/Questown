@@ -70,4 +70,7 @@ public class SpecialRules {
     // a job if there is an abundance of supplies available. This rule causes
     // the job to ignore that so villagers can always start the associated job.
     public static final String ALWAYS_CONSIDER = "always_consider";
+    // Global rule. When enabled, the LAST item in the villager's inventory will
+    // be rendered in their off-hand.
+    public static final String RENDER_LAST_ITEM_IN_OFF_HAND = "render_last_item_in_off_hand";
 }

@@ -34,7 +34,8 @@
         "claim_workspot",
         "require_two_free_spots",
         "always_consider",
-        "workspot_from_held_item"
+        "workspot_from_held_item",
+        "render_last_item_in_off_hand"
       ]
     },
     {

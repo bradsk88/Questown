@@ -136,6 +136,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<ItemStack> heldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
+    private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
+    );
 
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
@@ -378,6 +381,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(status, ProductionStatus.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
+        this.entityData.define(lastHeldItem, ItemStack.EMPTY);
     }
 
     @NotNull
@@ -483,6 +487,18 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
+            entityData.set(heldItem, j.getInventory()
+                                      .getItem(0));
+            if (j.getGlobalSpecialRules().contains(SpecialRules.RENDER_LAST_ITEM_IN_OFF_HAND)) {
+                int size = j.getInventory().getContainerSize();
+                for (int i = 1; i < size; i++) {
+                    ItemStack item = j.getInventory().getItem(size - i);
+                    if (!item.isEmpty()) {
+                        entityData.set(lastHeldItem, item);
+                        break;
+                    }
+                }
+            }
             entityData.set(heldItem, j.getInventory()
                                       .getItem(0));
             if (!job.get().isInitialized()) {
@@ -741,6 +757,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public ItemStack getMainHandItem() {
         return getEntityData().get(heldItem);
+    }
+
+    @Override
+    public ItemStack getOffhandItem() {
+        return getEntityData().get(lastHeldItem);
     }
 
     @Override
