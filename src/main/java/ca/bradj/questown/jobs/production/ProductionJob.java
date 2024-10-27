@@ -32,6 +32,8 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
@@ -60,6 +62,9 @@ public abstract class ProductionJob<
         > implements Job<MCHeldItem, SNAPSHOT, STATUS>, LockSlotHaver, ContainerListener,
         JournalItemsListener<MCHeldItem>, Jobs.LootDropper<MCHeldItem>, SignalSource {
 
+    private @Nullable Long lastDropTick = null;
+    private @Nullable Long secondLastDropTick = null;
+
     private final Marker marker;
 
     private final ArrayList<DataSlot> locks = new ArrayList<>();
@@ -68,7 +73,7 @@ public abstract class ProductionJob<
     protected final IProductionStatusFactory<STATUS> statusFactory;
     protected final Supplier<Claim> claimSupplier;
     private final WorkLocation location;
-    private ContainerTarget<MCContainer, MCTownItem> successTarget;
+    protected ContainerTarget<MCContainer, MCTownItem> successTarget;
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
     private boolean dropping;
 
@@ -241,23 +246,29 @@ public abstract class ProductionJob<
 
     protected abstract Map<Integer, Boolean> getSupplyItemStatus();
 
-    protected void tryDropLoot(
+    protected boolean tryDropLoot(
+            Long currentTick,
             BlockPos entityPos
     ) {
         if (successTarget == null) {
-            return;
+            return false;
         }
         if (!isCloseTo(entityPos, successTarget.getBlockPos())) {
-            return;
+            return false;
         }
         if (!journal.getStatus()
                     .isDroppingLoot()) {
-            return;
+            return false;
         }
         if (this.dropping) {
             QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
+        if (this.dropping) {
+            this.secondLastDropTick = this.lastDropTick;
+            this.lastDropTick = currentTick;
+        }
+        return this.dropping;
     }
 
     @NotNull
@@ -326,13 +337,10 @@ public abstract class ProductionJob<
             }
         }
 
-        STATUS s = journal.getStatus();
-        if (s.isCollectingSupplies()) {
-            setupForGetSupplies(town, entityBlockPos);
-            if (suppliesTarget != null) {
-                this.setLookTarget(suppliesTarget.getBlockPos());
-                return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
-            }
+        setupForGetSupplies(town, entityBlockPos, Util.getTick(sl));
+        if (suppliesTarget != null) {
+            this.setLookTarget(suppliesTarget.getBlockPos());
+            return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
         }
 
         if (shouldDisappear(town, entityPos)) {
@@ -384,28 +392,78 @@ public abstract class ProductionJob<
 
     private void setupForGetSupplies(
             TownInterface town,
-            BlockPos pos
+            BlockPos pos,
+            Long currentTick
     ) {
         ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
                 journal.getCapacity(), cleanRooms(),
                 journal.getItems(), item
         );
 
-        Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
-                town, checkFn, pos, this::shouldCheckContainerForSupplies
-        );
-
-        if (this.suppliesTarget != null) {
-            if (!this.suppliesTarget.hasItem(checkFn)) {
-                this.suppliesTarget = find.get();
+        Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> {
+            ServerLevel sl = town.getServerLevel();
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom = this::shouldCheckContainerForSupplies;
+            Collection<RoomRecipeMatch<MCRoom>> allContainers = town.getRoomHandle().getMatches(includeRoom);
+            List<ContainerTarget<MCContainer, MCTownItem>> chests = new ArrayList<>();
+            for (RoomRecipeMatch<MCRoom> c : allContainers) {
+                for (Map.Entry<BlockPos, Block> block : c.getContainedBlocks().entrySet()) {
+                    if (!(block.getValue() instanceof ChestBlock cb)) {
+                        continue;
+                    }
+                    BlockPos bp = block.getKey();
+                    ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
+                    chests.add(chest);
+                }
             }
-        } else {
-            this.suppliesTarget = find.get();
+            List<ContainerTarget<MCContainer, MCTownItem>> closeChests = chests
+                    .stream()
+                    .sorted(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos())))
+                    .toList();
+            for (ContainerTarget<MCContainer, MCTownItem> chest : closeChests) {
+                if (!chest.hasItem(checkFn)) {
+                    continue;
+                }
+                if (!shouldUseBlockForSupplies(currentTick, chest.getBlockPos())) {
+                    continue;
+                }
+                return chest;
+            }
+            return null;
+        };
+
+        ContainerTarget<MCContainer, MCTownItem> st = find.get();
+        if (st != null) {
+            this.suppliesTarget = st;
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
     }
+
+    private boolean shouldUseBlockForSupplies(
+            Long currentTick,
+            BlockPos b
+    ) {
+        if (suppliesTarget == null) {
+            return true;
+        }
+        Predicate<Long> isRecent = tick -> isRecentTick(currentTick, tick);
+        boolean droppedSuppliesRecently = isRecent.test(lastDropTick) && isRecent.test(secondLastDropTick);
+        boolean grabbedSuppliesRecently = grabbedSuppliesRecently(isRecent);
+        if (droppedSuppliesRecently && grabbedSuppliesRecently) {
+            return !suppliesTarget.getBlockPos().equals(b);
+        }
+        return true;
+    }
+
+    protected boolean isRecentTick(
+            Long referenceTick,
+            @Nullable Long testedTick
+    ) {
+        return testedTick != null && testedTick > referenceTick - 50;
+    }
+
+    protected abstract boolean grabbedSuppliesRecently(Predicate<Long> isTickRecent);
 
     protected abstract boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom);
 
@@ -462,7 +520,10 @@ public abstract class ProductionJob<
     }
 
     @Override
-    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
+    public void initialize(
+            ServerLevel level,
+            Snapshot<MCHeldItem> journal
+    ) {
         this.journal.initialize((SNAPSHOT) journal);
     }
 

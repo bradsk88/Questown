@@ -1,8 +1,9 @@
 package ca.bradj.questown.integration.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import org.jetbrains.annotations.Nullable;
 
-public class JobPhaseModifier {
+public abstract class JobPhaseModifier {
 
     public static JobPhaseModifier NO_OP = new JobPhaseModifier() {
         @Override
@@ -17,6 +18,14 @@ public class JobPhaseModifier {
         public <CONTEXT> @Nullable CONTEXT afterInsertItem(
                 CONTEXT ctxInput,
                 AfterInsertItemEvent event
+        ) {
+            return null;
+        }
+
+        @Override
+        public <CONTEXT> @Nullable CONTEXT afterDropLoot(
+                CONTEXT ctxInput,
+                AfterDropLootEvent event
         ) {
             return null;
         }
@@ -47,6 +56,13 @@ public class JobPhaseModifier {
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
             AfterInsertItemEvent event
+    ) {
+        return null;
+    }
+
+    public <CONTEXT> @Nullable CONTEXT afterDropLoot(
+            CONTEXT ctxInput,
+            AfterDropLootEvent event
     ) {
         return null;
     }

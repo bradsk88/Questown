@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.integration.jobs.AfterDropLootEvent;
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
@@ -113,5 +114,26 @@ public class WorkSpotFromHeldItemSpecialRule extends
             }
         }
         return null;
+    }
+
+    @Override
+    public <CONTEXT> @Nullable CONTEXT afterDropLoot(
+            CONTEXT ctxInput,
+            AfterDropLootEvent event
+    ) {
+        CONTEXT ctx = super.afterDropLoot(ctxInput, event);
+        ArrayList<MCHeldItem> itemsDropped = new ArrayList<>();
+        for (MCHeldItem mcHeldItem : event.itemsBeforeDrop()) {
+            if (event.itemsAfterDrop().contains(mcHeldItem)) {
+                continue;
+            }
+            itemsDropped.add(mcHeldItem);
+        }
+        @Nullable BlockPos jbp = getJobBlockPositionFromHeldItems(itemsDropped);
+        if (jbp == null) {
+            return ctx;
+        }
+        event.clearStatus().accept(jbp);
+        return ctx;
     }
 }

@@ -334,13 +334,13 @@ public class JobsClean {
         );
     }
 
-    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
+    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> boolean tryTakeContainerItems(
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<TOWN_ITEM, Boolean> isRemovalCandidate
     ) {
         if (!suppliesTarget.isCloseTo()) {
-            return;
+            return false;
         }
         String start = suppliesTarget.toShortString();
         List<TOWN_ITEM> items = suppliesTarget.getItems();
@@ -351,8 +351,9 @@ public class JobsClean {
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit.getShortName(), start);
                 villager.accept(unit);
                 suppliesTarget.removeItem(i, 1);
-                break;
+                return true;
             }
         }
+        return false;
     }
 }

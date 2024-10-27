@@ -49,6 +49,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 import java.util.stream.Stream;
@@ -73,6 +74,9 @@ public class DeclarativeJob extends
     private final int workInterval;
     private final RecipeProvider recipe;
     private Signals signal;
+
+    private @Nullable Long lastSupplyTick = null;
+    private @Nullable Long secondLastSupplyTick = null;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
 
@@ -155,8 +159,18 @@ public class DeclarativeJob extends
         Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> jobTools = checks.getAllRequiredTools();
         PredicateCollection noCheck = PredicateCollection.empty("no requirements");
         for (int i = 0; i < maxState; i++) {
-            ingr.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)));
-            tool.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)));
+            ingr.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)) {
+                @Override
+                public String toString() {
+                    return "no check";
+                }
+            });
+            tool.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)) {
+                @Override
+                public String toString() {
+                    return "no check";
+                }
+            });
         }
 
         JobCheckReplacer globalJCR = new JobCheckReplacer(location.isJobBlock());
@@ -352,6 +366,11 @@ public class DeclarativeJob extends
                         0
                 )
         );
+    }
+
+    @Override
+    protected boolean grabbedSuppliesRecently(Predicate<Long> isTickRecent) {
+        return isTickRecent.test(lastSupplyTick) && isTickRecent.test(secondLastSupplyTick);
     }
 
     @Override
@@ -568,8 +587,21 @@ public class DeclarativeJob extends
 
             @Override
             public boolean tryDropLoot() {
-                self.tryDropLoot(entity.blockPosition());
-                return self.isDropping();
+                ImmutableList<MCHeldItem> itemsBeforeDrop = journal.getItems();
+                boolean result = self.tryDropLoot(Util.getTick(town.getServerLevel()), entity.blockPosition());
+                ImmutableList<MCHeldItem> itemsAfterDrop = journal.getItems();
+                if (result) {
+                    PostDropHook.run(
+                            town,
+                            specialGlobalRules,
+                            town.getServerLevel(),
+                            successTarget.getBlockPos(),
+                            itemsBeforeDrop,
+                            itemsAfterDrop,
+                            work::clearState
+                    );
+                }
+                return result;
             }
 
             @Override
@@ -577,7 +609,11 @@ public class DeclarativeJob extends
                 if (logic.isWrappingUp()) {
                     return;
                 }
-                self.tryGetSupplies(roomsNeedingIngredientsOrTools, entity.blockPosition());
+                self.tryGetSupplies(
+                        roomsNeedingIngredientsOrTools,
+                        entity.blockPosition(),
+                        Util.getTick(town.getServerLevel())
+                );
             }
 
             @Override
@@ -621,12 +657,13 @@ public class DeclarativeJob extends
 
     private void tryGetSupplies(
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-            BlockPos entityBlockPos
+            BlockPos entityBlockPos,
+            Long currentTick
     ) {
         if (suppliesTarget == null) {
             return;
         }
-        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<BlockPos, MCTownItem>() {
+        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
@@ -651,7 +688,7 @@ public class DeclarativeJob extends
                               .removeItem(i, quantity);
             }
         };
-        getter.tryGetSupplies(
+        if (getter.tryGetSupplies(
                 journal.getStatus(), journal.getCapacity(),
                 roomsNeedingIngredientsOrTools,
                 st, recipe::getRecipe, journal.getItems(),
@@ -659,7 +696,11 @@ public class DeclarativeJob extends
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
                 }
-        );
+        )) {
+            this.secondLastSupplyTick = this.lastSupplyTick;
+            this.lastSupplyTick = currentTick;
+        }
+        ;
     }
 
     @Override

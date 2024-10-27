@@ -33,7 +33,8 @@
       "rules": [
         "claim_workspot",
         "require_two_free_spots",
-        "always_consider"
+        "always_consider",
+        "workspot_from_held_item"
       ]
     },
     {

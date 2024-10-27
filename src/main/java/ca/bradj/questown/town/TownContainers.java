@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -23,10 +24,7 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -40,7 +38,7 @@ public class TownContainers {
             return null;
         }
         Optional<ContainerTarget<MCContainer, MCTownItem>> found = findAllMatching(
-                townFlagBlockEntity, c, x -> true
+                townFlagBlockEntity, c, x -> true, b -> true
         ).findFirst();
         return found.orElse(null);
     }
@@ -48,13 +46,19 @@ public class TownContainers {
     public static Stream<ContainerTarget<MCContainer, MCTownItem>> findAllMatching(
             TownInterface t,
             ContainerTarget.CheckFn<MCTownItem> c,
-            Predicate<RoomRecipeMatch<MCRoom>> include
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
+            Predicate<BlockPos> includeBlock
     ) {
         ServerLevel level = t.getServerLevel();
         if (level == null) {
             return Stream.empty();
         }
-        List<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainersStream(t.getRoomHandle(), level, include).toList();
+        List<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainersStream(
+                t.getRoomHandle(),
+                level,
+                includeRoom,
+                includeBlock
+        ).toList();
         return allContainers.stream().filter(v -> v.hasItem(c));
     }
 
@@ -70,22 +74,34 @@ public class TownContainers {
             ServerLevel level,
             Predicate<RoomRecipeMatch<MCRoom>> include
     ) {
-        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level, include).toList();
+        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level, include, b -> true).toList();
     }
 
     @NotNull
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(
             RoomsHolder townFlagBlockEntity,
             ServerLevel level,
-            Predicate<RoomRecipeMatch<MCRoom>> include
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
+            Predicate<BlockPos> includeBlock
     ) {
         return townFlagBlockEntity
-                .getMatches(include)
+                .getMatches(includeRoom)
                 .stream()
-                .flatMap(v -> v.getContainedBlocks().entrySet().stream().map(z -> new UtilClean.Pair<>(v.room, z)))
+                .flatMap(v -> getContainedBlocks(includeBlock, v))
                 .filter(v -> v.b().getValue() instanceof ChestBlock)
                 .map(v -> fromChestBlockMaybe(v.a(), v.b().getKey(), (ChestBlock) v.b().getValue(), level))
                 .filter(Objects::nonNull);
+    }
+
+    private static @NotNull Stream<UtilClean.Pair<MCRoom, Map.Entry<BlockPos, Block>>> getContainedBlocks(
+            Predicate<BlockPos> includeBlock,
+            RoomRecipeMatch<MCRoom> v
+    ) {
+        return v.getContainedBlocks()
+                .entrySet()
+                .stream()
+                .filter(z -> includeBlock.test(z.getKey()))
+                .map(z -> new UtilClean.Pair<>(v.room, z));
     }
 
     @NotNull
@@ -169,7 +185,11 @@ public class TownContainers {
         );
     }
 
-    private static void setWorkSpot(MCRoom room, BlockPos p, MCTownItem item) {
+    private static void setWorkSpot(
+            MCRoom room,
+            BlockPos p,
+            MCTownItem item
+    ) {
         if (item.get().getDefaultInstance().isEmpty()) {
             return;
         }
@@ -186,15 +206,28 @@ public class TownContainers {
             ContainerTarget.CheckFn<MCTownItem> checkFn,
             BlockPos pos
     ) {
-        return findClosestMatching(town, checkFn, pos, x -> true);
+        return findClosestMatching(town, checkFn, pos, x -> true, b -> true);
     }
+
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> findClosestMatching(
             TownInterface town,
             ContainerTarget.CheckFn<MCTownItem> checkFn,
             BlockPos pos,
-            Predicate<RoomRecipeMatch<MCRoom>> include
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
+            Predicate<BlockPos> includeBlock
     ) {
-        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllMatching(town, checkFn, include);
+        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllMatching(town, checkFn, includeRoom, includeBlock);
         return all.min(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos()))).orElse(null);
+    }
+
+    public static @Nullable List<ContainerTarget<MCContainer, MCTownItem>> findNClosestMatching(
+            TownInterface town,
+            ContainerTarget.CheckFn<MCTownItem> checkFn,
+            BlockPos pos,
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
+            Predicate<BlockPos> includeBlock
+    ) {
+        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllMatching(town, checkFn, includeRoom, includeBlock);
+        return all.sorted(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos()))).toList();
     }
 }
