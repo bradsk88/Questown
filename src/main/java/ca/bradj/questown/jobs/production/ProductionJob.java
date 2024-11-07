@@ -390,7 +390,7 @@ public abstract class ProductionJob<
             IProductionStatusFactory<STATUS> statusFactory
     );
 
-    private void setupForGetSupplies(
+    protected void setupForGetSupplies(
             TownInterface town,
             BlockPos pos,
             Long currentTick
