@@ -8,6 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -16,7 +17,10 @@ public record CreateStockRequestFromUIMessage(
         WorkRequest item, int flagX, int flagY, int flagZ, UUID playerUUID
 ) {
 
-    public static void encode(CreateStockRequestFromUIMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(
+            CreateStockRequestFromUIMessage msg,
+            FriendlyByteBuf buffer
+    ) {
         msg.item.toNetwork(buffer);
         buffer.writeInt(msg.flagX());
         buffer.writeInt(msg.flagY());
@@ -46,7 +50,20 @@ public record CreateStockRequestFromUIMessage(
             }
             ItemStack toGive = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
             StockRequestItem.writeToNBT(toGive.getOrCreateTag(), item);
+            ItemStack given = new ItemStack(toGive.getItem(), toGive.getCount());
             sender.getInventory().add(toGive);
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sender),
+                    new CloseScreensMessage()
+            );
+            sender.containerMenu.broadcastChanges();
+            sender.sendMessage(
+                    Compat.translatable(
+                            "commands.give.success.single",
+                            1, given.getDisplayName(), (sender).getDisplayName()
+                    ),
+                    sender.getUUID()
+            );
         });
         ctx.get().setPacketHandled(true);
 

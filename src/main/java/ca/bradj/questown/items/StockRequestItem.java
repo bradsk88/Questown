@@ -104,7 +104,7 @@ public class StockRequestItem extends Item {
             List<Component> tooltips,
             TooltipFlag p_41424_
     ) {
-        CompoundTag tag = p_41421_.getTag();
+        CompoundTag tag = p_41421_.getOrCreateTag();
         if (hasRequest(tag)) {
             tooltips.add(Ingredients.getName(getRequest(tag).asIngredient()));
         }
