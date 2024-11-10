@@ -1047,4 +1047,27 @@ public class DeclarativeJob extends
         }
         super.setupForGetSupplies(town, pos, currentTick);
     }
+
+    @Override
+    protected @Nullable ContainerTarget<MCContainer, MCTownItem> getDropTargetForLoot(
+            BlockPos entityBlockPos,
+            TownInterface town
+    ) {
+        ContainerTarget<MCContainer, MCTownItem> defaultTarget = super.getDropTargetForLoot(
+                entityBlockPos,
+                town
+        );
+        if (!FetcherHack.isFetcher(jobId)) {
+            return defaultTarget;
+        }
+        return FetcherHack.getDropTargetForLoot(town, journal.getItems(), defaultTarget);
+    }
+
+    @Override
+    public Iterable<MCHeldItem> getItemsForDrop() {
+        if (!FetcherHack.isFetcher(jobId)) {
+            return super.getItemsForDrop();
+        }
+        return FetcherHack.getItemsForDrop(super.getItemsForDrop(), successTarget);
+    }
 }

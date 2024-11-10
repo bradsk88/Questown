@@ -388,7 +388,7 @@ public class Jobs {
 
         boolean hasAnyLootToDrop();
 
-        Iterable<I> getItems();
+        Iterable<I> getItemsForDrop();
 
         boolean removeItem(I mct);
 
@@ -407,7 +407,7 @@ public class Jobs {
 
 
         boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
-        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
+        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItemsForDrop()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
                 continue;

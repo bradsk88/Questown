@@ -235,7 +235,7 @@ public abstract class ProductionJob<
     }
 
     @Override
-    public Iterable<MCHeldItem> getItems() {
+    public Iterable<MCHeldItem> getItemsForDrop() {
         return journal.getItems();
     }
 
@@ -330,7 +330,7 @@ public abstract class ProductionJob<
         }
 
         if (status.isDroppingLoot()) {
-            successTarget = Jobs.setupForDropLoot(town, this.successTarget, entityBlockPos);
+            successTarget = getDropTargetForLoot(entityBlockPos, town);
             if (successTarget != null) {
                 this.setLookTarget(successTarget.getBlockPos());
                 return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
@@ -348,6 +348,13 @@ public abstract class ProductionJob<
         }
 
         return null;
+    }
+
+    protected @Nullable ContainerTarget<MCContainer, MCTownItem> getDropTargetForLoot(
+            BlockPos entityBlockPos,
+            TownInterface town
+    ) {
+        return Jobs.setupForDropLoot(town, this.successTarget, entityBlockPos);
     }
 
     protected void setLookTarget(BlockPos jobSite1) {
