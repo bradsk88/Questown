@@ -9,6 +9,7 @@ import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.roomrecipes.core.Room;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -23,7 +24,24 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
-            Consumer<TOWN_ITEM> taker) {
+            Consumer<TOWN_ITEM> taker
+    ) {
+        return tryGetSupplies(
+                status, upToAmount, roomsNeedingIngredientsOrTools,
+                suppliesTarget, recipe, currentHeldItems, taker,
+                list -> list
+        );
+    }
+    public boolean tryGetSupplies(
+            STATUS status,
+            int upToAmount,
+            RoomsNeedingIngredientsOrTools<?, ?, ?> roomsNeedingIngredientsOrTools,
+            JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
+            Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
+            Collection<HELD_ITEM> currentHeldItems,
+            Consumer<TOWN_ITEM> taker,
+            Function<List<TOWN_ITEM>, List<TOWN_ITEM>> adjustOrder
+    ) {
         // TODO: Introduce this status for farmer
         if (!status.isCollectingSupplies()) {
             return false;
@@ -44,7 +62,8 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
                 taker, suppliesTarget,
                 item -> JobsClean.<TOWN_ITEM, HELD_ITEM>shouldTakeItem(
                         upToAmount, recipe.apply(first.get()), currentHeldItems, item
-                )
+                ),
+                adjustOrder
         );
     }
 

@@ -337,13 +337,14 @@ public class JobsClean {
     public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> boolean tryTakeContainerItems(
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
-            Function<TOWN_ITEM, Boolean> isRemovalCandidate
+            Function<TOWN_ITEM, Boolean> isRemovalCandidate,
+            Function<List<TOWN_ITEM>, List<TOWN_ITEM>> adjustOrder
     ) {
         if (!suppliesTarget.isCloseTo()) {
             return false;
         }
         String start = suppliesTarget.toShortString();
-        List<TOWN_ITEM> items = suppliesTarget.getItems();
+        List<TOWN_ITEM> items = adjustOrder.apply(suppliesTarget.getItems());
         for (int i = 0; i < items.size(); i++) {
             TOWN_ITEM mcTownItem = items.get(i);
             if (isRemovalCandidate.apply(mcTownItem)) {

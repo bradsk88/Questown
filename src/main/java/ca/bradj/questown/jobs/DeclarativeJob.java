@@ -4,14 +4,12 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
 import ca.bradj.questown.integration.jobs.JobCheckReplacer;
 import ca.bradj.questown.integration.jobs.SupplyRoomCheckReplacer;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.fetcher.FetcherHack;
@@ -19,15 +17,12 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
-import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.jobs.special.IngredientsFromHeldItemLogic;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
-import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -48,7 +43,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.common.util.Lazy;
 import org.apache.logging.log4j.Marker;
@@ -618,6 +612,7 @@ public class DeclarativeJob extends
                     return;
                 }
                 self.tryGetSupplies(
+                        extra.town(),
                         roomsNeedingIngredientsOrTools,
                         entity.blockPosition(),
                         Util.getTick(town.getServerLevel())
@@ -664,6 +659,7 @@ public class DeclarativeJob extends
     }
 
     private void tryGetSupplies(
+            TownInterface town,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             BlockPos entityBlockPos,
             Long currentTick
@@ -696,6 +692,14 @@ public class DeclarativeJob extends
                               .removeItem(i, quantity);
             }
         };
+        Function<List<MCTownItem>, List<MCTownItem>> adjustOrder = list -> list;
+        if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
+            adjustOrder = list -> {
+                ArrayList<MCTownItem> shuffled = new ArrayList<>(list);
+                Collections.shuffle(shuffled, town.getServerLevel().getRandom());
+                return shuffled;
+            };
+        }
         if (getter.tryGetSupplies(
                 journal.getStatus(), journal.getCapacity(),
                 roomsNeedingIngredientsOrTools,
@@ -703,7 +707,8 @@ public class DeclarativeJob extends
                 (item) -> {
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
-                }
+                },
+                adjustOrder
         )) {
             this.secondLastSupplyTick = this.lastSupplyTick;
             this.lastSupplyTick = currentTick;

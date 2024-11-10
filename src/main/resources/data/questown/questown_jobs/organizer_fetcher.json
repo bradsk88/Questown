@@ -35,7 +35,8 @@
         "require_two_free_spots",
         "always_consider",
         "workspot_from_held_item",
-        "render_last_item_in_off_hand"
+        "render_last_item_in_off_hand",
+        "take_random_ingredient"
       ]
     },
     {
