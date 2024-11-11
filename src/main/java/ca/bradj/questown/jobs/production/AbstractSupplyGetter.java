@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.Item;
@@ -29,7 +30,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
         return tryGetSupplies(
                 status, upToAmount, roomsNeedingIngredientsOrTools,
                 suppliesTarget, recipe, currentHeldItems, taker,
-                list -> list
+                UtilClean::enumerate
         );
     }
     public boolean tryGetSupplies(
@@ -40,7 +41,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker,
-            Function<List<TOWN_ITEM>, List<TOWN_ITEM>> adjustOrder
+            Function<List<TOWN_ITEM>, List<UtilClean.Pair<Integer, TOWN_ITEM>>> adjustOrder
     ) {
         // TODO: Introduce this status for farmer
         if (!status.isCollectingSupplies()) {

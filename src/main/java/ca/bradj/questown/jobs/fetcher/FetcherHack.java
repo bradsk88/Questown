@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.special.IngredientsFromHeldItemLogic;
 import ca.bradj.questown.town.TownContainers;
@@ -100,7 +101,7 @@ public class FetcherHack {
                 continue;
             }
             if (!(item.get().get() instanceof StockRequestItem)) {
-                return defaultTarget;
+                continue;
             }
             BlockPos jb = StockRequestItem.getJobBlock(item.get().getItemNBT());
             if (jb == null) {
@@ -112,6 +113,13 @@ public class FetcherHack {
             return defaultTarget;
         }
         BlockPos fsr = sr;
+        return getTargetContainer(town, fsr);
+    }
+
+    private static @Nullable ContainerTarget<MCContainer, MCTownItem> getTargetContainer(
+            TownInterface town,
+            BlockPos fsr
+    ) {
         List<ContainerTarget<MCContainer, MCTownItem>> all = TownContainers.getAllContainers(
                 town, town.getServerLevel(),
                 match -> match.getContainedBlocks().containsKey(fsr)
@@ -120,5 +128,25 @@ public class FetcherHack {
             return null;
         }
         return all.get(0);
+    }
+
+    public static @Nullable ProductionStatus computeStatus(
+            TownInterface town,
+            ImmutableList<MCHeldItem> items
+    ) {
+        @Nullable ContainerTarget<MCContainer, MCTownItem> dt = getDropTargetForLoot(town, items, null);
+        if (dt == null) {
+            return null;
+        }
+        int emptyCount = 0;
+        for (MCTownItem item : dt.getItems()) {
+            if (item.isEmpty()) {
+                emptyCount++;
+            }
+        }
+        if (emptyCount == 2 || emptyCount == 1) {
+            return ProductionStatus.DROPPING_LOOT;
+        }
+        return null;
     }
 }

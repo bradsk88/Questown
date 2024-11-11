@@ -338,7 +338,7 @@ public class DeclarativeJob extends
             }
         };
 
-        Supplier<ProductionStatus> computeState = getStateComputer(statusFactory, jtp, elp);
+        Supplier<ProductionStatus> computeState = getStateComputer(extra.town(), statusFactory, jtp, elp);
         this.signal = Signals.fromDayTime(Util.getDayTime(extra.town().getServerLevel()));
         WorkPosition<BlockPos> workSpot = world.getWorkSpot();
         BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);
@@ -638,11 +638,19 @@ public class DeclarativeJob extends
     }
 
     private @NotNull Supplier<ProductionStatus> getStateComputer(
+            TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory,
             JobTownProvider<MCRoom> jtp,
             EntityLocStateProvider<MCRoom> elp
     ) {
         return () -> {
+            if (FetcherHack.isFetcher(jobId)) {
+                ProductionStatus s = FetcherHack.computeStatus(town, journal.getItems());
+                if (s != null) {
+                    journal.changeStatus(s);
+                    return s;
+                }
+            }
             journal.tryUpdateStatus(
                     jtp,
                     elp,
@@ -692,10 +700,10 @@ public class DeclarativeJob extends
                               .removeItem(i, quantity);
             }
         };
-        Function<List<MCTownItem>, List<MCTownItem>> adjustOrder = list -> list;
+        Function<List<MCTownItem>, List<UtilClean.Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;
         if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
             adjustOrder = list -> {
-                ArrayList<MCTownItem> shuffled = new ArrayList<>(list);
+                ArrayList<UtilClean.Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
                 Collections.shuffle(shuffled, town.getServerLevel().getRandom());
                 return shuffled;
             };
