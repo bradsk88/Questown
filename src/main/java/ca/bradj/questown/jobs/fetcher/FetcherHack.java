@@ -40,7 +40,7 @@ public class FetcherHack {
                 town,
                 town.getServerLevel()
         )) {
-            if (containsUsableRequest(town, chest)) {
+            if (containsUsableRequest(town, chest) && !chest.getContainer().isFull()) {
                 return chest;
             }
         }
@@ -148,7 +148,17 @@ public class FetcherHack {
                 emptyCount++;
             }
         }
-        if (emptyCount == 2 || emptyCount == 1) {
+        int heldCount = 0;
+        for (MCHeldItem item : items) {
+            if (item.isEmpty()) {
+                continue;
+            }
+            heldCount++;
+        }
+        if (heldCount <= 1 && emptyCount == 1) {
+            return ProductionStatus.DROPPING_LOOT;
+        }
+        if (heldCount >= 2 && emptyCount == 2) {
             return ProductionStatus.DROPPING_LOOT;
         }
         return null;

@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
+import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -26,6 +27,9 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
@@ -39,6 +43,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
     private final Tabs tabs;
+
+    private final EvictingQueue<IStatus<?>> statusSmoothingQueue = EvictingQueue.create(20);
 
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu menu,
@@ -161,7 +167,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.jobId, menu.getStatus()));
+        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.jobId, getSmoothedStatus()));
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;
@@ -171,6 +177,19 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int texWidth = 32;
         int texHeight = 32;
         blit(stack, destX, destY, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
+    }
+
+    private @NotNull IStatus<?> getSmoothedStatus() {
+        statusSmoothingQueue.add(menu.getStatus());
+        HashMap<IStatus<?>, Integer> counter = new HashMap<>();
+        for (IStatus<?> iStatus : statusSmoothingQueue) {
+            counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
+        }
+        return counter
+                .entrySet()
+                .stream()
+                .max(Comparator.comparingInt(Map.Entry::getValue))
+                .map(Map.Entry::getKey).orElseThrow();
     }
 
     @Override
@@ -206,7 +225,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 // TODO: Render root AND current job
-                IStatus<?> status = menu.getStatus();
+                IStatus<?> status = getSmoothedStatus();
                 @Nullable String cat = status.getCategoryId();
                 if (cat == null) {
                     cat = jobId;
