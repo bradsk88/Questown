@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -32,6 +33,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
@@ -516,5 +518,32 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void clearPoseRequests(UUID uuid) {
         requestedPose.remove(uuid);
+    }
+
+    @Override
+    public void showMultiStatusUI(ServerPlayer player) {
+
+        ImmutableMap.Builder<UUID, JobID> b = ImmutableMap.builder();
+        List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
+        es.forEach(e -> b.put(e.getUUID(), e.getJobId()));
+        ImmutableMap<UUID, JobID> jobs = b.build();
+
+        NetworkHooks.openGui(player, new MenuProvider() {
+            @Override
+            public @NotNull Component getDisplayName() {
+                return TextComponent.EMPTY;
+            }
+
+            @Override
+            public @NotNull AbstractContainerMenu createMenu(
+                    int windowId,
+                    @NotNull Inventory inv,
+                    @NotNull Player p
+            ) {
+                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId, jobs);
+                multiStatusMenu.connectToServer(es, player);
+                return multiStatusMenu;
+            }
+        }, data -> MultiStatusMenu.toNetwork(data, jobs));
     }
 }

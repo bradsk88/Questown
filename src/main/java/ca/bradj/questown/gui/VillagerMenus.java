@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.core.BlockPos;
@@ -29,14 +30,13 @@ public class VillagerMenus {
     ) {
         // Buffer reads - order must match write()
         int i = buf.readInt();
-        String rootId = buf.readUtf();
-        String jobId1 = buf.readUtf();
+        JobID jobId = Jobs.getIdFromNetwork(buf);
+
         int invSize = buf.readInt();
         Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
         BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
 
-        JobID jobId = new JobID(rootId, jobId1);
         // FIXME: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);

@@ -21,6 +21,11 @@ public class QuestownNetwork {
     );
 
     public static void init() {
+        initMessagesToServer();
+        initMessagesToClient();
+    }
+
+    private static void initMessagesToServer() {
         Compat.withConsumer(
                 registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
                 encoder(AddWorkFromUIMessage::encode).
@@ -64,39 +69,48 @@ public class QuestownNetwork {
                 CreateStockRequestFromUIMessage::handle
         ).add();
         Compat.withConsumer(
+                registerMessage(OpenMultiVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                encoder(OpenMultiVillagerMenuMessage::encode).
+                decoder(OpenMultiVillagerMenuMessage::decode),
+                OpenMultiVillagerMenuMessage::handle
+        ).add();
+    }
+
+    private static void initMessagesToClient() {
+        Compat.withConsumer(
                 registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(SyncBlockItemMessage::encode).
-                decoder(SyncBlockItemMessage::decode),
+                        encoder(SyncBlockItemMessage::encode).
+                        decoder(SyncBlockItemMessage::decode),
                 SyncBlockItemMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(OpenVillagerAdvancementsMenuMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(OpenVillagerAdvancementsMenuMessage::encode).
-                decoder(OpenVillagerAdvancementsMenuMessage::decode),
+                        encoder(OpenVillagerAdvancementsMenuMessage::encode).
+                        decoder(OpenVillagerAdvancementsMenuMessage::decode),
                 OpenVillagerAdvancementsMenuMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(OnScreenTextMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(OnScreenTextMessage::encode).
-                decoder(OnScreenTextMessage::decode),
+                        encoder(OnScreenTextMessage::encode).
+                        decoder(OnScreenTextMessage::decode),
                 OnScreenTextMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(JobWantedIngredientsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(JobWantedIngredientsMessage::encode).
-                decoder(JobWantedIngredientsMessage::decode),
+                        encoder(JobWantedIngredientsMessage::encode).
+                        decoder(JobWantedIngredientsMessage::decode),
                 JobWantedIngredientsMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(SyncVillagerAdvancementsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(SyncVillagerAdvancementsMessage::encode).
-                decoder(SyncVillagerAdvancementsMessage::decode),
+                        encoder(SyncVillagerAdvancementsMessage::encode).
+                        decoder(SyncVillagerAdvancementsMessage::decode),
                 SyncVillagerAdvancementsMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(CloseScreensMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                encoder(CloseScreensMessage::encode).
-                decoder(CloseScreensMessage::decode),
+                        encoder(CloseScreensMessage::encode).
+                        decoder(CloseScreensMessage::decode),
                 CloseScreensMessage::handle
         ).add();
     }

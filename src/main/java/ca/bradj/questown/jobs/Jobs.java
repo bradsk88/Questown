@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -305,6 +306,19 @@ public class Jobs {
             b.add(MCHeldItem.fromMCItemStack(inv.getItem(i)));
         }
         return b.build();
+    }
+
+    public static JobID getIdFromNetwork(FriendlyByteBuf buf) {
+        String rootId = buf.readUtf();
+        String jobId1 = buf.readUtf();
+        return new JobID(rootId, jobId1);
+    }
+
+    public static void writeIdToNetwork(
+            FriendlyByteBuf buf,
+            JobID job) {
+        buf.writeUtf(job.rootId());
+        buf.writeUtf(job.jobId());
     }
 
     public interface LootDropper<I> {

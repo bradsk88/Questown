@@ -1,8 +1,8 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
-import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
+import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
@@ -12,7 +12,6 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraft.client.renderer.blockentity.BedRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.commands.synchronization.ArgumentTypes;
@@ -71,7 +70,10 @@ public class Questown {
         return new ResourceLocation(Questown.MODID, id);
     }
 
-    public static ResourceLocation ResourceLocation(String id, Object... args) {
+    public static ResourceLocation ResourceLocation(
+            String id,
+            Object... args
+    ) {
         return new ResourceLocation(Questown.MODID, String.format(id, args));
     }
 
@@ -82,13 +84,20 @@ public class Questown {
     private void doClientStuff(final FMLClientSetupEvent event) {
         Compat.setCutoutRenderType(BlocksInit.FALSE_DOOR_BLOCK.get());
         Compat.setCutoutRenderType(BlocksInit.FALSE_WALL_BLOCK.get());
-        MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
-        MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
+        MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(
+                MenuTypesInit.TOWN_QUESTS.get(),
+                QuestsScreen::forTown
+        );
+        MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(
+                MenuTypesInit.VILLAGER_QUESTS.get(),
+                QuestsScreen::forVillager
+        );
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.CREATE_STOCK_REQUEST.get(), CreateStockRequestScreen::new);
         MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
+        MenuScreens.register(MenuTypesInit.MULTI_VILLAGER.get(), MultiStatusScreen::new);
         MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),

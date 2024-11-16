@@ -87,4 +87,6 @@ public interface VillagerHolder {
     Optional<PoseInPlace> getRequestedPose(UUID uuid);
 
     void clearPoseRequests(UUID uuid);
+
+    void showMultiStatusUI(ServerPlayer sender);
 }
