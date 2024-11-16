@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
@@ -88,7 +89,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
 
-    public static void logStoredData(TownFlagBlockEntity entity, CompoundTag tTag) {
+    public static void logStoredData(
+            TownFlagBlockEntity entity,
+            CompoundTag tTag
+    ) {
         List<String> qss = entity.getAllQuests().stream().map(Quest::toShortString).toList();
         QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
         QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
@@ -338,6 +342,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         villagerHandle.makeAllTotallyHungry();
         Compat.getBlockStoredTagData(this)
               .putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        resetDiningRooms();
+    }
+
+    private void resetDiningRooms() {
+        Collection<RoomRecipeMatch<MCRoom>> diningRooms = roomsHandle.getMatches(
+                m -> m.getRecipeID().equals(Questown.ResourceLocation("dining_room"))
+        );
+        for (RoomRecipeMatch<MCRoom> diningRoom : diningRooms) {
+            for (Map.Entry<BlockPos, Block> e : diningRoom.getContainedBlocks().entrySet()) {
+                if (!(e.getValue() instanceof PlateBlock)) {
+                    continue;
+                }
+                QT.FLAG_LOGGER.debug("Resetting plate claim and state at {}", e.getKey());
+                jobHandle.clearClaim(e.getKey());
+                jobHandle.clearState(e.getKey());
+            }
+        }
     }
 
     private static void profileTick(
@@ -851,7 +872,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             VisitorMobEntity f
     ) {
         f.setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, f.getJobJournalSnapshot()
-                                                          .items(), visitorUUID));
+                                                                            .items(), visitorUUID));
     }
 
     @Override
