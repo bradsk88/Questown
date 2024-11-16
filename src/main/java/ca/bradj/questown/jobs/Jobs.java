@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,7 +36,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,22 +74,6 @@ public class Jobs {
         return d < 5;
     }
 
-    public static boolean isVeryCloseTo(
-            Vec3 entityPos,
-            @NotNull BlockPos targetPos
-    ) {
-        double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
-        return d < 0.5;
-    }
-
-
-    public static boolean isOnTopOf(
-            Vec3 position,
-            BlockPos center
-    ) {
-        return isVeryCloseTo(position.with(Direction.Axis.Y, center.getY()), center);
-    }
-
     public static void handleItemChanges(
             Container inventory,
             ImmutableList<MCHeldItem> items
@@ -118,6 +100,7 @@ public class Jobs {
         if (invState.inventoryIsFull()) {
             return false;
         }
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
         H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         return true;
@@ -138,11 +121,7 @@ public class Jobs {
         } else {
             currentTarget = find.get();
         }
-        if (currentTarget != null) {
-            return currentTarget;
-        } else {
-            return null;
-        }
+        return currentTarget;
     }
 
     public static boolean openInventoryAndStatusScreen(
@@ -194,6 +173,7 @@ public class Jobs {
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
+        //noinspection UnnecessaryLocalVariable
         MCRoom in = JobsClean.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
@@ -253,39 +233,14 @@ public class Jobs {
         return ImmutableList.copyOf(b2);
     }
 
-    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, ItemStack>> unMC(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, ItemStack>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, PredicateCollection.<MCTownItem, ItemStack>wrap(
-                        new IPredicateCollection<ItemStack>() {
-                            @Override
-                            public boolean isEmpty() {
-                                return v.isEmpty();
-                            }
-
-                            @Override
-                            public boolean test(ItemStack mcTownItem) {
-                                return false;
-                            }
-                        },
-                        (inner) -> v.isEmpty(),
-                        (inner, item) -> v.test(item.toItemStack()),
-                        String.format("Ingredient2Predicate [%s]", v.toJson())
-                ))
-        );
-        return b.build();
-    }
-
     // This name is just irony because there are so many "un" functions
     public static ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> unMC5(
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
         ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, PredicateCollection.<MCTownItem, MCTownItem>wrap(
-                        new IPredicateCollection<MCTownItem>() {
+                (k, v) -> b.put(k, PredicateCollection.wrap(
+                        new IPredicateCollection<>() {
                             @Override
                             public boolean isEmpty() {
                                 return v.isEmpty();
@@ -309,52 +264,12 @@ public class Jobs {
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
-        );
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unMCHeld2(
-            ImmutableMap<Integer, Ingredient> input
-    ) {
-        return unFn(unMCHeld(input));
-    }
-
     public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> unMCHeld3(
             ImmutableMap<Integer, Ingredient> input
     ) {
 
         ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> b = ImmutableMap.builder();
         input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient2(v)));
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(
-            Map<Integer, Function<MCHeldItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, v::apply));
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCTownItem>> unFn2(
-            Map<Integer, Function<MCTownItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, v::apply));
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unHeld(
-            ImmutableMap<Integer, Function<MCTownItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
         return b.build();
     }
 
@@ -365,13 +280,6 @@ public class Jobs {
         input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
         return b.build();
     }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn3(ImmutableMap<Integer, Function<MCTownItem, Boolean>> input) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
-        return b.build();
-    }
-
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
             Predicate<BlockPos> isCorrectBlock,
@@ -382,10 +290,32 @@ public class Jobs {
         ).stream().map(RoomRecipeMatches::unsafe).toList();
     }
 
+    public static ImmutableList<MCHeldItem> getHeldItems(
+            Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job
+    ) {
+        Container inv = job.getInventory();
+        return getHeldItems(inv);
+    }
+
+    public static @NotNull ImmutableList<MCHeldItem> getHeldItems(
+            Container inv
+    ) {
+        ImmutableList.Builder<MCHeldItem> b = ImmutableList.builder();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            b.add(MCHeldItem.fromMCItemStack(inv.getItem(i)));
+        }
+        return b.build();
+    }
+
     public interface LootDropper<I> {
 
         UUID UUID();
 
+        boolean shouldHoldAllItems();
+
+        /**
+         * @deprecated Use shouldHoldAllItems
+         */
         boolean hasAnyLootToDrop();
 
         Iterable<I> getItemsForDrop();

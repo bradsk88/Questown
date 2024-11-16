@@ -230,6 +230,11 @@ public abstract class ProductionJob<
     }
 
     @Override
+    public boolean shouldHoldAllItems() {
+        return !journal.hasAnyLootToDrop();
+    }
+
+    @Override
     public boolean hasAnyLootToDrop() {
         return journal.hasAnyLootToDrop();
     }

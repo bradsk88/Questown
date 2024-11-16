@@ -14,11 +14,15 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -148,5 +152,26 @@ public class FetcherHack {
             return ProductionStatus.DROPPING_LOOT;
         }
         return null;
+    }
+
+    public static @NotNull List<Ingredient> getProductionNeeds(
+            List<MCHeldItem> heldItems
+    ) {
+        Optional<MCHeldItem> clipboard = heldItems
+                .stream()
+                .filter(v -> v.get().get() instanceof StockRequestItem)
+                .findFirst();
+        if (clipboard.isEmpty()) {
+            return ImmutableList.of(Ingredient.of(ItemsInit.STOCK_REQUEST.get()));
+        }
+        CompoundTag nbt = clipboard.get().getItemNBTData();
+        if (!StockRequestItem.hasRequest(nbt)) {
+            return ImmutableList.of(Ingredient.of(ItemsInit.STOCK_REQUEST.get()));
+        }
+        WorkRequest request = StockRequestItem.getRequest(nbt);
+        return ImmutableList.of(
+                Ingredient.of(ItemsInit.STOCK_REQUEST.get()),
+                request.asIngredient()
+        );
     }
 }

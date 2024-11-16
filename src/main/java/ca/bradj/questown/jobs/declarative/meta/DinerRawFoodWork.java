@@ -56,8 +56,14 @@ public class DinerRawFoodWork {
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()),
-            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.ATE_RAW_FOOD, Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get())
+            EffectMetaItem.withLastingEffect(
+                    EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING,
+                    Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()
+            ),
+            EffectMetaItem.withLastingEffect(
+                    EffectMetaItem.MoodEffects.ATE_RAW_FOOD,
+                    Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()
+            )
     );
     public static final int PAUSE_FOR_ACTION = 10;
 
@@ -102,7 +108,7 @@ public class DinerRawFoodWork {
                         () -> Long.MAX_VALUE,
                         jobId -> jobId
                 )
-        ).withNeeds(s -> ImmutableList.of(INGREDIENTS));
+        ).withNeeds((items) -> ImmutableList.of(INGREDIENTS));
     }
 
     public static JobID getIdForRoot(String rootId) {

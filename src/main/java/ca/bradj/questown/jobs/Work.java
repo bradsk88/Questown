@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.town.Warper;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -27,7 +29,7 @@ public record Work(
         IStatus<?> initialStatus,
         Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
         @Nullable ItemStack initialRequest,
-        Function<IStatus<?>, Collection<Ingredient>> needs,
+        Function<List<MCHeldItem>, Collection<Ingredient>> needs,
         Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
         int priority
 ) {
@@ -39,7 +41,7 @@ public record Work(
         );
     }
 
-    public Work withNeeds(Function<IStatus<?>, Collection<Ingredient>> needz) {
+    public Work withNeeds(Function<List<MCHeldItem>, Collection<Ingredient>> needz) {
         return new Work(
                 id, parentID, icon, jobFunc, snapshotFunc,
                 isJobBlock, baseRoom, initialStatus, results, initialRequest, needz, warper,

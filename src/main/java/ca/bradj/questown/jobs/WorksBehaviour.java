@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.fetcher.FetcherHack;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
@@ -105,11 +106,13 @@ public class WorksBehaviour {
         );
     }
 
-    public interface JobFunc extends Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
+    public interface JobFunc extends
+            Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
 
     }
 
-    public interface SnapshotFunc extends TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
+    public interface SnapshotFunc extends
+            TriFunction<JobID, String, ImmutableList<MCHeldItem>, ImmutableSnapshot<MCHeldItem, ?>> {
 
     }
 
@@ -160,7 +163,7 @@ public class WorksBehaviour {
             WorkSpecialRules special,
             @Nullable SoundInfo workSound,
             ExpirationRules expiration
-            ) {
+    ) {
         return new Work(
                 jobId,
                 parentID,
@@ -186,7 +189,7 @@ public class WorksBehaviour {
                 ProductionStatus.FACTORY.idle(),
                 description.currentlyPossibleResults(),
                 description.initialRequest(),
-                status -> getProductionNeeds(states.ingredientsRequired(), states.toolsRequired()),
+                (items) -> getProductionNeeds(jobId, states, items),
                 warpInput -> WorksBehaviour.productionWarper(
                         jobId,
                         warpInput,
@@ -204,6 +207,17 @@ public class WorksBehaviour {
                 ),
                 1
         );
+    }
+
+    private static @NotNull List<Ingredient> getProductionNeeds(
+            JobID jobId,
+            WorkStates states,
+            List<MCHeldItem> heldItems
+    ) {
+        if (FetcherHack.isFetcher(jobId)) {
+            return FetcherHack.getProductionNeeds(heldItems);
+        }
+        return getProductionNeeds(states.ingredientsRequired(), states.toolsRequired());
     }
 
     @NotNull
@@ -231,7 +245,6 @@ public class WorksBehaviour {
             ImmutableMap<Integer, Ingredient> ing,
             ImmutableMap<Integer, Ingredient> tools
     ) {
-        // TODO: Is it okay that we ignore status here?
         ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
         ing.values().forEach(b::add);
         tools.values().forEach(b::add);

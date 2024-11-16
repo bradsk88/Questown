@@ -4,6 +4,7 @@ import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.JobWantedIngredientsMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
@@ -309,7 +310,7 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     ) {
         IStatus<?> status = e.getStatusForServer();
         addStatusListener(e, status);
-        addWantedIngredientsListener(e, sender, status);
+        addWantedIngredientsListener(e, sender);
     }
 
     private void addStatusListener(
@@ -323,23 +324,21 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
 
     private void addWantedIngredientsListener(
             VisitorMobEntity e,
-            ServerPlayer sender,
-            IStatus<?> status
+            ServerPlayer sender
     ) {
-        JobWantedIngredientsMessage msg = buildMessage(e, status);
+        JobWantedIngredientsMessage msg = buildMessage(e);
         PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
         Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.CHANNEL.send(tgt, msg);
 
         e.addWantedIngredientsListener(listener);
         this.closers.add(() -> e.removeWantedIngredientsListener(listener));
-        QuestownNetwork.CHANNEL.send(tgt, buildMessage(e, status));
+        QuestownNetwork.CHANNEL.send(tgt, buildMessage(e));
     }
 
     private static @NotNull JobWantedIngredientsMessage buildMessage(
-            VisitorMobEntity e,
-            IStatus<?> status
+            VisitorMobEntity e
     ) {
-        Function<IStatus<?>, ImmutableList<Ingredient>> wantFn = JobsRegistry.getWantedResourcesProvider(e.getJobId());
-        return new JobWantedIngredientsMessage(wantFn.apply(status));
+        Function<List<MCHeldItem>, ImmutableList<Ingredient>> wantFn = JobsRegistry.getWantedResourcesProvider(e.getJobId());
+        return new JobWantedIngredientsMessage(wantFn.apply(Jobs.getHeldItems(e.getInventory())));
     }
 }

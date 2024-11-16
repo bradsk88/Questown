@@ -245,6 +245,7 @@
   "jobs.smelter": "Smelter",
   "jobs.blacksmith": "Blacksmith",
   "jobs.crafter": "Crafter",
+  "jobs.organizer": "Organizer",
   "job_board.default_name": "An item was requested",
   "job_board.remove_work": "Remove request",
   "job_board.add_work.title": "Request an item",

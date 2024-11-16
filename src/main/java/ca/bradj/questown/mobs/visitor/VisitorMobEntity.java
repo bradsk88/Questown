@@ -185,11 +185,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         if (town != null) {
             initBrain();
-            setArrowCount((int) (town.getVillagerHandle().getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
+            setArrowCount((int) (town.getVillagerHandle()
+                                     .getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
         this.changeListeners.add(() -> {
-            IStatus<?> s = getStatusForServer();
-            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId()).apply(s);
+            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId())
+                                                     .apply(Jobs.getHeldItems(job.get()));
             ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
         });
     }
@@ -350,6 +351,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
      */
+    @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
         String curJobName = "null";

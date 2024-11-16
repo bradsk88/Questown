@@ -59,7 +59,7 @@ public class JobsRegistry {
             BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
             TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
             TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest,
-            BiFunction<JobID, IStatus<?>, ImmutableList<Ingredient>> needs
+            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
     ) {
 
         static SpecialJob fromWork(
@@ -81,7 +81,7 @@ public class JobsRegistry {
                     (id, owner) -> cached.apply(id).jobFunc().apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
                     (id, bs, bp) -> cached.apply(id).isJobBlock().test(ignored -> bs.get(), bp),
-                    (id, s) -> ImmutableList.copyOf(cached.apply(id).needs().apply(s))
+                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs().apply(items))
             );
         }
     }
@@ -99,7 +99,7 @@ public class JobsRegistry {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
                 },
-                (id, s) -> ImmutableList.of()
+                (id, items) -> ImmutableList.of()
         ));
 
         b.add(SpecialJob.fromWork(DinerWork::isDining, id -> DinerWork.asWork(id.rootId())));
@@ -241,27 +241,27 @@ public class JobsRegistry {
         return requestedResult.test(work.initialRequest());
     }
 
-    public static Function<IStatus<?>, ImmutableList<Ingredient>> getWantedResourcesProvider(
+    public static Function<List<MCHeldItem>, ImmutableList<Ingredient>> getWantedResourcesProvider(
             JobID p
     ) {
         if (isSeekingWork(p)) {
-            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()));
+            return (items) -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()));
         }
         if (ResterWork.isResting(p)) {
-            return (s) -> ImmutableList.of(Ingredient.of(ItemsInit.HOSPITAL_BED.get()));
+            return (items) -> ImmutableList.of(Ingredient.of(ItemsInit.HOSPITAL_BED.get()));
         }
 
         Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(p)).findFirst();
         if (sj.isPresent()) {
-            return s -> sj.get().needs().apply(p, s);
+            return (items) -> sj.get().needs().apply(p, items);
         }
 
         Supplier<Work> w = Works.get(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
-            return (s) -> ImmutableList.of();
+            return (items) -> ImmutableList.of();
         }
-        return s -> ImmutableList.copyOf(w.get().needs().apply(s));
+        return (items) -> ImmutableList.copyOf(w.get().needs().apply(items));
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {

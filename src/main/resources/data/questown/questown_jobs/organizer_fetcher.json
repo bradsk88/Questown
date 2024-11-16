@@ -2,8 +2,8 @@
   "version": 2,
   "id": "organizer/fetch",
   "priority": "4000",
-  "parent": "organizer/learn",
-  "icon": "minecraft:book",
+  "parent": null,
+  "icon": "questown:stock_request",
   "initial_request": null,
   "result": {
     "type": "item",
