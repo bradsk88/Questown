@@ -11,7 +11,9 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -92,7 +94,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
         QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
         QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
-        QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(), '\n'));
+        QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(x -> true), '\n'));
 
         String prettyJsonString = new GsonBuilder().setPrettyPrinting().create()
                                                    .toJson(JsonParser.parseString(tTag.toString()));
@@ -147,6 +149,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownRoomsHandle roomsHandle = new TownRoomsHandle();
     final TownMessages messages = new TownMessages();
 
+    @Override
     public TownPossibleWork getPossibleWork() {
         return possibleWork;
     }
@@ -774,8 +777,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> JobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
+        Predicate<JobID> canAlwaysStart = p -> JobsRegistry.canAlwaysStart(uuid, p);
         JobID work = TownVillagers.chooseFromList(
-                canFit, requestedResults, td, possibleWork.getFor(villager.getJobId())
+                canFit, canAlwaysStart, requestedResults, td, possibleWork.getFor(villager.getJobId())
         );
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
@@ -788,7 +792,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         preferredBuffer = 0;
 
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, requestedResults, td);
+        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
         if (work != null) {
             changeJobForVisitor(ownerUUID, work);
             return true;
@@ -846,7 +850,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             JobID jobName,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(jobName, f.getJobJournalSnapshot()
+        f.setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, f.getJobJournalSnapshot()
                                                           .items(), visitorUUID));
     }
 

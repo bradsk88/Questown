@@ -100,6 +100,11 @@ class TownStateTest {
         public String toShortString() {
             return String.join(", ", items.stream().map(v -> v.value).toList());
         }
+
+        @Override
+        public String toShortString(boolean includeAir) {
+            return toShortString();
+        }
     }
 
     private TestTownState townState;
@@ -110,7 +115,7 @@ class TownStateTest {
     void depositItems_shouldDepositItemsIntoContainers() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Position(0, 0), new Container(false), () -> true
+                        new Position(0, 0), 0, new Position(0, 0), new Container(false), () -> true, i -> {}
                 )
         );
 
@@ -149,7 +154,7 @@ class TownStateTest {
     void depositItems_shouldReturnAllInputITemsWhenNoStorageAvailable() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Position(0, 0), new Container(true), () -> true
+                        new Position(0, 0), 0, new Position(0, 0), new Container(true), () -> true, i -> {}
                 )
         );
 

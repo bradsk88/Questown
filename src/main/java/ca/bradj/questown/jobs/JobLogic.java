@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 public class JobLogic<EXTRA, TOWN, POS> {
 
     private int worked = 0;
+    private int ticksWithoutNextJob = 0;
 
     public boolean hasWorkedRecently() {
         return worked > 0;
@@ -39,7 +40,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean canDropLoot();
 
-        void tryDropLoot();
+        boolean tryDropLoot();
 
         void tryGetSupplies();
 
@@ -56,6 +57,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         void changeToNextJob();
 
         boolean setWorkLeftAtFreshState(int workRequiredAtFirstState);
+
+        void clearInsertedSupplies();
     }
 
     private WorkPosition<POS> workSpot;
@@ -97,13 +100,33 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
+        if (ticksWithoutNextJob > 500) { // TODO: Config
+            QT.JOB_LOGGER.debug(
+                    "{} gave up waiting for different work after {} ticks ({})",
+                    entityCurrentJob.rootId(),
+                    ticksWithoutNextJob,
+                    entityCurrentJob.jobId()
+            );
+            // TODO: Visual indicator that something is wrong
+            worldBeforeTick.changeJob(expiration.noSuppliesFallbackFn().apply(entityCurrentJob));
+            return;
+        }
+
+
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
+
+        if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
+            this.workSpot = null;
+            return;
+        }
 
         if (ImmutableList.of(
                 ProductionStatus.NO_SUPPLIES,
                 ProductionStatus.NO_JOBSITE
         ).contains(status)) {
+            noSuppliesTicks++;
+        } else if (status.isWorkingOnProduction() && workSpot == null) {
             noSuppliesTicks++;
         } else {
             noSuppliesTicks = 0;
@@ -117,12 +140,14 @@ public class JobLogic<EXTRA, TOWN, POS> {
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
+                worldBeforeTick.clearInsertedSupplies();
             }
             return;
         }
 
         if (this.grabbedInsertedSupplies) {
-            worldBeforeTick.seekFallbackWork();
+            worldBeforeTick.changeToNextJob();
+            ticksWithoutNextJob++;
             return;
         }
 
@@ -155,11 +180,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
-        if (worldBeforeTick.canDropLoot()) {
-            worldBeforeTick.changeToNextJob();
-            return;
-        }
-
         if (isEntityInJobSite && status.isWorkingOnProduction()) {
             doTryWorking(
                     extra,
@@ -171,13 +191,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
             );
         }
 
-        worldBeforeTick.tryDropLoot();
+        if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
+            this.workSpot = null;
+            return;
+        }
         worldBeforeTick.tryGetSupplies();
 
         if (wrappingUp) {
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
             worldBeforeTick.changeToNextJob();
+            ticksWithoutNextJob++;
         }
     }
 

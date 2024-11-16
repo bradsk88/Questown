@@ -3,13 +3,18 @@ package ca.bradj.questown.core;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class UtilClean {
+
+    public static <X> List<Pair<Integer, X>> enumerate(List<X> list) {
+        ImmutableList.Builder<UtilClean.Pair<Integer, X>> b = ImmutableList.builder();
+        for (int i = 0; i < list.size(); i++) {
+            b.add(new UtilClean.Pair<>(i, list.get(i)));
+        }
+        return b.build();
+    }
 
     public record Pair<A, B>(A a, B b){};
 

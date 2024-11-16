@@ -79,7 +79,7 @@ public class QTNBT {
             String key,
             int val
     ) {
-        t.putInt(key, val);
+        t.putInt(keyify(key), val);
     }
 
     public static ResourceLocation getResourceLocation(

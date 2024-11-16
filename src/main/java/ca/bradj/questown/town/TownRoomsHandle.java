@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>,
@@ -173,7 +174,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     @Override
     public Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr) {
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
-        for (RoomRecipeMatch<MCRoom> i : roomsMap.getAllMatches()) {
+        for (RoomRecipeMatch<MCRoom> i : roomsMap.getAllMatches(x -> true)) {
             for (Map.Entry<BlockPos, Block> j : i.getContainedBlocks()
                                                  .entrySet()) {
                 if (mr.doesMatch(j.getValue())) {
@@ -186,13 +187,10 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
 
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
-        long beds = roomsMap.getAllMatches()
+        long beds = roomsMap.getAllMatches(v -> true)
                             .stream()
-                            .flatMap(v -> v.getContainedBlocks()
-                                           .values()
-                                           .stream())
-                            .filter(v -> Ingredient.of(ItemTags.BEDS)
-                                                   .test(new ItemStack(v.asItem())))
+                            .flatMap(v -> v.getContainedBlocks().values().stream())
+                            .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem())))
                             .count();
         if (beds == 0 && numVillagers == 0) {
             return false;
@@ -201,8 +199,8 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
     }
 
     @Override
-    public Collection<RoomRecipeMatch<MCRoom>> getMatches() {
-        return this.roomsMap.getAllMatches();
+    public Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
+        return this.roomsMap.getAllMatches(include);
     }
 
     public void registerDoor(BlockPos clickedPos) {

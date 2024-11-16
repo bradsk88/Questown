@@ -14,6 +14,8 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -41,18 +43,13 @@ public class RealtimeWorldInteraction extends
     private int soundTicksLeft;
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
-    private final ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
     private final @Nullable SoundInfo sound;
 
     public RealtimeWorldInteraction(
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
-            ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> ingredientsRequiredAtStates,
-            ImmutableMap<Integer, Integer> ingredientQtyRequiredAtStates,
-            ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> toolsRequiredAtStates,
+            DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
@@ -65,16 +62,11 @@ public class RealtimeWorldInteraction extends
                 // Not used by this implementation
                 interval,
                 maxState,
-                toolsRequiredAtStates,
-                workRequiredAtStates,
-                ingredientsRequiredAtStates,
-                ingredientQtyRequiredAtStates,
-                timeRequiredAtStates,
+                checks,
                 claimSpots,
                 specialRules
         );
         this.journal = journal;
-        this.ingredientQtyRequiredAtStates = ingredientQtyRequiredAtStates;
         this.resultGenerator = resultGenerator;
         this.sound = sound;
         super.addItemInsertionListener((extra, bp, item) -> {
@@ -235,11 +227,6 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return ingredientQtyRequiredAtStates;
-    }
-
-    @Override
     public @Nullable WorkOutput<Boolean, WorkPosition<BlockPos>> tryWorking(
             MCExtra mcExtra,
             WorkPosition<BlockPos> workSpot
@@ -302,6 +289,10 @@ public class RealtimeWorldInteraction extends
             return true;
         }
         return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
+    }
+
+    public void clearInsertedSupplies(MCExtra extra) {
+        extra.entity().clearWorkToUndo();
     }
 
     @Override

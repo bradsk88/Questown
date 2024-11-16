@@ -84,5 +84,13 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("tools_from_held_item"),
                 new IngredientsFromHeldItemSpecialRule(true)
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.ADD_ITEM_TO_CONTAINER),
+                new AddItemToContainerSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("require_two_free_spots"),
+                new RequireTwoFreeSpotsSpecialRule()
+        );
     }
 }

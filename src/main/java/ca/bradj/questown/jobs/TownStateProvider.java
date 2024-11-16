@@ -1,11 +1,11 @@
 package ca.bradj.questown.jobs;
 
 public interface TownStateProvider {
-    boolean hasSupplies();
+    LZCD.Dependency<Void> hasSupplies();
 
-    boolean hasSpace();
+    LZCD.Dependency<Void> hasSpace();
 
-    boolean isTimerActive();
+    LZCD.Dependency<Void> isTimerActive();
 
-    boolean canUseMoreSupplies();
+    LZCD.Dependency<Void> canUseMoreSupplies();
 }

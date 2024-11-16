@@ -103,6 +103,10 @@ class JobLogicTest {
         }
 
         @Override
+        public void clearInsertedSupplies() {
+        }
+
+        @Override
         public WorkPosition<Position> getWorkSpot() {
             return this.workspot;
         }
@@ -118,8 +122,9 @@ class JobLogicTest {
         }
 
         @Override
-        public void tryDropLoot() {
+        public boolean tryDropLoot() {
 
+            return false;
         }
 
         @Override
@@ -500,6 +505,7 @@ class JobLogicTest {
         Assertions.assertTrue(world.states.getJobBlockState(ARBITRARY_WORKSPOT.jobBlock()).hasWorkLeft());
     }
 
+    @Disabled("Not implemented")
     @Test
     void tick_shouldNotSetJobState_IfFirstStepRequiresItemsOrWork() {
         Assertions.fail("Not implemented");

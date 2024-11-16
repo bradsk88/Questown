@@ -96,7 +96,7 @@ public class DinerNoTableWork {
                         () -> Long.MAX_VALUE,
                         jobId -> jobId
                 )
-        ).withNeeds(s -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
+        ).withNeeds((items) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
     }
 
     public static JobID getIdForRoot(String rootId) {

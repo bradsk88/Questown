@@ -96,8 +96,11 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return Positions.ToBlock(getPosition(), getYPosition());
     }
 
+    public String toShortString(boolean includeAir) {
+        return container.toShortString(includeAir);
+    }
     public String toShortString() {
-        return container.toShortString();
+        return this.toShortString(true);
     }
 
     public @Nullable Map.Entry<ContainerTarget<C, I>, I> withItemRemoved(Predicate<I> itemCheck) {
@@ -137,6 +140,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         boolean isFull();
 
         String toShortString();
+        String toShortString(boolean includeAir);
     }
 
     private final ValidCheck check;

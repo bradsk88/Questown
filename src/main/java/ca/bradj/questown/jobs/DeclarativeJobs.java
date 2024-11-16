@@ -1,31 +1,42 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraftforge.common.util.Lazy;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
+import java.util.*;
+import java.util.function.*;
 
 public class DeclarativeJobs {
 
@@ -123,6 +134,143 @@ public class DeclarativeJobs {
                 MCHeldItem::Air,
                 STATUS_FACTORY
         );
+    }
+
+    public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
+            @NotNull Integer maxState,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomHandle,
+            WorkStatusHandle<BlockPos, MCHeldItem> work
+    ) {
+        ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+        Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
+            ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
+            Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
+            List<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = roomHandle.getMatches();
+
+            rooms.forEach(match -> match.getContainedBlocks().forEach((bp, bv) -> {
+                State jobBlockState = work.getJobBlockState(bp);
+                if (jobBlockState == null) {
+                    return;
+                }
+                spotStatuses.put(bp, jobBlockState.processingState());
+                Util.addOrInitialize(roomStatuses, match.getRoom(), jobBlockState.processingState());
+            }));
+            return new UtilClean.Pair<>(spotStatuses.build(), roomStatuses);
+        };
+
+        for (int i = 0; i < maxState; i++) {
+            b.put(i, new RoomStates(i, e));
+        }
+        return b.build();
+    }
+
+    public static LZCD.Dependency<Void> supplies(
+            ServerLevel level,
+            Supplier<Map<Integer, LZCD.Dependency<Void>>> roomStatuses,
+            TownInterface rooms,
+            Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
+            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
+            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom
+    ) {
+        return new LZCD.SimpleDependency("town has supplies") {
+
+            @Override
+            public String describe() {
+                return "TODO"; // TODO?
+            }
+
+            @Override
+            protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
+                Map<Integer, LZCD.Dependency<Void>> needs = roomStatuses.get();
+                b.put("room needs", needs);
+
+                List<PredicateCollection<MCHeldItem, MCHeldItem>> neededIngredients = new ArrayList<>();
+                List<PredicateCollection<MCTownItem, MCTownItem>> neededTools = new ArrayList<>();
+                for (Map.Entry<Integer, LZCD.Dependency<Void>> v : needs.entrySet()) {
+                    if (!v.getValue().apply(() -> null).value) {
+                        continue;
+                    }
+                    PredicateCollection<MCHeldItem, MCHeldItem> ingt = ingredients.get(v.getKey());
+                    if (ingt != null) {
+                        neededIngredients.add(ingt);
+                    }
+                    PredicateCollection<MCTownItem, MCTownItem> tool = tools.get(v.getKey());
+                    if (tool != null) {
+                        neededTools.add(tool);
+                    }
+
+                }
+
+                b.put("relevant ingredients", neededIngredients);
+                b.put("relevant tools", neededTools);
+
+                List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
+                        rooms,
+                        level,
+                        shouldGetSuppliesFromRoom
+                );
+                b.put("containers", containers);
+
+                @Nullable WithReason<Boolean> found = null;
+                Map<String, Object> b2 = new HashMap<>();
+
+                for (ContainerTarget<MCContainer, MCTownItem> c : containers) {
+
+                    Position position = Positions.FromBlockPos(c.getBlockPos());
+                    String dPos = position.getUIString();
+                    for (MCTownItem i : c.getItems()) {
+                        if (i.isEmpty()) {
+                            continue;
+                        }
+                        if (b2.get(dPos) != null && Boolean.TRUE.equals(b2.get(dPos))) {
+                            continue;
+                        }
+                        MCHeldItem iHeld = MCHeldItem.fromTown(i);
+                        Optional<?> matchedIngredient = neededIngredients.
+                                stream().
+                                filter(ing -> ing.test(iHeld)).
+                                findFirst();
+                        String result = matchedIngredient.map(Object::toString).orElse("No match");
+                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        if (matchedIngredient.isPresent()) {
+                            found = WithReason.always(true, i.getShortName() + " matches " + matchedIngredient.get());
+                            if (stopOnTrue) {
+                                break;
+                            }
+                        }
+                        Optional<?> matchedTool = neededTools.
+                                stream().
+                                filter(ing -> ing.test(i)).
+                                findFirst();
+                        result = matchedTool.map(Object::toString).orElse("No match");
+                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        if (matchedTool.isPresent()) {
+                            found = WithReason.always(true, i.getShortName() + " matches " + matchedTool.get());
+                            if (stopOnTrue) {
+                                break;
+                            }
+                        }
+                    }
+                    if (found != null && stopOnTrue) {
+                        break;
+                    }
+                }
+
+                if (found == null) {
+                    found = WithReason.always(false, "No matches found for " + ingredients + " in any containers");
+                }
+
+                b.put("supply checks", ImmutableMap.copyOf(b2));
+                b.put("predicate", ingredients);
+                return new LZCD.Populated<>(
+                        "town has supplies",
+                        found,
+                        b.build(),
+                        null
+                );
+            }
+        };
     }
 
     private record HandlerInputs(
@@ -250,7 +398,7 @@ public class DeclarativeJobs {
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,
-                                fakeRoom,
+                                new RoomRecipeMatch<>(fakeRoom, new ResourceLocation("fake"), ImmutableList.of()),
                                 fakePos,
                                 outState.containers
                         ),
@@ -282,7 +430,7 @@ public class DeclarativeJobs {
                 long start = referenceTick;
                 long max = referenceTick + ticksPassed;
 
-                // TODO[ASAP]: Factor in timers and "walk time"
+                // TODO[WARP]: Factor in timers and "walk time"
                 int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
                 int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
                 for (long i = start; i <= max; i += stepInterval) {
@@ -302,5 +450,70 @@ public class DeclarativeJobs {
                 return fakeRoom;
             }
         };
+    }
+
+    private static class RoomStates implements LZCD.Dependency<Void> {
+
+        private static final String NAME = "rooms contain workstate";
+
+        private final Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
+        private final String name;
+        private final int state;
+        private LZCD.Populated<WithReason<Boolean>> value;
+
+        public RoomStates(
+                int state,
+                Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
+        ) {
+            this.inputs = inputs;
+            this.name = NAME + " " + state;
+            this.state = state;
+        }
+
+        @Override
+        public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+            // TODO[Performance]: Cache?
+//            if (value != null) {
+//                return value;
+//            }
+            UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
+            Map<BlockPos, Integer> spotStates = v.a();
+            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()
+                                                                         .filter(z -> Integer.compare(
+                                                                                 state,
+                                                                                 z.getValue()
+                                                                         ) == 0).findFirst();
+            WithReason<Boolean> hasSpot = foundSpot.map(
+                    zz -> WithReason.always(true, "town has workspot with state at " + foundSpot.get().getKey())
+            ).orElse(
+                    WithReason.always(false, "no spots found")
+            );
+
+            ImmutableMap.Builder<String, Object> css = ImmutableMap.builder();
+            spotStates.forEach((k, vv) -> css.put(k.toShortString(), vv));
+            ImmutableMap.Builder<String, Object> crs = ImmutableMap.builder();
+            v.b().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
+
+            this.value = new LZCD.Populated<>(name, hasSpot, ImmutableMap.of(
+                    "spots", css.build(),
+                    "rooms", crs.build()
+            ), null);
+            return value;
+        }
+
+        @Override
+        public String describe() {
+            return "TODO"; // TODO:
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
+            return this.populate().value();
+        }
     }
 }

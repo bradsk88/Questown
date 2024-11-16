@@ -2,10 +2,14 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.logic.MonoPredicateCollection;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -15,8 +19,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Supplier;
+
 
 public class TestWorldInteraction extends
         AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
@@ -28,9 +32,9 @@ public class TestWorldInteraction extends
 
     public TestWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             Iterable<GathererJournalTest.TestItem> results,
@@ -54,9 +58,9 @@ public class TestWorldInteraction extends
 
     public TestWorldInteraction(
             int maxState,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> toolsRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
             ImmutableMap<Integer, Integer> workRequiredAtStates,
-            ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
             ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
@@ -68,11 +72,15 @@ public class TestWorldInteraction extends
                 -1, // Not used
                 0,
                 maxState,
-                toolsRequiredAtStates,
-                workRequiredAtStates,
-                ingredientsRequiredAtStates,
-                ingredientQuantityRequiredAtStates,
-                timeRequiredAtStates,
+                new DeclarativeJobChecks<>(
+                        ingredientsRequiredAtStates,
+                        ingredientQuantityRequiredAtStates,
+                        toolsRequiredAtStates,
+                        workRequiredAtStates,
+                        timeRequiredAtStates,
+                        room -> true,
+                        block -> true
+                ),
                 (v) -> claim.get(),
                 ImmutableMap.of()
         );
@@ -99,11 +107,24 @@ public class TestWorldInteraction extends
         );
     }
 
-    private static ImmutableMap<Integer, Function<GathererJournalTest.TestItem, Boolean>> itemPred(
+    private static ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> itemPred(
             ImmutableMap<Integer, String> items
     ) {
-        ImmutableMap.Builder<Integer, Function<GathererJournalTest.TestItem, Boolean>> b = ImmutableMap.builder();
-        items.forEach((k, v) -> b.put(k, item -> v.equals(item.value)));
+        ImmutableMap.Builder<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> b = ImmutableMap.builder();
+        items.forEach((k, v) -> b.put(
+                k,
+                new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean test(GathererJournalTest.TestItem item) {
+                        return v.equals(item.value);
+                    }
+
+                    @Override
+                    public boolean isEmpty() {
+                        return false;
+                    }
+                }, "pc defined in itemPred")
+        ));
         return b.build();
     }
 
@@ -117,17 +138,33 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected void preStateChangeHooks(@NotNull Boolean ctx, Collection<String> rules, Void inputs, WorkSpot<Integer, Position> position) {
+    protected void preStateChangeHooks(
+            @NotNull Boolean ctx,
+            Collection<String> rules,
+            Void inputs,
+            WorkSpot<Integer, Position> position
+    ) {
 
     }
 
     @Override
-    protected @Nullable Boolean postInsertHook(@NotNull Boolean aBoolean, Collection<String> rules, Void inputs, WorkedSpot<Position> position, GathererJournalTest.TestItem item) {
+    protected @Nullable Boolean postInsertHook(
+            @NotNull Boolean aBoolean,
+            Collection<String> rules,
+            Void inputs,
+            WorkedSpot<Position> position,
+            GathererJournalTest.TestItem item
+    ) {
         return null;
     }
 
     @Override
-    protected @Nullable Boolean preExtractHook(Boolean aBoolean, Collection<String> rules, Void inputs, Position position) {
+    protected @Nullable Boolean preExtractHook(
+            Boolean aBoolean,
+            Collection<String> rules,
+            Void inputs,
+            Position position
+    ) {
         return null;
     }
 
@@ -204,11 +241,6 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    public Map<Integer, Integer> ingredientQuantityRequiredAtStates() {
-        return null;
-    }
-
-    @Override
     protected int getWorkSpeedOf10(Void unused) {
         return 10;
     }
@@ -236,8 +268,8 @@ public class TestWorldInteraction extends
     @Override
     protected Boolean degradeTool(
             Void unused,
-            Boolean tuwn,
-            Function<GathererJournalTest.TestItem, Boolean> heldItemBooleanFunction
+            @Nullable Boolean tuwn,
+            PredicateCollection<GathererJournalTest.TestItem, ?> heldItemBooleanFunction
     ) {
         return tuwn;
     }
@@ -274,7 +306,11 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected WorkedSpot<Position> getCurWorkedSpot(Void unused, Boolean stateSource, Position workSpot) {
+    protected WorkedSpot<Position> getCurWorkedSpot(
+            Void unused,
+            Boolean stateSource,
+            Position workSpot
+    ) {
         State stateAfterWork = getJobBlockState(null, workSpot);
         return new WorkedSpot<>(workSpot, Util.withFallbackForNullInput(stateAfterWork, State::processingState, 0));
     }

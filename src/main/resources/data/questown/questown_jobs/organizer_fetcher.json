@@ -2,8 +2,8 @@
   "version": 2,
   "id": "organizer/fetch",
   "priority": "4000",
-  "parent": "organizer/learn",
-  "icon": "minecraft:book",
+  "parent": null,
+  "icon": "questown:stock_request",
   "initial_request": null,
   "result": {
     "type": "item",
@@ -19,7 +19,7 @@
       "tools": "questown:stock_request"
     },
     {
-      "work": 25
+      "work": 3
     },
     {
       "comment": "this is only here to increase the max state",
@@ -31,7 +31,12 @@
     {
       "type": "global",
       "rules": [
-        "claim_workspot"
+        "claim_workspot",
+        "require_two_free_spots",
+        "always_consider",
+        "workspot_from_held_item",
+        "render_last_item_in_off_hand",
+        "take_random_ingredient"
       ]
     },
     {
@@ -55,6 +60,13 @@
       "rules": [
         "ingredients_from_held_item",
         "workspot_from_held_item"
+      ]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": [
+        "add_item_to_container"
       ]
     }
   ]

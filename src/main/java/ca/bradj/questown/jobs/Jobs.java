@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
@@ -18,17 +19,15 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,12 +36,10 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -77,22 +74,6 @@ public class Jobs {
         return d < 5;
     }
 
-    public static boolean isVeryCloseTo(
-            Vec3 entityPos,
-            @NotNull BlockPos targetPos
-    ) {
-        double d = targetPos.distToCenterSqr(entityPos.x, entityPos.y, entityPos.z);
-        return d < 0.5;
-    }
-
-
-    public static boolean isOnTopOf(
-            Vec3 position,
-            BlockPos center
-    ) {
-        return isVeryCloseTo(position.with(Direction.Axis.Y, center.getY()), center);
-    }
-
     public static void handleItemChanges(
             Container inventory,
             ImmutableList<MCHeldItem> items
@@ -119,6 +100,7 @@ public class Jobs {
         if (invState.inventoryIsFull()) {
             return false;
         }
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
         H emptySlot = inventory.stream().filter(Item::isEmpty).findFirst().get();
         inventory.set(inventory.indexOf(emptySlot), item);
         return true;
@@ -139,11 +121,7 @@ public class Jobs {
         } else {
             currentTarget = find.get();
         }
-        if (currentTarget != null) {
-            return currentTarget;
-        } else {
-            return null;
-        }
+        return currentTarget;
     }
 
     public static boolean openInventoryAndStatusScreen(
@@ -190,22 +168,18 @@ public class Jobs {
         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
     }
 
-    public static RoomRecipeMatch<MCRoom> getEntityCurrentJobSite(
-            TownInterface town,
-            ResourceLocation id,
-            BlockPos entityBlockPos
+    public static @Nullable MCRoom getEntityCurrentJobSite(
+            BlockPos entityBlockPos,
+            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
+            Collection<MCRoom> roomsWithCompletedProduct
     ) {
-        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
-        return town.getRoomHandle().getRoomsMatching(id).stream()
-                   .filter(v -> v.room.yCoord > entityBlockPos.getY() - 5)
-                   .filter(v -> v.room.yCoord < entityBlockPos.getY() + 5)
-                   .filter(v -> InclusiveSpaces.contains(
-                                   v.room.getSpaces(),
-                                   Positions.FromBlockPos(entityBlockPos)
-                           ) || v.room.getDoorPos().equals(Positions.FromBlockPos(entityBlockPos))
-                   )
-                   .findFirst()
-                   .orElse(null);
+        //noinspection UnnecessaryLocalVariable
+        MCRoom in = JobsClean.getEntityCurrentJobSite(
+                Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
+                roomsWithCompletedProduct,
+                (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5)
+        );
+        return in;
     }
 
     public static boolean hasNonSupplyItems(
@@ -259,13 +233,14 @@ public class Jobs {
         return ImmutableList.copyOf(b2);
     }
 
-    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, ?>> unMC(
+    // This name is just irony because there are so many "un" functions
+    public static ImmutableMap<Integer, PredicateCollection<MCTownItem, MCTownItem>> unMC5(
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
-        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, ?>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<Integer, PredicateCollection<MCTownItem, MCTownItem>> b = ImmutableMap.builder();
         toolsRequiredAtStates.forEach(
                 (k, v) -> b.put(k, PredicateCollection.wrap(
-                        new IPredicateCollection<MCTownItem>() {
+                        new IPredicateCollection<>() {
                             @Override
                             public boolean isEmpty() {
                                 return v.isEmpty();
@@ -275,117 +250,75 @@ public class Jobs {
                             public boolean test(MCTownItem mcTownItem) {
                                 return false;
                             }
+
+                            @Override
+                            public String toString() {
+                                return v.toJson().toString();
+                            }
                         },
                         (inner) -> v.isEmpty(),
                         (inner, item) -> v.test(item.toItemStack()),
-                        String.format("Ingredient2Predicate [%s]", v.toJson())
+                        "Ingredient2Predicate"
                 ))
         );
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> unMCHeld(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach(
-                (k, v) -> b.put(k, (MCHeldItem item) -> v.test(item.get().toItemStack()))
-        );
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unMCHeld2(
-            ImmutableMap<Integer, Ingredient> input
-    ) {
-        return unFn(unMCHeld(input));
-    }
-
-    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, ?>> unMCHeld3(
+    public static ImmutableMap<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> unMCHeld3(
             ImmutableMap<Integer, Ingredient> input
     ) {
 
-        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, ?>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient(v)));
+        ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> b = ImmutableMap.builder();
+        input.forEach((k, v) -> b.put(k, PredicateCollections.fromMCIngredient2(v)));
         return b.build();
     }
 
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn(
-            Map<Integer, Function<MCHeldItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, v::apply));
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCTownItem>> unFn2(
-            Map<Integer, Function<MCTownItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCTownItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, v::apply));
-        return b.build();
-    }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unHeld(
-            ImmutableMap<Integer, Function<MCTownItem, Boolean>> input
-    ) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
-        return b.build();
-    }
     public static ImmutableMap<Integer, Predicate<MCHeldItem>> unTown(
-            ImmutableMap<Integer, ? extends Predicate<MCTownItem>> input
+            Map<Integer, ? extends Predicate<MCTownItem>> input
     ) {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.test(z.get())));
+        input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
         return b.build();
     }
-
-    public static ImmutableMap<Integer, Predicate<MCHeldItem>> unFn3(ImmutableMap<Integer, Function<MCTownItem, Boolean>> input) {
-        ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
-        input.forEach((k, v) -> b.put(k, z -> v.apply(z.get())));
-        return b.build();
-    }
-
-    public interface StateCheck {
-        boolean Check(
-                ServerLevel sl,
-                BlockPos bp
-        );
-    }
-
     public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
-            TownInterface town,
-            Collection<RoomRecipeMatch<MCRoom>> rooms,
-            BiPredicate<ServerLevel, BlockPos> blockCheck,
-            StateCheck check
+            Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
+            Predicate<BlockPos> isCorrectBlock,
+            Predicate<BlockPos> hasCorrectState
     ) {
-        return rooms.stream()
-                    .filter(v -> {
-                        List<Map.Entry<BlockPos, Block>> containedJobBlocks = v.containedBlocks.entrySet().stream()
-                                                                                               .filter(
-                                                                                                       z -> blockCheck.test(
-                                                                                                               town.getServerLevel(),
-                                                                                                               z.getKey()
-                                                                                                       )
-                                                                                               ).toList();
-                        ImmutableSet<Map.Entry<BlockPos, Block>> blocks = ImmutableSet.copyOf(containedJobBlocks);
-                        for (Map.Entry<BlockPos, Block> e : blocks) {
-                            if (check.Check(town.getServerLevel(), e.getKey())) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    })
-                    .toList();
+        return JobsClean.roomsWithState(
+                rooms, isCorrectBlock, hasCorrectState
+        ).stream().map(RoomRecipeMatches::unsafe).toList();
+    }
+
+    public static ImmutableList<MCHeldItem> getHeldItems(
+            Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job
+    ) {
+        Container inv = job.getInventory();
+        return getHeldItems(inv);
+    }
+
+    public static @NotNull ImmutableList<MCHeldItem> getHeldItems(
+            Container inv
+    ) {
+        ImmutableList.Builder<MCHeldItem> b = ImmutableList.builder();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            b.add(MCHeldItem.fromMCItemStack(inv.getItem(i)));
+        }
+        return b.build();
     }
 
     public interface LootDropper<I> {
 
         UUID UUID();
 
+        boolean shouldHoldAllItems();
+
+        /**
+         * @deprecated Use shouldHoldAllItems
+         */
         boolean hasAnyLootToDrop();
 
-        Iterable<I> getItems();
+        Iterable<I> getItemsForDrop();
 
         boolean removeItem(I mct);
 
@@ -404,7 +337,7 @@ public class Jobs {
 
 
         boolean farFromChest = !isCloseTo(entityPos, target.getBlockPos());
-        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItems()));
+        List<MCHeldItem> snapshot = Lists.reverse(ImmutableList.copyOf(dropper.getItemsForDrop()));
         for (MCHeldItem mct : snapshot) {
             if (mct.isEmpty()) {
                 continue;

@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -58,7 +60,7 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     }
 
     @Override
-    public void initialize(Snapshot<MCHeldItem> journal) {
+    public void initialize(ServerLevel level, Snapshot<MCHeldItem> journal) {
 
     }
 
@@ -167,5 +169,10 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     @Override
     public boolean isWorking() {
         return false;
+    }
+
+    @Override
+    public Collection<String> getGlobalSpecialRules() {
+        throw new UnsupportedOperationException("Client Side");
     }
 }

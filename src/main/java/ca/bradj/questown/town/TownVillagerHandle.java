@@ -86,6 +86,13 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     private void tickHunger() {
+        if (!Config.HUNGER_ENABLED.get()) {
+            entities.forEach(e -> {
+                fullness.put(e.getUUID(), Config.BASE_FULLNESS.get());
+            });
+            return;
+        }
+
         Map<UUID, Integer> map = fullness;
         Integer base = Config.BASE_FULLNESS.get();
         BiConsumer<Integer, LivingEntity> then = (newVal, e) -> {
@@ -384,19 +391,19 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isDining(UUID uuid) {
         return entities.stream()
-                       .filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
-                       .findFirst()
-                       .orElse(false);
+                .filter(v -> uuid.equals(v.getUUID()))
+                .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
+                .findFirst()
+                .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
         return entities.stream()
-                       .filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
-                       .findFirst()
-                       .orElse(false);
+                .filter(v -> uuid.equals(v.getUUID()))
+                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
+                .findFirst()
+                .orElse(false);
     }
 
     @Override

@@ -136,6 +136,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<ItemStack> heldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
+    private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
+    );
 
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
@@ -182,11 +185,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         if (town != null) {
             initBrain();
-            setArrowCount((int) (town.getVillagerHandle().getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
+            setArrowCount((int) (town.getVillagerHandle()
+                                     .getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
         this.changeListeners.add(() -> {
-            IStatus<?> s = getStatusForServer();
-            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId()).apply(s);
+            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId())
+                                                     .apply(Jobs.getHeldItems(job.get()));
             ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
         });
     }
@@ -332,6 +336,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.sleepListeners.add(l);
     }
 
+    public void clearWorkToUndo() {
+        this.workToUndo = null;
+    }
+
     public record WorkToUndo(
             JobID jobID,
             BlockPos pos,
@@ -343,6 +351,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitor} instead.
      */
+    @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
         String curJobName = "null";
@@ -362,6 +371,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 () -> this.workToUndo = null
         ));
+        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
+                () -> this.town.getPossibleWork().invalidate()
+        ));
     }
 
     @Override
@@ -371,6 +383,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(status, ProductionStatus.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
+        this.entityData.define(lastHeldItem, ItemStack.EMPTY);
     }
 
     @NotNull
@@ -476,6 +489,23 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
+            entityData.set(heldItem, j.getInventory()
+                                      .getItem(0));
+            if (j.getGlobalSpecialRules().contains(SpecialRules.RENDER_LAST_ITEM_IN_OFF_HAND)) {
+                int size = j.getInventory().getContainerSize();
+                boolean holdingMultiple = false;
+                for (int i = 1; i < size; i++) {
+                    ItemStack item = j.getInventory().getItem(size - i);
+                    if (!item.isEmpty()) {
+                        entityData.set(lastHeldItem, item);
+                        holdingMultiple = true;
+                        break;
+                    }
+                }
+                if (!holdingMultiple) {
+                    entityData.set(lastHeldItem, ItemStack.EMPTY);
+                }
+            }
             entityData.set(heldItem, j.getInventory()
                                       .getItem(0));
             if (!job.get().isInitialized()) {
@@ -734,6 +764,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public ItemStack getMainHandItem() {
         return getEntityData().get(heldItem);
+    }
+
+    @Override
+    public ItemStack getOffhandItem() {
+        return getEntityData().get(lastHeldItem);
     }
 
     @Override
@@ -1194,7 +1229,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Snapshot journal
     ) {
         this.town = town;
-        setJob(JobsRegistry.getInitializedJob(journal.jobId(), journal, uuid));
+        //noinspection unchecked
+        setJob(JobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(
                 getJob().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
         );

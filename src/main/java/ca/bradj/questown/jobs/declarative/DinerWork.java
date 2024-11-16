@@ -50,7 +50,10 @@ public class DinerWork {
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
             EffectMetaItem.withConsumableEffect(EffectMetaItem.ConsumableEffects.FILL_HUNGER),
-            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.COMFORTABLE_EATING, Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get())
+            EffectMetaItem.withLastingEffect(
+                    EffectMetaItem.MoodEffects.COMFORTABLE_EATING,
+                    Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get()
+            )
     );
     public static final int PAUSE_FOR_ACTION = 10;
 
@@ -94,7 +97,7 @@ public class DinerWork {
                         Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )
-        ).withNeeds(s -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
+        ).withNeeds((items) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
     }
 
     public static JobID getIdForRoot(String rootId) {

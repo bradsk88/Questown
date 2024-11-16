@@ -17,17 +17,17 @@ class JobRelationshipTest {
                                 ImmutableList.of()
                         ),
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("1", "2"),
                                 ImmutableList.of()
                         ),
 
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("1", "3"),
                                 ImmutableList.of()
                         ),
 
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("1", "4"),
                                 ImmutableList.of()
                         )
                 )
@@ -48,21 +48,21 @@ class JobRelationshipTest {
                                         ),
 
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("1", "2"),
                                                 ImmutableList.of()
                                         )
                                 )
                         ),
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("2", "1"),
                                 ImmutableList.of(
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("2", "2"),
                                                 ImmutableList.of()
                                         ),
 
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("3", "3"),
                                                 ImmutableList.of()
                                         )
                                 )
@@ -80,32 +80,32 @@ class JobRelationshipTest {
                                 new JobID("1", "1"),
                                 ImmutableList.of(
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("1", "2"),
                                                 ImmutableList.of()
                                         ),
 
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("1", "3"),
                                                 ImmutableList.of()
                                         )
                                 )
                         ),
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("2", "1"),
                                 ImmutableList.of(
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("2", "2"),
                                                 ImmutableList.of()
                                         ),
 
                                         new JobRelationship(
-                                                new JobID("1", "1"),
+                                                new JobID("2", "3"),
                                                 ImmutableList.of()
                                         )
                                 )
                         ),
                         new JobRelationship(
-                                new JobID("1", "1"),
+                                new JobID("3", "1"),
                                 ImmutableList.of()
                         )
                 )

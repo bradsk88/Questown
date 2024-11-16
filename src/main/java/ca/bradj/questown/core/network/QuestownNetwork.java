@@ -93,6 +93,12 @@ public class QuestownNetwork {
                 decoder(SyncVillagerAdvancementsMessage::decode),
                 SyncVillagerAdvancementsMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(CloseScreensMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                encoder(CloseScreensMessage::encode).
+                decoder(CloseScreensMessage::decode),
+                CloseScreensMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {

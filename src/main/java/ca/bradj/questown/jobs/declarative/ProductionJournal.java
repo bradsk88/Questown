@@ -93,7 +93,7 @@ public class ProductionJournal<
         changeStatus(statusFactory.idle());
     }
 
-    protected void changeStatus(ProductionStatus s) {
+    public void changeStatus(ProductionStatus s) {
         this.status = s;
         this.statusListeners.forEach(l -> l.statusChanged(this.status));
     }

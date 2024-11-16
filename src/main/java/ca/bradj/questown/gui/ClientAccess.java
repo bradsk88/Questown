@@ -22,4 +22,7 @@ public class ClientAccess {
     public static void showHint(Component c) {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
+    public static void closeScreens() {
+        Minecraft.getInstance().setScreen(null);
+    }
 }

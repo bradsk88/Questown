@@ -33,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -212,7 +213,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 (scanLevel, rooms) -> {
                     getOrCreateRooms(scanLevel).update(rooms);
                     registeredDoors.stream().filter(v -> rooms.values().stream()
-                                                              .noneMatch(z -> z.isPresent() && v.toPosition().equals(z.get().doorPos)))
+                                                              .noneMatch(z -> z.isPresent() && v.toPosition()
+                                                                                                .equals(z.get().doorPos)))
                                    .forEach(
                                            nonRoomDoor -> doorsToDrop.compute(new TownPosition(
                                                    nonRoomDoor.x,
@@ -356,12 +358,13 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return this.activeRecipes.size();
     }
 
-    public Collection<RoomRecipeMatch<MCRoom>> getAllMatches() {
-        Stream<RoomRecipeMatch<MCRoom>> objectStream = this.activeRecipes.values()
-                                                                         .stream()
-                                                                         .map(ActiveRecipes::entrySet)
-                                                                         .flatMap(v -> v.stream()
-                                                                                        .map(Map.Entry::getValue));
+    public Collection<RoomRecipeMatch<MCRoom>> getAllMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
+        Stream<RoomRecipeMatch<MCRoom>> objectStream = this.activeRecipes
+                .values()
+                .stream()
+                .map(ActiveRecipes::entrySet)
+                .flatMap(v -> v.stream().map(Map.Entry::getValue))
+                .filter(include);
         return objectStream.collect(Collectors.toSet());
     }
 

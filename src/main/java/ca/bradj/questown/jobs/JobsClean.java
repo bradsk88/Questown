@@ -1,10 +1,19 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
@@ -32,14 +41,23 @@ public class JobsClean {
     }
 
     @NotNull
-    static <I> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+    static <I extends Item<I>> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
             Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
             Function<Integer, Boolean> anyIngredientsRequiredAtStates,
             Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
             Function<Integer, Boolean> anyToolsRequiredAtStates,
-            Map<Integer, Integer> workRequiredAtStates
+            Map<Integer, Integer> workRequiredAtStates,
+            int maxState
     ) {
+        if (journal.get().stream().allMatch(Item::isEmpty)) {
+            ImmutableMap.Builder<Integer, Boolean> b = ImmutableMap.builder();
+            for (int i = 0; i < maxState; i++) {
+                b.put(i, false);
+            }
+            return b.build();
+        }
+
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
             if (ingr == null) {
@@ -87,8 +105,6 @@ public class JobsClean {
         return items.stream().anyMatch(v -> !ings.test(v));
     }
 
-
-    @NotNull
     private static <I> boolean isNotToolFromAnyStage(
             I i,
             Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates
@@ -126,7 +142,10 @@ public class JobsClean {
         return isItemNeeded(neededItems, item);
     }
 
-    private static <I extends Item<I>> boolean isItemNeeded(Collection<Predicate<I>> itemsNeeded, I item) {
+    private static <I extends Item<I>> boolean isItemNeeded(
+            Collection<Predicate<I>> itemsNeeded,
+            I item
+    ) {
         for (Predicate<I> ingredient : itemsNeeded) {
             if (ingredient.test(item)) {
                 return true;
@@ -135,7 +154,10 @@ public class JobsClean {
         return false;
     }
 
-    private static <I extends Item<I>, H extends HeldItem<H, I>> void removeItemsAlreadyHeld(ArrayList<Predicate<I>> ingredientsToSatisfy, Collection<H> currentHeldItems) {
+    private static <I extends Item<I>, H extends HeldItem<H, I>> void removeItemsAlreadyHeld(
+            ArrayList<Predicate<I>> ingredientsToSatisfy,
+            Collection<H> currentHeldItems
+    ) {
         ArrayList<H> heldItemsToCheck = new ArrayList<>(currentHeldItems);
         for (int i = 0; i < ingredientsToSatisfy.size(); i++) {
             for (H heldItem : heldItemsToCheck) {
@@ -147,6 +169,156 @@ public class JobsClean {
                 }
             }
         }
+    }
+
+    public static <ROOM, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> ImmutableList<MATCH> roomsWithState(
+            Collection<MATCH> rooms,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        @NotNull List<WithReason<@Nullable MATCH>> filtered = filterByPredicates(
+                rooms,
+                isCorrectBlock,
+                hasCorrectState
+        );
+        List<MATCH> values = filtered.stream().map(v -> v.value).filter(Objects::nonNull).toList();
+        return ImmutableList.copyOf(values);
+    }
+
+    private static <ROOM, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> @NotNull List<WithReason<@Nullable MATCH>> filterByPredicates(
+            Collection<MATCH> rooms,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        ArrayList<WithReason<@Nullable MATCH>> out = new ArrayList<>();
+        for (MATCH room : rooms) {
+            out.add(describeFilteredRoom(room, isCorrectBlock, hasCorrectState));
+        }
+        return out;
+    }
+
+    private static <MATCH extends IRoomRecipeMatch<?, ?, POS, ?>, POS> WithReason<@Nullable MATCH> describeFilteredRoom(
+            MATCH room,
+            Predicate<POS> isCorrectBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        Map<POS, ?> allContainedBlocks = room.getContainedBlocks();
+        HashSet<POS> allUniquePos = new HashSet<>(allContainedBlocks.keySet());
+        List<WithReason<POS>> allTestedPos = new ArrayList<>();
+        for (POS p : allUniquePos) {
+            if (isCorrectBlock.test(p)) {
+                allTestedPos.add(WithReason.always(p, "is correct block: " + isCorrectBlock));
+                continue;
+            }
+            allTestedPos.add(WithReason.always(null, "is not correct block: " + isCorrectBlock));
+        }
+        if (allTestedPos.isEmpty()) {
+            return WithReason.always(null, "None of the blocks are job blocks");
+        }
+        List<POS> allTestedNonNullPos = allTestedPos.stream().filter(v -> v.value != null).map(v -> v.value).toList();
+        for (POS e : allTestedNonNullPos) {
+            if (e == null) {
+                continue;
+            }
+            if (hasCorrectState.test(e)) {
+                return WithReason.always(room, e + " had correct state");
+            }
+        }
+        return WithReason.always(
+                null,
+                "None of the job blocks has correct state: [" +
+                        String.join(", ", allTestedNonNullPos.stream().map(Object::toString).toList()) + "]"
+        );
+    }
+
+    // TODO[ASAP]: Test "should not return null if entity is in room with finished product"
+    public static <ROOM extends Room, RECIPE, POS> ROOM getEntityCurrentJobSite(
+            Position entityBlockPos,
+            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
+            Collection<ROOM> roomsWithCompletedProduct,
+            Predicate<ROOM> additionalPosCheck
+    ) {
+        for (ROOM room : roomsWithCompletedProduct) {
+            if (InclusiveSpaces.contains(room.getSpaces(), entityBlockPos)) {
+                return room;
+            }
+        }
+
+        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
+        Predicate<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> containsEntity = v ->
+        {
+            boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), entityBlockPos);
+            return contains || v.getRoom().getDoorPos().equals(entityBlockPos);
+        };
+        return roomsNeedingIngredientsOrTools
+                .getMatches()
+                .stream()
+                .filter(v -> additionalPosCheck.test(v.getRoom()))
+                .filter(containsEntity)
+                .findFirst()
+                .map(IRoomRecipeMatch::getRoom)
+                .orElse(null);
+    }
+
+    public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
+            int maxState,
+            boolean prioritizeExtraction,
+            Map<Integer, Boolean> statusItems,
+            Collection<ROOM> roomsWithFinishedProduct,
+            Function<ROOM, BLOCK> getPositionWithin,
+            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, BLOCK> blocksSrc,
+            Function<BLOCK, State> work,
+            Predicate<BLOCK> isJobBlock,
+            BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot
+    ) {
+        if (prioritizeExtraction && !roomsWithFinishedProduct.isEmpty()) {
+            return WithReason.always(
+                    getPositionWithin.apply(roomsWithFinishedProduct.iterator().next()),
+                    "prioritizing extraction and room has result"
+            );
+        }
+
+        ArrayList<IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?>> rooms = new ArrayList<>(blocksSrc.getMatches());
+        // TODO: Sort by distance and choose the closest (maybe also coordinate
+        //  with other workers who need the same type of job site)
+        // For now, we use randomization
+        Collections.shuffle(rooms);
+
+        boolean roomFoundButNotBlock = false;
+
+        for (IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?> match : rooms) {
+            for (Map.Entry<BLOCK, ?> blocks : match.getContainedBlocks().entrySet()
+            ) {
+                BLOCK blockPos = blocks.getKey();
+                State blockState = work.apply(blockPos);
+                if (blockState == null) {
+                    blockState = State.freshAtState(0);
+                }
+                if (!isJobBlock.test(blockPos)) {
+                    roomFoundButNotBlock = true;
+                    continue;
+                }
+
+                Supplier<BLOCK> is = () -> findInteractionSpot.apply(
+                        blockPos,
+                        match.getRoom()
+                );
+
+                if (maxState == blockState.processingState()) {
+                    return new WithReason<>(is.get(), "Found extractable product");
+                }
+                boolean shouldGo = statusItems.getOrDefault(blockState.processingState(), false);
+                if (shouldGo) {
+                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
+                }
+            }
+        }
+
+        if (roomFoundButNotBlock) {
+            return new WithReason<>(null, "Job site found, but no usable job blocks");
+        }
+
+        return new WithReason<>(null, "No job sites");
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {
@@ -163,25 +335,26 @@ public class JobsClean {
         );
     }
 
-    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> void tryTakeContainerItems(
+    public static <POS, TOWN_ITEM extends Item<TOWN_ITEM>> boolean tryTakeContainerItems(
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
-            Function<TOWN_ITEM, Boolean> isRemovalCandidate
+            Function<TOWN_ITEM, Boolean> isRemovalCandidate,
+            Function<List<TOWN_ITEM>, List<UtilClean.Pair<Integer, TOWN_ITEM>>> adjustOrder
     ) {
         if (!suppliesTarget.isCloseTo()) {
-            return;
+            return false;
         }
         String start = suppliesTarget.toShortString();
-        List<TOWN_ITEM> items = suppliesTarget.getItems();
-        for (int i = 0; i < items.size(); i++) {
-            TOWN_ITEM mcTownItem = items.get(i);
-            if (isRemovalCandidate.apply(mcTownItem)) {
-                TOWN_ITEM unit = mcTownItem.unit();
+        List<UtilClean.Pair<Integer, TOWN_ITEM>> items = adjustOrder.apply(suppliesTarget.getItems());
+        for (UtilClean.Pair<Integer, TOWN_ITEM> mcTownItem : items) {
+            if (isRemovalCandidate.apply(mcTownItem.b())) {
+                TOWN_ITEM unit = mcTownItem.b().unit();
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit.getShortName(), start);
                 villager.accept(unit);
-                suppliesTarget.removeItem(i, 1);
-                break;
+                suppliesTarget.removeItem(mcTownItem.a(), 1);
+                return true;
             }
         }
+        return false;
     }
 }
