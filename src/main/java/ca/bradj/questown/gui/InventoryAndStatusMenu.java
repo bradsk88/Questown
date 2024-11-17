@@ -313,6 +313,11 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
         addWantedIngredientsListener(e, sender);
     }
 
+    @Override
+    public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
+        return listenToNewJob.apply(this);
+    }
+
     private void addStatusListener(
             VisitorMobEntity e,
             IStatus<?> status

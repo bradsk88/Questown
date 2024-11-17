@@ -90,4 +90,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     boolean isWorking();
 
     Collection<String> getGlobalSpecialRules();
+
+    Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
 }

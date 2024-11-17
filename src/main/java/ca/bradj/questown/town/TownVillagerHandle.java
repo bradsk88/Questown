@@ -2,16 +2,11 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.network.OpenVillagerAdvancementsMenuMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.core.network.SyncVillagerAdvancementsMessage;
+import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.Works;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -310,7 +305,10 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public void fillHunger(UUID uuid, float percent) {
+    public void fillHunger(
+            UUID uuid,
+            float percent
+    ) {
         fullness.put(uuid, (int) (percent * Config.BASE_FULLNESS.get()));
     }
 
@@ -393,19 +391,19 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isDining(UUID uuid) {
         return entities.stream()
-                .filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
-                .findFirst()
-                .orElse(false);
+                       .filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
+                       .findFirst()
+                       .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
         return entities.stream()
-                .filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
-                .findFirst()
-                .orElse(false);
+                       .filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
+                       .findFirst()
+                       .orElse(false);
     }
 
     @Override
@@ -522,11 +520,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public void showMultiStatusUI(ServerPlayer player) {
-
-        ImmutableMap.Builder<UUID, JobID> b = ImmutableMap.builder();
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
-        es.forEach(e -> b.put(e.getUUID(), e.getJobId()));
-        ImmutableMap<UUID, JobID> jobs = b.build();
 
         NetworkHooks.openGui(player, new MenuProvider() {
             @Override
@@ -540,10 +534,31 @@ public class TownVillagerHandle implements VillagerHolder {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId, jobs);
-                multiStatusMenu.connectToServer(es, player);
+                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId);
+                for (VisitorMobEntity e : es) {
+                    e.addStatusListener(new StatusListener() {
+                        @Override
+                        public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
+                            return listenToNewJob.apply(this);
+                        }
+
+                        @Override
+                        public void statusChanged(IStatus<?> newStatus) {
+                            ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
+                            es.forEach(v -> b.put(
+                                    v.getUUID(),
+                                    new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
+                            ));
+                            QuestownNetwork.CHANNEL.send(
+                                    PacketDistributor.PLAYER.with(() -> player),
+                                    new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(b.build()))
+                            );
+                        }
+                    });
+                }
                 return multiStatusMenu;
             }
-        }, data -> MultiStatusMenu.toNetwork(data, jobs));
+        }, data -> {
+        });
     }
 }

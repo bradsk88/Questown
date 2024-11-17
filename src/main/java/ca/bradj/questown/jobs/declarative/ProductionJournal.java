@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -39,6 +40,15 @@ public class ProductionJournal<
     @Override
     public void removeStatusListener(StatusListener o) {
         this.statusListeners.remove(o);
+    }
+
+    @Override
+    public Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob) {
+        ImmutableList.Builder<Runnable> b = ImmutableList.builder();
+        for (StatusListener statusListener : this.statusListeners) {
+             b.add(statusListener.jobChanged(listenToNewJob));
+        }
+        return b.build();
     }
 
     public ProductionJournal(

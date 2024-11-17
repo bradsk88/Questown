@@ -42,10 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
 
@@ -196,6 +193,11 @@ public abstract class ProductionJob<
     @Override
     public void removeStatusListener(StatusListener o) {
         this.journal.removeStatusListener(o);
+    }
+
+    @Override
+    public Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob) {
+        return this.journal.notifyListenersOfNewJob(listenToNewJob);
     }
 
     @Override

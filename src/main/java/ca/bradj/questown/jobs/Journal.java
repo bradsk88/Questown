@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import com.google.common.collect.ImmutableList;
 
+import java.util.Collection;
 import java.util.function.Function;
 
 public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
@@ -26,4 +27,6 @@ public interface Journal<STATUS, I, SNAPSHOT> extends ItemsHolder<I> {
     void removeStatusListener(StatusListener o);
 
     boolean isInitialized();
+
+    Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
 }

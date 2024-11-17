@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class UtilClean {
@@ -14,6 +15,13 @@ public class UtilClean {
             b.add(new UtilClean.Pair<>(i, list.get(i)));
         }
         return b.build();
+    }
+
+    public static Function<Void, Void> voidVoid(Runnable apply) {
+        return ignored -> {
+            apply.run();
+            return null;
+        };
     }
 
     public record Pair<A, B>(A a, B b){};

@@ -6,7 +6,6 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
@@ -174,5 +173,10 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     @Override
     public Collection<String> getGlobalSpecialRules() {
         throw new UnsupportedOperationException("Client Side");
+    }
+
+    @Override
+    public Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob) {
+        throw new UnsupportedOperationException("Should only be called on server side");
     }
 }

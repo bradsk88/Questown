@@ -28,50 +28,50 @@ public class QuestownNetwork {
     private static void initMessagesToServer() {
         Compat.withConsumer(
                 registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(AddWorkFromUIMessage::encode).
-                decoder(AddWorkFromUIMessage::decode),
+                        encoder(AddWorkFromUIMessage::encode).
+                        decoder(AddWorkFromUIMessage::decode),
                 AddWorkFromUIMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(RemoveWorkFromUIMessage::encode).
-                decoder(RemoveWorkFromUIMessage::decode),
+                        encoder(RemoveWorkFromUIMessage::encode).
+                        decoder(RemoveWorkFromUIMessage::decode),
                 RemoveWorkFromUIMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(OpenQuestsMenuMessage::encode).
-                decoder(OpenQuestsMenuMessage::decode),
+                        encoder(OpenQuestsMenuMessage::encode).
+                        decoder(OpenQuestsMenuMessage::decode),
                 OpenQuestsMenuMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(RemoveQuestFromUIMessage::encode).
-                decoder(RemoveQuestFromUIMessage::decode),
+                        encoder(RemoveQuestFromUIMessage::encode).
+                        decoder(RemoveQuestFromUIMessage::decode),
                 RemoveQuestFromUIMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(OpenVillagerMenuMessage::encode).
-                decoder(OpenVillagerMenuMessage::decode),
+                        encoder(OpenVillagerMenuMessage::encode).
+                        decoder(OpenVillagerMenuMessage::decode),
                 OpenVillagerMenuMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(ChangeVillagerJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(ChangeVillagerJobMessage::encode).
-                decoder(ChangeVillagerJobMessage::decode),
+                        encoder(ChangeVillagerJobMessage::encode).
+                        decoder(ChangeVillagerJobMessage::decode),
                 ChangeVillagerJobMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(CreateStockRequestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(CreateStockRequestFromUIMessage::encode).
-                decoder(CreateStockRequestFromUIMessage::decode),
+                        encoder(CreateStockRequestFromUIMessage::encode).
+                        decoder(CreateStockRequestFromUIMessage::decode),
                 CreateStockRequestFromUIMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(OpenMultiVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                encoder(OpenMultiVillagerMenuMessage::encode).
-                decoder(OpenMultiVillagerMenuMessage::decode),
+                        encoder(OpenMultiVillagerMenuMessage::encode).
+                        decoder(OpenMultiVillagerMenuMessage::decode),
                 OpenMultiVillagerMenuMessage::handle
         ).add();
     }
@@ -113,9 +113,18 @@ public class QuestownNetwork {
                         decoder(CloseScreensMessage::decode),
                 CloseScreensMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(MultiStatusScreenSyncMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(MultiStatusScreenSyncMessage::encode).
+                        decoder(MultiStatusScreenSyncMessage::decode),
+                MultiStatusScreenSyncMessage::handle
+        ).add();
     }
 
-    public static <T> SimpleChannel.MessageBuilder<T> registerMessage(Class<T> msgClass, NetworkDirection dir) {
+    public static <T> SimpleChannel.MessageBuilder<T> registerMessage(
+            Class<T> msgClass,
+            NetworkDirection dir
+    ) {
         return CHANNEL.messageBuilder(msgClass, messageIndex++, dir);
     }
 }

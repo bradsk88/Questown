@@ -4,6 +4,7 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
@@ -98,7 +99,6 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.Lazy;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.tags.ITag;
@@ -106,10 +106,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.*;
 import java.util.stream.Collectors;
 
 import static net.minecraft.world.entity.Pose.SLEEPING;
@@ -154,9 +151,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Lazy<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = Lazy.of(
-            this::getInitialJob
-    );
+    Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
     private int ticksWithoutJobTarget;
     private int ticksStuckWithTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
@@ -307,9 +302,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         // Technically this also gets us item updates because item changes cause status to go back to IDLE
         // But this is admittedly a bit fragile.
-        this.cleanupJobListeners.add(
-                j.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
-        );
+        this.cleanupJobListeners.add(j.addStatusListener(getNotifiedOfJobStatusChanges()));
         return j;
     }
 
@@ -358,12 +351,23 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (curJob != null) {
             curJobName = curJob.getId().toNiceString();
         }
-        this.cleanupJobListeners.forEach(v -> v.apply(null));
-        job = Lazy.of(() -> initializedJob);
+
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> oldJob = job.get();
+        job = () -> initializedJob;
         entityData.set(jobName, initializedJob.getJobName().translationKey());
         QT.VILLAGER_LOGGER.debug("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
+        Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
+            Function<Void, Void> out = initializedJob.addStatusListener(l);
+            return () -> out.apply(null);
+        });
+
+        this.cleanupJobListeners.forEach(v -> v.apply(null));
+        this.cleanupJobListeners.clear();
+        List<Function<Void, Void>> cleanupz = newCleanup.stream().map(UtilClean::voidVoid).toList();
+        this.cleanupJobListeners.addAll(cleanupz);
+
         this.cleanupJobListeners.add(
-                initializedJob.addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
+                initializedJob.addStatusListener(getNotifiedOfJobStatusChanges())
         );
         this.cleanupJobListeners.add(initializedJob.addItemInsertionListener(
                 (bp, item) -> this.workToUndo = new WorkToUndo(initializedJob.getId(), bp, item)
@@ -374,6 +378,21 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 () -> this.town.getPossibleWork().invalidate()
         ));
+    }
+
+    private @NotNull StatusListener getNotifiedOfJobStatusChanges() {
+        return new StatusListener() {
+            @Override
+            public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
+                // Do nothing, this listener gets removed whenever a job changes
+                return () -> {};
+            }
+
+            @Override
+            public void statusChanged(IStatus<?> newStatus) {
+                changeListeners.forEach(ChangeListener::Changed);
+            }
+        };
     }
 
     @Override
@@ -1213,7 +1232,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public void addStatusListener(StatusListener l) {
-        job.get().addStatusListener(l);
+        this.cleanupJobListeners.add(
+            job.get().addStatusListener(l)
+        );
     }
 
     public ImmutableSnapshot<MCHeldItem, ?> getJobJournalSnapshot() {
@@ -1231,9 +1252,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.town = town;
         //noinspection unchecked
         setJob(JobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
-        this.cleanupJobListeners.add(
-                getJob().addStatusListener((newStatus) -> this.changeListeners.forEach(ChangeListener::Changed))
-        );
+        this.cleanupJobListeners.add(getJob().addStatusListener(getNotifiedOfJobStatusChanges()));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
         this.initialized = true;

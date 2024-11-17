@@ -2,12 +2,12 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.EvictingQueue;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -24,9 +24,18 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
     private static final int backgroundHeight = 166;
 
     private final DrawableNineSliceTexture background;
-    private final IDrawableStatic slot;
 
     private final Map<UUID, Collection<IStatus<?>>> statusSmoothingQueue = new HashMap<>();
+
+    public record SyncedData(
+            Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers
+    ) {
+    }
+
+    // TODO: These are updated by a network message. Is there any way we can protect access?
+    public static SyncedData syncedData = new SyncedData(
+            new HashMap<>()
+    );
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -36,13 +45,6 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         super(menu, playerInv, Compat.literal(""));
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
-        this.slot = textures.getSlotDrawable();
-    }
-
-    @Override
-    public void onClose() {
-        super.onClose();
-        menu.onClose();
     }
 
     @Override
@@ -105,8 +107,8 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int destX = x + backgroundWidth - 16 - 32;
         int destY = y + 16;
 
-        for (UUID uuid : menu.getVillagerUUIDs()) {
-            ResourceLocation texture = StatusArt.getTexture(menu.getJobId(uuid), getSmoothedStatus(uuid));
+        for (UUID uuid : syncedData.villagers.keySet()) {
+            ResourceLocation texture = StatusArt.getTexture(syncedData.villagers.get(uuid).a(), getSmoothedStatus(uuid));
             RenderSystem.setShaderTexture(0, texture);
             blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
             destY = destY + drawHeight;
@@ -117,10 +119,10 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         Collection<IStatus<?>> q = UtilClean.getOrDefaultCollection(
                 statusSmoothingQueue,
                 villagerUUID,
-                EvictingQueue.create(20),
+                EvictingQueue.create(5),
                 true
         );
-        q.add(menu.getStatus(villagerUUID));
+        q.add(syncedData.villagers.get(villagerUUID).b());
         statusSmoothingQueue.put(villagerUUID, q);
         HashMap<IStatus<?>, Integer> counter = new HashMap<>();
         for (IStatus<?> iStatus : q) {
