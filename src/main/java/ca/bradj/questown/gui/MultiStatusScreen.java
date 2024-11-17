@@ -3,8 +3,13 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
+import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.EvictingQueue;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.Internal;
@@ -12,9 +17,11 @@ import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -42,7 +49,12 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             Inventory playerInv,
             Component title
     ) {
-        super(menu, playerInv, Compat.literal(""));
+        super(menu, new Inventory(null) {
+            @Override
+            public Component getDisplayName() {
+                return Compat.literal("");
+            }
+        }, Compat.literal(""));
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
     }
@@ -108,7 +120,10 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int destY = y + 16;
 
         for (UUID uuid : syncedData.villagers.keySet()) {
-            ResourceLocation texture = StatusArt.getTexture(syncedData.villagers.get(uuid).a(), getSmoothedStatus(uuid));
+            ResourceLocation texture = StatusArt.getTexture(
+                    syncedData.villagers.get(uuid).a(),
+                    getSmoothedStatus(uuid)
+            );
             RenderSystem.setShaderTexture(0, texture);
             blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
             destY = destY + drawHeight;
@@ -141,115 +156,62 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             int mouseX,
             int mouseY
     ) {
-//        // TODO: Implement
-//        int x = (this.width - backgroundWidth) / 2;
-//        int y = (this.height - backgroundHeight) / 2;
-//        int leftX = x + backgroundWidth - 16 - 32;
-//        int topY = y + 16;
-//        int rightX = leftX + 32;
-//        int botY = topY + 32;
-//
-//        String jobId = menu.getRootJobId();
-//        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
-//
-//        if (this.tabs.renderTooltip(
-//                x, y, mouseX, mouseY,
-//                key -> super.renderTooltip(stack, new TranslatableComponent(key), mouseX, mouseY)
-//        )) {
-//            return;
-//        }
-//
-//        if (this.tabs.renderTooltip(
-//                x, y, mouseX, mouseY,
-//                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
-//        )) {
-//            return;
-//        }
-//
-//        if (mouseX > leftX && mouseX < rightX) {
-//            if (mouseY > topY && mouseY < botY) {
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        int leftX = x + backgroundWidth - 16 - 32;
+        int topY = y + 16;
+        int rightX = leftX + 32;
+        int botY = topY + 32;
+        int texWidth = 32;
+        int texHeight = 32;
+
+        ImmutableList<UUID> uuids = ImmutableList.copyOf(syncedData.villagers.keySet());
+        for (int i = 0; i < uuids.size(); i++) {
+            if (mouseX < leftX) {
+                continue;
+            }
+            if (mouseX > rightX) {
+                continue;
+            }
+            if (mouseY < topY + (i * texHeight)) {
+                continue;
+            }
+            if (mouseY > botY + (i * texHeight)) {
+                continue;
+            }
 //                // TODO: Render root AND current job
-//                IStatus<?> status = getSmoothedStatus();
-//                @Nullable String cat = status.getCategoryId();
-//                if (cat == null) {
-//                    cat = jobId;
-//                }
-//
-//                // TODO: Handle work seeker statuses some where else
-//                if (WorkSeekerJob.isSeekingWork(menu.jobId)) {
-//                    cat = "work_seeker";
-//                }
-//                if (
-//                        DinerNoTableWork.isDining(menu.jobId) ||
-//                                DinerWork.isDining(menu.jobId) ||
-//                                DinerRawFoodWork.isDining(menu.jobId)
-//                ) {
-//                    cat = "diner";
-//                }
-//
-//                TranslatableComponent component = new TranslatableComponent(
-//                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
-//                        jobName
-//                );
-//                TranslatableComponent component2 = new TranslatableComponent(
-//                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
-//                        jobName
-//                );
-//                super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
-//                return;
-//            }
-//        }
-//
-//        int yCoord = y - 1;
-//        for (
-//                int i = 0; i < menu.slots.size(); i++) {
-//            Slot s = menu.slots.get(i);
-//            int xCoord = x - 1 + s.x;
-//            yCoord = y - 1 + s.y;
-//            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
-//                if (renderLocksTooltip(stack, xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
-//                    return;
-//                }
-//            }
-//        }
-//
-//        int iconX = x - 12;
-//        for (
-//                Ingredient i : ClientJobWantedResources.wantedIngredients) {
-//            if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
-//                return;
-//            }
-//        }
-//
-//        super.
-//
-//                renderTooltip(
-//                        stack,
-//                        mouseX,
-//                        mouseY
-//                );
+            UUID villagerUUID = uuids.get(i);
+            IStatus<?> status = getSmoothedStatus(villagerUUID);
+            @Nullable String cat = status.getCategoryId();
+            JobID jobId = syncedData.villagers().get(villagerUUID).a();
+            if (cat == null) {
+                cat = jobId.rootId();
+            }
+
+            // TODO: Handle work seeker statuses some where else
+            if (WorkSeekerJob.isSeekingWork(jobId)) {
+                cat = "work_seeker";
+            }
+            if (
+                    DinerNoTableWork.isDining(jobId) ||
+                            DinerWork.isDining(jobId) ||
+                            DinerRawFoodWork.isDining(jobId)
+            ) {
+                cat = "diner";
+            }
+
+            TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId.rootId());
+            TranslatableComponent component = new TranslatableComponent(
+                    String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
+                    jobName
+            );
+            TranslatableComponent component2 = new TranslatableComponent(
+                    String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
+                    jobName
+            );
+            super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
+            return;
+        }
+        super.renderTooltip(stack, mouseX, mouseY);
     }
-//
-//    private boolean renderNeedsTooltip(
-//            @NotNull PoseStack stack,
-//            int leftX,
-//            int topY,
-//            int mouseX,
-//            int mouseY,
-//            Ingredient item
-//    ) {
-//        int rightX = leftX + 16;
-//        int botY = topY + 16;
-//        if (mouseX > leftX && mouseX < rightX) {
-//            if (mouseY > topY && mouseY < botY) {
-//                TranslatableComponent jPart = new TranslatableComponent(String.format("jobs.%s", menu.getRootJobId()));
-//                TranslatableComponent component = new TranslatableComponent(
-//                        "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
-//                );
-//                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
 }
