@@ -40,7 +40,7 @@ public class VillagerMenus {
         // FIXME: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);
-        // Never provide these initializers with the entity, itself.
+        // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
         // It tends to cause client-side-only bugs that don't show up in the dev environment.
         menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos);
         menus.initVillagerStatsMenu(windowId, flagPos, stats);

@@ -2,6 +2,8 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,7 +11,13 @@ import net.minecraft.world.entity.player.Inventory;
 import java.util.Collection;
 import java.util.List;
 
-public class TownQuestsContainer extends AbstractQuestsContainer {
+public class TownQuestsContainer extends AbstractQuestsContainer implements FlagTabsEmbedding {
+
+
+    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
+            OpenFlagMenuMessage.QUESTS,
+            OpenFlagMenuMessage.VILLAGERS
+    );
 
     public TownQuestsContainer(
             int windowId,
@@ -24,14 +32,8 @@ public class TownQuestsContainer extends AbstractQuestsContainer {
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        try {
-            Collection<UIQuest> q = readQuests(data);
-            BlockPos p = readFlagPos(data);
-            return new TownQuestsContainer(windowId, q, p);
-        } catch (Exception e) {
-            QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
-            throw e;
-        }
+        FlagMenus menus = FlagMenus.fromNetwork(windowId, inv.player, data);
+        return menus.questsMenu;
     }
 
     public static void write(
@@ -43,4 +45,13 @@ public class TownQuestsContainer extends AbstractQuestsContainer {
         writeFlagPos(data, pos);
     }
 
+    @Override
+    public Collection<String> getEnabledTabs() {
+        return ENABLED_TABS;
+    }
+
+    @Override
+    public BlockPos getFlagPos() {
+        return flagPos;
+    }
 }

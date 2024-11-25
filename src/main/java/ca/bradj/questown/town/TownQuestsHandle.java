@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.gui.FlagMenus;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -49,10 +50,10 @@ public class TownQuestsHandle implements QuestsHolder {
             boolean promptUser
     ) {
         if (promptUser) {
-            Optional<MCQuestBatch> first = town.quests.questBatches.getAllBatches()
-                    .stream()
-                    .filter(v -> batchID.equals(v.getBatchUUID()))
-                    .findFirst();
+            Optional<MCQuestBatch> first = unsafeGetTown().quests.questBatches.getAllBatches()
+                                                                              .stream()
+                                                                              .filter(v -> batchID.equals(v.getBatchUUID()))
+                                                                              .findFirst();
             if (first.isEmpty()) {
                 QT.QUESTS_LOGGER.error("Received request to remove non-existent batch. Doing nothing. [{}]", batchID);
                 return;
@@ -63,12 +64,14 @@ public class TownQuestsHandle implements QuestsHolder {
         }
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void showQuestsUI(ServerPlayer player) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = unsafeGetTown().getAllQuestsWithRewards();
-        List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
+        @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
 
+        Collection entities = t.getVillagerHandle().entities();
         NetworkHooks.openGui(player, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -83,9 +86,8 @@ public class TownQuestsHandle implements QuestsHolder {
             ) {
                 return new TownQuestsContainer(windowId, quests, t.getBlockPos());
             }
-        }, data -> {
-            TownQuestsContainer.write(data, quests, t.getBlockPos());
-        });
+        }, data ->
+                FlagMenus.writeAndLink(data, quests, t.getBlockPos(), player, entities));
     }
 
     @Override
@@ -96,7 +98,10 @@ public class TownQuestsHandle implements QuestsHolder {
         ).toList();
     }
 
-    private void showConfirmUI(ServerPlayer sp, MCQuestBatch batch) {
+    private void showConfirmUI(
+            ServerPlayer sp,
+            MCQuestBatch batch
+    ) {
         final TownInterface t = unsafeGetTown();
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);
         NetworkHooks.openGui(sp, new MenuProvider() {
@@ -113,9 +118,8 @@ public class TownQuestsHandle implements QuestsHolder {
             ) {
                 return new TownRemoveQuestsContainer(windowId, quests, t.getTownFlagBasePos(), batch.getBatchUUID());
             }
-        }, data -> {
-            TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID());
-        });
+        }, data ->
+                TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID()));
     }
 
     private void doRemove(
@@ -143,6 +147,6 @@ public class TownQuestsHandle implements QuestsHolder {
 
     @Override
     public ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards() {
-        return town.getAllQuestsWithRewards();
+        return unsafeGetTown().getAllQuestsWithRewards();
     }
 }

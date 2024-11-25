@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -522,6 +521,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public void showMultiStatusUI(ServerPlayer player) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
+        BlockPos townFlagBasePos = town.getUnsafe().getTownFlagBasePos();
         NetworkHooks.openGui(player, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {
@@ -534,31 +534,13 @@ public class TownVillagerHandle implements VillagerHolder {
                     @NotNull Inventory inv,
                     @NotNull Player p
             ) {
-                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId);
-                for (VisitorMobEntity e : es) {
-                    e.addStatusListener(new StatusListener() {
-                        @Override
-                        public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
-                            return listenToNewJob.apply(this);
-                        }
-
-                        @Override
-                        public void statusChanged(IStatus<?> newStatus) {
-                            ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
-                            es.forEach(v -> b.put(
-                                    v.getUUID(),
-                                    new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
-                            ));
-                            QuestownNetwork.CHANNEL.send(
-                                    PacketDistributor.PLAYER.with(() -> player),
-                                    new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(b.build()))
-                            );
-                        }
-                    });
-                }
+                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId, townFlagBasePos);
                 return multiStatusMenu;
             }
         }, data -> {
+            // FIXME: Provide quests
+            List<UIQuest> quests = UIQuest.fromLevel(player.getLevel(), town.getUnsafe().getAllQuestsWithRewards());
+            FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
         });
     }
 }

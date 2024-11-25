@@ -7,7 +7,7 @@ public interface SubUI {
 
     void mouseClicked(int bgX, int bgY, double x, double y);
 
-    boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> o);
+    boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> renderFn);
 
     class Empty implements SubUI {
 

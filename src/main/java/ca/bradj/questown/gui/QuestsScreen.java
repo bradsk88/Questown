@@ -55,7 +55,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     private final SubUI tabs;
     private int currentPage = 0;
 
-    public QuestsScreen(C container, Inventory playerInv, Component title, SubUI villagerTabs) {
+    public QuestsScreen(C container, Inventory playerInv, Component title, SubUI tabs) {
         super(container, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
@@ -81,7 +81,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             head.getOrCreateTag().putString(PlayerHeadItem.TAG_SKULL_OWNER, v.villagerUUID());
             return head;
         }).toList();
-        this.tabs = villagerTabs;
+        this.tabs = tabs;
     }
 
     @Override
@@ -265,6 +265,14 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             int iconY,
             Component tooltipText
     ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        if (this.tabs.renderTooltip(
+                bgX, bgY, mouseX, mouseY,
+                key -> super.renderTooltip(poseStack, Compat.translatable(key), mouseX, mouseY)
+        )) {
+            return;
+        }
         if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
             // transparent white square behind hovered item slot
             fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
@@ -458,7 +466,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     }
 
     public static QuestsScreen<TownQuestsContainer> forTown(TownQuestsContainer container, Inventory playerInv, Component title) {
-        return new QuestsScreen<>(container, playerInv, title, new SubUI.Empty());
+        return new QuestsScreen<>(
+                container, playerInv, title,
+                FlagTabs.forMenu(container)
+        );
     }
 
     public static QuestsScreen<VillagerQuestsContainer> forVillager(

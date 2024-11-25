@@ -33,6 +33,7 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
     private final DrawableNineSliceTexture background;
 
     private final Map<UUID, Collection<IStatus<?>>> statusSmoothingQueue = new HashMap<>();
+    private final FlagTabs tabs;
 
     public record SyncedData(
             Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers
@@ -57,6 +58,7 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         }, Compat.literal(""));
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
+        this.tabs = FlagTabs.forMenu(menu);
     }
 
     @Override
@@ -66,8 +68,11 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             int mouseY,
             float partialTicks
     ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
+        tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
         this.renderTooltip(stack, mouseX, mouseY);
     }
 
@@ -156,10 +161,17 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             int mouseX,
             int mouseY
     ) {
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        int leftX = x + backgroundWidth - 16 - 32;
-        int topY = y + 16;
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+
+        if (this.tabs.renderTooltip(
+                bgX, bgY, mouseX, mouseY,
+                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+        )) {
+            return;
+        }
+        int leftX = bgX + backgroundWidth - 16 - 32;
+        int topY = bgY + 16;
         int rightX = leftX + 32;
         int botY = topY + 32;
         int texWidth = 32;
@@ -213,5 +225,17 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             return;
         }
         super.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean mouseClicked(
+            double p_97748_,
+            double p_97749_,
+            int p_97750_
+    ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        tabs.mouseClicked(bgX, bgY, p_97748_, p_97749_);
+        return super.mouseClicked(p_97748_, p_97749_, p_97750_);
     }
 }

@@ -57,6 +57,12 @@ public class QuestownNetwork {
                 OpenVillagerMenuMessage::handle
         ).add();
         Compat.withConsumer(
+                registerMessage(OpenFlagMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(OpenFlagMenuMessage::encode).
+                        decoder(OpenFlagMenuMessage::decode),
+                OpenFlagMenuMessage::handle
+        ).add();
+        Compat.withConsumer(
                 registerMessage(ChangeVillagerJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
                         encoder(ChangeVillagerJobMessage::encode).
                         decoder(ChangeVillagerJobMessage::decode),
