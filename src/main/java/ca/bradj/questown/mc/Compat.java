@@ -1,9 +1,10 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
@@ -35,7 +36,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -195,5 +195,24 @@ public class Compat {
             }
         }
         return false;
+    }
+
+    public static void drawDarkText(
+            Font font,
+            PoseStack stack,
+            TranslatableComponent translatable,
+            int x,
+            int y
+    ) {
+        font.draw(stack, translatable, x, y, 0x00000000);
+    }
+    public static void drawLightText(
+            Font font,
+            PoseStack stack,
+            String translatable,
+            int x,
+            int y
+    ) {
+        font.drawShadow(stack, translatable, x, y, 0xFFFFFFFF);
     }
 }

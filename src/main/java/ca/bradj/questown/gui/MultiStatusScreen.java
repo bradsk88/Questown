@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -54,12 +55,14 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             Inventory playerInv,
             Component title
     ) {
-        super(menu, new Inventory(null) {
-            @Override
-            public Component getDisplayName() {
-                return Compat.literal("");
-            }
-        }, Compat.literal(""));
+        super(
+                menu, new Inventory(null) {
+                    @Override
+                    public Component getDisplayName() {
+                        return Compat.literal("");
+                    }
+                }, Compat.literal("")
+        );
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu);
@@ -92,19 +95,41 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
         renderStatus(stack);
         renderInventory();
+        renderFaces(stack);
     }
 
     private void renderInventory() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         y += 32;
-        x += 8;
+        x += 16;
         for (UUID uuid : syncedData.items.keySet()) {
             int iconX = x - 12;
             Collection<net.minecraft.world.item.Item> items = syncedData.items.get(uuid);
             for (Item item : items) {
                 this.itemRenderer.renderAndDecorateItem(new ItemStack(item), iconX += 16 + 4, y);
             }
+            y += 32;
+        }
+    }
+
+    private void renderFaces(PoseStack stack) {
+        float texStartX = 8;
+        float texStartY = 8;
+        int texFileWidth = 64;
+        int texFileHeight = 64;
+        int drawNumPixelsX = 8;
+        int drawNumPixelsY = 8;
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        y += 20;
+        x += 16;
+        for (UUID uuid : syncedData.items.keySet()) {
+            ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
+            RenderSystem.setShaderTexture(0, texture);
+            blit(stack, x, y, texStartX, texStartY, drawNumPixelsX, drawNumPixelsY, texFileWidth, texFileHeight);
+            int nameX = x + drawNumPixelsX + 4;
+            Compat.drawDarkText(font, stack, Compat.translatable(syncedData.villagers.get(uuid).a().rootId()), nameX, y);
             y += 32;
         }
     }

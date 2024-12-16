@@ -371,7 +371,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
+        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
     }
 
     @Override

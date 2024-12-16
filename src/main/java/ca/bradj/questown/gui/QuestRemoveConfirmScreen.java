@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
@@ -313,7 +314,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        font.drawShadow(poseStack, pageString, textArea.getX(), textArea.getY(), 0xFFFFFFFF);
+        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
     }
 
     @Override

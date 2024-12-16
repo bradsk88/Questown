@@ -11,10 +11,12 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.UUID;
+
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
 
     // TODO: Just scan the directory for files
-    ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
+    static ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
             Questown.ResourceLocation("textures/entity/1.png"),
             Questown.ResourceLocation("textures/entity/2.png"),
             Questown.ResourceLocation("textures/entity/3.png"),
@@ -32,9 +34,14 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
 
     @Override
     public ResourceLocation getTextureLocation(VisitorMobEntity entity) {
-        int index = Math.abs(entity.getUUID().hashCode()) % (customSkins.size() + 2);
+        UUID uuid = entity.getUUID();
+        return getTextureLocation(uuid);
+    }
+
+    public static ResourceLocation getTextureLocation(UUID uuid) {
+        int index = Math.abs(uuid.hashCode()) % (customSkins.size() + 2);
         if (index < 2) {
-            return DefaultPlayerSkin.getDefaultSkin(entity.getUUID());
+            return DefaultPlayerSkin.getDefaultSkin(uuid);
         }
         return customSkins.get(index - 2);
     }
