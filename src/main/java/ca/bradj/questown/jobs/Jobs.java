@@ -18,6 +18,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -169,16 +170,17 @@ public class Jobs {
         return town.findMatchingContainer(MCTownItem::isEmpty) != null;
     }
 
-    public static @Nullable MCRoom getEntityCurrentJobSite(
+    public static @Nullable EntityCurrentJobSite<MCRoom> getEntityCurrentJobSite(
             BlockPos entityBlockPos,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
         //noinspection UnnecessaryLocalVariable
-        MCRoom in = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<MCRoom> in = JobsClean.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
-                (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5)
+                (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5),
+                SpecialQuests.FARM::equals
         );
         return in;
     }

@@ -392,6 +392,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (isInitialized()) {
             super.setChanged();
             this.changed = true;
+            possibleWork.invalidate();
         }
     }
 

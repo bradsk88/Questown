@@ -20,6 +20,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,12 +38,14 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
     private final FlagTabs tabs;
 
     public record SyncedData(
-            Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers
+            Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers,
+            Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items
     ) {
     }
 
     // TODO: These are updated by a network message. Is there any way we can protect access?
     public static SyncedData syncedData = new SyncedData(
+            new HashMap<>(),
             new HashMap<>()
     );
 
@@ -87,27 +91,22 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int bgY = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
         renderStatus(stack);
-        renderInventory(stack);
+        renderInventory();
     }
 
-    private void renderInventory(PoseStack stack) {
-        // TODO: render held items (not as slots, read-only)
-//        int x = (this.width - backgroundWidth) / 2;
-//        int y = (this.height - backgroundHeight) / 2;
-//        int yCoord = 0;
-//        for (int i = 0; i < menu.slots.size(); i++) {
-//            Slot s = menu.slots.get(i);
-//            int xCoord = x - 1 + s.x;
-//            yCoord = y - 1 + s.y;
-//            this.slot.draw(stack, xCoord, yCoord);
-//        }
-//        int iconX = x - 12;
-//        for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-//            int curSeconds = (int) (System.currentTimeMillis() / 1000);
-//            ItemStack[] matchingStacks = i.getItems();
-//            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-//            this.itemRenderer.renderAndDecorateItem(itemStack, iconX += 16 + 4, yCoord + 32);
-//        }
+    private void renderInventory() {
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        y += 32;
+        x += 8;
+        for (UUID uuid : syncedData.items.keySet()) {
+            int iconX = x - 12;
+            Collection<net.minecraft.world.item.Item> items = syncedData.items.get(uuid);
+            for (Item item : items) {
+                this.itemRenderer.renderAndDecorateItem(new ItemStack(item), iconX += 16 + 4, y);
+            }
+            y += 32;
+        }
     }
 
     private void renderStatus(

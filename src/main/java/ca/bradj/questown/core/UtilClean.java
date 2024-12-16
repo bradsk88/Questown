@@ -24,6 +24,14 @@ public class UtilClean {
         };
     }
 
+    public static <X, Y> Map<X, ImmutableList<Y>> deepCopy(Map<X, ? extends Collection<Y>> items) {
+        ImmutableMap.Builder<X, ImmutableList<Y>> b = ImmutableMap.builder();
+        items.forEach((k, v) -> {
+            b.put(k, ImmutableList.copyOf(v));
+        });
+        return b.build();
+    }
+
     public record Pair<A, B>(A a, B b){};
 
     // If you make any changes to the returned map (when mutable), remember to PUT it back into the map.

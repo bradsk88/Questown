@@ -8,12 +8,15 @@ import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraftforge.network.PacketDistributor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -57,14 +60,8 @@ public class FlagMenus {
             Iterable<? extends VisitorMobEntity> es
     ) {
         VillagerQuestsContainer.write(data, quests, flagPos);
-        ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
-        es.forEach(v -> b.put(
-                v.getUUID(),
-                new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
-        ));
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new MultiStatusScreenSyncMessage(
-                new MultiStatusScreen.SyncedData(b.build())
-        ));
+        MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
+        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
             e.addStatusListener(new StatusListener() {
                 @Override
@@ -74,18 +71,29 @@ public class FlagMenus {
 
                 @Override
                 public void statusChanged(IStatus<?> newStatus) {
-                    ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
-                    es.forEach(v -> b.put(
-                            v.getUUID(),
-                            new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
-                    ));
+                    MultiStatusScreen.SyncedData data1 = makeSyncData(es);
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
-                            new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(b.build()))
+                            new MultiStatusScreenSyncMessage(data1)
                     );
                 }
             });
         }
+    }
+
+    private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
+        ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
+        es.forEach(v -> b.put(
+                v.getUUID(),
+                new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
+        ));
+        ImmutableMap.Builder<UUID, ImmutableList<Item>> b2 = ImmutableMap.builder();
+        es.forEach(v -> b2.put(
+                v.getUUID(),
+                ImmutableList.copyOf(v.getJobJournalSnapshot().items().stream().map(z -> z.get().get()).toList())
+        ));
+        MultiStatusScreen.SyncedData data1 = new MultiStatusScreen.SyncedData(b.build(), b2.build());
+        return data1;
     }
 
     public void initQuestsMenu(

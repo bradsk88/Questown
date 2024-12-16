@@ -232,15 +232,16 @@ public class JobsClean {
     }
 
     // TODO[ASAP]: Test "should not return null if entity is in room with finished product"
-    public static <ROOM extends Room, RECIPE, POS> ROOM getEntityCurrentJobSite(
+    public static <ROOM extends Room, RECIPE, POS> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
             Position entityBlockPos,
             RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
             Collection<ROOM> roomsWithCompletedProduct,
-            Predicate<ROOM> additionalPosCheck
+            Predicate<ROOM> additionalPosCheck,
+            Predicate<RECIPE> isFarm
     ) {
         for (ROOM room : roomsWithCompletedProduct) {
             if (InclusiveSpaces.contains(room.getSpaces(), entityBlockPos)) {
-                return room;
+                return new EntityCurrentJobSite<>(room, false); // TODO: Add a check for farm
             }
         }
 
@@ -256,7 +257,7 @@ public class JobsClean {
                 .filter(v -> additionalPosCheck.test(v.getRoom()))
                 .filter(containsEntity)
                 .findFirst()
-                .map(IRoomRecipeMatch::getRoom)
+                .map(v -> new EntityCurrentJobSite<>(v.getRoom(), isFarm.test(v.getRecipeID())))
                 .orElse(null);
     }
 

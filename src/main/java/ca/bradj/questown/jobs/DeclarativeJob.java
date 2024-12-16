@@ -322,7 +322,7 @@ public class DeclarativeJob extends
     ) {
         JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
 
-        MCRoom entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
+        EntityCurrentJobSite<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
                 entity.blockPosition(),
                 roomsNeedingIngredientsOrTools,
                 jtp.roomsWithCompletedProduct()
@@ -334,7 +334,7 @@ public class DeclarativeJob extends
                 if (entityCurrentJobSite == null) {
                     return null;
                 }
-                return entityCurrentJobSite;
+                return entityCurrentJobSite.room();
             }
         };
 
@@ -359,7 +359,8 @@ public class DeclarativeJob extends
                 new JobLogic.JobDetails(maxState, checks.getWorkForStep(0), workInterval),
                 this.asLogicWorld(
                         extra, work,
-                        (VisitorMobEntity) entity, entityCurrentJobSite,
+                        (VisitorMobEntity) entity,
+                        entityCurrentJobSite,
                         roomsNeedingIngredientsOrTools
                 ),
                 (tuwn, bpp) -> Util.withFallbackForNullInput(
@@ -512,7 +513,7 @@ public class DeclarativeJob extends
             MCExtra extra,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             VisitorMobEntity entity,
-            MCRoom entityCurrentJobSite,
+            EntityCurrentJobSite<MCRoom> entityCurrentJobSite,
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
         DeclarativeJob self = this;
@@ -535,7 +536,7 @@ public class DeclarativeJob extends
                 for (RoomRecipeMatch<MCRoom> room : town.getRoomHandle().getRoomsMatching(SpecialQuests.CLINIC)) {
                     Map<Integer, Collection<WorkPosition<BlockPos>>> spots = DeclarativeJob.this.listAllWorkSpots(
                             getWorkStatusHandle(town)::getJobBlockState,
-                            room.room,
+                            new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
                             bp -> isJobBlock(bp),
                             () -> Direction.getRandom(sl.random)
@@ -560,7 +561,8 @@ public class DeclarativeJob extends
                     return ImmutableMap.of();
                 }
                 return self.listAllWorkSpots(
-                        work::getJobBlockState, entityCurrentJobSite,
+                        work::getJobBlockState,
+                        entityCurrentJobSite,
                         bp -> isValidWalkTarget(town, bp),
                         bp -> isJobBlock(bp),
                         () -> Direction.getRandom(sl.random)
@@ -731,7 +733,7 @@ public class DeclarativeJob extends
 
     Map<Integer, Collection<WorkPosition<BlockPos>>> listAllWorkSpots(
             Function<BlockPos, State> town,
-            @Nullable MCRoom jobSite,
+            @Nullable EntityCurrentJobSite<MCRoom> jobSite,
             Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
             Supplier<Direction> randomDirection
@@ -740,17 +742,20 @@ public class DeclarativeJob extends
             return ImmutableMap.of();
         }
 
-        Function<BlockPos, BlockPos> is = bp -> findInteractionSpot(bp, jobSite, isValidWalkTarget, randomDirection);
+        Function<BlockPos, BlockPos> is = bp -> {
+            bp = jobSite.isFarm() ? bp.above() : bp;
+            return findInteractionSpot(bp, jobSite.room(), isValidWalkTarget, randomDirection);
+        };
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
-        jobSite.getSpaces()
+        jobSite.room().getSpaces()
                .stream()
                .flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space)
                                                 .stream())
                .forEach(v -> {
-                   BlockPos pos = Positions.ToBlock(v, jobSite.yCoord);
+                   BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);
                    tryAdd.accept(pos);
                    tryAdd.accept(pos.above());
                });
@@ -765,13 +770,13 @@ public class DeclarativeJob extends
             Function<BlockPos, State> town,
             BlockPos bp,
             Map<Integer, List<WorkPosition<BlockPos>>> b,
-            Function<BlockPos, BlockPos> is,
+            Function<BlockPos, BlockPos> i9nSpot,
             Predicate<BlockPos> isJobBlock
     ) {
         @Nullable Integer blockAction = JobBlock.getState(town, bp);
         if (blockAction != null) {
             if (isJobBlock.test(bp)) {
-                Util.addOrInitialize(b, blockAction, new WorkPosition<>(bp, is.apply(bp)));
+                Util.addOrInitialize(b, blockAction, new WorkPosition<>(bp, i9nSpot.apply(bp)));
             }
         }
     }
