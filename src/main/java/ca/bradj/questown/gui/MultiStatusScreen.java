@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
@@ -33,10 +34,18 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
+    private static final int CARD_PADDING = 1;
+    private static final int PAGE_PADDING = 10;
+    private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
+    private static final int CARD_HEIGHT = 42;
+    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+
     private final DrawableNineSliceTexture background;
 
     private final Map<UUID, Collection<IStatus<?>>> statusSmoothingQueue = new HashMap<>();
     private final FlagTabs tabs;
+    private final JEI.NineNine cardBackground;
+    private final int currentPage = 0; // TODO: Paging of statuses
 
     public record SyncedData(
             Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers,
@@ -66,6 +75,7 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu);
+        this.cardBackground = JEI.getRecipeBackground();
     }
 
     @Override
@@ -93,23 +103,42 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+
+        renderCardsBG(stack, bgY, bgX);
         renderStatus(stack);
         renderInventory();
         renderFaces(stack);
     }
 
+    private void renderCardsBG(
+            PoseStack stack,
+            int bgY,
+            int bgX
+    ) {
+        int startIndex = currentPage * MAX_CARDS_PER_PAGE;
+        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, syncedData.villagers.size());
+
+        int x = bgX + PAGE_PADDING;
+        int y = bgY + PAGE_PADDING;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            int row = i - startIndex;
+            int cardY = y + row * (CARD_HEIGHT + CARD_PADDING);
+            this.cardBackground.draw(stack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+        }
+    }
+
     private void renderInventory() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        y += 32;
         x += 16;
         for (UUID uuid : syncedData.items.keySet()) {
             int iconX = x - 12;
             Collection<net.minecraft.world.item.Item> items = syncedData.items.get(uuid);
             for (Item item : items) {
-                this.itemRenderer.renderAndDecorateItem(new ItemStack(item), iconX += 16 + 4, y);
+                this.itemRenderer.renderAndDecorateItem(new ItemStack(item), iconX += 16 + 4, y + 32);
             }
-            y += 32;
+            y += CARD_HEIGHT + CARD_PADDING;
         }
     }
 
@@ -122,15 +151,14 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int drawNumPixelsY = 8;
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        y += 20;
         x += 16;
         for (UUID uuid : syncedData.items.keySet()) {
             ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
             RenderSystem.setShaderTexture(0, texture);
-            blit(stack, x, y, texStartX, texStartY, drawNumPixelsX, drawNumPixelsY, texFileWidth, texFileHeight);
+            blit(stack, x, y + 20, texStartX, texStartY, drawNumPixelsX, drawNumPixelsY, texFileWidth, texFileHeight);
             int nameX = x + drawNumPixelsX + 4;
-            Compat.drawDarkText(font, stack, Compat.translatable(syncedData.villagers.get(uuid).a().rootId()), nameX, y);
-            y += 32;
+            Compat.drawDarkText(font, stack, Compat.translatable(syncedData.villagers.get(uuid).a().rootId()), nameX, y + 20);
+            y += CARD_HEIGHT + CARD_PADDING;
         }
     }
 
@@ -146,7 +174,7 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int texHeight = 32;
 
         int destX = x + backgroundWidth - 16 - 32;
-        int destY = y + 16;
+        int destY = y + CARD_PADDING;
 
         for (UUID uuid : syncedData.villagers.keySet()) {
             ResourceLocation texture = StatusArt.getTexture(
@@ -154,8 +182,8 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
                     getSmoothedStatus(uuid)
             );
             RenderSystem.setShaderTexture(0, texture);
-            blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
-            destY = destY + drawHeight;
+            blit(stack, destX, destY + 14, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
+            destY = destY + CARD_HEIGHT + CARD_PADDING;
         }
     }
 

@@ -84,6 +84,8 @@
   "tooltips.villagers.job.production.status_2.WAITING_FOR_TIMED_STATE": "",
   "tooltips.villagers.job.production.status_1.IDLE": "%s is waiting for",
   "tooltips.villagers.job.production.status_2.IDLE": "something to do.",
+  "tooltips.villagers.job.production.status_1.RELAXING": "%s is resting",
+  "tooltips.villagers.job.production.status_2.RELAXING": "until morning.",
   "tooltips.villagers.job.blacksmith.status_1.0": "%s is placing down parts",
   "tooltips.villagers.job.blacksmith.status_2.0": "for the pickaxe handle",
   "tooltips.villagers.job.blacksmith.status_1.1": "%s is placing down parts",
