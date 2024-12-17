@@ -48,11 +48,12 @@ public class JobTooltips {
         ) {
             cat = "diner";
         }
+        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId.rootId());
         String key1 = String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2());
         String key2 = String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2());
         components = ImmutableList.of(
-                new TranslatableComponent(key1, cat, status.nameV2()),
-                new TranslatableComponent(key2, cat, status.nameV2())
+                new TranslatableComponent(key1, jobName),
+                new TranslatableComponent(key2, jobName)
         );
         return components;
     }

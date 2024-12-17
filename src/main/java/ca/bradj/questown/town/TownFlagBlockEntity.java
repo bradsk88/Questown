@@ -733,8 +733,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 getBlockPos().getX(),
                 getBlockPos().getY() + 10,
                 getBlockPos().getZ(),
-                new ItemStack(Items.FIREWORK_ROCKET.getDefaultInstance()
-                                                   .getItem(), 3)
+                new ItemStack(
+                        Items.FIREWORK_ROCKET.getDefaultInstance()
+                                             .getItem(), 3
+                )
         );
         level.addFreshEntity(firework);
     }
@@ -872,8 +874,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             JobID jobName,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(getServerLevel(), jobName, f.getJobJournalSnapshot()
-                                                                            .items(), visitorUUID));
+        f.setJob(JobsRegistry.getInitializedJob(
+                getServerLevel(), jobName, f.getJobJournalSnapshot()
+                                            .items(), visitorUUID
+        ));
     }
 
     @Override
@@ -912,15 +916,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
         ImmutableList<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
-        return pois.getWanderTarget(getServerLevel(), allRooms, (p, r) -> {
-            BlockPos pos = Positions.ToBlock(p, r.yCoord);
-            double dist = pos.distSqr(avoiding);
-            if (dist > 5) {
-                QT.FLAG_LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
-                return true;
-            }
-            return false;
-        }, (p, r) -> Positions.ToBlock(p, r.yCoord));
+        return pois.getWanderTarget(
+                getServerLevel(), allRooms, (p, r) -> {
+                    BlockPos pos = Positions.ToBlock(p, r.yCoord);
+                    double dist = pos.distSqr(avoiding);
+                    if (dist > 5) {
+                        QT.FLAG_LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
+                        return true;
+                    }
+                    return false;
+                }, (p, r) -> Positions.ToBlock(p, r.yCoord)
+        );
     }
 
     @Override
@@ -1089,6 +1095,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public boolean isInitialized() {
         return isInitializedQuests && biomes.isInitialized() && initializers.isEmpty();
+    }
+
+    public boolean isInitializing() {
+        return !initializers.isEmpty();
     }
 
     @Override

@@ -323,10 +323,10 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             if (mouseX > rightX) {
                 continue;
             }
-            if (mouseY < topY + (i * texHeight)) {
+            if (mouseY < topY + (i * CARD_HEIGHT)) {
                 continue;
             }
-            if (mouseY > botY + (i * texHeight)) {
+            if (mouseY > botY + (i * CARD_HEIGHT)) {
                 continue;
             }
             UUID villagerUUID = uuids.get(i);

@@ -43,7 +43,7 @@
     {
       "type": "core_state",
       "state": "WAITING_FOR_TIMED_STATE",
-      "new_texture": "questown:textures/menu/gatherer/gathering"
+      "new_texture": "questown:textures/menu/gatherer/gathering.png"
     }
   ],
   "status_text_overrides": [

@@ -60,9 +60,12 @@ public class JobsRegistry {
             JobID job,
             IStatus<?> status
     ) {
-        ResourceLocation tex = Works.get(job).get().applyStatusTextureOverride(status);
-        if (tex != null) {
-            return tex;
+        Work work = getWork(job);
+        if (work != null) {
+            ResourceLocation tex = work.applyStatusTextureOverride(status);
+            if (tex != null) {
+                return tex;
+            }
         }
         return StatusArt.getTexture(job, status);
     }
@@ -71,7 +74,23 @@ public class JobsRegistry {
             JobID job,
             IStatus<?> status
     ) {
-        return Works.get(job).get().applyStatusTextOverride(status);
+        Work work = getWork(job);
+        if (work == null) {
+            return null;
+        }
+        return work.applyStatusTextOverride(status);
+    }
+
+    private static @Nullable Work getWork(JobID job) {
+        Supplier<Work> workSupplier = Works.get(job);
+        if (workSupplier == null) {
+            return null;
+        }
+        Work work = workSupplier.get();
+        if (work == null) {
+            return null;
+        }
+        return work;
     }
 
     public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJobForVillager(
@@ -337,8 +356,8 @@ public class JobsRegistry {
     ) {
         Work w = Works.get(p).get();
         long jobDuration = w.jobFunc
-                            .apply(villagerID)
-                            .getTotalDuration();
+                .apply(villagerID)
+                .getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
         Signals currentSegment = Signals.fromDayTime(currentTick);
@@ -368,10 +387,12 @@ public class JobsRegistry {
         });
 
         ps.forEach((rootId, w) -> {
-            b.put(rootId, new Jerb(
-                    w.stream().map(x -> x.id).toList(),
-                    ImmutableList.of()
-            ));
+            b.put(
+                    rootId, new Jerb(
+                            w.stream().map(x -> x.id).toList(),
+                            ImmutableList.of()
+                    )
+            );
         });
         jobs = b.build();
     }
