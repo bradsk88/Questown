@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import com.google.common.collect.ImmutableList;
@@ -15,7 +14,6 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
 
 
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.QUESTS,
             OpenFlagMenuMessage.VILLAGERS
     );
 

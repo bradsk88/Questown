@@ -15,8 +15,7 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
 
 
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.QUESTS,
-            OpenFlagMenuMessage.VILLAGERS
+            OpenFlagMenuMessage.QUESTS
     );
     private final BlockPos flagPos;
 
