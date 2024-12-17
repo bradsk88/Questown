@@ -15,6 +15,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
+import ca.bradj.roomrecipes.recipes.RoomAnnouncing;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -93,11 +94,15 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         BlockState bs = level.getBlockState(bPos);
         return Ingredient.of(Tags.Items.FENCES)
-                         .test(new ItemStack(bs.getBlock()
-                                               .asItem(), 1)) ||
+                         .test(new ItemStack(
+                                 bs.getBlock()
+                                   .asItem(), 1
+                         )) ||
                 Ingredient.of(Tags.Items.FENCE_GATES)
-                          .test(new ItemStack(bs.getBlock()
-                                                .asItem(), 1));
+                          .test(new ItemStack(
+                                  bs.getBlock()
+                                    .asItem(), 1
+                          ));
     }
 
     private TownRooms getOrCreateRooms(int scanLevel) {
@@ -216,11 +221,13 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                                                               .noneMatch(z -> z.isPresent() && v.toPosition()
                                                                                                 .equals(z.get().doorPos)))
                                    .forEach(
-                                           nonRoomDoor -> doorsToDrop.compute(new TownPosition(
-                                                   nonRoomDoor.x,
-                                                   nonRoomDoor.z,
-                                                   scanLevel
-                                           ), (door, ticks) -> ticks == null ? 1 : ticks + 1)
+                                           nonRoomDoor -> doorsToDrop.compute(
+                                                   new TownPosition(
+                                                           nonRoomDoor.x,
+                                                           nonRoomDoor.z,
+                                                           scanLevel
+                                                   ), (door, ticks) -> ticks == null ? 1 : ticks + 1
+                                           )
                                    );
                     dropDeadDoors(flagPos);
                 },
@@ -300,7 +307,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         this.initialize(
                 owner,
-                ImmutableMap.of(),
+                ImmutableList.of(),
                 ImmutableList.of(),
                 ImmutableList.of()
         );
@@ -308,20 +315,42 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void initialize(
             TownFlagBlockEntity owner,
-            Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> ars,
             ImmutableList<TownPosition> registeredDoors,
-            ImmutableList<TownPosition> registeredFenceGates
+            ImmutableList<TownPosition> registeredFenceGates,
+            ImmutableList<TownPosition> doorsWithActiveRecipes
     ) {
         if (!this.activeRecipes.isEmpty()) {
             throw new IllegalStateException("Double initialization");
         }
-        this.activeRecipes.putAll(ars);
-        for (ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> r : ars.values()) {
+
+        ImmutableSet.Builder<Integer> levelsToInit = ImmutableSet.builder();
+        registeredDoors.forEach(p -> levelsToInit.add(p.scanLevel));
+        levelsToInit.build().forEach(l -> markDoorsForSkipAnnounce(l, getOrCreateRooms(l), doorsWithActiveRecipes));
+
+        ImmutableSet.Builder<Integer> farmLevelsToInit = ImmutableSet.builder();
+        registeredDoors.forEach(p -> farmLevelsToInit.add(p.scanLevel));
+        farmLevelsToInit.build().forEach(l -> markDoorsForSkipAnnounce(l, getOrCreateFarms(l), doorsWithActiveRecipes));
+
+        this.activeRecipes.forEach((k, v) -> markDoorsForSkipAnnounce(k, v, doorsWithActiveRecipes));
+        for (ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> r : activeRecipes.values()) {
             r.addChangeListener(owner);
         }
         this.registeredDoors.addAll(registeredDoors);
         this.registeredFenceGates.addAll(registeredFenceGates);
         this.town = owner;
+    }
+
+    private void markDoorsForSkipAnnounce(
+            Integer scanLevel,
+            RoomAnnouncing recipes,
+            ImmutableList<TownPosition> registeredDoors
+    ) {
+        List<Position> relevantDoors = registeredDoors
+                .stream()
+                .filter(v -> scanLevel.equals(v.scanLevel))
+                .map(TownPosition::toPosition)
+                .toList();
+        recipes.skipAnnounceOnFirstDetect(relevantDoors);
     }
 
     /**
@@ -453,4 +482,21 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         this.recipeListeners.add(l);
     }
+
+    public ImmutableSet<BlockPos> getAllActiveRecipeDoors() {
+        ImmutableSet.Builder<BlockPos> b = ImmutableSet.builder();
+        activeRecipes.forEach((k, v) -> {
+            v.entrySet().forEach((v2) -> {
+                b.add(Positions.ToBlock(v2.getKey().doorPos, v2.getKey().yCoord));
+            });
+        });
+        activeFarms.forEach((k, v) -> {
+            v.getAll().forEach((v2) -> {
+                b.add(Positions.ToBlock(v2.doorPos, v2.yCoord + 1));
+            });
+        });
+        return b.build();
+    }
+
+    ;
 }

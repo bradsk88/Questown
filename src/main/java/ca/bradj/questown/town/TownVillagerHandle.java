@@ -69,8 +69,12 @@ public class TownVillagerHandle implements VillagerHolder {
         this.damage.putAll(damage);
     }
 
-    public void tick(long currentTick) {
-        tickHunger();
+    public void tick(long currentTick,
+                     Signals signals
+    ) {
+        if (signals != Signals.NIGHT) {
+            tickHunger();
+        }
         tickDamage();
         moods.tick(currentTick);
         TownFlagBlockEntity t = town.getUnsafe();

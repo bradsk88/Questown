@@ -10,6 +10,7 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
+import ca.bradj.roomrecipes.recipes.RoomAnnouncing;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import ca.bradj.roomrecipes.rooms.ActiveRooms;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -20,13 +21,14 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
 
-public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChecker, ActiveRooms.ChangeListener<MCRoom> {
+public class TownRooms implements
+        TownCycle.BlockChecker,
+        DoorDetection.DoorChecker,
+        ActiveRooms.ChangeListener<MCRoom>,
+        RoomAnnouncing {
 
     private final List<RecipeRoomChangeListener> changeListeners = new ArrayList<>();
 
@@ -36,6 +38,13 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
 
     public Optional<Room> get(Position position) {
         return Optional.ofNullable(rooms.get(position));
+    }
+
+    private final Stack<Position> roomsToSkipInitialAnnounce = new Stack<>();
+
+    @Override
+    public void skipAnnounceOnFirstDetect(Collection<Position> collection) {
+        roomsToSkipInitialAnnounce.addAll(collection);
     }
 
     public interface RecipeRoomChangeListener {
@@ -96,13 +105,20 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
         grantAdvancement(doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
-        changeListeners.forEach(
-                cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
-        );
-        entity.messages.roomCreated(recipe, doorPos);
+        if (roomsToSkipInitialAnnounce.contains(room.doorPos)) {
+            roomsToSkipInitialAnnounce.remove(room.doorPos);
+        } else {
+            changeListeners.forEach(
+                    cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
+            );
+            entity.messages.roomCreated(recipe, doorPos);
+        }
     }
 
-    protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(ServerLevel entity, MCRoom room) {
+    protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(
+            ServerLevel entity,
+            MCRoom room
+    ) {
         return RecipeDetection.getActiveRecipe(entity, room, this);
     }
 
@@ -161,14 +177,16 @@ public class TownRooms implements TownCycle.BlockChecker, DoorDetection.DoorChec
             ParticleOptions pType
     ) {
         for (InclusiveSpace space : room.getSpaces()) {
-            RoomEffects.renderParticlesBetween(space, (x, z) -> {
-                BlockPos bp = new BlockPos(x, room.yCoord, z);
-                if (!sl.isEmptyBlock(bp)) {
-                    return;
-                }
-                sl.sendParticles(pType, x, room.yCoord, z, 2, 0, 1, 0, 1);
-                sl.sendParticles(pType, x, room.yCoord + 1, z, 2, 0, 1, 0, 1);
-            });
+            RoomEffects.renderParticlesBetween(
+                    space, (x, z) -> {
+                        BlockPos bp = new BlockPos(x, room.yCoord, z);
+                        if (!sl.isEmptyBlock(bp)) {
+                            return;
+                        }
+                        sl.sendParticles(pType, x, room.yCoord, z, 2, 0, 1, 0, 1);
+                        sl.sendParticles(pType, x, room.yCoord + 1, z, 2, 0, 1, 0, 1);
+                    }
+            );
         }
     }
 }

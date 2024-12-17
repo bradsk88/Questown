@@ -14,6 +14,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -326,7 +327,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.pois.tick(sl, blockEntityPos);
 
-        e.villagerHandle.tick(Util.getTick(sl));
+        e.villagerHandle.tick(Util.getTick(sl), Signals.fromDayTime(Util.getDayTime(sl)));
 
         e.everScanned = true;
 
@@ -433,8 +434,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     private static void loadNextTick(Queue<Function<TownFlagBlockEntity, Boolean>> initializers) {
-        // TODO: Store active rooms. Otherwise they get re-announced on each startup.
-
         initializers.add(t -> {
             logStoredData(t, Compat.getBlockStoredTagData(t));
             return true;
@@ -1107,14 +1106,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public void campfireFound(BlockPos bp) {
         Position pos = Positions.FromBlockPos(bp);
-        MCRoom room = new MCRoom(pos, ImmutableList.of(new InclusiveSpace(pos, pos)), bp.getY());
+        MCRoom room = new MCRoom(pos, ImmutableList.of(InclusiveSpace.from(pos).to(pos)), bp.getY());
         quests.markQuestAsComplete(room, SpecialQuests.CAMPFIRE);
     }
 
     @Override
     public void townGateFound(BlockPos bp) {
         Position pos = Positions.FromBlockPos(bp);
-        MCRoom room = new MCRoom(pos, ImmutableList.of(new InclusiveSpace(pos, pos)), bp.getY());
+        MCRoom room = new MCRoom(pos, ImmutableList.of(InclusiveSpace.from(pos).to(pos)), bp.getY());
         quests.markQuestAsComplete(room, SpecialQuests.TOWN_GATE);
     }
 

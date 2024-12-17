@@ -167,8 +167,8 @@ public class Compat {
         return cfg::get;
     }
 
-    public static TownPosition townPos(BlockPos blockPos) {
-        return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY());
+    public static TownPosition townPos(BlockPos flagPos, BlockPos blockPos) {
+        return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY() - flagPos.getY());
     }
 
     public static boolean insertInNextOpenSlot(

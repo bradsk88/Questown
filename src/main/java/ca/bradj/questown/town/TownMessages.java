@@ -99,7 +99,6 @@ public class TownMessages {
     public void roomCreated(Optional<RoomRecipeMatch<MCRoom>> recipe, Position doorPos) {
         broadcastMessage(
                 "messages.building.room_created",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
                 doorPos.getUIString()
         );
     }

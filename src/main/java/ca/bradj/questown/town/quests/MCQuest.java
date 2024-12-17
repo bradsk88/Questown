@@ -111,7 +111,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             int bbX = nbt.getInt(NBT_COMPLETED_ON_BB_X);
             int bbZ = nbt.getInt(NBT_COMPLETED_ON_BB_Z);
             Position doorPos = new Position(doorX, doorZ);
-            InclusiveSpace space = new InclusiveSpace(new Position(aaX, aaZ), new Position(bbX, bbZ));
+            InclusiveSpace space = InclusiveSpace.from(aaX, aaZ).to(bbX, bbZ);
             ResourceLocation fromRecipeId = null;
             if (nbt.contains(NBT_FROM_RECIPE_ID)) {
                 fromRecipeId = new ResourceLocation(nbt.getString(NBT_FROM_RECIPE_ID));

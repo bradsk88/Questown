@@ -9,11 +9,15 @@ import org.jetbrains.annotations.NotNull;
 
 public class Spaces {
     @NotNull
-    public static MCRoom metaRoomAround(BlockPos p, int radius) {
+    public static MCRoom metaRoomAround(
+            BlockPos p,
+            int radius
+    ) {
         return new MCRoom(
                 Positions.FromBlockPos(p.offset(1, 0, 0)),
-                ImmutableList.of(new InclusiveSpace(
-                        Positions.FromBlockPos(p).offset(-radius, -radius),
+                ImmutableList.of(InclusiveSpace.from(
+                        Positions.FromBlockPos(p).offset(-radius, -radius)
+                ).to(
                         Positions.FromBlockPos(p).offset(radius, radius)
                 )),
                 p.getY()
