@@ -2,6 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;

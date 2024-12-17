@@ -363,7 +363,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (oEntity.get().isInitialized()) {
-            oEntity.get().getQuestHandle().showQuestsUI((ServerPlayer) player);
+            oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
         } else {
             if (!oEntity.get().isInitializing()) {
                 oEntity.get().initializeFreshFlag(true);

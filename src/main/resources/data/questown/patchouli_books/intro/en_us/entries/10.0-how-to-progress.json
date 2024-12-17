@@ -1,0 +1,23 @@
+{
+  "name": "9: Monitoring",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_open_flag_menu",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "TODO"
+    },{
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "F": "questown:cobblestone_flag_base"
+        },
+        "pattern": [
+          ["F0"]
+        ]
+      },
+      "text": "Hint: Right-click the base of the town flag to open the management menu."
+    }
+  ]
+}

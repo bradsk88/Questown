@@ -11,6 +11,7 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
@@ -327,7 +328,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.pois.tick(sl, blockEntityPos);
 
-        e.villagerHandle.tick(Util.getTick(sl), Signals.fromDayTime(Util.getDayTime(sl)));
+        Signals signals = Signals.fromDayTime(Util.getDayTime(sl));
+        if (signals == Signals.NIGHT || signals == Signals.EVENING) {
+            AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(sl, VisitorTrigger.Triggers.FirstNightFall, e.getBlockPos());
+        }
+
+        e.villagerHandle.tick(Util.getTick(sl), signals);
 
         e.everScanned = true;
 
@@ -638,7 +644,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         messages.roomRecipeCreated(roomDoorPos, match);
         ;
         BlockPos pos = Positions.ToBlock(roomDoorPos.doorPos, roomDoorPos.yCoord);
-        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
+        if (match.getRecipeID().equals(SpecialQuests.JOB_BOARD)) {
+            AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
+        }
+        if (match.getRecipeID().equals(Questown.ResourceLocation("store_room"))) {
+            AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstStoreRoom, pos);
+        }
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
         quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
@@ -1170,7 +1181,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         pois.registerWelcomeMat(welcomeMatBlock);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                getServerLevel(), RoomTrigger.Triggers.FirstJobBlock, welcomeMatBlock
+                getServerLevel(), RoomTrigger.Triggers.FirstWelcomeMat, welcomeMatBlock
         );
     }
 

@@ -493,7 +493,9 @@ public abstract class ProductionJob<
             if (rule == null) {
                 continue;
             }
-            return SpecialRules.REMOVE_FROM_WORLD.equals(rule);
+            if (SpecialRules.REMOVE_FROM_WORLD.equals(rule)) {
+                return true;
+            }
         }
         return false;
     }

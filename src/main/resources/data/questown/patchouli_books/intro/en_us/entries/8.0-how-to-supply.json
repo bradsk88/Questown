@@ -1,0 +1,16 @@
+{
+  "name": "8: Supplies",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_store_room",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Just one more thing.$(br2)Like you, this villager will get hungry as they work!$(br2)Give the villager some food, and they should leave town to gather more supplies!"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Hint: Place some basic food in the store room chest. The villager will take it."
+    }
+  ]
+}

@@ -42,12 +42,16 @@ public class RoomTrigger extends SimpleCriterionTrigger<RoomTrigger.Instance> {
         FirstRoom,
         FirstJobBlock,
         FirstJobBoard,
+        FirstStoreRoom,
+        FirstWelcomeMat,
         WandGet; // TODO: Put this on "ItemTrigger" (new class) instead
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
                 Triggers.FirstRoom, "first_room",
                 Triggers.FirstJobBlock, "first_job_block",
                 Triggers.FirstJobBoard, "first_job_board",
+                Triggers.FirstStoreRoom, "first_store_room",
+                Triggers.FirstWelcomeMat, "first_welcome_mat",
                 Triggers.WandGet, "wand_get"
         );
 

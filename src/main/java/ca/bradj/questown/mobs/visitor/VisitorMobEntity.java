@@ -5,6 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
@@ -490,6 +491,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
 
+        ServerLevel sl = (ServerLevel) level;
+
         town.getVillagerHandle().getRequestedPose(uuid).ifPresent(this::applyRequestedPose);
 
         trySetWalkTargetFromJob(j);
@@ -502,6 +505,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
 
         boolean vis = !j.shouldDisappear(town, position());
+        if (!vis) {
+            if (job.get().getId().rootId().equals("gatherer")) {
+                AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                        sl,
+                        VisitorTrigger.Triggers.FirstLeaveToGather,
+                        blockPosition()
+                );
+            }
+        }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());

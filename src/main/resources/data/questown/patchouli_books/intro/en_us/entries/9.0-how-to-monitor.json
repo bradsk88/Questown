@@ -1,0 +1,23 @@
+{
+  "name": "9: Monitoring",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_leave_to_gather",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "If you're reading this, hopefully your villager has left town to gather supplies. Very handy!$(br2)If you ever want to know where your villagers have gone, you can always use the flag to check."
+    },{
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "F": "questown:cobblestone_flag_base"
+        },
+        "pattern": [
+          ["F0"]
+        ]
+      },
+      "text": "Hint: Right-click the base of the town flag to open the management menu."
+    }
+  ]
+}

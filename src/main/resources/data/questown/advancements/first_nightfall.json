@@ -1,14 +1,14 @@
 {
   "display": {
     "title": {
-      "text": "TO-DO",
+      "text": "First of Many",
       "color": "white"
     },
     "description": {
-      "text": "Place a block which a villager can use to do work"
+      "text": "Complete a full day with a villager present"
     },
     "icon": {
-      "item": "crafting_table"
+      "item": "minecraft:red_bed"
     },
     "frame": "goal",
     "show_toast": true,
@@ -18,9 +18,9 @@
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:visitor_trigger",
       "conditions": {
-        "context": "first_job_block"
+        "context": "first_nightfall"
       }
     }
   },
@@ -32,5 +32,5 @@
   "rewards": {
     "experience": 100
   },
-  "parent": "questown:root"
+  "parent": "questown:first_visitor"
 }

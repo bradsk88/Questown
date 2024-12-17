@@ -1,14 +1,14 @@
 {
   "display": {
     "title": {
-      "text": "TO-DO",
+      "text": "Stocking Up",
       "color": "white"
     },
     "description": {
-      "text": "Place a block which a villager can use to do work"
+      "text": "Create a store room"
     },
     "icon": {
-      "item": "crafting_table"
+      "item": "chest"
     },
     "frame": "goal",
     "show_toast": true,
@@ -20,7 +20,7 @@
     "Trigger": {
       "trigger": "questown:room_trigger",
       "conditions": {
-        "context": "first_job_block"
+        "context": "first_store_room"
       }
     }
   },
@@ -32,5 +32,5 @@
   "rewards": {
     "experience": 100
   },
-  "parent": "questown:root"
+  "parent": "questown:first_room"
 }
