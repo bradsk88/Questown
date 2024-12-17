@@ -38,7 +38,7 @@
   "tooltips.villagers.job.gatherer.status_2.NO_GATE": "(Check the old journal for info)",
   "tooltips.villagers.job.gatherer.status_1.STAYING": "%s is staying. Make sure there",
   "tooltips.villagers.job.gatherer.status_2.STAYING": "is food in storage in the morning.",
-  "tooltips.villagers.job.gatherer.status_1.GATHERING": "%s is leaving to collect items.",
+  "tooltips.villagers.job.gatherer.status_1.GATHERING": "%s has left to collect items.",
   "tooltips.villagers.job.gatherer.status_2.GATHERING": "",
   "tooltips.villagers.job.gatherer.status_1.RETURNED_SUCCESS": "%s has returned with items.",
   "tooltips.villagers.job.gatherer.status_2.RETURNED_SUCCESS": "They will deposit them in chests.",

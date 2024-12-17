@@ -3,10 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
-import ca.bradj.questown.jobs.declarative.DinerWork;
-import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
@@ -25,13 +22,11 @@ import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -160,12 +155,17 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         bgY = bgY + PAGE_PADDING + PAGE_PADDING;
         renderCardsBG(stack, bgY, bgX);
 
-        Iterable<UUID> uuids = Iterables.skip(syncedData.villagers.keySet(), currentPage * MAX_CARDS_PER_PAGE);
-        uuids = Iterables.limit(uuids, MAX_CARDS_PER_PAGE);
+        Iterable<UUID> uuids = getUuids();
 
         renderStatus(stack, bgX, bgY, uuids);
         renderInventory(bgX, bgY,uuids);
         renderFaces(stack, bgX, bgY, uuids);
+    }
+
+    private @NotNull Iterable<UUID> getUuids() {
+        Iterable<UUID> uuids = Iterables.skip(syncedData.villagers.keySet(), currentPage * MAX_CARDS_PER_PAGE);
+        uuids = Iterables.limit(uuids, MAX_CARDS_PER_PAGE);
+        return uuids;
     }
 
     private void renderPageNum(
@@ -262,10 +262,9 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int destY = y + CARD_PADDING;
 
         for (UUID uuid : uuids) {
-            ResourceLocation texture = StatusArt.getTexture(
-                    syncedData.villagers.get(uuid).a(),
-                    getSmoothedStatus(uuid)
-            );
+            IStatus<?> status = getSmoothedStatus(uuid);
+            JobID job = syncedData.villagers.get(uuid).a();
+            ResourceLocation texture = JobsRegistry.getTexture(job, status);
             RenderSystem.setShaderTexture(0, texture);
             blit(stack, destX, destY + 14, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
             destY = destY + CARD_HEIGHT + CARD_PADDING;
@@ -307,6 +306,8 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         )) {
             return;
         }
+
+        bgY = bgY + PAGE_PADDING + PAGE_PADDING; // Accounting for pager
         int leftX = bgX + backgroundWidth - 16 - 32;
         int topY = bgY + 16;
         int rightX = leftX + 32;
@@ -314,7 +315,7 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
         int texWidth = 32;
         int texHeight = 32;
 
-        ImmutableList<UUID> uuids = ImmutableList.copyOf(syncedData.villagers.keySet());
+        ImmutableList<UUID> uuids = ImmutableList.copyOf(getUuids());
         for (int i = 0; i < uuids.size(); i++) {
             if (mouseX < leftX) {
                 continue;
@@ -328,37 +329,11 @@ public class MultiStatusScreen extends AbstractContainerScreen<MultiStatusMenu> 
             if (mouseY > botY + (i * texHeight)) {
                 continue;
             }
-//                // TODO: Render root AND current job
             UUID villagerUUID = uuids.get(i);
             IStatus<?> status = getSmoothedStatus(villagerUUID);
-            @Nullable String cat = status.getCategoryId();
             JobID jobId = syncedData.villagers().get(villagerUUID).a();
-            if (cat == null) {
-                cat = jobId.rootId();
-            }
-
-            // TODO: Handle work seeker statuses some where else
-            if (WorkSeekerJob.isSeekingWork(jobId)) {
-                cat = "work_seeker";
-            }
-            if (
-                    DinerNoTableWork.isDining(jobId) ||
-                            DinerWork.isDining(jobId) ||
-                            DinerRawFoodWork.isDining(jobId)
-            ) {
-                cat = "diner";
-            }
-
-            TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId.rootId());
-            TranslatableComponent component = new TranslatableComponent(
-                    String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
-                    jobName
-            );
-            TranslatableComponent component2 = new TranslatableComponent(
-                    String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
-                    jobName
-            );
-            super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
+            ImmutableList<Component> components = JobTooltips.get(status, jobId);
+            super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
             return;
         }
         super.renderTooltip(stack, mouseX, mouseY);

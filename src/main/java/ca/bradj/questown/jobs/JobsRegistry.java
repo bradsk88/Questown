@@ -2,9 +2,11 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBoardBlock;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.gui.StatusArt;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
@@ -51,7 +53,33 @@ public class JobsRegistry {
             UUID uuid,
             JobID p
     ) {
-        return Works.get(p).get().jobFunc().apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
+        return Works.get(p).get().jobFunc.apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
+    }
+
+    public static ResourceLocation getTexture(
+            JobID job,
+            IStatus<?> status
+    ) {
+        ResourceLocation tex = Works.get(job).get().applyStatusTextureOverride(status);
+        if (tex != null) {
+            return tex;
+        }
+        return StatusArt.getTexture(job, status);
+    }
+
+    public static @Nullable UtilClean.Pair<String, String> getStatusText(
+            JobID job,
+            IStatus<?> status
+    ) {
+        return Works.get(job).get().applyStatusTextOverride(status);
+    }
+
+    public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJobForVillager(
+            UUID villagerUUID
+    ) {
+        JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
+        Work work = Works.get(initialID).get();
+        return work.jobFunc.apply(villagerUUID);
     }
 
     private record SpecialJob(
@@ -78,10 +106,10 @@ public class JobsRegistry {
             };
             return new SpecialJob(
                     idTest,
-                    (id, owner) -> cached.apply(id).jobFunc().apply(owner),
+                    (id, owner) -> cached.apply(id).jobFunc.apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
-                    (id, bs, bp) -> cached.apply(id).isJobBlock().test(ignored -> bs.get(), bp),
-                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs().apply(items))
+                    (id, bs, bp) -> cached.apply(id).isJobBlock.test(ignored -> bs.get(), bp),
+                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items))
             );
         }
     }
@@ -125,7 +153,7 @@ public class JobsRegistry {
                 return true;
             }
         }
-        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock().test(sl, bp));
+        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(sl, bp));
         // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
             return true;
@@ -152,7 +180,7 @@ public class JobsRegistry {
                                                         .stream()
                                                         .filter(v -> v.getKey().rootId().equals(rootId))
                                                         .toList();
-        return x.get(Compat.nextInt(rand, x.size())).getValue().get().baseRoom();
+        return x.get(Compat.nextInt(rand, x.size())).getValue().get().baseRoom;
     }
 
     public static ImmutableList<JobID> getPreferredWorkIds(JobID jobId) {
@@ -229,16 +257,16 @@ public class JobsRegistry {
         }
 
         Work work = w.get();
-        if (work.initialRequest() == null) {
+        if (work.initialRequest == null) {
             return true;
         }
 
-        for (MCTownItem r : work.results().apply(town)) {
+        for (MCTownItem r : work.results.apply(town)) {
             if (requestedResult.test(r.toItemStack())) {
                 return true;
             }
         }
-        return requestedResult.test(work.initialRequest());
+        return requestedResult.test(work.initialRequest);
     }
 
     public static Function<List<MCHeldItem>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -261,7 +289,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return (items) -> ImmutableList.of();
         }
-        return (items) -> ImmutableList.copyOf(w.get().needs().apply(items));
+        return (items) -> ImmutableList.copyOf(w.get().needs.apply(items));
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
@@ -273,7 +301,7 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
-        return w.get().initialRequest();
+        return w.get().initialRequest;
     }
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
@@ -281,9 +309,9 @@ public class JobsRegistry {
                                      .map(v -> {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-                                         work.results().apply(t).forEach(z -> b.add(z.toItemStack()));
-                                         if (work.initialRequest() != null) {
-                                             b.add(work.initialRequest());
+                                         work.results.apply(t).forEach(z -> b.add(z.toItemStack()));
+                                         if (work.initialRequest != null) {
+                                             b.add(work.initialRequest);
                                          }
                                          return b.build();
                                      })
@@ -308,7 +336,7 @@ public class JobsRegistry {
             Signals.DayTime currentTick
     ) {
         Work w = Works.get(p).get();
-        long jobDuration = w.jobFunc()
+        long jobDuration = w.jobFunc
                             .apply(villagerID)
                             .getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
@@ -335,13 +363,13 @@ public class JobsRegistry {
         js.forEach((id, job) -> {
             ArrayList<Work> rL = Util.getOrDefault(ps, id.rootId(), new ArrayList<>());
             rL.add(job);
-            rL.sort(Comparator.comparingInt(Work::priority));
+            rL.sort(Comparator.comparingInt(w -> w.priority));
             ps.put(id.rootId(), rL);
         });
 
         ps.forEach((rootId, w) -> {
             b.put(rootId, new Jerb(
-                    w.stream().map(Work::id).toList(),
+                    w.stream().map(x -> x.id).toList(),
                     ImmutableList.of()
             ));
         });
@@ -402,10 +430,10 @@ public class JobsRegistry {
             Supplier<Work> fn = Works.get(jobName);
             if (fn == null) {
                 QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-                j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc().apply(ownerUUID);
+                j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.apply(ownerUUID);
             } else {
                 Work work = fn.get();
-                j = work.jobFunc().apply(ownerUUID);
+                j = work.jobFunc.apply(ownerUUID);
                 journal = newJournal(jobName, journal, heldItems, work);
             }
         }
@@ -423,7 +451,7 @@ public class JobsRegistry {
             Work fn
     ) {
         if (journal == null && heldItems != null) {
-            journal = fn.snapshotFunc().apply(jobName, fn.initialStatus().name(), heldItems);
+            journal = fn.snapshotFunc.apply(jobName, fn.initialStatus.name(), heldItems);
         } else if (journal == null) {
             QT.JOB_LOGGER.error("Null items and journal. We probably just lost items.");
         }
@@ -458,6 +486,6 @@ public class JobsRegistry {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);
             f = Works.get(GathererUnmappedNoToolWorkQtrDay.ID);
         }
-        return f.get().snapshotFunc().apply(job, status, heldItems);
+        return f.get().snapshotFunc.apply(job, status, heldItems);
     }
 }

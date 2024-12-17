@@ -141,7 +141,7 @@ public class TownFlagTileData {
                     return;
                 }
                 String rid = e.getJobId().rootId();
-                ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom();
+                ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
                 Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
                 if (diningRooms.isEmpty()) {
                     t.changeJobForVisitor(e.getUUID(), DinerNoTableWork.getIdForRoot(rid));

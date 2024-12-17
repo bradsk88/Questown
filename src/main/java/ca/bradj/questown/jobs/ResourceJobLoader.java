@@ -1,7 +1,9 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -83,9 +85,9 @@ public class ResourceJobLoader {
                                     "Unknown job file version \"%s\"", version
                             ));
                         };
-                        QT.INIT_LOGGER.info("Work found in filesystem: {}", type.id());
-                        QT.INIT_LOGGER.debug("{}: {}", type.id().toNiceString(), type);
-                        b.put(type.id(), type);
+                        QT.INIT_LOGGER.info("Work found in filesystem: {}", type.id);
+                        QT.INIT_LOGGER.debug("{}: {}", type.id.toNiceString(), type);
+                        b.put(type.id, type);
                     } catch (Exception e) {
                         QT.INIT_LOGGER.error(
                                 "Failed to load work {} using version {}",
@@ -127,17 +129,81 @@ public class ResourceJobLoader {
                     "block").getAsString());
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
-            return WorksBehaviour.productionWork(
-                    iconItem.getDefaultInstance(),
-                    JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
-                    JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                    description(initReq, object),
-                    new WorkLocation(isJobBlock, required(object, "room")),
-                    ResourceJobLoader.workStates(object),
-                    wwi,
-                    loadRulesV1(object),
-                    loadSoundV1(object)
-            ).withPriority(requiredInt(object, "priority"));
+            Work wb = WorksBehaviour
+                    .productionWork(
+                            iconItem.getDefaultInstance(),
+                            JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
+                            JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
+                            description(initReq, object),
+                            new WorkLocation(isJobBlock, required(object, "room")),
+                            ResourceJobLoader.workStates(object),
+                            wwi,
+                            loadRulesV1(object),
+                            loadSoundV1(object)
+                    )
+                    .withPriority(requiredInt(object, "priority"));
+            @Nullable Overrides overrides = overridesFromJsonV2(object);
+            if (overrides != null) {
+                return wb.withOverrides(overrides);
+            }
+            return wb;
+        }
+
+        private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
+            ImmutableMap<IStatus<?>, ResourceLocation> textureOverrides = textureOverridesV2(object);
+            ImmutableMap<IStatus<?>, UtilClean.Pair<String, String>> statusTextOverrides = statusTextOverridesV2(object);
+            return new Overrides(textureOverrides, statusTextOverrides);
+        }
+
+        private ImmutableMap<IStatus<?>, ResourceLocation> textureOverridesV2(JsonObject object) {
+            ImmutableMap.Builder<IStatus<?>, ResourceLocation> textureOverrides = ImmutableMap.builder();
+            if (object.has("status_texture_overrides")) {
+                JsonArray rows = object.getAsJsonArray("status_texture_overrides");
+                for (JsonElement row : rows) {
+                    JsonObject rowObj = row.getAsJsonObject();
+                    String type = rowObj.get("type").getAsString();
+                    switch (type) {
+                        case "core_state": {
+                            ProductionStatus productionStatus = getCore(rowObj);
+                            String newTexture = rowObj.get("new_texture").getAsString();
+                            @NotNull String[] newTextureParts = newTexture.split(":");
+                            if (newTextureParts.length == 2) {
+                                ResourceLocation rl = new ResourceLocation(newTextureParts[0], newTextureParts[1]);
+                                textureOverrides.put(productionStatus, rl);
+                            } else {
+                                textureOverrides.put(productionStatus, Questown.ResourceLocation(newTexture));
+                            }
+                            break;
+                        }
+                        default:
+                            throw new IllegalArgumentException("Unexpected texture override type " + type);
+                    }
+                }
+            }
+            return textureOverrides.build();
+        }
+
+        private ImmutableMap<IStatus<?>, UtilClean.Pair<String, String>> statusTextOverridesV2(JsonObject object) {
+            ImmutableMap.Builder<IStatus<?>, UtilClean.Pair<String, String>> textOverrides = ImmutableMap.builder();
+            if (object.has("status_text_overrides")) {
+                JsonArray rows = object.getAsJsonArray("status_text_overrides");
+                for (JsonElement row : rows) {
+                    JsonObject rowObj = row.getAsJsonObject();
+                    String type = rowObj.get("type").getAsString();
+                    switch (type) {
+                        case "core_state": {
+                            ProductionStatus productionStatus = getCore(rowObj);
+                            String newKey1 = rowObj.get("new_key_1").getAsString();
+                            String newKey2 = rowObj.get("new_key_2").getAsString();
+                            textOverrides.put(productionStatus, new UtilClean.Pair<>(newKey1, newKey2));
+                            break;
+                        }
+                        default:
+                            throw new IllegalArgumentException("Unexpected status text override type " + type);
+                    }
+                }
+            }
+            return textOverrides.build();
         }
 
         private Work workFromJsonV2(JsonObject object) {
@@ -205,6 +271,7 @@ public class ResourceJobLoader {
                     globals.build()
             );
         }
+
         private WorkSpecialRules loadRulesV2(JsonObject object) {
             ImmutableList.Builder<String> globals = ImmutableList.builder();
             globals.add(SpecialRules.PRIORITIZE_EXTRACTION);
@@ -312,18 +379,23 @@ public class ResourceJobLoader {
                 break;
             }
             case "core_state": {
-                String name = required(rowObj, "state", JsonElement::getAsString);
-                ImmutableSet<ProductionStatus> all = ProductionStatus.allStatuses();
-                ProductionStatus productionStatus = all.stream()
-                                                       .filter(v -> v.name.equals(name))
-                                                       .findFirst()
-                                                       .orElseThrow(() -> new NotValidCoreStatus(name, all));
+                ProductionStatus productionStatus = getCore(rowObj);
                 Util.addOrInitialize(writeableStages, productionStatus, rule.getAsString());
                 break;
             }
             default:
                 throw new IllegalArgumentException("Unexpected special type " + type);
         }
+    }
+
+    private static ProductionStatus getCore(JsonObject rowObj) {
+        String name = required(rowObj, "state", JsonElement::getAsString);
+        ImmutableSet<ProductionStatus> all = ProductionStatus.allStatuses();
+        ProductionStatus productionStatus = all.stream()
+                                               .filter(v -> v.name.equals(name))
+                                               .findFirst()
+                                               .orElseThrow(() -> new NotValidCoreStatus(name, all));
+        return productionStatus;
     }
 
     private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> itemResult(
@@ -372,12 +444,14 @@ public class ResourceJobLoader {
         int qty = requiredInt(rizz, "quantity");
         return (l, i) -> {
             ItemStack itemstack = ItemStack.EMPTY;
-            CraftingContainer cc = new CraftingContainer(new AbstractContainerMenu(null, 0) {
-                @Override
-                public boolean stillValid(Player p_38874_) {
-                    return false;
-                }
-            }, 3, 3);
+            CraftingContainer cc = new CraftingContainer(
+                    new AbstractContainerMenu(null, 0) {
+                        @Override
+                        public boolean stillValid(Player p_38874_) {
+                            return false;
+                        }
+                    }, 3, 3
+            );
 
             for (int j = 0; j < resultPrefix.size(); j++) {
                 String rowStr = resultPrefix.get(j).getAsString();

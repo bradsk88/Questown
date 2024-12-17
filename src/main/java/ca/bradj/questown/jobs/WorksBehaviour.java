@@ -137,6 +137,7 @@ public class WorksBehaviour {
             WorkWorldInteractions world,
             WorkSpecialRules special,
             @Nullable SoundInfo workSound
+            // Don't add more optional args here. Use chaining like "withNeeds".
     ) {
         return productionWork(
                 parentId,

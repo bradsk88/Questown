@@ -86,8 +86,7 @@ public class TownPossibleWork {
             Map.Entry<JobID, Supplier<Work>> w
     ) {
         Work work = w.getValue().get();
-        Job<?, ?, ?> j = work.jobFunc()
-                             .apply(UUID.randomUUID());
+        Job<?, ?, ?> j = work.jobFunc.apply(UUID.randomUUID());
         if (!(j instanceof DeclarativeJob dj)) {
             return 0.0;
         }

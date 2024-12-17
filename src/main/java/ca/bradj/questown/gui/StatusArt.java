@@ -28,7 +28,8 @@ public class StatusArt {
 
     public static ResourceLocation getTexture(
             JobID jobId,
-            IStatus<?> status) {
+            IStatus<?> status
+    ) {
         if (status instanceof ProductionStatus ps) {
             String art = pArt.get(ps);
             if (WorkSeekerJob.isSeekingWork(jobId) && ps.isExtractingProduct()) {

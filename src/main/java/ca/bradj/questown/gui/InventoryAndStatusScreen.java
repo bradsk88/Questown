@@ -1,10 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
-import ca.bradj.questown.jobs.declarative.DinerWork;
-import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.JobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
@@ -25,7 +22,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -167,7 +163,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, StatusArt.getTexture(menu.jobId, getSmoothedStatus()));
+        RenderSystem.setShaderTexture(0, JobsRegistry.getTexture(menu.jobId, getSmoothedStatus()));
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;
@@ -224,34 +220,9 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                // TODO: Render root AND current job
                 IStatus<?> status = getSmoothedStatus();
-                @Nullable String cat = status.getCategoryId();
-                if (cat == null) {
-                    cat = jobId;
-                }
-
-                // TODO: Handle work seeker statuses some where else
-                if (WorkSeekerJob.isSeekingWork(menu.jobId)) {
-                    cat = "work_seeker";
-                }
-                if (
-                        DinerNoTableWork.isDining(menu.jobId) ||
-                                DinerWork.isDining(menu.jobId) ||
-                                DinerRawFoodWork.isDining(menu.jobId)
-                ) {
-                    cat = "diner";
-                }
-
-                TranslatableComponent component = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2()),
-                        jobName
-                );
-                TranslatableComponent component2 = new TranslatableComponent(
-                        String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2()),
-                        jobName
-                );
-                super.renderTooltip(stack, ImmutableList.of(component, component2), Optional.empty(), mouseX, mouseY);
+                ImmutableList<Component> components = JobTooltips.get(status, menu.jobId);
+                super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
                 return;
             }
         }

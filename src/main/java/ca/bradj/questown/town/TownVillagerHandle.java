@@ -271,8 +271,8 @@ public class TownVillagerHandle implements VillagerHolder {
         Map<JobID, ResourceLocation> b2 = new HashMap<>();
         Works.values().forEach(w -> {
             Work work = w.get();
-            b.put(work.id(), work.parentID());
-            b2.put(work.id(), work.icon().getItem().getRegistryName());
+            b.put(work.id, work.parentID);
+            b2.put(work.id, work.icon.getItem().getRegistryName());
         });
         QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
     }

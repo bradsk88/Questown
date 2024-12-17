@@ -293,13 +293,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 //    }
 
     // TODO: Make this abstract or injectable
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @NotNull
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
-        JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
-        Work work = Works.get(initialID).get();
-        WorksBehaviour.JobFunc wf = work.jobFunc();
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = wf.apply(uuid);
-
+        Job j = JobsRegistry.getInitialJobForVillager(uuid);
         // Technically this also gets us item updates because item changes cause status to go back to IDLE
         // But this is admittedly a bit fragile.
         this.cleanupJobListeners.add(j.addStatusListener(getNotifiedOfJobStatusChanges()));
