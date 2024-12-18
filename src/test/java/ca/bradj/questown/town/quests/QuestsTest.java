@@ -19,11 +19,11 @@ class QuestsTest {
 
     private static final Room testRoom1 = new Room(
             new Position(1, 2),
-            new InclusiveSpace(new Position(3, 4), new Position(5, 6))
+            InclusiveSpace.from(3, 4).to(5, 6)
     );
     private static final Room testRoom2 = new Room(
             new Position(7, 8),
-            new InclusiveSpace(new Position(9, 10), new Position(11, 12))
+            InclusiveSpace.from(9, 10).to(11, 12)
     );
 
     private QuestBatch<Integer, Room, TestQuest, Reward> quests;

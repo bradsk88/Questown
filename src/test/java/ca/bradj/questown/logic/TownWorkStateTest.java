@@ -17,7 +17,7 @@ class TownWorkStateTest {
 
     private static final Room arbitraryRoom = new Room(
             new Position(0, 1),
-            new InclusiveSpace(new Position(-1, -1), new Position(1, 1))
+            InclusiveSpace.from(-1, -1).to(1, 1)
     );
 
     private record TestStatus(

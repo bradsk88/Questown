@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableList;
@@ -79,7 +80,7 @@ class JobsCleanTest {
 
         @Override
         public Room getRoom() {
-            return new Room(new Position(0, 0), InclusiveSpaces.from(-1, 0).to(1, 2));
+            return new Room(new Position(0, 0), InclusiveSpace.from(-1, 0).to(1, 2));
         }
 
         @Override
@@ -102,7 +103,7 @@ class JobsCleanTest {
 
         @Override
         public Room getRoom() {
-            return new Room(new Position(100, 100), InclusiveSpaces.from(100, 0).to(200, 100));
+            return new Room(new Position(100, 100), InclusiveSpace.from(100, 0).to(200, 100));
         }
 
         @Override
@@ -153,46 +154,50 @@ class JobsCleanTest {
 
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityInRoom() {
-        Room site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
-                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
+                new RoomsNeedingIngredientsOrTools<Room, Object, Object>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
-                ONLY_CHECK_XZ_COORDINATES
+                ONLY_CHECK_XZ_COORDINATES,
+                (x) -> false
         );
-        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site);
+        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site.room());
     }
 
     @Test
     void getEntityCurrentJobSite_shouldReturnNull_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityNotInRoom() {
-        Room site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 new Position(-100, -100),
                 new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
-                ONLY_CHECK_XZ_COORDINATES
+                ONLY_CHECK_XZ_COORDINATES,
+                x -> false
         );
         Assertions.assertNull(site);
     }
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
-        Room site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
                         0, ImmutableList.of(arbitaryRoomMatch1) // There is a room needing supplies at state 0
                 )),
                 ImmutableList.of(), // There are no finished results to grab
-                ONLY_CHECK_XZ_COORDINATES
+                ONLY_CHECK_XZ_COORDINATES,
+                x -> false
         );
-        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site);
+        Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site.room());
     }
     @Test
     void getEntityCurrentJobSite_shouldReturnNull_WhenRoomWithRequirementsExists_AndResultsAreNotAvailable_IfEntityInADifferentRoom() {
-        Room site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
                         0, ImmutableList.of(arbitaryRoomMatch2) // There is a room needing supplies at state 0 (but the entity is in another room)
                 )),
                 ImmutableList.of(), // There are no finished results to grab
-                ONLY_CHECK_XZ_COORDINATES
+                ONLY_CHECK_XZ_COORDINATES,
+                x -> false
         );
         Assertions.assertNull(site);
     }

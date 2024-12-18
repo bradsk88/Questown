@@ -33,7 +33,7 @@ public class StatusesProductionRoutineTest {
 
     Room arbitraryRoom = new Room(
             new Position(0, 0),
-            new InclusiveSpace(new Position(0, 0), new Position(1, 1))
+            InclusiveSpace.from(0, 0).to(1, 1)
     );
 
     IRoomRecipeMatch<Room, String, Position, String> arbitraryMatch = new IRoomRecipeMatch<Room, String, Position, String>() {
@@ -354,7 +354,7 @@ public class StatusesProductionRoutineTest {
     void InMorning_StatusShouldStay_GoingToJobSite_WhenCurrentJobSiteHasNoJobs_AndAnotherJobSiteHasJobs() {
         Room currentRoom = new Room(
                 new Position(0, 1),
-                new InclusiveSpace(new Position(2, 3), new Position(4, 5))
+                InclusiveSpace.from(2, 3).to(4, 5)
         );
 
         boolean hasSupplies = true;
@@ -517,7 +517,7 @@ public class StatusesProductionRoutineTest {
             public Room getRoom() {
                 return new Room(
                         new Position(0, 1),
-                        new InclusiveSpace(new Position(2, 3), new Position(4, 5))
+                        InclusiveSpace.from(2, 3).to(4, 5)
                 );
             }
 

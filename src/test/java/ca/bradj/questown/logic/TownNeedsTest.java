@@ -6,8 +6,8 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +24,7 @@ class TownNeedsTest {
     private final ProductionStatus STATUS_1 = ProductionStatus.fromJobBlockStatus(1);
     private final ProductionStatus STATUS_2 = ProductionStatus.fromJobBlockStatus(2);
 
-    private final Room ROOM_A = new Room(new Position(0, 0), InclusiveSpaces.from(-1, -1).to(1, 1));
+    private final Room ROOM_A = new Room(new Position(0, 0), InclusiveSpace.from(-1, -1).to(1, 1));
 
     private final Emptyable EMPTY = () -> true;
     private final Emptyable NOT_EMPTY = () -> false;

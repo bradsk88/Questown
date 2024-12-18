@@ -9,7 +9,6 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -18,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
 import java.util.function.Supplier;
 
 
@@ -29,6 +27,11 @@ public class TestWorldInteraction extends
     private Iterable<GathererJournalTest.TestItem> results = ImmutableList.of();
     boolean extracted;
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
+    private int degradedTool;
+
+    public int degradedTool() {
+        return degradedTool;
+    }
 
     public TestWorldInteraction(
             int maxState,
@@ -113,17 +116,19 @@ public class TestWorldInteraction extends
         ImmutableMap.Builder<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> b = ImmutableMap.builder();
         items.forEach((k, v) -> b.put(
                 k,
-                new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
-                    @Override
-                    public boolean test(GathererJournalTest.TestItem item) {
-                        return v.equals(item.value);
-                    }
+                new MonoPredicateCollection<>(
+                        new IPredicateCollection<GathererJournalTest.TestItem>() {
+                            @Override
+                            public boolean test(GathererJournalTest.TestItem item) {
+                                return v.equals(item.value);
+                            }
 
-                    @Override
-                    public boolean isEmpty() {
-                        return false;
-                    }
-                }, "pc defined in itemPred")
+                            @Override
+                            public boolean isEmpty() {
+                                return false;
+                            }
+                        }, "pc defined in itemPred"
+                )
         ));
         return b.build();
     }
@@ -271,6 +276,7 @@ public class TestWorldInteraction extends
             @Nullable Boolean tuwn,
             PredicateCollection<GathererJournalTest.TestItem, ?> heldItemBooleanFunction
     ) {
+        this.degradedTool++;
         return tuwn;
     }
 

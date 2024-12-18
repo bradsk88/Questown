@@ -505,6 +505,66 @@ class JobLogicTest {
         Assertions.assertTrue(world.states.getJobBlockState(ARBITRARY_WORKSPOT.jobBlock()).hasWorkLeft());
     }
 
+    @Test
+    void tick_shouldNotDamageTools_IfWorkDoneButStateUnchanged() {
+
+
+        JobDefinition definition = new JobDefinition(
+                new JobID("tester", "test"),
+                3,
+                ImmutableMap.of(
+                        // No items required
+                ),
+                ImmutableMap.of(
+                        // No items required
+                ),
+                ImmutableMap.of(
+                        0, "hammer" // hammer required
+                ),
+                ImmutableMap.of(
+                        0, 2 // 2 work required
+                ),
+                ImmutableMap.of(
+                        // No timers
+                ),
+                "gold nugget"
+        );
+
+        TestLogicWorld world = new TestLogicWorld(definition);
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
+
+        if (world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS) != null) {
+            throw new IllegalStateException("Should have no state until ticked");
+        }
+
+        world.allWorkSpots = ImmutableMap.of(
+                0, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Runnable ticker = () -> logic.tick(
+                null,
+                () -> ProductionStatus.fromJobBlockStatus(0),
+                definition.jobId(),
+                true,
+                false,
+                false,
+                true,
+                ExpirationRules.never(),
+                new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                world,
+                (a, b) -> world.states.getJobBlockState(b).processingState()
+        );
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("hammer")); // Give them the needed tools
+
+        ticker.run(); // Once for setup because no item required
+        Assertions.assertEquals(2, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+        ticker.run();
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        Assertions.assertEquals(0, world.wi.degradedTool());
+    }
+
     @Disabled("Not implemented")
     @Test
     void tick_shouldNotSetJobState_IfFirstStepRequiresItemsOrWork() {

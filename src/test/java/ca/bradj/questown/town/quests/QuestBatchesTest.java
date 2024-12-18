@@ -83,10 +83,7 @@ class QuestBatchesTest {
 
         Room sameRoom = new Room(
                 new Position(1, 2),
-                new InclusiveSpace(
-                        new Position(3, 4),
-                        new Position(5, 6)
-                )
+                InclusiveSpace.from(3, 4).to(5, 6)
         );
 
         TestQuestBatch oldBatch = new TestQuestBatch();
@@ -116,10 +113,7 @@ class QuestBatchesTest {
 
         Room sameRoom = new Room(
                 new Position(1, 2),
-                new InclusiveSpace(
-                        new Position(3, 4),
-                        new Position(5, 6)
-                )
+                InclusiveSpace.from(3, 4).to(5, 6)
         );
 
         TestQuestBatch incompleteBatch = new TestQuestBatch();
@@ -159,10 +153,7 @@ class QuestBatchesTest {
 
         Room sameRoom = new Room(
                 new Position(1, 2),
-                new InclusiveSpace(
-                        new Position(3, 4),
-                        new Position(5, 6)
-                )
+                InclusiveSpace.from(3, 4).to(5, 6)
         );
 
         TestQuestBatch batch = new TestQuestBatch();

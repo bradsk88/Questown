@@ -22,7 +22,7 @@ class AbstractSupplyGetterTest {
 
     public static final Room ARBITRARY_ROOM = new Room(
             new Position(1, 2),
-            new InclusiveSpace(new Position(3, 4), new Position(5, 6))
+            InclusiveSpace.from(3, 4).to(5, 6)
     );
 
     private static class TestSupplyGetter extends

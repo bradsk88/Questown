@@ -14,7 +14,7 @@ class WorkStatusStoreTest {
 
     private static final Room arbitaryRoom = new Room(
             new Position(1, 2),
-            new InclusiveSpace(new Position(3, 4), new Position(5, 6))
+            InclusiveSpace.from(3, 4).to(5, 6)
     );
 
     private static void tick(TestWorkStatusStore s) {
