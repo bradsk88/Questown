@@ -104,19 +104,19 @@ class AbstractWorkWITest {
                 (a, b) -> {
                 }
         );
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
         Assertions.assertEquals(
                 State.freshAtState(1).setWorkLeft(2),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
         Assertions.assertEquals(
                 State.freshAtState(1).setWorkLeft(1),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
         Assertions.assertEquals(
                 State.freshAtState(2).setWorkLeft(0),
                 wi.state.get(new Position(0, 0))
@@ -134,9 +134,9 @@ class AbstractWorkWITest {
                 ImmutableMap.of(),
                 (a, b) -> calledBack.add(b)
         );
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
         Assertions.assertIterableEquals(ImmutableList.of(
                 new WorkSpot<>(new Position(0, 0), 0, 0, new Position(0, 0)),
                 new WorkSpot<>(new Position(0, 0), 1, 0, new Position(0, 0))
@@ -159,7 +159,7 @@ class AbstractWorkWITest {
                 return 5; // Makes work degrade in steps less than integer
             }
         };
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
         Assertions.assertEquals(0, calledBack.size());
     }
 
@@ -175,19 +175,19 @@ class AbstractWorkWITest {
                 (a, b) -> {
                 }
         );
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
         Assertions.assertEquals(
                 State.freshAtState(1),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
         Assertions.assertEquals(
                 State.freshAtState(2),
                 wi.state.get(new Position(0, 0))
         );
 
-        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 2));
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 2), false);
         Assertions.assertEquals(
                 State.freshAtState(3),
                 wi.state.get(new Position(0, 0))

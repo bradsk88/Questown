@@ -23,7 +23,8 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
 
     public TOWN tryWork(
             EXTRA extra,
-            WorkedSpot<POS> ws
+            WorkedSpot<POS> ws,
+            boolean degradeTool
     ) {
         POS bp = ws.workPosition();
         Integer curState = ws.stateAfterWork();
@@ -35,7 +36,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         TOWN updatedTown = applyWork(extra, bp, curState, nextStepWork, nextStepTime);
         boolean didWork = updatedTown != null;
         PredicateCollection<ITEM, ?> itemBooleanFunction = checks.getToolsForStep(curState);
-        if (didWork && itemBooleanFunction != null) {
+        if (degradeTool && didWork && itemBooleanFunction != null) {
             return degradeTool(extra, updatedTown, itemBooleanFunction);
         }
         return updatedTown;

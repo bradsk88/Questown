@@ -411,13 +411,14 @@ public abstract class AbstractWorldInteraction<
             }
         }
 
+        if (jobBlockState == null) {
+            jobBlockState = State.fresh();
+        }
+
         if (this.checks.isWorkRequiredAtStep(action)) {
             Integer work = this.checks.getWorkForStep(action, 0);
             if (work > 0) {
                 if (action == 0) {
-                    if (jobBlockState == null) {
-                        jobBlockState = State.fresh();
-                    }
                     if (jobBlockState.workLeft() == 0) {
                         TOWN town = workStatuses.setJobBlockState(workSpot.jobBlock(), jobBlockState.setWorkLeft(work));
                         return new WorkOutput<>(false, true, town, workSpot);
@@ -428,7 +429,9 @@ public abstract class AbstractWorldInteraction<
 
         // TODO: If workspot is waiting for time, return  null
 
-        TOWN town = workWI.tryWork(extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()));
+        TOWN town = workWI.tryWork(
+                extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()), jobBlockState.workLeft() <= 1
+        );
         return new WorkOutput<>(town != null, town != null, town, workSpot);
     }
 

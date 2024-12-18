@@ -519,10 +519,12 @@ class JobLogicTest {
                         // No items required
                 ),
                 ImmutableMap.of(
-                        0, "hammer" // hammer required
+                        0, "hammer", // hammer required
+                        1, "hammer" // hammer required
                 ),
                 ImmutableMap.of(
-                        0, 2 // 2 work required
+                        0, 2, // 2 work required
+                        1, 1 // 1 work required
                 ),
                 ImmutableMap.of(
                         // No timers
@@ -563,6 +565,12 @@ class JobLogicTest {
         Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
 
         Assertions.assertEquals(0, world.wi.degradedTool());
+        ticker.run();
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+        Assertions.assertEquals(1, world.wi.degradedTool());
+        ticker.run();
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
     }
 
     @Disabled("Not implemented")
