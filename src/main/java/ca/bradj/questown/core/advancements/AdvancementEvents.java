@@ -23,7 +23,8 @@ public class AdvancementEvents {
             RoomTrigger.Triggers.WandGet.getID(),
             RoomTrigger.Triggers.FirstJobBoard.getID(),
             RoomTrigger.Triggers.FirstStoreRoom.getID(),
-            RoomTrigger.Triggers.FirstWelcomeMat.getID()
+            RoomTrigger.Triggers.FirstWelcomeMat.getID(),
+            RoomTrigger.Triggers.FirstOpenFlagMenu.getID()
     );
 
 

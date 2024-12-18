@@ -43,8 +43,8 @@ public class FlagMenus {
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenu(windowId, quests, flagPos);
-            menus.initMultiVillagerStatusMenu(windowId, flagPos);
+            menus.initQuestsMenuClientSide(windowId, quests, flagPos);
+            menus.initMultiVillagerStatusMenuClientSide(windowId, flagPos);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -96,18 +96,18 @@ public class FlagMenus {
         return data1;
     }
 
-    public void initQuestsMenu(
+    public void initQuestsMenuClientSide(
             int windowId,
             Collection<UIQuest> quests,
             BlockPos flagPos
     ) {
-        questsMenu = new TownQuestsContainer(windowId, quests, flagPos);
+        questsMenu = new TownQuestsContainer(windowId, quests, flagPos, () -> {});
     }
 
-    public void initMultiVillagerStatusMenu(
+    public void initMultiVillagerStatusMenuClientSide(
             int windowId,
             BlockPos flagPos
     ) {
-        villagersMenu = new MultiStatusMenu(windowId, flagPos);
+        villagersMenu = new MultiStatusMenu(windowId, flagPos, () -> {});
     }
 }

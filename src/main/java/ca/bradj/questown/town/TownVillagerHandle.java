@@ -71,8 +71,9 @@ public class TownVillagerHandle implements VillagerHolder {
         this.damage.putAll(damage);
     }
 
-    public void tick(long currentTick,
-                     Signals signals
+    public void tick(
+            long currentTick,
+            Signals signals
     ) {
         if (signals != Signals.NIGHT) {
             tickHunger();
@@ -106,8 +107,10 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     private void tickDamage() {
-        tickThing(damage, 0, e -> applyHealFactor(e, 100), (newVal, e) -> {
-        });
+        tickThing(
+                damage, 0, e -> applyHealFactor(e, 100), (newVal, e) -> {
+                }
+        );
     }
 
     private int applyHealFactor(
@@ -230,27 +233,33 @@ public class TownVillagerHandle implements VillagerHolder {
 
         ImmutableMap<String, Runnable> showers = ImmutableMap.of(
                 OpenVillagerMenuMessage.INVENTORY,
-                () -> openMenu(sender, (windowId, inv, p) -> {
-                    InventoryAndStatusMenu x = new InventoryAndStatusMenu(
-                            windowId,
-                            e.getInventory(),
-                            p.getInventory(),
-                            e.getSlotLocks(),
-                            e.getUUID(),
-                            e.getJobId(),
-                            e.getFlagPos()
-                    );
-                    x.connectToServer(e, sender);
-                    return x;
-                }, quests, e, stats),
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> {
+                            InventoryAndStatusMenu x = new InventoryAndStatusMenu(
+                                    windowId,
+                                    e.getInventory(),
+                                    p.getInventory(),
+                                    e.getSlotLocks(),
+                                    e.getUUID(),
+                                    e.getJobId(),
+                                    e.getFlagPos()
+                            );
+                            x.connectToServer(e, sender);
+                            return x;
+                        }, quests, e, stats
+                ),
                 OpenVillagerMenuMessage.QUESTS,
-                () -> openMenu(sender, (windowId, inv, p) -> new VillagerQuestsContainer(
-                        windowId, e.getUUID(), quests, e.getFlagPos()
-                ), quests, e, stats),
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new VillagerQuestsContainer(
+                                windowId, e.getUUID(), quests, e.getFlagPos()
+                        ), quests, e, stats
+                ),
                 OpenVillagerMenuMessage.STATS,
-                () -> openMenu(sender, (windowId, inv, p) -> new VillagerStatsMenu(
-                        windowId, e, e.getFlagPos(), stats
-                ), quests, e, stats),
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new VillagerStatsMenu(
+                                windowId, e, e.getFlagPos(), stats
+                        ), quests, e, stats
+                ),
                 OpenVillagerMenuMessage.SKILLS,
                 () -> {
                     QuestownNetwork.CHANNEL.send(
@@ -286,21 +295,25 @@ public class TownVillagerHandle implements VillagerHolder {
             VisitorMobEntity e,
             VillagerStatsData stats
     ) {
-        Compat.openScreen(sender, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return Compat.literal("");
-            }
+        Compat.openScreen(
+                sender,
+                new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return Compat.literal("");
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return shower.apply(windowId, inv, p);
-            }
-        }, data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats));
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        return shower.apply(windowId, inv, p);
+                    }
+                },
+                data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats)
+        );
     }
 
     @Override
@@ -528,25 +541,40 @@ public class TownVillagerHandle implements VillagerHolder {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
         BlockPos townFlagBasePos = town.getUnsafe().getTownFlagBasePos();
-        NetworkHooks.openGui(player, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        NetworkHooks.openGui(
+                player, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return TextComponent.EMPTY;
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                MultiStatusMenu multiStatusMenu = new MultiStatusMenu(windowId, townFlagBasePos);
-                return multiStatusMenu;
-            }
-        }, data -> {
-            // FIXME: Provide quests
-            List<UIQuest> quests = UIQuest.fromLevel(player.getLevel(), town.getUnsafe().getAllQuestsWithRewards());
-            FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
-        });
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
+                                windowId, townFlagBasePos,
+                                this::triggerAdvancement
+                        );
+                        return multiStatusMenu;
+                    }
+
+                    private void triggerAdvancement() {
+                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                                player.getLevel(),
+                                RoomTrigger.Triggers.FirstOpenFlagMenu, townFlagBasePos
+                        );
+                    }
+                }, data -> {
+                    // FIXME: Provide quests
+                    List<UIQuest> quests = UIQuest.fromLevel(
+                            player.getLevel(),
+                            town.getUnsafe().getAllQuestsWithRewards()
+                    );
+                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
+                }
+        );
     }
 }

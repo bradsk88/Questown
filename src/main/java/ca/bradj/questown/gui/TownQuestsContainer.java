@@ -20,9 +20,11 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
     public TownQuestsContainer(
             int windowId,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            BlockPos flagPos,
+            Runnable triggerAdvancement
     ) {
         super(MenuTypesInit.TOWN_QUESTS.get(), windowId, quests, flagPos);
+        triggerAdvancement.run();
     }
 
     public static TownQuestsContainer ForClient(

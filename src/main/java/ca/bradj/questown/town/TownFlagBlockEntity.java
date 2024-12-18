@@ -90,6 +90,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
+    private boolean isMorning = false;
 
     public static void logStoredData(
             TownFlagBlockEntity entity,
@@ -292,6 +293,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
+
+        Signals.DayTime dayTime = Util.getDayTime(sl);
+        Signals signals = Signals.fromDayTime(dayTime);
+        if (signals == Signals.MORNING) {
+            if (!e.isMorning) {
+                e.isMorning = true;
+                e.onMorning(Util.getTick(sl));
+            }
+        } else {
+            if (e.isMorning) {
+                e.isMorning = false;
+            }
+        }
+
         if (!e.mornings.empty()) {
             e.morningTick(e.mornings.pop());
         }
@@ -327,8 +342,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.asapRewards.tick();
 
         e.pois.tick(sl, blockEntityPos);
-
-        Signals signals = Signals.fromDayTime(Util.getDayTime(sl));
         if (signals == Signals.NIGHT || signals == Signals.EVENING) {
             AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(sl, VisitorTrigger.Triggers.FirstNightFall, e.getBlockPos());
         }
@@ -342,7 +355,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private void morningTick(Long newTime) {
         this.assignedFarmers.clear();
-        for (MCReward r : this.morningRewards.getChildren()) {
+        for (MCReward r : this.morningRewards.popChildren()) {
             this.asapRewards.push(r);
         }
         this.setChanged();

@@ -1,23 +1,19 @@
 {
-  "name": "9: Monitoring",
+  "name": "10: Growing Your Village",
   "icon": "minecraft:writable_book",
   "category": "questown:entries",
   "advancement": "questown:first_open_flag_menu",
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "TODO"
-    },{
-      "type": "patchouli:multiblock",
-      "multiblock": {
-        "mapping": {
-          "F": "questown:cobblestone_flag_base"
-        },
-        "pattern": [
-          ["F0"]
-        ]
-      },
-      "text": "Hint: Right-click the base of the town flag to open the management menu."
+      "text": "One villager is helpful, but more are better!$(br2)If we want to attract more people to our village, we should probably add some more amenities.$(br2)But what should we build?"
+    },
+    {
+      "type": "patchouli:image",
+      "images": [
+        "questown:textures/guide/quests.png"
+      ],
+      "text": "Hint: Click the \"Quests\" tab from the flag menu. Complete the quests to get more villagers."
     }
   ]
 }

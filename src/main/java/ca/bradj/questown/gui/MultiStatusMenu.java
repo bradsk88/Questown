@@ -30,10 +30,12 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
 
     public MultiStatusMenu(
             int windowId,
-            BlockPos flagPos
+            BlockPos flagPos,
+            Runnable triggerAdvancement
     ) {
         super(MenuTypesInit.MULTI_VILLAGER.get(), windowId);
         this.flagPos = flagPos;
+        triggerAdvancement.run();
     }
 
     public boolean stillValid(Player p_38874_) {

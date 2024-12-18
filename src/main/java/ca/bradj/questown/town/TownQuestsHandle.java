@@ -1,6 +1,8 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.FlagMenus;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
@@ -14,6 +16,7 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -72,22 +75,38 @@ public class TownQuestsHandle implements QuestsHolder {
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
 
         Collection entities = t.getVillagerHandle().entities();
-        NetworkHooks.openGui(player, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        NetworkHooks.openGui(
+                player, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return TextComponent.EMPTY;
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new TownQuestsContainer(windowId, quests, t.getBlockPos());
-            }
-        }, data ->
-                FlagMenus.writeAndLink(data, quests, t.getBlockPos(), player, entities));
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        return new TownQuestsContainer(
+                                windowId,
+                                quests,
+                                t.getBlockPos(),
+                                () -> triggerAdvancement(player, t)
+                        );
+                    }
+
+                    private void triggerAdvancement(
+                            ServerPlayer player,
+                            @NotNull TownFlagBlockEntity t
+                    ) {
+                        ServerLevel l = player.getLevel();
+                        RoomTrigger.Triggers trigger = RoomTrigger.Triggers.FirstOpenFlagMenu;
+                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, trigger, t.getBlockPos());
+                    }
+                }, data ->
+                        FlagMenus.writeAndLink(data, quests, t.getBlockPos(), player, entities)
+        );
     }
 
     @Override
@@ -104,22 +123,29 @@ public class TownQuestsHandle implements QuestsHolder {
     ) {
         final TownInterface t = unsafeGetTown();
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        NetworkHooks.openGui(
+                sp, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return TextComponent.EMPTY;
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new TownRemoveQuestsContainer(windowId, quests, t.getTownFlagBasePos(), batch.getBatchUUID());
-            }
-        }, data ->
-                TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID()));
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        return new TownRemoveQuestsContainer(
+                                windowId,
+                                quests,
+                                t.getTownFlagBasePos(),
+                                batch.getBatchUUID()
+                        );
+                    }
+                }, data ->
+                        TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID())
+        );
     }
 
     private void doRemove(

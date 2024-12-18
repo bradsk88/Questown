@@ -35,6 +35,13 @@ public class MCMorningRewards extends MCRewardList {
         return ImmutableList.copyOf(this.currentChildren);
     }
 
+    public Collection<MCReward> popChildren() {
+        ImmutableList<MCReward> mcRewards = ImmutableList.copyOf(this.currentChildren);
+        currentChildren.clear();
+        return mcRewards;
+    }
+
+
     @Override
     public CompoundTag serializeNbt() {
         return super.serializeNbt();

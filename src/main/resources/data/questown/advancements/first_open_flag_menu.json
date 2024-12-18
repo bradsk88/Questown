@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Hand me the controls!",
+      "color": "white"
+    },
+    "description": {
+      "text": "Access the town menu by right-clicking on the flag base"
+    },
+    "icon": {
+      "item": "questown:flag_base"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:room_trigger",
+      "conditions": {
+        "context": "first_open_flag_menu"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:root"
+}

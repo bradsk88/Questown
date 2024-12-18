@@ -44,7 +44,8 @@ public class RoomTrigger extends SimpleCriterionTrigger<RoomTrigger.Instance> {
         FirstJobBoard,
         FirstStoreRoom,
         FirstWelcomeMat,
-        WandGet; // TODO: Put this on "ItemTrigger" (new class) instead
+        WandGet, // TODO: Put this on "ItemTrigger" (new class) instead
+        FirstOpenFlagMenu;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
                 Triggers.FirstRoom, "first_room",
@@ -52,7 +53,8 @@ public class RoomTrigger extends SimpleCriterionTrigger<RoomTrigger.Instance> {
                 Triggers.FirstJobBoard, "first_job_board",
                 Triggers.FirstStoreRoom, "first_store_room",
                 Triggers.FirstWelcomeMat, "first_welcome_mat",
-                Triggers.WandGet, "wand_get"
+                Triggers.WandGet, "wand_get",
+                Triggers.FirstOpenFlagMenu, "first_open_flag_menu"
         );
 
         public static Triggers fromJSON(JsonElement trick_id) {
