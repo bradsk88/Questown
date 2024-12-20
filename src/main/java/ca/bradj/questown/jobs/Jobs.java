@@ -374,7 +374,7 @@ public class Jobs {
             }
 
             QT.JOB_LOGGER.debug(
-                    "Gatherer {} is putting {} in {} [{}]",
+                    "Villager {} is putting {} in {} [{}]",
                     ownerUUID,
                     mct.getShortName(),
                     target.getBlockPos(),

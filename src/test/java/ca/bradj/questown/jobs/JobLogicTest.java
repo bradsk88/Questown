@@ -561,15 +561,14 @@ class JobLogicTest {
 
         ticker.run(); // Once for setup because no item required
         Assertions.assertEquals(2, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
-        ticker.run();
-        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
 
-        Assertions.assertEquals(0, world.wi.degradedTool());
-        ticker.run();
-        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
-        Assertions.assertEquals(1, world.wi.degradedTool());
-        ticker.run();
+        ticker.run(); // Once to apply work (should not degrade tool)
         Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+        Assertions.assertEquals(0, world.wi.degradedTool());
+
+        ticker.run(); // Final application of work should degrade tool and move to next state
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+        Assertions.assertEquals(1, world.wi.degradedTool());
         Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
     }
 

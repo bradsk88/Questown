@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
@@ -79,26 +80,29 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
-        renderMood(poseStack);
-        renderHunger(poseStack);
-        renderDamage(poseStack);
+        int position = 0;
+        renderMood(poseStack, position);
+        if (Config.HUNGER_ENABLED.get()) {
+            renderHunger(poseStack, position++);
+        }
+        renderDamage(poseStack, position++);
     }
 
-    private void renderMood(PoseStack stack) {
+    private void renderMood(PoseStack stack, int position) {
         Component title = Compat.translatable("menu.mood");
-        renderBar(stack, 0, title, menu.getMoodPercent());
+        renderBar(stack, position, title, menu.getMoodPercent());
     }
 
-    private void renderHunger(PoseStack stack) {
+    private void renderHunger(PoseStack stack, int position) {
         int fullnessPercent = menu.getFullnessPercent();
         Component title = Compat.translatable("menu.hunger");
-        renderBar(stack, 1, title, fullnessPercent);
+        renderBar(stack, position, title, fullnessPercent);
     }
 
-    private void renderDamage(PoseStack stack) {
+    private void renderDamage(PoseStack stack, int position) {
         int damageLevel = menu.getDamageLevel();
         Component title = Compat.translatable("menu.damage");
-        renderBar(stack, 2, title, damageLevel);
+        renderBar(stack, position, title, damageLevel);
     }
 
     private void renderBar(PoseStack stack, int index, Component title, int fullnessPercent) {
