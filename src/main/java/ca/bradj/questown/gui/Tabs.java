@@ -21,12 +21,19 @@ public class Tabs {
     }
 
     public boolean renderTooltip(
-            int bgX, int bgY, int mouseX, int mouseY, Consumer<String> renderFn
+            int bgX,
+            int bgY,
+            int mouseX,
+            int mouseY,
+            Consumer<String> renderFn
     ) {
-        int tabsY = bgY - this.unTab.getHeight();
+        int tabTopY = bgY - this.unTab.getHeight();
         for (int i = 0; i < tabs.size(); i++) {
-            int tabX = bgX + (unTab.getWidth() * i);
-            if (mouseX > tabX && mouseX < tabX + tab.getWidth() && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
+            int tabLeftX = bgX + (unTab.getWidth() * i);
+            int tabRightX = tabLeftX + tab.getWidth();
+            int tabBotY = tabTopY + unTab.getHeight();
+            // TODO: Use UtilClean
+            if (mouseX > tabLeftX && mouseX < tabRightX && mouseY > tabTopY && mouseY < tabBotY) {
                 renderFn.accept(tabs.get(i).titleKey());
                 return true;
             }
@@ -34,7 +41,11 @@ public class Tabs {
         return false;
     }
 
-    public void draw(RenderContext rc, int bgX, int bgY) {
+    public void draw(
+            RenderContext rc,
+            int bgX,
+            int bgY
+    ) {
         for (int i = 0; i < tabs.size(); i++) {
             IDrawableStatic tab = unTab;
             if (tabs.get(i).selected()) {
@@ -47,11 +58,18 @@ public class Tabs {
         }
     }
 
-    public void mouseClicked(int bgX, int bgY, double mouseX, double mouseY) {
+    public void mouseClicked(
+            int bgX,
+            int bgY,
+            double mouseX,
+            double mouseY
+    ) {
         int tabsY = bgY - this.unTab.getHeight() + Y_OFFSET;
         for (int i = 0; i < tabs.size(); i++) {
-            int tabX = bgX + (unTab.getWidth() * i) + X_OFFSET;
-            if (mouseX > tabX && mouseX < tabX + tab.getWidth() && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
+            int tabLeftX = bgX + (unTab.getWidth() * i) + X_OFFSET;
+            int tabRightX = tabLeftX + tab.getWidth();
+            // TODO: Use UtilClean
+            if (mouseX > tabLeftX && mouseX < tabRightX && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
                 tabs.get(i).onClick().run();
                 return;
             }

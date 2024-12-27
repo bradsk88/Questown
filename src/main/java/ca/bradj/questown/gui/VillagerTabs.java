@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -21,7 +22,8 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable invScreenFn,
             @Nullable Runnable qScreenFn,
             @Nullable Runnable sScreenFn,
-            @Nullable Runnable skillScreenFn
+            @Nullable Runnable skillScreenFn,
+            @Nullable Runnable econScreenFn
     ) {
         super(ImmutableList.of(
                 new Tab(
@@ -64,6 +66,16 @@ public class VillagerTabs extends Tabs implements SubUI {
                         setScreen(sScreenFn),
                         "tooltips.stats",
                         sScreenFn == null
+                ),
+                new Tab(
+                        (rc, x, y) -> {
+                            int txBefore = RenderSystem.getShaderTexture(0);
+                            Util.blitTab(rc.stack(), x, y, 0);
+                            RenderSystem.setShaderTexture(0, txBefore);
+                        },
+                        setScreen(econScreenFn),
+                        "tooltips.economics",
+                        econScreenFn == null
                 )
         ));
     }
@@ -101,7 +113,8 @@ public class VillagerTabs extends Tabs implements SubUI {
                 factory.apply(OpenVillagerMenuMessage.INVENTORY),
                 factory.apply(OpenVillagerMenuMessage.QUESTS),
                 factory.apply(OpenVillagerMenuMessage.STATS),
-                factory.apply(OpenVillagerMenuMessage.SKILLS)
+                factory.apply(OpenVillagerMenuMessage.SKILLS),
+                factory.apply(OpenVillagerMenuMessage.ECONOMICS)
         );
     }
 }

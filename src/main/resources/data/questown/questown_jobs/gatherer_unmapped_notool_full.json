@@ -7,8 +7,8 @@
   "initial_request": "minecraft:wheat_seeds",
   "result": {
     "type": "biome_loot",
-    "prefix": "jobs/gatherer_notool",
-    "default": "jobs/gatherer_notool/default",
+    "prefix": "jobs/gatherer_notool_full",
+    "default": "jobs/gatherer_notool_full/default",
     "attempts": 6
   },
   "block": "questown:welcome_mat_block",

@@ -21,13 +21,13 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS
+            OpenVillagerMenuMessage.SKILLS,
+            OpenVillagerMenuMessage.ECONOMICS
     );
     private final DataSlot fullnessSlot;
     private final DataSlot damageSlot;
     private final DataSlot moodSlot;
     private final Stack<Runnable> closers = new Stack<>();
-    private final Runnable openInvFn;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -46,8 +46,6 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
             VillagerStatsData initialData
     ) {
         super(MenuTypesInit.VILLAGER_STATS.get(), windowId, flagPos, entity.getUUID());
-
-        this.openInvFn = VillagerTabs.makeOpenFn(flagPos, entity.getUUID(), OpenVillagerMenuMessage.INVENTORY);
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));

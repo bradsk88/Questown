@@ -38,6 +38,9 @@ public class MenuTypesInit {
     public static RegistryObject<MenuType<VillagerStatsMenu>> VILLAGER_STATS = MENUS.register(
             "villager_stats", () -> IForgeMenuType.create(VillagerStatsMenu::ForClientSide)
     );
+    public static RegistryObject<MenuType<VillagerEconomicsMenu>> VILLAGER_ECONOMICS = MENUS.register(
+            "villager_economics", () -> IForgeMenuType.create(VillagerEconomicsMenu::ForClientSide)
+    );
     public static RegistryObject<MenuType<CreateStockRequestContainer>> CREATE_STOCK_REQUEST = MENUS.register(
             "create_stock_request", () -> IForgeMenuType.create(CreateStockRequestContainer::ForClientSide)
     );

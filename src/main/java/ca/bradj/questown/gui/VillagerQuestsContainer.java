@@ -17,7 +17,8 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.SKILLS
+            OpenVillagerMenuMessage.SKILLS,
+            OpenVillagerMenuMessage.ECONOMICS
     );
     private final UUID villagerUUID;
 

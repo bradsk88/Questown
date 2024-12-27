@@ -98,5 +98,12 @@ public class QuestownJei implements IModPlugin {
                 return containerScreen.getExtraAreas();
             }
         });
+        registration.addGuiContainerHandler(
+                VillagerEconomicsScreen.class, new IGuiContainerHandler<>() {
+            @Override
+            public List<Rect2i> getGuiExtraAreas(VillagerEconomicsScreen containerScreen) {
+                return containerScreen.getExtraAreas();
+            }
+        });
     }
 }

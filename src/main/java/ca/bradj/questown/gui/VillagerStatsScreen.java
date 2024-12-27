@@ -82,10 +82,13 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
 
         int position = 0;
         renderMood(poseStack, position);
+        position++;
         if (Config.HUNGER_ENABLED.get()) {
-            renderHunger(poseStack, position++);
+            renderHunger(poseStack, position);
+            position++;
         }
-        renderDamage(poseStack, position++);
+        renderDamage(poseStack, position);
+        renderTooltip(poseStack, mouseX, mouseY);
     }
 
     private void renderMood(PoseStack stack, int position) {

@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
@@ -9,11 +10,6 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.util.ImmutableRect2i;
-import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,57 +18,41 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractContainerScreen<C> {
+public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPagedCardScreen<C, UIQuest> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
-    private static final int borderPadding = 6;
-
-    private static final int buttonWidth = 13;
-    private static final int buttonHeight = 13;
 
     private static final int TEXT_COLOR = 0x404040;
 
-    private static final int CARD_PADDING = 1;
-    private static final int PAGE_PADDING = 10;
-    private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
-    private static final int CARD_HEIGHT = 42;
-
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
-    private final JEI.NineNine cardBackground;
-    private final GuiIconButtonSmall nextPage;
-    private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
     private final Map<Position, Runnable> removes = new HashMap<>();
     private final SubUI tabs;
-    private int currentPage = 0;
 
-    public QuestsScreen(C container, Inventory playerInv, Component title, SubUI tabs) {
+    private ImmutableList.Builder<Slot> slotsBuilder = ImmutableList.builder();
+
+    public QuestsScreen(
+            C container,
+            Inventory playerInv,
+            Component title,
+            SubUI tabs
+    ) {
         super(container, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
 
         this.quests = ImmutableList.copyOf(container.GetQuests());
         this.background = JEI.getRecipeGuiBackground();
-        this.cardBackground = JEI.getRecipeBackground();
 
-        IDrawableStatic arrowNext = JEI.getArrowNext();
-        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
-
-        this.nextPage = JEI.guiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
-        );
-        this.previousPage = JEI.guiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
-        );
         this.heads = quests.stream().map(v -> {
             if (v.villagerUUID() == null) {
                 return null;
@@ -85,16 +65,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     }
 
     @Override
-    protected void init() {
-        int y = (this.height - backgroundHeight) / 2;
-        int pageStringY = y + borderPadding;
-        int x = ((this.width - backgroundWidth) / 2);
-        this.previousPage.x = x + borderPadding;
-        this.previousPage.y = pageStringY;
-        this.nextPage.x = x + backgroundWidth - buttonWidth - borderPadding;
-        this.nextPage.y = pageStringY;
-        this.addRenderableWidget(this.previousPage);
-        this.addRenderableWidget(this.nextPage);
+    protected ImmutableList<UIQuest> cardsData() {
+        return ImmutableList.copyOf(quests);
     }
 
     @Override
@@ -111,11 +83,19 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     }
 
     @Override
-    protected void renderLabels(PoseStack p_97808_, int p_97809_, int p_97810_) {
+    protected void renderLabels(
+            PoseStack p_97808_,
+            int p_97809_,
+            int p_97810_
+    ) {
     }
 
     @Override
-    protected void renderTooltip(PoseStack stack, int mouseX, int mouseY) {
+    protected void renderTooltip(
+            PoseStack stack,
+            int mouseX,
+            int mouseY
+    ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
@@ -134,126 +114,124 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
+        slotsBuilder = ImmutableList.builder();
         super.render(poseStack, mouseX, mouseY, partialTicks);
-
+        slots = slotsBuilder.build();
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        int x = bgX;
-        int y = bgY;
-        int pageStringY = y + PAGE_PADDING;
+        this.tabs.draw(new RenderContext(itemRenderer, poseStack), bgX, bgY);
+    }
 
-        renderPageNum(poseStack, x);
+    @Override
+    protected void renderCardContent(
+            PoseStack poseStack,
+            Card<UIQuest> card,
+            int mouseX,
+            int mouseY
+    ) {
+        UIQuest recipe = quests.get(card.index());
+        if (recipe == null) {
+            return;
+        }
+        Component recipeName = recipe.getName();
+        if (recipe.fromRecipe != null) {
+            Component fromName = RoomRecipes.getName(recipe.fromRecipe);
+            recipeName = Compat.translatable("quests.upgrade", fromName, recipeName);
+        }
 
-        y = pageStringY + PAGE_PADDING;
+        if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
+            recipeName = Compat.translatable("quests.completed_suffix", recipeName);
+        }
 
-        int startIndex = currentPage * MAX_CARDS_PER_PAGE;
-        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, quests.size());
+        int iconY = card.coords().bottomYPadded() - 10;
+        ImmutableList<Slot> slotz = renderRecipeCardIcons(
+                poseStack,
+                recipe,
+                card.coords().leftXPadded(),
+                iconY,
+                mouseX,
+                mouseY
+        );
+        slotsBuilder.addAll(slotz);
 
-        x = x + PAGE_PADDING;
-        y = y + PAGE_PADDING;
+        int idX = card.coords().leftXPadded();
+        int idY = card.coords().topYPadded();
+        this.font.draw(poseStack, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR);
+        String vID = recipe.villagerUUID();
+        String jobName = recipe.jobName();
 
-        ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        for (int i = startIndex; i < endIndex; i++) {
-            final int index = i;
-            int row = i - startIndex;
-            int cardY = y + row * (CARD_HEIGHT + CARD_PADDING);
+        Component tooltip = Compat.translatable(
+                "quests.job_owner",
+                getVillagerName(vID)
+        );
 
-            UIQuest recipe = quests.get(i);
-            if (recipe == null) {
-                continue;
-            }
-            Component recipeName = recipe.getName();
-            if (recipe.fromRecipe != null) {
-                Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = Compat.translatable("quests.upgrade", fromName, recipeName);
-            }
+        CardCoordinates shiftedUp = card.coords().shiftedUp(5);
+        if (recipe.getBatchUUID() != null) {
+            renderRemovalButton(poseStack, mouseX, mouseY, shiftedUp, recipe.getBatchUUID());
+        }
 
-            if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
-                RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = Compat.translatable("quests.completed_suffix", recipeName);
-            }
-            if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
-                RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
-            }
-            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        if (vID.isEmpty()) {
+            return;
+        }
 
-            int iconY = cardY + CARD_HEIGHT - 24;
-            ImmutableList<Slot> slotz = renderRecipeCardIcons(poseStack, recipe, x, iconY, mouseX, mouseY);
-            b.addAll(slotz);
+        boolean hasJob = jobName.isEmpty();
+        if (!hasJob) {
+            tooltip = Compat.translatable("quests.job_change", vID, jobName);
+        }
 
-            int idX = x + PAGE_PADDING;
-            int idY = iconY - 10;
-            this.font.draw(poseStack, recipeName.getString(), idX, idY, TEXT_COLOR);
-            String vID = recipe.villagerUUID();
-            String jobName = recipe.jobName();
+        boolean showHead = !hasJob;
+        if (mouseX >= card.coords().leftX() && mouseY >= card.coords().topY() && mouseX < card.coords()
+                                                                                              .rightX() && mouseY < card.coords()
+                                                                                                                        .bottomY()) {
+            showHead = true;
+        }
 
-            Component tooltip = Compat.translatable("quests.job_owner", vID);
-
-            if (recipe.getBatchUUID() != null) {
-                renderRemovalButton(poseStack, mouseX, mouseY, idX, idY, recipe.getBatchUUID());
-            }
-
-            if (vID.isEmpty()) {
-                continue;
-            }
-
-            boolean hasJob = jobName.isEmpty();
-            if (!hasJob) {
-                tooltip = Compat.translatable("quests.job_change", vID, jobName);
-            }
-
-            boolean showHead = !hasJob;
-            if (mouseX >= x && mouseY >= cardY && mouseX < x + CARD_WIDTH && mouseY < cardY + CARD_HEIGHT) {
-                showHead = true;
-            }
-
-            if (showHead) {
-                int headX = x + CARD_WIDTH - 19 - 19;
-                int headY = idY - 6;
-                this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
-                if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
-                    fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
-                    renderTooltip(poseStack, tooltip, mouseX, mouseY);
-                }
+        if (showHead) {
+            int headX = card.coords().rightX() - 19 - 20;
+            int headY = shiftedUp.topYPadded() - 1;
+            this.itemRenderer.renderAndDecorateItem(heads.get(card.index()), headX, headY);
+            if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
+                fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
+                renderTooltip(poseStack, tooltip, mouseX, mouseY);
             }
         }
-        slots.clear();
-        slots.addAll(b.build());
+//        slots.clear();
+//        slots.addAll(b.build());
+//
+    }
 
-        // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
-
-        this.tabs.draw(new RenderContext(itemRenderer, poseStack), bgX, bgY);
+    private static @NotNull String getVillagerName(String vID) {
+        if (vID.length() <= 8) {
+            return vID;
+        }
+        return vID.substring(0, 4) + "..." + vID.substring(vID.length() - 4, vID.length() - 1);
     }
 
     private void renderRemovalButton(
             PoseStack poseStack,
             int mouseX,
             int mouseY,
-            int idX,
-            int idY,
+            CardCoordinates coords,
             UUID index
     ) {
-        int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
+        int removeButtonX = coords.rightXPadded() - buttonWidth;
+        int removeButtonY = coords.topYPadded();
         this.font.drawShadow(
                 poseStack,
                 Compat.literal("x"),
-                removeX + borderPadding - 1,
-                idY + borderPadding - 1,
+                removeButtonX + ((float) buttonWidth / 2) - 1,
+                removeButtonY + ((float) buttonWidth / 2) - 3,
                 0xFFFFFF
         );
         highlightAndTooltip(
                 poseStack,
                 mouseX,
                 mouseY,
-                removeX,
-                idY,
+                removeButtonX,
+                removeButtonY,
                 Compat.translatable("job_board.remove_work")
         );
-        this.removes.put(new Position(removeX, idY), () -> menu.sendRemoveRequest(index));
+        this.removes.put(new Position(removeButtonX, removeButtonY), () -> menu.sendRemoveRequest(index));
     }
 
 
@@ -273,9 +251,9 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         )) {
             return;
         }
-        if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
+        if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 16) {
             // transparent white square behind hovered item slot
-            fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
+            fill(poseStack, iconX, iconY, iconX + 16, iconY + 16, 0x80FFFFFF);
             // render hovered item's name as a tooltip
             renderTooltip(poseStack, tooltipText, mouseX, mouseY);
         }
@@ -315,20 +293,20 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks
-                (ingredients);
+                                         (ingredients);
         int j = 0;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
 
         for (Ingredient ing : ingredients) {
-            int iconX = x + 8 + j * 18;
+            int iconX = x + j * 18;
 
             ItemStack[] matchingStacks = ing.getItems();
             if (matchingStacks.length > 0) {
                 int curSeconds = (int) (System.currentTimeMillis() / 1000);
                 ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
                 this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-                if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
+                if (UtilClean.mouseInBox(mouseX, mouseY, iconX, y, 16, 17)) {
                     fill(
                             poseStack,
                             iconX,
@@ -351,27 +329,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
             j++;
         }
         return b.build();
-    }
-
-    private void renderPageNum(
-            PoseStack poseStack,
-            int x
-    ) {
-        // Draw page numbers
-        fill(
-                poseStack,
-                x + borderPadding + buttonWidth,
-                nextPage.y,
-                x + backgroundWidth - borderPadding - buttonWidth,
-                nextPage.y + buttonHeight,
-                0x30000000
-        );
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
-        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
-
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
@@ -400,19 +357,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         }
     }
 
-    private void nextPage() {
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
-        if (currentPage < totalPages - 1) {
-            currentPage++;
-        }
-    }
-
-    private void previousPage() {
-        if (currentPage > 0) {
-            currentPage--;
-        }
-    }
-
     @Override
     public boolean isPauseScreen() {
         return false;
@@ -436,27 +380,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         return found.map(Slot::getItem).orElse(ItemStack.EMPTY);
     }
 
-
-    @Override
-    public boolean mouseScrolled(
-            double scrollX,
-            double scrollY,
-            double scrollDelta
-    ) {
-        final double x = JEI.getX();
-        final double y = JEI.getY();
-        if (isMouseOver(x, y)) {
-            if (scrollDelta < 0) {
-                this.nextPage();
-                return true;
-            } else if (scrollDelta > 0) {
-                this.previousPage();
-                return true;
-            }
-        }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
-    }
-
     @Override
     public boolean isMouseOver(
             double mouseX,
@@ -465,7 +388,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
         return true;
     }
 
-    public static QuestsScreen<TownQuestsContainer> forTown(TownQuestsContainer container, Inventory playerInv, Component title) {
+    public static QuestsScreen<TownQuestsContainer> forTown(
+            TownQuestsContainer container,
+            Inventory playerInv,
+            Component title
+    ) {
         return new QuestsScreen<>(
                 container, playerInv, title,
                 FlagTabs.forMenu(container)
@@ -473,11 +400,23 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractCon
     }
 
     public static QuestsScreen<VillagerQuestsContainer> forVillager(
-            VillagerQuestsContainer menu, Inventory inventory, Component component
+            VillagerQuestsContainer menu,
+            Inventory inventory,
+            Component component
     ) {
         return new QuestsScreen<>(
                 menu, inventory, component,
                 VillagerTabs.forMenu(menu)
         );
+    }
+
+    @Override
+    protected void setRenderColorForCard(UIQuest data) {
+        if (Quest.QuestStatus.COMPLETED.equals(data.status)) {
+            RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
+        }
+        if (SpecialQuests.BROKEN.equals(data.getRecipeId())) {
+            RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
+        }
     }
 }

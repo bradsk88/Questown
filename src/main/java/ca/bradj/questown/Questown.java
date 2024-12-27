@@ -99,6 +99,7 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
         MenuScreens.register(MenuTypesInit.MULTI_VILLAGER.get(), MultiStatusScreen::new);
         MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);
+        MenuScreens.register(MenuTypesInit.VILLAGER_ECONOMICS.get(), VillagerEconomicsScreen::new);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new

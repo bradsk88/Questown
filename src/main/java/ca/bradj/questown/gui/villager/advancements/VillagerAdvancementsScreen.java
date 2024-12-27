@@ -1,9 +1,14 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.gui.RenderContext;
+import ca.bradj.questown.gui.VillagerTabs;
+import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
@@ -16,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public class VillagerAdvancementsScreen extends Screen {
@@ -23,9 +29,12 @@ public class VillagerAdvancementsScreen extends Screen {
     private static final Component VERY_SAD_LABEL = Compat.translatable("advancements.sad_label");
     private static final Component NO_ADVANCEMENTS_LABEL = Compat.translatable("advancements.empty");
     private static final Component TITLE = Compat.translatable("menu.jobs");
+    public static final int backgroundWidth = 252;
+    public static final int backgroundHeight = 140;
     private final BlockPos flagPos;
     private final UUID villagerUUID;
     private final VillagerAdvancementsContent content;
+    private final VillagerTabs tabs;
     private boolean isScrolling;
 
     public VillagerAdvancementsScreen(
@@ -47,6 +56,27 @@ public class VillagerAdvancementsScreen extends Screen {
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
+        this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
+            @Override
+            public Collection<String> getEnabledTabs() {
+                return ImmutableList.of(
+                        OpenVillagerMenuMessage.INVENTORY,
+                        OpenVillagerMenuMessage.QUESTS,
+                        OpenVillagerMenuMessage.STATS,
+                        OpenVillagerMenuMessage.ECONOMICS
+                );
+            }
+
+            @Override
+            public BlockPos getFlagPos() {
+                return flagPos;
+            }
+
+            @Override
+            public UUID getVillagerUUID() {
+                return villagerUUID;
+            }
+        });
     }
 
     protected void init() {
@@ -138,48 +168,57 @@ public class VillagerAdvancementsScreen extends Screen {
         this.blit(p_97357_, p_97358_, p_97359_, 0, 0, 252, 140);
 
         this.font.draw(p_97357_, TITLE, (float) (p_97358_ + 8), (float) (p_97359_ + 6), 4210752);
+
+        int bgX = (this.width - 252) / 2;
+        int bgY = (this.height - 140) / 2;
+        this.tabs.draw(new RenderContext(itemRenderer, p_97357_), bgX, bgY);
     }
 
     private void renderTooltips(
             PoseStack p_97382_,
             int p_97383_,
             int p_97384_,
-            int p_97385_,
-            int p_97386_
+            int mouseX,
+            int mouseY
     ) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
             PoseStack posestack = RenderSystem.getModelViewStack();
             posestack.pushPose();
-            posestack.translate((double) (p_97385_ + 9), (double) (p_97386_ + 18), 400.0);
+            posestack.translate((double) (mouseX + 9), (double) (mouseY + 18), 400.0);
             RenderSystem.applyModelViewMatrix();
             RenderSystem.enableDepthTest();
-            this.content.drawTooltips(p_97382_, p_97383_ - p_97385_ - 9, p_97384_ - p_97386_ - 18, p_97385_, p_97386_);
+            this.content.drawTooltips(p_97382_, p_97383_ - mouseX - 9, p_97384_ - mouseY - 18, mouseX, mouseY);
             RenderSystem.disableDepthTest();
             posestack.popPose();
             RenderSystem.applyModelViewMatrix();
         }
-
     }
 
     @Override
     public boolean mouseClicked(
-            double mouseY,
             double mouseX,
+            double mouseY,
             int p_94697_
     ) {
-        JobID id = this.content.getClickJob(mouseX, mouseY);
+        JobID id = this.content.getClickJob(mouseY, mouseX);
 
         if (id == null) {
-            return super.mouseClicked(mouseY, mouseX, p_94697_);
+            int bgX = (this.width - backgroundWidth) / 2;
+            int bgY = (this.height - backgroundHeight) / 2;
+            this.tabs.mouseClicked(bgX, bgY, mouseX, mouseY);
+            return super.mouseClicked(mouseX, mouseY, p_94697_);
         }
 
+        changeJobAndClose(id);
+        return true;
+    }
+
+    private void changeJobAndClose(JobID id) {
         QuestownNetwork.CHANNEL.sendToServer(
                 new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id, true)
         );
 
         this.minecraft.setScreen((Screen) null);
-
-        return super.mouseClicked(mouseY, mouseX, p_94697_);
     }
 }

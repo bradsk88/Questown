@@ -230,6 +230,9 @@ public class TownVillagerHandle implements VillagerHolder {
         ).flatMap(List::stream).toList();
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
+        VillagerEconomicsData econ = new VillagerEconomicsData(
+                ImmutableList.of()
+        );
 
         ImmutableMap<String, Runnable> showers = ImmutableMap.of(
                 OpenVillagerMenuMessage.INVENTORY,
@@ -266,7 +269,13 @@ public class TownVillagerHandle implements VillagerHolder {
                             PacketDistributor.PLAYER.with(() -> sender),
                             new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
                     );
-                }
+                },
+                OpenVillagerMenuMessage.ECONOMICS,
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new VillagerEconomicsMenu(
+                                windowId, e, e.getFlagPos(), econ
+                        ), quests, e, stats
+                )
         );
 
         Runnable runnable = showers.get(type);
@@ -312,7 +321,13 @@ public class TownVillagerHandle implements VillagerHolder {
                         return shower.apply(windowId, inv, p);
                     }
                 },
-                data -> VillagerMenus.write(data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats)
+                data -> VillagerMenus.write(
+                        data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats,
+                        new VillagerEconomicsData(
+                                ImmutableList.of()
+                        ) // TODO: Actually send econ data
+                        // TODO: Finish testing this UI
+                )
         );
     }
 

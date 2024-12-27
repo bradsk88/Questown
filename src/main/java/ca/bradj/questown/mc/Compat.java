@@ -200,7 +200,7 @@ public class Compat {
     public static void drawDarkText(
             Font font,
             PoseStack stack,
-            TranslatableComponent translatable,
+            Component translatable,
             int x,
             int y
     ) {

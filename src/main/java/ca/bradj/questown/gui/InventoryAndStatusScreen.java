@@ -19,7 +19,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,6 +40,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final Tabs tabs;
 
     private final EvictingQueue<IStatus<?>> statusSmoothingQueue = EvictingQueue.create(20);
+    private final IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
     public InventoryAndStatusScreen(
             InventoryAndStatusMenu menu,
@@ -127,12 +127,9 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 //                renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
 //            }
         }
-        int iconX = x - 12;
+        int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            int curSeconds = (int) (System.currentTimeMillis() / 1000);
-            ItemStack[] matchingStacks = i.getItems();
-            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-            this.itemRenderer.renderAndDecorateItem(itemStack, iconX += 16 + 4, yCoord + 32);
+            this.ingredientRenderer.render(itemRenderer, i, iconX += 16, yCoord + 32);
         }
     }
 
@@ -203,13 +200,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         String jobId = menu.getRootJobId();
         TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
-
-        if (this.tabs.renderTooltip(
-                x, y, mouseX, mouseY,
-                key -> super.renderTooltip(stack, new TranslatableComponent(key), mouseX, mouseY)
-        )) {
-            return;
-        }
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,

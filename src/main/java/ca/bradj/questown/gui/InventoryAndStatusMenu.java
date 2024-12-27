@@ -33,7 +33,8 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.QUESTS,
             OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.SKILLS
+            OpenVillagerMenuMessage.SKILLS,
+            OpenVillagerMenuMessage.ECONOMICS
     );
     public final IItemHandler gathererInventory;
     private final IItemHandler playerInventory;
@@ -47,9 +48,6 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     final JobID jobId;
 
     private final Stack<Runnable> closers = new Stack<>();
-
-    private final Runnable openQuestsFn;
-    private final Runnable openStatsFn;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -77,8 +75,6 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
 //        this.gathererInventory = new LockableInventoryWrapper(gathererInv, lockedSlots);
         this.gathererInventory = new InvWrapper(gathererInv);
         this.jobId = jobId;
-        this.openQuestsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.QUESTS);
-        this.openStatsFn = makeOpenFn(flagPos, villagerUUID, OpenVillagerMenuMessage.STATS);
 
         layoutPlayerInventorySlots(86); // Order is important for quickmove
         layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
@@ -92,18 +88,6 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
 //            this.lockedSlots.add(this.addDataSlot(gatherer.getLockSlot(i)));
 //            i++;
 //        }
-    }
-
-    private Runnable makeOpenFn(
-            BlockPos fp,
-            UUID gathererId,
-            String type
-    ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
-                fp.getX(), fp.getY(), fp.getZ(),
-                gathererId, type
-        ));
-        return fn;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -289,14 +273,6 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
 
     public void onClose() {
         closers.forEach(Runnable::run);
-    }
-
-    public void openQuests() {
-        this.openQuestsFn.run();
-    }
-
-    public void openStats() {
-        this.openStatsFn.run();
     }
 
     @Override

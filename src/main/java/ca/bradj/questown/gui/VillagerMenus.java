@@ -18,6 +18,7 @@ public class VillagerMenus {
     InventoryAndStatusMenu invMenu;
     VillagerStatsMenu statsMenu;
     VillagerQuestsContainer questsMenu;
+    VillagerEconomicsMenu econMenu;
 
     public VillagerMenus(VisitorMobEntity e) {
         this.entity = e;
@@ -36,6 +37,7 @@ public class VillagerMenus {
         Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
         BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
+        VillagerEconomicsData econ = VillagerEconomicsMenu.read(buf);
 
         // FIXME: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
@@ -45,6 +47,7 @@ public class VillagerMenus {
         menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos);
         menus.initVillagerStatsMenu(windowId, flagPos, stats);
         menus.initInventory(windowId, jobId, player, e.getUUID(), e.getSlotLocks(), invSize, flagPos);
+        menus.initVillagerEconomicsMenu(windowId, flagPos, econ);
         return menus;
     }
 
@@ -54,7 +57,8 @@ public class VillagerMenus {
             VisitorMobEntity e,
             int capacity,
             JobID jobId,
-            VillagerStatsData stats
+            VillagerStatsData stats,
+            VillagerEconomicsData econ
     ) {
         data.writeInt(e.getId());
         data.writeUtf(jobId.rootId());
@@ -62,6 +66,7 @@ public class VillagerMenus {
         data.writeInt(capacity);
         VillagerQuestsContainer.write(data, quests, e.getFlagPos());
         VillagerStatsMenu.write(stats, data);
+        VillagerEconomicsMenu.write(econ, data);
     }
 
     private InventoryAndStatusMenu initInventory(
@@ -94,5 +99,13 @@ public class VillagerMenus {
     ) {
         statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos, data);
         return statsMenu;
+    }
+    public VillagerEconomicsMenu initVillagerEconomicsMenu(
+            int windowId,
+            BlockPos flagPos,
+            VillagerEconomicsData data
+    ) {
+        econMenu = new VillagerEconomicsMenu(windowId, this.entity, flagPos, data);
+        return econMenu;
     }
 }

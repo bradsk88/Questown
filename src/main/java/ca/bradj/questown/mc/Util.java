@@ -1,5 +1,6 @@
 package ca.bradj.questown.mc;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.*;
@@ -9,6 +10,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -169,7 +173,10 @@ public class Util {
      * Handles potentially infinite iterables, applying the BASE_MAX_LOOP
      * to make them finite by truncating.
      */
-    public static <X> void iterate(Iterable<X> source, Consumer<X> sink) {
+    public static <X> void iterate(
+            Iterable<X> source,
+            Consumer<X> sink
+    ) {
         Iterator<X> iter = source.iterator();
         for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
             if (iter.hasNext()) {
@@ -228,21 +235,31 @@ public class Util {
         qty.put(k, v);
     }
 
-    public static <X, Y> @Nullable Y orNull(@Nullable X input, Function<X, Y> fn) {
+    public static <X, Y> @Nullable Y orNull(
+            @Nullable X input,
+            Function<X, Y> fn
+    ) {
         if (input == null) {
             return null;
         }
         return fn.apply(input);
     }
 
-    public static <X> void ifNotNull(X input, Consumer<X> fn) {
+    public static <X> void ifNotNull(
+            X input,
+            Consumer<X> fn
+    ) {
         if (input == null) {
             return;
         }
         fn.accept(input);
     }
 
-    public static <X, Y> Y withFallbackForNullInput(X input, Function<X, Y> fn, Y fallback) {
+    public static <X, Y> Y withFallbackForNullInput(
+            X input,
+            Function<X, Y> fn,
+            Y fallback
+    ) {
         if (input == null) {
             return fallback;
         }
@@ -253,7 +270,7 @@ public class Util {
         if (value == null) {
             return Direction.WEST;
         }
-        int v = value - 4  % 16;
+        int v = value - 4 % 16;
         // 0 is south
         // 4 is west
         // 8 is north
@@ -289,5 +306,39 @@ public class Util {
                 v.town(),
                 new WorkPosition<>(v.spot().jobBlock(), feet)
         );
+    }
+
+    public static void blit(
+            PoseStack stack,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY,
+            int widthOfEntireFile,
+            int texFileHeight
+    ) {
+        GuiComponent.blit(
+                stack,
+                screenX,
+                screenY,
+                firstPixelInFilex,
+                firstPixelInFileY,
+                drawNumPixelsX,
+                drawNumPixelsY,
+                widthOfEntireFile,
+                texFileHeight
+        );
+    }
+
+    public static void blitTab(
+            PoseStack stack,
+            Integer x,
+            Integer y,
+            int i
+    ) {
+        RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/tabs.png"));
+        blit(stack, x + 12, y + 10, i * 16, 0, 16, 16, 256, 256);
     }
 }

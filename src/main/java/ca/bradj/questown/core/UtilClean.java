@@ -32,6 +32,17 @@ public class UtilClean {
         return b.build();
     }
 
+    public static boolean mouseInBox(
+            int mouseX,
+            int mouseY,
+            int leftX,
+            int topY,
+            int width,
+            int height
+    ) {
+        return mouseX >= leftX && mouseY >= topY && mouseX < leftX + width && mouseY < topY + height;
+    }
+
     public record Pair<A, B>(A a, B b){
         public static <X> ImmutableList<X> toList(Pair<X, X> in) {
             return ImmutableList.of(in.a, in.b);
