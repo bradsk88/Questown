@@ -29,9 +29,12 @@ public class NeedsRegistrations<POS, EXTRA> {
 
     public void addUnmet(
             EXTRA extra,
-            POS workspot
+            @Nullable POS workspot
     ) {
-        @Nullable State state = getState.apply(extra, workspot);
+        State state = State.fresh();
+        if (workspot != null) {
+            state = getState.apply(extra, workspot);
+        }
         if (state == null) {
             registerUnmetNeed.accept(extra, new Need(0, null));
             return;

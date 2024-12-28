@@ -21,7 +21,6 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
             OpenVillagerMenuMessage.QUESTS,
             OpenVillagerMenuMessage.SKILLS
     );
-    private final Stack<Runnable> closers = new Stack<>();
 
     public static VillagerEconomicsMenu ForClientSide(
             int windowId,
@@ -43,7 +42,7 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
     }
 
     public static VillagerEconomicsData read(FriendlyByteBuf buf) {
-        return  new VillagerEconomicsData(
+        return new VillagerEconomicsData(
                 ImmutableList.of()
         );
     }

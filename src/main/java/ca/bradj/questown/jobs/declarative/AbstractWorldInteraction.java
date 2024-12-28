@@ -638,7 +638,7 @@ public abstract class AbstractWorldInteraction<
 
     public void registerUnmetNeeds(
             EXTRA extra,
-            POS workspot
+            @Nullable POS workspot
     ) {
         needsReg.addUnmet(extra, workspot);
     }

@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,7 +61,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         void clearInsertedSupplies();
 
-        void registerUnmetNeeds(ProductionStatus status, POS workspot);
+        void registerUnmetNeeds(
+                ProductionStatus status,
+                @Nullable POS workspot
+        );
     }
 
     private WorkPosition<POS> workSpot;
@@ -116,6 +120,11 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
+
+        if (ticksSinceStart % 200 == 0) {
+            // This is for handling villagers who get stuck as work seekers
+            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock));
+        }
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
@@ -178,7 +187,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     entityCurrentJob.jobId()
             );
             this.grabbingInsertedSupplies = true;
-            worldBeforeTick.registerUnmetNeeds(status, workSpot.jobBlock());
+            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock));
             return;
         }
 

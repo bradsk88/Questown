@@ -358,6 +358,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.villagerHandle.tick(Util.getTick(sl), signals);
 
+        e.economics.tick();
+
         e.everScanned = true;
 
         profileTick(e, start);

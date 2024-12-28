@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.antlr.v4.codegen.model.decl.Decl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,7 +75,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
-            Function<NeedsRegistrations.Need, String> needs,
+            BiFunction<MCExtra, NeedsRegistrations.Need, String> needs,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -85,7 +86,14 @@ public class WorkSeekerJob extends DeclarativeJob {
                 specialRules,
                 resultGenerator,
                 claimSpots,
-                needs,
+                (x, need) -> {
+                    Work w = JobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
+                    Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
+                    if (job instanceof DeclarativeJob dj) {
+                        return dj.getIngredient(need.ingredientIndex());
+                    }
+                    return null;
+                },
                 interval,
                 sound
         ) {

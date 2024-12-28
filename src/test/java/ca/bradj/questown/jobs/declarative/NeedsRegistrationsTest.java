@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings("DataFlowIssue")
 class NeedsRegistrationsTest {
@@ -29,6 +29,7 @@ class NeedsRegistrationsTest {
         r.addUnmet(null, ARB_POS);
         assertEquals(0, unmetIngredient.get());
     }
+
     @Test
     void addUnmetShouldRegisterFirstIngredientIfStateIsZero() {
         AtomicInteger unmetIngredient = new AtomicInteger();
@@ -45,6 +46,7 @@ class NeedsRegistrationsTest {
         r.addUnmet(null, ARB_POS);
         assertEquals(0, unmetIngredient.get());
     }
+
     @Test
     void addUnmetShouldRegisterFirstToolIfStateIsZeroWithWorkRemaining() {
         AtomicInteger unmetTool = new AtomicInteger();
@@ -62,6 +64,7 @@ class NeedsRegistrationsTest {
         r.addUnmet(null, ARB_POS);
         assertEquals(0, unmetTool.get());
     }
+
     @Test
     void addUnmetShouldRegisterSecondIngredientIfStateIsOne() {
         AtomicInteger unmetIngredient = new AtomicInteger();
@@ -78,6 +81,7 @@ class NeedsRegistrationsTest {
         r.addUnmet(null, ARB_POS);
         assertEquals(1, unmetIngredient.get());
     }
+
     @Test
     void addUnmetShouldRegisterSecondToolIfStateIsOneAndWorkRemains() {
         AtomicInteger unmetTool = new AtomicInteger();
@@ -94,5 +98,22 @@ class NeedsRegistrationsTest {
         );
         r.addUnmet(null, ARB_POS);
         assertEquals(1, unmetTool.get());
+    }
+
+    @Test
+    void addUnmetShouldRegisterFirstIngredientIfWorkSpotIsNUll() {
+        AtomicInteger unmetIngr = new AtomicInteger();
+        NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (no, idx) -> {
+                    if (idx.isTool()) {
+                        throw new AssertionError("Should not set tool");
+                    }
+                    unmetIngr.set(idx.ingredientIndex());
+
+                },
+                (no, pos) -> State.freshAtState(1).setWorkLeft(1)
+        );
+        r.addUnmet(null, null);
+        assertEquals(0, unmetIngr.get());
     }
 }

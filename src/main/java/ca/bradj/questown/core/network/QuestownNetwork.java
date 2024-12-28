@@ -125,6 +125,12 @@ public class QuestownNetwork {
                         decoder(MultiStatusScreenSyncMessage::decode),
                 MultiStatusScreenSyncMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(EconomicsUpdate.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(EconomicsUpdate::encode).
+                        decoder(EconomicsUpdate::decode),
+                EconomicsUpdate::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(

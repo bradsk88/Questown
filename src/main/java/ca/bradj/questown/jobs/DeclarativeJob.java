@@ -76,6 +76,7 @@ public class DeclarativeJob extends
     private final long totalDuration;
     private final int workInterval;
     private final RecipeProvider recipe;
+    private final ImmutableMap<Integer, Ingredient> initialIngredients;
     private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;
@@ -114,6 +115,7 @@ public class DeclarativeJob extends
                 },
                 location
         );
+        this.initialIngredients = ingredientsRequiredAtStates;
         this.jobId = jobId;
         this.checks = new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(ingredientsRequiredAtStates),
@@ -136,10 +138,19 @@ public class DeclarativeJob extends
                     }
                     return null;
                 },
-                i -> Util.orNull(
-                        ingredientsRequiredAtStates.get(i),
-                        Ingredients::toString
-                ),
+                (x, i) -> {
+                    Integer ii = i.ingredientIndex();
+                    if (ii != null) {
+                        return Util.orNull(
+                                ingredientsRequiredAtStates.get(ii),
+                                Ingredients::toString
+                        );
+                    }
+                    return Util.orNull(
+                            toolsRequiredAtStates.get(i.toolIndex()),
+                            Ingredients::toString
+                    );
+                },
                 workInterval,
                 sound
         );
@@ -243,7 +254,7 @@ public class DeclarativeJob extends
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
-            Function<NeedsRegistrations.Need, String> getUnmetNeed,
+            BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -593,7 +604,7 @@ public class DeclarativeJob extends
             @Override
             public void registerUnmetNeeds(
                     ProductionStatus status,
-                    BlockPos workspot
+                    @Nullable BlockPos workspot
             ) {
                 world.registerUnmetNeeds(extra, workspot);
             }
@@ -1106,5 +1117,12 @@ public class DeclarativeJob extends
             return super.getItemsForDrop();
         }
         return FetcherHack.getItemsForDrop(super.getItemsForDrop(), successTarget);
+    }
+
+    public String getIngredient(@Nullable Integer integer) {
+        return Util.orNull(
+                initialIngredients.get(integer),
+                Ingredients::toString
+        );
     }
 }

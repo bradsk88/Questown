@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.InsertedItemAware;
-import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -35,14 +34,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class RealtimeWorldInteraction extends
         AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
-    private final Function<NeedsRegistrations.Need, String> getUnmetNeed;
+    private final BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed;
     private int soundTicksLeft;
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
@@ -56,7 +54,7 @@ public class RealtimeWorldInteraction extends
             Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
-            Function<NeedsRegistrations.Need, String> getUnmetNeed,
+            BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -308,10 +306,14 @@ public class RealtimeWorldInteraction extends
         if (serverLevel == null) {
             throw new UnsupportedOperationException("Cannot run without server level");
         }
+        String apply = getUnmetNeed.apply(mcExtra, need);
+        if (apply == null) {
+            return;
+        }
         mcExtra.town().getEconomicsHandle().registerUnmetNeed(
                 Util.getTick(serverLevel),
                 mcExtra.entity().getUUID(),
-                getUnmetNeed.apply(need)
+                apply
         );
     }
 

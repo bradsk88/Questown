@@ -271,11 +271,19 @@ public class TownVillagerHandle implements VillagerHolder {
                     );
                 },
                 OpenVillagerMenuMessage.ECONOMICS,
-                () -> openMenu(
-                        sender, (windowId, inv, p) -> new VillagerEconomicsMenu(
-                                windowId, e, e.getFlagPos(), econ
-                        ), quests, e, stats
-                )
+                () -> {
+                    TownEconomics tEcon = flag.getEconomicsHandle();
+                    ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregated(villagerId);
+                    QuestownNetwork.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sender),
+                            new EconomicsUpdate(aggregated)
+                    );
+                    openMenu(
+                            sender, (windowId, inv, p) -> new VillagerEconomicsMenu(
+                                    windowId, e, e.getFlagPos(), econ
+                            ), quests, e, stats
+                    );
+                }
         );
 
         Runnable runnable = showers.get(type);

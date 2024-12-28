@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,12 +18,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     private final VillagerTabs tabs;
 
     // FIXME: Update this from town
-    private static VillagerEconomicsData lastUpdate = new VillagerEconomicsData(
-            ImmutableList.of(
-                    new ItemEconomicsData(Ingredient.of(TagsInit.Items.VILLAGER_FOOD), 11),
-                    new ItemEconomicsData(Ingredient.of(TagsInit.Items.AXES), 9)
-            )
-    );
+    public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
 
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
@@ -41,7 +36,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
 
     @Override
     protected ImmutableList<ItemEconomicsData> cardsData() {
-        return lastUpdate.items();
+        return lastUpdate.data();
     }
 
     @Override
@@ -74,7 +69,10 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
-                bgX, bgY, mouseX, mouseY,
+                bgX,
+                bgY,
+                mouseX,
+                mouseY,
                 key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
@@ -86,7 +84,8 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             if (UtilClean.mouseInBox(mouseX, mouseY, x, y, CARD_WIDTH, CARD_HEIGHT)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
-                Component itemName = Ingredients.getName(card.data().item());
+                Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
+                Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
                 List<Component> es = ImmutableList.of(
                         Compat.translatable(key1, itemName, timesNeeded),
@@ -127,12 +126,13 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     ) {
         int iconX = coords.leftX() + MED_PADDING;
         int iconY = coords.topY() + MED_PADDING;
-        ingredientRenderer.render(itemRenderer, data.item(), iconX, iconY);
+        Ingredient item = Ingredients.fromString(data.ingredientKey());
+        ingredientRenderer.render(itemRenderer, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = coords.topYPadded();
-        Compat.drawDarkText(font, poseStack, Ingredients.getName(data.item()), textX, textY);
-        String count = "100";
-        int countX = coords.rightXPadded() - font.width("100");
+        Compat.drawDarkText(font, poseStack, Ingredients.getName(item), textX, textY);
+        String count = Integer.toString(data.timesNeeded());
+        int countX = coords.rightXPadded() - font.width(count);
         Compat.drawDarkText(font, poseStack, Compat.literal(count), countX, textY);
     }
 
@@ -156,9 +156,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(
-                new Rect2i(x, y, backgroundWidth, backgroundHeight)
-        );
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
     }
 
     @Override

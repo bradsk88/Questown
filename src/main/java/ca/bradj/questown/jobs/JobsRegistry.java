@@ -195,11 +195,20 @@ public class JobsRegistry {
             ServerLevel rand,
             String rootId
     ) {
+        Work work = getRandomWork(rand, rootId);
+        return work.baseRoom;
+    }
+
+    public static Work getRandomWork(
+            ServerLevel rand,
+            String rootId
+    ) {
         List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
                                                         .stream()
                                                         .filter(v -> v.getKey().rootId().equals(rootId))
                                                         .toList();
-        return x.get(Compat.nextInt(rand, x.size())).getValue().get().baseRoom;
+        Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
+        return work;
     }
 
     public static ImmutableList<JobID> getPreferredWorkIds(JobID jobId) {
