@@ -43,4 +43,27 @@ public class Ingredients {
         }
         throw new IllegalArgumentException("Ingredient has no item or tag");
     }
+
+    public static Ingredient fromString(String block) {
+        if (block.startsWith("#")) {
+            return Ingredient.of(TagKey.create(
+                    Registry.ITEM_REGISTRY,
+                    new ResourceLocation(block.replace("#", ""))
+            ));
+        }
+        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+    }
+
+    public static String toString(Ingredient item) {
+        JsonElement j = item.toJson();
+        if (j.getAsJsonObject().has("tag")) {
+            String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
+            return tKey;
+        }
+        if (j.getAsJsonObject().has("item")) {
+            String tKey = j.getAsJsonObject().get("item").getAsString();
+            return tKey;
+        }
+        throw new IllegalArgumentException("Ingredient must have tag or item");
+    }
 }

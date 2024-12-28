@@ -308,6 +308,14 @@ public class MCTownStateWorldInteraction extends
         return true;
     }
 
+    @Override
+    protected void registerUnmetNeed(
+            Inputs inputs,
+            NeedsRegistrations.Need ingredientIndex
+    ) {
+        // TODO[WARP]: Implement tracking of needs
+    }
+
     public void injectTicks(int interval) {
         ticksSinceLastAction += interval;
     }

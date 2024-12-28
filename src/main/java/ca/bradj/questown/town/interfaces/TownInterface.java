@@ -6,10 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.HealingStore;
-import ca.bradj.questown.town.TownHealingHandle;
-import ca.bradj.questown.town.TownPossibleWork;
-import ca.bradj.questown.town.WorkHandle;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -20,6 +17,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -149,6 +147,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     TownHealingHandle getHealHandle();
 
     HealingStore<BlockPos> getHealingHandle();
+
+    TownEconomics getEconomicsHandle();
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

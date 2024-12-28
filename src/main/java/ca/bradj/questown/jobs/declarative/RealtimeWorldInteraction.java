@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.InsertedItemAware;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -34,12 +35,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class RealtimeWorldInteraction extends
         AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
+    private final Function<NeedsRegistrations.Need, String> getUnmetNeed;
     private int soundTicksLeft;
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
@@ -53,6 +56,7 @@ public class RealtimeWorldInteraction extends
             Map<ProductionStatus, Collection<String>> specialRules,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
+            Function<NeedsRegistrations.Need, String> getUnmetNeed,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -66,6 +70,7 @@ public class RealtimeWorldInteraction extends
                 claimSpots,
                 specialRules
         );
+        this.getUnmetNeed = getUnmetNeed;
         this.journal = journal;
         this.resultGenerator = resultGenerator;
         this.sound = sound;
@@ -126,8 +131,10 @@ public class RealtimeWorldInteraction extends
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toItemStack();
-            is.hurtAndBreak(1, mcExtra.entity(), (x) -> {
-            });
+            is.hurtAndBreak(
+                    1, mcExtra.entity(), (x) -> {
+                    }
+            );
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
         }
@@ -291,6 +298,23 @@ public class RealtimeWorldInteraction extends
         return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
     }
 
+
+    @Override
+    protected void registerUnmetNeed(
+            MCExtra mcExtra,
+            NeedsRegistrations.Need need
+    ) {
+        ServerLevel serverLevel = mcExtra.town().getServerLevel();
+        if (serverLevel == null) {
+            throw new UnsupportedOperationException("Cannot run without server level");
+        }
+        mcExtra.town().getEconomicsHandle().registerUnmetNeed(
+                Util.getTick(serverLevel),
+                mcExtra.entity().getUUID(),
+                getUnmetNeed.apply(need)
+        );
+    }
+
     public void clearInsertedSupplies(MCExtra extra) {
         extra.entity().clearWorkToUndo();
     }
@@ -303,7 +327,8 @@ public class RealtimeWorldInteraction extends
             BlockPos position
     ) {
         VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
-        return PreExtractHook.run(didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
+        return PreExtractHook.run(
+                didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
                     return in;
                 },
@@ -336,10 +361,12 @@ public class RealtimeWorldInteraction extends
     ) {
         PreStateChangeHook.run(
                 rules,
-                pose -> inputs.town().getVillagerHandle().requestPose(inputs.entity().getUUID(), new PoseInPlace(
-                        pose,
-                        decideSpot(rules, position)
-                )),
+                pose -> inputs.town().getVillagerHandle().requestPose(
+                        inputs.entity().getUUID(), new PoseInPlace(
+                                pose,
+                                decideSpot(rules, position)
+                        )
+                ),
                 jobId -> inputs.town().getVillagerHandle().changeJobForVillager(inputs.entity().getUUID(), jobId, false)
         );
     }

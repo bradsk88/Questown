@@ -59,6 +59,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         boolean setWorkLeftAtFreshState(int workRequiredAtFirstState);
 
         void clearInsertedSupplies();
+
+        void registerUnmetNeeds(ProductionStatus status, POS workspot);
     }
 
     private WorkPosition<POS> workSpot;
@@ -112,7 +114,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
-
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
 
@@ -151,7 +152,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             return;
         }
 
-        WorkPosition<?> workSpot = worldBeforeTick.getWorkSpot();
+        WorkPosition<POS> workSpot = worldBeforeTick.getWorkSpot();
         if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
@@ -177,6 +178,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     entityCurrentJob.jobId()
             );
             this.grabbingInsertedSupplies = true;
+            worldBeforeTick.registerUnmetNeeds(status, workSpot.jobBlock());
             return;
         }
 

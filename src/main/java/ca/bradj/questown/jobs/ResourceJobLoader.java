@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -602,21 +603,11 @@ public class ResourceJobLoader {
     }
 
     private static @NotNull Ingredient getIngredient(String block) {
-        Ingredient ingredient = doGetIngredient(block);
+        Ingredient ingredient = Ingredients.fromString(block);
         if (ingredient.isEmpty()) {
             throw new IllegalArgumentException(block + " is an unknown or empty ingredient");
         }
         return ingredient;
-    }
-
-    private static @NotNull Ingredient doGetIngredient(String block) {
-        if (block.startsWith("#")) {
-            return Ingredient.of(TagKey.create(
-                    Registry.ITEM_REGISTRY,
-                    new ResourceLocation(block.replace("#", ""))
-            ));
-        }
-        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
     }
 
     private static @NotNull Predicate<BlockState> getBlockCheck(String block) {

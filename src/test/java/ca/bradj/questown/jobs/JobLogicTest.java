@@ -107,6 +107,14 @@ class JobLogicTest {
         }
 
         @Override
+        public void registerUnmetNeeds(
+                ProductionStatus status,
+                Position workspot
+        ) {
+
+        }
+
+        @Override
         public WorkPosition<Position> getWorkSpot() {
             return this.workspot;
         }

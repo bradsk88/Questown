@@ -58,6 +58,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -91,6 +92,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
     private boolean isMorning = false;
+    private final TownEconomics economics = new TownEconomics();
 
     public static void logStoredData(
             TownFlagBlockEntity entity,
@@ -114,6 +116,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public TownHealingHandle getHealingHandle() {
         return healing;
+    }
+
+    public TownEconomics getEconomicsHandle() {
+        return economics;
     }
 
     private static Map<String, InitPair> initPairs;
@@ -343,7 +349,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.pois.tick(sl, blockEntityPos);
         if (signals == Signals.NIGHT || signals == Signals.EVENING) {
-            AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(sl, VisitorTrigger.Triggers.FirstNightFall, e.getBlockPos());
+            AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                    sl,
+                    VisitorTrigger.Triggers.FirstNightFall,
+                    e.getBlockPos()
+            );
         }
 
         e.villagerHandle.tick(Util.getTick(sl), signals);

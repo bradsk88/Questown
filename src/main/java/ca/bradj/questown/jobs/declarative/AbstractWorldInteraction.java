@@ -26,6 +26,7 @@ public abstract class AbstractWorldInteraction<
         > implements AbstractWorkStatusStore.InsertionRules<HELD_ITEM> {
     private final AbstractItemWI<POS, EXTRA, HELD_ITEM, TOWN> itemWI;
     private final AbstractWorkWI<POS, EXTRA, INNER_ITEM, TOWN> workWI;
+    private final NeedsRegistrations<POS, EXTRA> needsReg;
     protected final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     protected final DeclarativeJobChecks<EXTRA, HELD_ITEM, INNER_ITEM, ?, POS> checks;
@@ -55,6 +56,10 @@ public abstract class AbstractWorldInteraction<
                     jobId
             );
         }
+        this.needsReg = new NeedsRegistrations<>(
+                this::registerUnmetNeed,
+                this::getJobBlockState
+        );
         this.checks = checks;
         this.villagerIndex = villagerIndex;
         this.interval = interval;
@@ -322,12 +327,14 @@ public abstract class AbstractWorldInteraction<
                 return getWithSurfaceInteractionPos(extra, v);
             }
         }
-        return getWithSurfaceInteractionPos(extra, new WorkOutput<>(
-                false,
-                false,
-                null,
-                ImmutableList.copyOf(shuffled).get(0)
-        ));
+        return getWithSurfaceInteractionPos(
+                extra, new WorkOutput<>(
+                        false,
+                        false,
+                        null,
+                        ImmutableList.copyOf(shuffled).get(0)
+                )
+        );
     }
 
     protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(
@@ -628,4 +635,16 @@ public abstract class AbstractWorldInteraction<
     public @Nullable PredicateCollection<HELD_ITEM, ?> getIngredientsRequiredAtState(Integer state) {
         return checks.getIngredientsForStep(state);
     }
+
+    public void registerUnmetNeeds(
+            EXTRA extra,
+            POS workspot
+    ) {
+        needsReg.addUnmet(extra, workspot);
+    }
+
+    protected abstract void registerUnmetNeed(
+            EXTRA extra,
+            NeedsRegistrations.Need need
+    );
 }

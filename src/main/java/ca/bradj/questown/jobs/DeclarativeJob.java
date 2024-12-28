@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
 import ca.bradj.questown.integration.jobs.JobCheckReplacer;
 import ca.bradj.questown.integration.jobs.SupplyRoomCheckReplacer;
@@ -135,6 +136,10 @@ public class DeclarativeJob extends
                     }
                     return null;
                 },
+                i -> Util.orNull(
+                        ingredientsRequiredAtStates.get(i),
+                        Ingredients::toString
+                ),
                 workInterval,
                 sound
         );
@@ -161,18 +166,22 @@ public class DeclarativeJob extends
         Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> jobTools = checks.getAllRequiredTools();
         PredicateCollection noCheck = PredicateCollection.empty("no requirements");
         for (int i = 0; i < maxState; i++) {
-            ingr.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)) {
-                @Override
-                public String toString() {
-                    return "no check";
-                }
-            });
-            tool.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)) {
-                @Override
-                public String toString() {
-                    return "no check";
-                }
-            });
+            ingr.put(
+                    i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)) {
+                        @Override
+                        public String toString() {
+                            return "no check";
+                        }
+                    }
+            );
+            tool.put(
+                    i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)) {
+                        @Override
+                        public String toString() {
+                            return "no check";
+                        }
+                    }
+            );
         }
 
         JobCheckReplacer globalJCR = new JobCheckReplacer(location.isJobBlock());
@@ -234,6 +243,7 @@ public class DeclarativeJob extends
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
+            Function<NeedsRegistrations.Need, String> getUnmetNeed,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -244,6 +254,7 @@ public class DeclarativeJob extends
                 specialRules,
                 resultGenerator,
                 claimSpots,
+                getUnmetNeed,
                 interval,
                 sound
         );
@@ -577,6 +588,14 @@ public class DeclarativeJob extends
             @Override
             public void clearInsertedSupplies() {
                 world.clearInsertedSupplies(extra);
+            }
+
+            @Override
+            public void registerUnmetNeeds(
+                    ProductionStatus status,
+                    BlockPos workspot
+            ) {
+                world.registerUnmetNeeds(extra, workspot);
             }
 
             @Override

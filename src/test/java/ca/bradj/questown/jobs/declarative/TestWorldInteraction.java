@@ -246,6 +246,14 @@ public class TestWorldInteraction extends
     }
 
     @Override
+    protected void registerUnmetNeed(
+            Void unused,
+            NeedsRegistrations.Need ingredientIndex
+    ) {
+
+    }
+
+    @Override
     protected int getWorkSpeedOf10(Void unused) {
         return 10;
     }

@@ -178,6 +178,7 @@ public class TownFlagTileData {
         write(t, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
         write(t, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
         write(t, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        // FIXME: Serialize economics
     }
 
     private static void write(

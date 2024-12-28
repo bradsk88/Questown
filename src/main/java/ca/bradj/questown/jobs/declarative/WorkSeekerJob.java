@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -73,6 +74,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
+            Function<NeedsRegistrations.Need, String> needs,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -83,6 +85,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 specialRules,
                 resultGenerator,
                 claimSpots,
+                needs,
                 interval,
                 sound
         ) {
