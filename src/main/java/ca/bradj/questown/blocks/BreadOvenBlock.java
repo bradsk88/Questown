@@ -185,7 +185,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
 
         if (hasBread(blockState)) {
             moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toItemStack()));
-            // FIXME: Set state to 0
+            // TODO: Set state to 0
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 

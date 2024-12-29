@@ -81,7 +81,7 @@ public class TownStateSerializer {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
         ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = loadVillagers(tag);
-        // TODO[ASAP]: Load work states
+        // TODO[Warp]: Load work states
         @NotNull ImmutableMap<BlockPos, State> workStates = ImmutableMap.of();
         @NotNull ImmutableMap<BlockPos, Integer> workTimers = ImmutableMap.of();
         @NotNull ImmutableList<MCHeldItem> knowledge = ImmutableList.of();
@@ -151,11 +151,6 @@ public class TownStateSerializer {
             CompoundTag tag,
             ServerLevel level
     ) {
-        if (true) {
-            // FIXME: Remove this next time online
-            return ImmutableList.of();
-        }
-
         ImmutableList.Builder<ContainerTarget<MCContainer, MCTownItem>> cB = ImmutableList.builder();
         ListTag containers = tag.getList("containers", Tag.TAG_COMPOUND);
         for (Tag cTag : containers) {

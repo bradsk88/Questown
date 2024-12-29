@@ -76,7 +76,7 @@ public abstract class ProductionJob<
 
     protected final UUID ownerUUID;
 
-    // FIXME: Stop using this - use a cached supplier instead
+    // TODO: Stop using this - use a cached supplier instead
     protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;

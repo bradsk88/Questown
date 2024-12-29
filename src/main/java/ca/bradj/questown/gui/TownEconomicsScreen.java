@@ -14,14 +14,14 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 import java.util.Optional;
 
-public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEconomicsMenu, ItemEconomicsData> {
-    private final VillagerTabs tabs;
+public class TownEconomicsScreen extends AbstractPagedCardScreen<VillagerEconomicsMenu, ItemEconomicsData> {
+    private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
 
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
-    public VillagerEconomicsScreen(
+    public TownEconomicsScreen(
             VillagerEconomicsMenu menu,
             Inventory playerInv,
             Component title

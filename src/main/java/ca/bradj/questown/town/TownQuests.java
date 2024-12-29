@@ -102,7 +102,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         }
 
         if (villagerQuests.isEmpty()) {
-            // FIXME: Add a failure path
+            // TODO: Add a failure path
             Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
             return;
         }
@@ -114,7 +114,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
         ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), quest.getWantedId());
         if (upgradeRecipe == null) {
-            // FIXME: Add a failure path
+            // TODO: Add a failure path
             Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
             return;
         }

@@ -70,7 +70,7 @@ public class ExplorerWork {
     ) {
         ItemStack map = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
 
-        // TODO[ASAP]: Get from JSON files so mod can be extended with more biomes
+        // TODO: Get from JSON files so mod can be extended with more biomes
         ImmutableList<ResourceLocation> biomes = ImmutableList.of(
                 new ResourceLocation("dark_forest"),
                 new ResourceLocation("desert"),

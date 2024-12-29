@@ -591,7 +591,6 @@ public class TownVillagerHandle implements VillagerHolder {
                         );
                     }
                 }, data -> {
-                    // FIXME: Provide quests
                     List<UIQuest> quests = UIQuest.fromLevel(
                             player.getLevel(),
                             town.getUnsafe().getAllQuestsWithRewards()

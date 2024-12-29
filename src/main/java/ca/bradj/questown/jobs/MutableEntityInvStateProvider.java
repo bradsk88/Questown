@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.Map;
 
-// FIXME: Implement this
+// TODO[Warp]: (I THINK this is warp) Implement this
 public class MutableEntityInvStateProvider<HELD_ITEM extends HeldItem<HELD_ITEM, ?>> implements EntityInvStateProvider<Integer> {
 
     private ImmutableCollection<HELD_ITEM> items = ImmutableList.of();

@@ -248,7 +248,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                                                              .collect(Collectors.toSet());
             int y1 = flagPos.offset(0, scanLev, 0)
                             .getY();
-            // FIXME: Do the farms too
+            // TODO[Performance]: Spread the farms across multiple ticks too
             updateActiveFarms(level, scanLev, y1, gatesAtLevel);
         }
         profileTick("queue+farm", start);

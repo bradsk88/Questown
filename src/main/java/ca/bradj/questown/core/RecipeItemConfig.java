@@ -90,7 +90,7 @@ public class RecipeItemConfig {
     );
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
 
-    // TODO[ASAP]: Scan all recipes on server start and check for missing weights up front
+    // TODO: Scan all recipes on server start and check for missing weights up front
     //  Currently, they only get scanned when the town flag tries to generate quests
 
     static {

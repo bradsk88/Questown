@@ -7,14 +7,14 @@ public class TownHealingSerializer {
             CompoundTag tag,
             TownHealingHandle healing
     ) {
-        // FIXME: Implement
+        // TODO: Implement
     }
 
     public CompoundTag serialize(
             TownVillagerHandle villagers,
             Long currentTick
     ) {
-        // FIXME: Implement
+        // TODO: Implement
         return new CompoundTag();
     }
 }

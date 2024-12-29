@@ -63,7 +63,7 @@ public class TownFlagState {
         return new MCTownState(
                 vB.build(),
                 TownContainers.findAllMatching(parent, item -> true, room -> true, block -> true).toList(),
-                // TODO[ASAP]: Store statuses for all villagers
+                // TODO[Warp]: Store statuses for all villagers
                 parent.getWorkStatusHandle(null).getAll(),
                 ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
@@ -78,7 +78,7 @@ public class TownFlagState {
             @Nullable Long optionalWarpDuration
             ) {
         long dayTime = sl.getDayTime();
-        if (e.advancedTimeOnTick == dayTime) { // FIXME: Plus or minus some ticks?
+        if (e.advancedTimeOnTick == dayTime) { // TODO[Warp]: Plus or minus some ticks?
             QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
             return null;
         }

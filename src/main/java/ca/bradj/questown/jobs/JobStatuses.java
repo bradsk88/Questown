@@ -228,7 +228,7 @@ public class JobStatuses {
                         Collection<Integer> states = town.getStatesWithUnfinishedItemlessWork();
                         if (!states.isEmpty()) {
                             for (Integer state : states) {
-                                // TODO[ASAP]: Unit test
+                                // TODO: Unit test
                                 if (location != null) {
                                     if (town.roomsAtState(state).contains(location)) {
                                         return factory.fromJobBlockState(state);

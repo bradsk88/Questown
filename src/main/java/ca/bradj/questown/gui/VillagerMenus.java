@@ -39,7 +39,7 @@ public class VillagerMenus {
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
         VillagerEconomicsData econ = VillagerEconomicsMenu.read(buf);
 
-        // FIXME: Rather than getting the entity, get the uuid and slot locks
+        // TODO[Performance]: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);
         // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.

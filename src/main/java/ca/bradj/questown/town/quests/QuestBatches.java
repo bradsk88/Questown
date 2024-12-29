@@ -132,7 +132,7 @@ public class QuestBatches<
         if (owner != null && villagers.isVillagerMissing(owner)) {
             UUID newOwner = villagers.getRandomVillager();
             if (newOwner == null) {
-                // FIXME: This will alway happen because the flag gets initialized before entities
+                // TODO: This will always happen because the flag gets initialized before entities
                 QT.LOGGER.warn("Could not repair quest belonging to {} because no other villagers exist", owner);
             } else {
                 QT.LOGGER.warn("Replacing missing villager {} with {}", owner, newOwner);
