@@ -77,6 +77,7 @@ public class DeclarativeJob extends
     private final int workInterval;
     private final RecipeProvider recipe;
     private final ImmutableMap<Integer, Ingredient> initialIngredients;
+    private final ImmutableMap<Integer, Ingredient> initialTools;
     private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;
@@ -116,6 +117,7 @@ public class DeclarativeJob extends
                 location
         );
         this.initialIngredients = ingredientsRequiredAtStates;
+        this.initialTools = toolsRequiredAtStates;
         this.jobId = jobId;
         this.checks = new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(ingredientsRequiredAtStates),
@@ -1122,6 +1124,12 @@ public class DeclarativeJob extends
     public String getIngredient(@Nullable Integer integer) {
         return Util.orNull(
                 initialIngredients.get(integer),
+                Ingredients::toString
+        );
+    }
+    public String getTool(@Nullable Integer integer) {
+        return Util.orNull(
+                initialTools.get(integer),
                 Ingredients::toString
         );
     }

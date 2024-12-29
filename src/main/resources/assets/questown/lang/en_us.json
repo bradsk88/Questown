@@ -284,11 +284,13 @@
   "menu.back": "Back",
   "menu.hunger": "Hunger",
   "menu.mood": "Mood",
-  "questown.menu.needs_in_period_1": "%s was been needed %d",
+  "questown.menu.needs_in_period_1": "%s was needed %d",
   "questown.menu.needs_in_period_2": "times in the past %d days",
   "#questown:villager_food": "Food",
   "#questown:axes": "Axes",
   "#questown:hoes": "Hoes",
   "#questown:farmlands": "Farmlands",
+  "#questown:fishing_rods": "Fishing Rods",
+  "#questown:compostable": "Compostables",
   "#minecraft:coals": "Coal"
 }

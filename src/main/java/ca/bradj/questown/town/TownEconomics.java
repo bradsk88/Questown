@@ -74,7 +74,14 @@ public class TownEconomics {
     }
 
     public ImmutableList<ItemEconomicsData> getAggregated(UUID villagerId) {
-        return UtilClean.getOrDefaultCollection(aggregated, villagerId, ImmutableList.of());
+        ImmutableList<ItemEconomicsData> l = UtilClean.getOrDefaultCollection(
+                aggregated,
+                villagerId,
+                ImmutableList.of()
+        );
+        return ImmutableList.copyOf(
+                l.stream().sorted((a, b) -> Integer.compare(b.timesNeeded(), a.timesNeeded())).toList()
+        );
     }
 
     public record UnmetNeed(

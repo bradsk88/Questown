@@ -90,7 +90,11 @@ public class WorkSeekerJob extends DeclarativeJob {
                     Work w = JobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
                     Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
                     if (job instanceof DeclarativeJob dj) {
-                        return dj.getIngredient(need.ingredientIndex());
+                        String ingredient = dj.getIngredient(0);
+                        if (ingredient == null) {
+                            return dj.getTool(0);
+                        }
+                        return ingredient;
                     }
                     return null;
                 },
