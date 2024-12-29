@@ -26,6 +26,7 @@ import java.util.function.Function;
 public class FlagMenus {
     TownQuestsContainer questsMenu;
     MultiStatusMenu villagersMenu;
+    TownEconomicsMenu econMenu;
 
     public FlagMenus() {
     }
@@ -45,6 +46,7 @@ public class FlagMenus {
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
             menus.initQuestsMenuClientSide(windowId, quests, flagPos);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagPos);
+            menus.initEconClientSide(windowId, flagPos);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -101,13 +103,26 @@ public class FlagMenus {
             Collection<UIQuest> quests,
             BlockPos flagPos
     ) {
-        questsMenu = new TownQuestsContainer(windowId, quests, flagPos, () -> {});
+        questsMenu = new TownQuestsContainer(
+                windowId, quests, flagPos, () -> {
+        }
+        );
     }
 
     public void initMultiVillagerStatusMenuClientSide(
             int windowId,
             BlockPos flagPos
     ) {
-        villagersMenu = new MultiStatusMenu(windowId, flagPos, () -> {});
+        villagersMenu = new MultiStatusMenu(
+                windowId, flagPos, () -> {
+        }
+        );
+    }
+
+    private void initEconClientSide(
+            int windowId,
+            BlockPos flagPos
+    ) {
+        econMenu = new TownEconomicsMenu(windowId, flagPos);
     }
 }

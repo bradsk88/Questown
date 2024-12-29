@@ -19,6 +19,7 @@ public class TownEconomics {
     private final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(100);
     private boolean needAggregate;
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
+    private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
 
     public static ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> aggregateForUI(
             Collection<UnmetNeed> unmetNeedsRecord
@@ -62,6 +63,20 @@ public class TownEconomics {
             return;
         }
         this.aggregated = aggregateForUI(unmetNeedsRecord);
+        HashMap<String, Integer> b = new HashMap<>();
+        for (ImmutableList<ItemEconomicsData> v : aggregated.values()) {
+            for (ItemEconomicsData i : v) {
+                b.compute(
+                        i.ingredientKey(),
+                        (k, vv) -> vv == null ? i.timesNeeded() : vv + i.timesNeeded()
+                );
+            }
+        }
+        UUID standIn = UUID.randomUUID();
+        Map<UUID, ImmutableList<ItemEconomicsData>> x = aggregateCounts(
+                ImmutableMap.of(standIn, b)
+        );
+        this.aggregatedAll = x.get(standIn);
     }
 
     public void registerUnmetNeed(
@@ -74,11 +89,14 @@ public class TownEconomics {
     }
 
     public ImmutableList<ItemEconomicsData> getAggregated(UUID villagerId) {
-        ImmutableList<ItemEconomicsData> l = UtilClean.getOrDefaultCollection(
-                aggregated,
-                villagerId,
-                ImmutableList.of()
-        );
+        ImmutableList<ItemEconomicsData> l = aggregatedAll;
+        if (villagerId != null) {
+            l = UtilClean.getOrDefaultCollection(
+                    aggregated,
+                    villagerId,
+                    ImmutableList.of()
+            );
+        }
         return ImmutableList.copyOf(
                 l.stream().sorted((a, b) -> Integer.compare(b.timesNeeded(), a.timesNeeded())).toList()
         );

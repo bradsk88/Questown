@@ -2,6 +2,7 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.ItemEconomicsData;
+import ca.bradj.questown.gui.TownEconomicsScreen;
 import ca.bradj.questown.gui.VillagerEconomicsScreen;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.FriendlyByteBuf;
@@ -39,7 +40,10 @@ public record EconomicsUpdate(
     ) {
         ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
                 Dist.CLIENT,
-                () -> () -> VillagerEconomicsScreen.lastUpdate = this
+                () -> () -> {
+                    VillagerEconomicsScreen.lastUpdate = this;
+                    TownEconomicsScreen.lastUpdate = this;
+                }
         )).exceptionally(EconomicsUpdate::logError);
         ctx.get().setPacketHandled(true);
 

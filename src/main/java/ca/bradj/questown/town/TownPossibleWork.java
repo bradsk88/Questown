@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -75,10 +74,24 @@ public class TownPossibleWork {
         Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
         e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w)));
-        return b.build().entrySet().stream()
-                .filter(v -> v.getValue() > Config.MIN_JOB_ACCEPTANCE.get())
-                .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-                .map(Map.Entry::getKey).toList();
+        ImmutableMap<JobID, Double> list = b.build();
+        List<Map.Entry<JobID, Double>> out = filter(list, Config.PREFERRED_JOB_ACCEPTANCE.get());
+        if (out.isEmpty()) {
+            QT.FLAG_LOGGER.debug("Could not generate preferred work. Using fallbacks.");
+            out = filter(list, Config.MIN_JOB_ACCEPTANCE.get());
+        }
+        return out.stream()
+                  .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+                  .map(Map.Entry::getKey).toList();
+    }
+
+    private static List<Map.Entry<JobID, Double>> filter(
+            ImmutableMap<JobID, Double> list,
+            Double threshold
+    ) {
+        return list.entrySet().stream()
+                   .filter(v -> v.getValue() > threshold)
+                   .toList();
     }
 
     private static double getWorkPercentPossible(

@@ -2,11 +2,10 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
-import ca.bradj.questown.gui.FlagMenus;
-import ca.bradj.questown.gui.MultiStatusMenu;
-import ca.bradj.questown.gui.TownQuestsContainer;
-import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -19,6 +18,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,7 +57,19 @@ public class TownFlagMenus {
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
                                 windowId, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
                         ), quests, flagPos, entities
-                )
+                ),
+                OpenFlagMenuMessage.ECONOMICS,
+                () -> {
+                    QuestownNetwork.CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> sender),
+                            new EconomicsUpdate(flag.getEconomicsHandle().getAggregated(null))
+                    );
+                    openMenu(
+                            sender, (windowId, inv, p) -> new TownEconomicsMenu(
+                                    windowId, flagPos
+                            ), quests, flagPos, entities
+                    );
+                }
         );
 
         Runnable runnable = showers.get(type);

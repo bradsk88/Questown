@@ -2,7 +2,9 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 
@@ -14,7 +16,8 @@ public class FlagTabs extends Tabs implements SubUI {
 
     public FlagTabs(
             @Nullable Runnable questsScreenFn,
-            @Nullable Runnable villagerScreenFn
+            @Nullable Runnable villagerScreenFn,
+            @Nullable Runnable econScreenFn
     ) {
         super(ImmutableList.of(
                 new Tab(
@@ -30,6 +33,16 @@ public class FlagTabs extends Tabs implements SubUI {
                         setScreen(questsScreenFn),
                         "tooltips.quests",
                         questsScreenFn == null
+                ),
+                new Tab(
+                        (rc, x, y) -> {
+                            int txBefore = RenderSystem.getShaderTexture(0);
+                            Util.blitTab(rc.stack(), x, y, 0);
+                            RenderSystem.setShaderTexture(0, txBefore);
+                        },
+                        setScreen(econScreenFn),
+                        "tooltips.economics",
+                        econScreenFn == null
                 )
         ));
     }
@@ -64,7 +77,8 @@ public class FlagTabs extends Tabs implements SubUI {
         };
         return new FlagTabs(
                 factory.apply(OpenFlagMenuMessage.QUESTS),
-                factory.apply(OpenFlagMenuMessage.VILLAGERS)
+                factory.apply(OpenFlagMenuMessage.VILLAGERS),
+                factory.apply(OpenFlagMenuMessage.ECONOMICS)
         );
     }
 }

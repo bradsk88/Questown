@@ -14,7 +14,8 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
 
 
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.VILLAGERS
+            OpenFlagMenuMessage.VILLAGERS,
+            OpenFlagMenuMessage.ECONOMICS
     );
 
     public TownQuestsContainer(

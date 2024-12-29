@@ -14,7 +14,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 import java.util.Optional;
 
-public class TownEconomicsScreen extends AbstractPagedCardScreen<VillagerEconomicsMenu, ItemEconomicsData> {
+public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMenu, ItemEconomicsData> {
     private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
@@ -22,7 +22,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<VillagerEconomi
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
     public TownEconomicsScreen(
-            VillagerEconomicsMenu menu,
+            TownEconomicsMenu menu,
             Inventory playerInv,
             Component title
     ) {
@@ -30,7 +30,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<VillagerEconomi
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.tabs = VillagerTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu);
     }
 
     @Override

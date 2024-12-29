@@ -121,7 +121,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         this.ticksSinceStart++;
         ProductionStatus status = computeState.get();
 
-        if (ticksSinceStart % 200 == 0) {
+        if (ticksSinceStart % 200 == 0 && status.isExtractingProduct()) {
             // This is for handling villagers who get stuck as work seekers
             worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock));
         }
