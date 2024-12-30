@@ -2,11 +2,10 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,7 +23,7 @@ public class TownVillagers {
             ImmutableList<WorkRequest> requestedResults,
             WorksBehaviour.TownData td
     ) {
-        List<JobID> preference = new ArrayList<>(JobsRegistry.getPreferredWorkIds(villagerCurrentJob));
+        List<JobID> preference = new ArrayList<>(ServerJobsRegistry.getPreferredWorkIds(villagerCurrentJob));
 
         return chooseFromList(canFitInDay, canAlwaysStart, requestedResults, td, preference);
     }
@@ -64,7 +63,7 @@ public class TownVillagers {
                 //  blacksmith should light up red to indicate a broken chain and
                 //  that the player will need to contribute in order for the
                 //  blacksmith to work, rather than everything being automated.
-                if (JobsRegistry.canSatisfy(td, p, requestedResult)) {
+                if (ServerJobsRegistry.canSatisfy(td, p, requestedResult)) {
                     return p;
                 }
             }

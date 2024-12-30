@@ -3,7 +3,7 @@ package ca.bradj.questown.integration.minecraft;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
@@ -63,7 +63,7 @@ public class TownStateSerializer {
             }
             vTag.put("journal_items", journalItems);
             vTag.putUUID("uuid", e.uuid);
-            vTag.putString("job", JobsRegistry.getStringValue(e.journal.jobId()));
+            vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
             villagers.add(vTag);
         }
         tag.put("villagers", villagers);
@@ -132,8 +132,8 @@ public class TownStateSerializer {
                 QT.JOB_LOGGER.error("Empty job. Falling back to gatherer for {}", uuid);
                 job = "gatherer";
             }
-            ImmutableSnapshot<MCHeldItem, ?> journal = JobsRegistry.getNewJournal(
-                    JobsRegistry.parseStringValue(job),
+            ImmutableSnapshot<MCHeldItem, ?> journal = ServerJobsRegistry.getNewJournal(
+                    ServerJobsRegistry.parseStringValue(job),
                     vcTag.getString("journal_status"),
                     heldItems
             );

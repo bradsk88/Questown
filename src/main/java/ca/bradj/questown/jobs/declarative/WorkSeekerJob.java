@@ -14,14 +14,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.antlr.v4.codegen.model.decl.Decl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -87,7 +85,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 resultGenerator,
                 claimSpots,
                 (x, need) -> {
-                    Work w = JobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
+                    Work w = ServerJobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
                     Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
                     if (job instanceof DeclarativeJob dj) {
                         String ingredient = dj.getIngredient(0);

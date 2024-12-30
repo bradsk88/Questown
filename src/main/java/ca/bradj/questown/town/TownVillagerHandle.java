@@ -422,6 +422,9 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     public void makeAllTotallyHungry() {
+        if (!Config.HUNGER_ENABLED.get()) {
+            return;
+        }
         entities.forEach(e -> {
             UUID u = e.getUUID();
             fullness.put(u, 1);
@@ -433,7 +436,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public boolean isDining(UUID uuid) {
         return entities.stream()
                        .filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> JobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
+                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
                        .findFirst()
                        .orElse(false);
     }

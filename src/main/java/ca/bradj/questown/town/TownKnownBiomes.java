@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -35,16 +36,12 @@ public class TownKnownBiomes {
     }
 
     public Collection<ResourceLocation> getAllInTown() {
-        @NotNull TownFlagBlockEntity e = town.getUnsafe();
         ImmutableSet.Builder<ResourceLocation> b = ImmutableSet.builder();
-        List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(e, e.getServerLevel());
-        cs.forEach(v -> v.getItems()
-                .stream()
-                .filter(i -> ItemsInit.GATHERER_MAP.get()
-                        .equals(i.get()))
-                .map(i -> GathererMap.getBiome(i.toItemStack()))
-                .filter(Objects::nonNull)
-                .forEach(b::add));
+        try {
+            getBiomesFromMapsInChests(b);
+        } catch (IllegalStateException ex) {
+            QT.FLAG_LOGGER.error("TownKnownBiomes is not connected to town. Fallback biome will be used");
+        }
         nearbyBiomes.forEach(v -> {
             ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
             if (key == null) {
@@ -54,6 +51,25 @@ public class TownKnownBiomes {
         });
         b.add(Loots.fallbackBiome);
         return b.build();
+    }
+
+    private void getBiomesFromMapsInChests(ImmutableSet.Builder<ResourceLocation> b) {
+        @NotNull TownFlagBlockEntity e = town.getUnsafe();
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = TownContainers.getAllContainers(e, e.getServerLevel());
+        for (ContainerTarget<MCContainer, MCTownItem> c : cs) {
+            for (ResourceLocation mapItem : getMapItems(c)) {
+                b.add(mapItem);
+            }
+        }
+    }
+
+    private static @NotNull List<ResourceLocation> getMapItems(ContainerTarget<MCContainer, MCTownItem> v) {
+        return v.getItems()
+                .stream()
+                .filter(i -> ItemsInit.GATHERER_MAP.get()
+                                                   .equals(i.get()))
+                .map(i -> GathererMap.getBiome(i.toItemStack()))
+                .filter(Objects::nonNull).toList();
     }
 
     public ResourceLocation getRandomNearbyBiome() {
@@ -75,7 +91,7 @@ public class TownKnownBiomes {
     ) {
         TownFlagBlockEntity town = e.town.getUnsafe();
         BlockPos blockPos = town.getBlockPos();
-        ServerLevel level = e.town. getServerLevelUnsafe();
+        ServerLevel level = e.town.getServerLevelUnsafe();
         ChunkPos here = new ChunkPos(blockPos);
         Biome value = level.getBiome(blockPos).value();
         e.nearbyBiomes.add(value);
@@ -83,7 +99,7 @@ public class TownKnownBiomes {
             for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
                 ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
                 Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY()))
-                        .value();
+                                   .value();
                 e.nearbyBiomes.add(biome);
             }
         }

@@ -5,7 +5,7 @@ import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.network.OnScreenTextMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.CreateStockRequestContainer;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableSet;
@@ -50,7 +50,7 @@ public class StockRequestClipboardItem extends Item {
 
         WorksBehaviour.TownData td = parent.getTownData();
         BlockPos flagPos = parent.getTownFlagBasePos();
-        ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {

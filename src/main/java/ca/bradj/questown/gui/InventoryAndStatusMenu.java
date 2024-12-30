@@ -319,7 +319,7 @@ public class InventoryAndStatusMenu extends AbstractVillagerMenu implements Stat
     private static @NotNull JobWantedIngredientsMessage buildMessage(
             VisitorMobEntity e
     ) {
-        Function<List<MCHeldItem>, ImmutableList<Ingredient>> wantFn = JobsRegistry.getWantedResourcesProvider(e.getJobId());
+        Function<List<MCHeldItem>, ImmutableList<Ingredient>> wantFn = ServerJobsRegistry.getWantedResourcesProvider(e.getJobId());
         return new JobWantedIngredientsMessage(wantFn.apply(Jobs.getHeldItems(e.getInventory())));
     }
 }

@@ -3,7 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
@@ -149,7 +149,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destY = coords.topYPadded() - MED_PADDING;
         IStatus<?> status = getSmoothedStatus(uuid);
         JobID job = syncedData.villagers.get(uuid).a();
-        ResourceLocation texture = JobsRegistry.getTexture(job, status);
+        ResourceLocation texture = ServerJobsRegistry.getTexture(job, status);
         RenderSystem.setShaderTexture(0, texture);
         blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
     }

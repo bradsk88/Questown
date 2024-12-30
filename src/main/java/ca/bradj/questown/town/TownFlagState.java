@@ -5,7 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -131,7 +131,7 @@ public class TownFlagState {
                     ticksPassed,
                     liveState
             );
-            Warper<ServerLevel, MCTownState> vWarper = JobsRegistry.getWarper(
+            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(
                     i, v.journal.jobId()
             );
 

@@ -2,7 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.blocks.StatefulJobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -27,8 +27,8 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                 (level, pos) -> {
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
-                    if (JobsRegistry.isJobBlock(level::getBlockState, pos)) {
-                        return JobsRegistry.getDefaultJobBlockState(b);
+                    if (ServerJobsRegistry.isJobBlock(level::getBlockState, pos)) {
+                        return ServerJobsRegistry.getDefaultJobBlockState(b);
                     }
                     return null;
                 },

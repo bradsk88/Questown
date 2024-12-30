@@ -3,7 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
@@ -19,7 +19,7 @@ public class JobTooltips {
             IStatus<?> status,
             JobID jobId
     ) {
-        UtilClean.Pair<String, String> overrides = JobsRegistry.getStatusText(jobId, status);
+        UtilClean.Pair<String, String> overrides = ServerJobsRegistry.getStatusText(jobId, status);
         if (overrides != null) {
             return UtilClean.Pair.toList(UtilClean.Pair.monoMap(overrides, TranslatableComponent::new));
         }

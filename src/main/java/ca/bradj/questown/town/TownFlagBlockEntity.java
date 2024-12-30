@@ -13,7 +13,7 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.ResterWork;
@@ -581,7 +581,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                       .map(v -> (VisitorMobEntity) v)
                       .filter(e -> {
                           for (WorkRequest r : workHandle.getRequestedResults()) {
-                              if (JobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
+                              if (ServerJobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
                                   if (e.getStatusForServer()
                                        .isBusy()) {
                                       return false;
@@ -838,8 +838,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
-        Predicate<JobID> canFit = p -> JobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
-        Predicate<JobID> canAlwaysStart = p -> JobsRegistry.canAlwaysStart(uuid, p);
+        Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
+        Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
         JobID work = TownVillagers.chooseFromList(
                 canFit, canAlwaysStart, requestedResults, td, possibleWork.getFor(villager.getJobId())
         );
@@ -912,7 +912,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             JobID jobName,
             VisitorMobEntity f
     ) {
-        f.setJob(JobsRegistry.getInitializedJob(
+        f.setJob(ServerJobsRegistry.getInitializedJob(
                 getServerLevel(), jobName, f.getJobJournalSnapshot()
                                             .items(), visitorUUID
         ));
@@ -1105,10 +1105,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public Collection<String> getAvailableRootJobs() {
         // TODO: Scan villagers to make this decision
-        Set<String> allJobs = JobsRegistry.getAllJobs()
-                                          .stream()
-                                          .map(JobID::rootId)
-                                          .collect(Collectors.toSet());
+        Set<String> allJobs = ServerJobsRegistry.getAllJobs()
+                                                .stream()
+                                                .map(JobID::rootId)
+                                                .collect(Collectors.toSet());
         Set<String> allFilledJobs = villagerHandle.stream()
                                                   .filter(v -> v instanceof VisitorMobEntity)
                                                   .map(v -> (VisitorMobEntity) v)

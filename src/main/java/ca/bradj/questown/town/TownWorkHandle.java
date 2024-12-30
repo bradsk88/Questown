@@ -7,7 +7,7 @@ import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.gui.AddWorkContainer;
 import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.common.collect.ImmutableList;
@@ -94,7 +94,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
-        ImmutableSet<Ingredient> allOutputs = JobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
         NetworkHooks.openGui(sp, new MenuProvider() {
             @Override
             public @NotNull Component getDisplayName() {

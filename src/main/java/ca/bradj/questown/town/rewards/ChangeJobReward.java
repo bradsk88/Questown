@@ -3,13 +3,12 @@ package ca.bradj.questown.town.rewards;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobsRegistry;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -49,9 +48,9 @@ public class ChangeJobReward extends MCReward {
         return () -> {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
             town.changeJobForVisitor(visitorUUID, jobID);
-            ImmutableList<JobID> defaultWork = JobsRegistry.getDefaultWork(jobID);
+            ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
             defaultWork.forEach(v -> {
-                ItemStack output = JobsRegistry.getDefaultWorkForNewWorker(v);
+                ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(v);
                 if (output.isEmpty()) {
                     return;
                 }

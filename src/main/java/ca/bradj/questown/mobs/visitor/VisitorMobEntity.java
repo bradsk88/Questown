@@ -5,7 +5,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
@@ -185,8 +184,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                                      .getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
         this.changeListeners.add(() -> {
-            Collection<Ingredient> ing = JobsRegistry.getWantedResourcesProvider(getJobId())
-                                                     .apply(Jobs.getHeldItems(job.get()));
+            Collection<Ingredient> ing = ServerJobsRegistry.getWantedResourcesProvider(getJobId())
+                                                           .apply(Jobs.getHeldItems(job.get()));
             ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
         });
     }
@@ -297,7 +296,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @NotNull
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
-        Job j = JobsRegistry.getInitialJobForVillager(uuid);
+        Job j = ServerJobsRegistry.getInitialJobForVillager(uuid);
         // Technically this also gets us item updates because item changes cause status to go back to IDLE
         // But this is admittedly a bit fragile.
         this.cleanupJobListeners.add(j.addStatusListener(getNotifiedOfJobStatusChanges()));
@@ -1261,7 +1260,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     ) {
         this.town = town;
         //noinspection unchecked
-        setJob(JobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
+        setJob(ServerJobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
         this.cleanupJobListeners.add(getJob().addStatusListener(getNotifiedOfJobStatusChanges()));
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);

@@ -213,7 +213,7 @@ public class Config {
         ).defineInRange("BaseFullness", 5000, 1, 24000);
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
-        ).define("HungerEnabled", false);
+        ).define("HungerEnabledV2", false);
         MAX_TICKS_WITHOUT_DINING_TABLE = BUILDER.comment(
                 "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +

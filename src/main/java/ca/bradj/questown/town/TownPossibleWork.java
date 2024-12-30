@@ -104,7 +104,7 @@ public class TownPossibleWork {
             return 0.0;
         }
 
-        if (!JobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
+        if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
             QT.FLAG_LOGGER.trace(
                     "Villager will not do {} because there is not enough time left in the day",
                     j.getId().toNiceString()

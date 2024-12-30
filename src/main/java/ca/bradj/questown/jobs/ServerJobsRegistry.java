@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 
 import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork;
 
-public class JobsRegistry {
+public class ServerJobsRegistry {
 
     public static boolean canAlwaysStart(
             UUID uuid,
@@ -60,12 +60,17 @@ public class JobsRegistry {
             JobID job,
             IStatus<?> status
     ) {
-        Work work = getWork(job);
-        if (work != null) {
-            ResourceLocation tex = work.applyStatusTextureOverride(status);
-            if (tex != null) {
-                return tex;
+        try {
+            Work work = getWork(job);
+            if (work != null) {
+                ResourceLocation tex = work.applyStatusTextureOverride(status);
+                if (tex != null) {
+                    return tex;
+                }
             }
+        } catch (Exception e) {
+            // FIXME: Send this information as a message to the UIs, because "Work" is not Client-Safe
+            QT.JOB_LOGGER.error("Failed to apply status texture override");
         }
         return StatusArt.getTexture(job, status);
     }
@@ -141,7 +146,7 @@ public class JobsRegistry {
         b.add(new SpecialJob(
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob::isSeekingWork,
                 (j, owner) -> new WorkSeekerJob(owner, 6, j.rootId()),
-                JobsRegistry::newWorkSeekerJournal,
+                ServerJobsRegistry::newWorkSeekerJournal,
                 (id, bsSrc, bp) -> {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
