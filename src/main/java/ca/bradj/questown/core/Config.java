@@ -199,7 +199,7 @@ public class Config {
         ).define("CrashOnInvalidJobs", true);
         WORK_PRECOMPUTE_FREQUENCY = BUILDER.comment(
                 "Questown tries to pre-compute the work that can be picked up by villagers in advance. This controls how many ticks are between attempts."
-        ).defineInRange("WorkPrecomputeFrequency", 100L, 1L, 24000L);
+        ).defineInRange("WorkPrecomputeFrequency", 50L, 1L, 24000L);
         BUILDER.pop();
 
         // Villagers Config

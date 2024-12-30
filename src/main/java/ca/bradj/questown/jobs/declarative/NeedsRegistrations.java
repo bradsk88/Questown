@@ -29,7 +29,8 @@ public class NeedsRegistrations<POS, EXTRA> {
 
     public void addUnmet(
             EXTRA extra,
-            @Nullable POS workspot
+            @Nullable POS workspot,
+            boolean hasInserted
     ) {
         State state = State.fresh();
         if (workspot != null) {
@@ -39,10 +40,14 @@ public class NeedsRegistrations<POS, EXTRA> {
             registerUnmetNeed.accept(extra, new Need(0, null));
             return;
         }
+        int ingredientIndex = state.processingState();
         if (state.hasWorkLeft()) {
-            registerUnmetNeed.accept(extra, new Need(null, state.processingState()));
+            registerUnmetNeed.accept(extra, new Need(null, ingredientIndex));
             return;
         }
-        registerUnmetNeed.accept(extra, new Need(state.processingState(), null));
+        if (hasInserted) {
+            ingredientIndex += 1;
+        }
+        registerUnmetNeed.accept(extra, new Need(ingredientIndex, null));
     }
 }

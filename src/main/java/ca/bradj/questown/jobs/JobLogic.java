@@ -63,8 +63,11 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         void registerUnmetNeeds(
                 ProductionStatus status,
-                @Nullable POS workspot
+                @Nullable POS workspot,
+                boolean b
         );
+
+        boolean hasInsertedSupplies();
     }
 
     private WorkPosition<POS> workSpot;
@@ -123,7 +126,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (ticksSinceStart % 200 == 0 && status.isExtractingProduct()) {
             // This is for handling villagers who get stuck as work seekers
-            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock));
+            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock),
+                    worldBeforeTick.hasInsertedSupplies()
+            );
         }
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
@@ -181,13 +186,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
             QT.JOB_LOGGER.debug(
-                    "{} gave up waiting for ingredients after {} ticks ({})",
+                    "{} gave up waiting for ingredients after {} ticks (job: {})",
                     entityCurrentJob.rootId(),
                     noSuppliesTicks,
                     entityCurrentJob.jobId()
             );
             this.grabbingInsertedSupplies = true;
-            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock));
+            worldBeforeTick.registerUnmetNeeds(
+                    status,
+                    Util.orNull(workSpot, WorkPosition::jobBlock),
+                    worldBeforeTick.hasInsertedSupplies()
+            );
             return;
         }
 

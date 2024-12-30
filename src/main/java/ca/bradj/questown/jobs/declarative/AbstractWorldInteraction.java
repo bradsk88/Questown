@@ -623,6 +623,8 @@ public abstract class AbstractWorldInteraction<
             EXTRA mcExtra
     );
 
+    public abstract boolean hasInserted(EXTRA extra);
+
     public @Nullable WorkPosition<POS> getWorkSpot() {
         return workspot.value;
     }
@@ -638,9 +640,10 @@ public abstract class AbstractWorldInteraction<
 
     public void registerUnmetNeeds(
             EXTRA extra,
-            @Nullable POS workspot
+            @Nullable POS workspot,
+            boolean hasInserted
     ) {
-        needsReg.addUnmet(extra, workspot);
+        needsReg.addUnmet(extra, workspot, hasInserted);
     }
 
     protected abstract void registerUnmetNeed(

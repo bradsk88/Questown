@@ -11,7 +11,6 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.JobsRegistry;
@@ -58,7 +57,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -325,6 +323,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             e.state.putStateOnTile(tag, e.uuid);
             e.changed = false;
             setChanged(level, blockEntityPos, state);
+        }
+
+        if (stateChanged) {
+            e.possibleWork.invalidate();
         }
 
         e.workHandle.tick(sl);

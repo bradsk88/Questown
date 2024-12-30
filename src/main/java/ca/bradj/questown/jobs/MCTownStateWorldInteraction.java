@@ -304,8 +304,14 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     public boolean tryGrabbingInsertedSupplies(Inputs mcExtra) {
-        // TODO: Is this good enough?
+        // TODO[Warp]: Implement
         return true;
+    }
+
+    @Override
+    public boolean hasInserted(Inputs inputs) {
+        // TODO[Warp]: Implement
+        return false;
     }
 
     @Override

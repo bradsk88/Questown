@@ -335,6 +335,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             JobID jobID,
             BlockPos pos,
             MCHeldItem item
+            // TODO[Bugs]: Add quantity
     ) {
     }
 

@@ -109,7 +109,8 @@ class JobLogicTest {
         @Override
         public void registerUnmetNeeds(
                 ProductionStatus status,
-                Position workspot
+                Position workspot,
+                boolean hasInserted // TODO[Bugs]: Replace with number
         ) {
 
         }

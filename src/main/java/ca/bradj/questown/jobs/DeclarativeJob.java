@@ -606,9 +606,15 @@ public class DeclarativeJob extends
             @Override
             public void registerUnmetNeeds(
                     ProductionStatus status,
-                    @Nullable BlockPos workspot
+                    @Nullable BlockPos workspot,
+                    boolean hasInserted
             ) {
-                world.registerUnmetNeeds(extra, workspot);
+                world.registerUnmetNeeds(extra, workspot, hasInserted);
+            }
+
+            @Override
+            public boolean hasInsertedSupplies() {
+                return world.hasInserted(extra);
             }
 
             @Override
