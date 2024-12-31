@@ -55,4 +55,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> BOWL_RACK = BLOCKS.register(
             BowlRackBlock.ITEM_ID, BowlRackBlock::new
     );
+    public static final RegistryObject<Block> FOOD_DISPLAY = BLOCKS.register(
+            FoodDisplayBlock.ITEM_ID, FoodDisplayBlock::new
+    );
 }

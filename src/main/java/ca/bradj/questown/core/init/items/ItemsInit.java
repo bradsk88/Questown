@@ -95,6 +95,14 @@ public class ItemsInit {
                     Questown.DEFAULT_ITEM_PROPS
             )
     );
+
+    public static final RegistryObject<Item> FOOD_DISPLAY_BLOCK = ITEMS.register(
+            FoodDisplayBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.FOOD_DISPLAY.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
     public static final RegistryObject<Item> SMALL_SOUP_POT_BLOCK = ITEMS.register(
             SmallSoupPotBlock.ITEM_ID,
             () -> new BlockItem(

@@ -111,7 +111,7 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
             }
         }
         if (informed) {
-            return InteractionResult.sidedSuccess(clientSide);
+            return InteractionResult.CONSUME;
         }
         return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
     }

@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.PacketDistributor;
 
-public class PlateBlockEntity extends BlockEntity {
+public class PlateBlockEntity extends BlockEntity implements ItemAccepting {
     private ItemStack food = Items.AIR.getDefaultInstance();
 
     public PlateBlockEntity(
@@ -24,13 +24,24 @@ public class PlateBlockEntity extends BlockEntity {
         return this.food;
     }
 
-    public void setFood(ItemStack item) {
+    @Override
+    public boolean setItem(
+            ItemStack item,
+            int index
+    ) {
         this.food = item;
         if (level.isClientSide()) {
-            return;
+            return false;
         }
-        QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), new SyncBlockItemMessage(
-                getBlockPos(), this.food
-        ));
+        QuestownNetwork.CHANNEL.send(
+                PacketDistributor.ALL.noArg(), new SyncBlockItemMessage(
+                        getBlockPos(), this.food, index
+                )
+        );
+        return true;
+    }
+
+    public void setFood(ItemStack itemStack) {
+        setItem(itemStack, 0);
     }
 }

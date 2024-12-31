@@ -1,10 +1,8 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.blocks.HospitalBedBlock;
-import ca.bradj.questown.blocks.JobBoardBlock;
-import ca.bradj.questown.blocks.PlateBlock;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.blocks.*;
+import ca.bradj.questown.blocks.entity.FoodDisplayEntity;
 import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.town.TownFlagBlockEntity;
@@ -38,6 +36,12 @@ public class TilesInit {
     public static final RegistryObject<BlockEntityType<PlateBlockEntity>> PLATE = TILES.register(
             PlateBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     PlateBlockEntity::new, BlocksInit.PLATE_BLOCK.get()
+            ).build(null)
+    );
+
+    public static final RegistryObject<BlockEntityType<FoodDisplayEntity>> FOOD_DISPLAY = TILES.register(
+            FoodDisplayBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    FoodDisplayEntity::new, BlocksInit.FOOD_DISPLAY.get()
             ).build(null)
     );
 

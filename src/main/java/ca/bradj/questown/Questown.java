@@ -1,5 +1,6 @@
 package ca.bradj.questown;
 
+import ca.bradj.questown.blocks.entity.renderer.FoodDisplayEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
 import ca.bradj.questown.commands.JobArgument;
@@ -108,6 +109,10 @@ public class Questown {
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.PLATE.get(),
                 PlateBlockEntityRenderer::new
+        ));
+        event.enqueueWork(() -> BlockEntityRenderers.register(
+                TilesInit.FOOD_DISPLAY.get(),
+                FoodDisplayEntityRenderer::new
         ));
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.HOSPITAL_BED.get(),
