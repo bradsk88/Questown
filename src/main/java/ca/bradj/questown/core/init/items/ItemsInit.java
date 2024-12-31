@@ -87,6 +87,14 @@ public class ItemsInit {
                     Questown.DEFAULT_ITEM_PROPS
             )
     );
+
+    public static final RegistryObject<Item> BOWL_RACK_BLOCK = ITEMS.register(
+            BowlRackBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.BOWL_RACK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
     public static final RegistryObject<Item> SMALL_SOUP_POT_BLOCK = ITEMS.register(
             SmallSoupPotBlock.ITEM_ID,
             () -> new BlockItem(

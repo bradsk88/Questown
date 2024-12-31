@@ -52,4 +52,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> HOSPITAL_BED = BLOCKS.register(
             HospitalBedBlock.ITEM_ID, HospitalBedBlock::new
     );
+    public static final RegistryObject<Block> BOWL_RACK = BLOCKS.register(
+            BowlRackBlock.ITEM_ID, BowlRackBlock::new
+    );
 }
