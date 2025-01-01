@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks.entity;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncBlockItemMessage;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -10,7 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.PacketDistributor;
 
-public class PlateBlockEntity extends BlockEntity implements ItemAccepting {
+public class PlateBlockEntity extends BlockEntity implements ItemAccepting<MCTownItem> {
     private ItemStack food = Items.AIR.getDefaultInstance();
 
     public PlateBlockEntity(
@@ -24,12 +25,13 @@ public class PlateBlockEntity extends BlockEntity implements ItemAccepting {
         return this.food;
     }
 
+
     @Override
     public boolean setItem(
-            ItemStack item,
-            int index
+            int index,
+            MCTownItem item
     ) {
-        this.food = item;
+        this.food = item.toItemStack();
         if (level.isClientSide()) {
             return false;
         }
@@ -42,6 +44,6 @@ public class PlateBlockEntity extends BlockEntity implements ItemAccepting {
     }
 
     public void setFood(ItemStack itemStack) {
-        setItem(itemStack, 0);
+        setItem(0, MCTownItem.fromMCItemStack(itemStack));
     }
 }

@@ -1,10 +1,8 @@
 package ca.bradj.questown.blocks.entity;
 
-import net.minecraft.world.item.ItemStack;
-
-public interface ItemAccepting {
+public interface ItemAccepting<I> {
     boolean setItem(
-            ItemStack item,
-            int index
+            int index,
+            I item
     );
 }

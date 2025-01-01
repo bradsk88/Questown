@@ -2,7 +2,6 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -12,8 +11,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
@@ -35,31 +32,19 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
     }
 
     @Override
-    public boolean hasAnyOf(ImmutableSet<MCTownItem> items) {
-        return container.hasAnyOf(items.stream().map(MCTownItem::get).collect(Collectors.toSet()));
-    }
-
-    @Override
-    public void setItems(List<MCTownItem> newItems) {
-        for (int i = 0; i < newItems.size(); i++) {
-            container.setItem(i, newItems.get(i).toItemStack());
-        }
-    }
-
-    @Override
-    public void removeItem(
-            int index,
-            int amount
+    public MCTownItem removeItem(
+            int index
     ) {
-        container.removeItem(index, amount);
+        return MCTownItem.fromMCItemStack(container.removeItem(index, 1));
     }
 
     @Override
-    public void setItem(
+    public boolean setItem(
             int i,
             MCTownItem item
     ) {
         container.setItem(i, item.toItemStack());
+        return true;
     }
 
     @Override
@@ -94,6 +79,16 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
             }
         }
         return String.join(", ", names.build());
+    }
+
+    @Override
+    public boolean canAccept(MCTownItem item) {
+        return true;
+    }
+
+    @Override
+    public float getItemAcceptanceRankBoost() {
+        return 1f;
     }
 
     @Override

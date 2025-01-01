@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.blocks.entity.ItemAccepting;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -38,7 +39,7 @@ public record SyncBlockItemMessage(
     ) {
         ctx.get().enqueueWork(() -> {
             if (Minecraft.getInstance().level.getBlockEntity(pos()) instanceof ItemAccepting be) {
-                be.setItem(item, index);
+                be.setItem(index, MCTownItem.fromMCItemStack(item));
             }
         });
         ctx.get().setPacketHandled(true);

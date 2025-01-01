@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -66,8 +67,8 @@ public class SoupPotBlock extends Block implements InsertedItemAware {
 
     @Override
     public void handleInsertedItem(MCExtra extra, BlockPos bp, MCHeldItem item) {
-        ((ItemAccepting) extra.town().getServerLevel().getBlockEntity(bp)).setItem(
-                item.get().toItemStack(), 0
+        ((ItemAccepting<MCTownItem>) extra.town().getServerLevel().getBlockEntity(bp)).setItem(
+                0, item.get()
         );
     }
 

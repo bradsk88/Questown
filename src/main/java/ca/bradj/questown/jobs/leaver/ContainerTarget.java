@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.leaver;
 
+import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -72,6 +73,8 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
     private final Position interactPosition;
     private final Consumer<I> associate;
+    private final float rankingBoost;
+    private final Predicate<I> canAccept;
 
     public int size() {
         return container.size();
@@ -99,6 +102,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
     public String toShortString(boolean includeAir) {
         return container.toShortString(includeAir);
     }
+
     public String toShortString() {
         return this.toShortString(true);
     }
@@ -107,9 +111,18 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         for (int i = 0; i < container.size(); i++) {
             if (itemCheck.test(container.getItem(i))) {
                 I itm = container.getItem(i);
-                container.removeItem(i, 1);
+                container.removeItem(i);
                 return new AbstractMap.SimpleEntry<>(
-                        new ContainerTarget<>(position, yPosition, interactPosition, container, check, associate),
+                        new ContainerTarget<>(
+                                position,
+                                yPosition,
+                                interactPosition,
+                                container,
+                                check,
+                                associate,
+                                canAccept,
+                                rankingBoost
+                        ),
                         itm.unit()
                 );
             }
@@ -117,30 +130,33 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return null;
     }
 
-    public interface Container<I extends Item<I>> {
+    public float getRankingBoost() {
+        return rankingBoost;
+    }
+
+    public boolean canAccept(I item) {
+        return canAccept.test(item);
+    }
+
+    public interface Container<I extends Item<I>> extends ItemAccepting<I> {
 
         int size();
 
         I getItem(int i);
 
-        boolean hasAnyOf(ImmutableSet<I> items);
-
-        void setItems(List<I> newItems);
-
-        void removeItem(
-                int index,
-                int amount
-        );
-
-        void setItem(
-                int i,
-                I item
+        I removeItem(
+                int index
         );
 
         boolean isFull();
 
         String toShortString();
+
         String toShortString(boolean includeAir);
+
+        boolean canAccept(I item);
+
+        float getItemAcceptanceRankBoost();
     }
 
     private final ValidCheck check;
@@ -158,10 +174,6 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return b.build();
     }
 
-    public void setItems(List<I> newItems) {
-        container.setItems(newItems);
-    }
-
     public interface ValidCheck {
         boolean IsStillValid();
     }
@@ -172,7 +184,9 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
             Position interactionPosition,
             @NotNull Container<I> container,
             ValidCheck check,
-            Consumer<I> associate
+            Consumer<I> associate,
+            @Nullable Predicate<I> canAccept,
+            float rankingBoost
     ) {
         this.position = position;
         this.yPosition = yPosition;
@@ -180,6 +194,8 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         this.container = container;
         this.check = check;
         this.associate = associate;
+        this.canAccept = canAccept;
+        this.rankingBoost = rankingBoost;
     }
 
     public Position getPosition() {
@@ -196,10 +212,6 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
     public Container<I> getContainer() {
         return container;
-    }
-
-    public boolean hasAnyOf(ImmutableSet<I> items) {
-        return container.hasAnyOf(items);
     }
 
     public interface CheckFn<I extends Item> {

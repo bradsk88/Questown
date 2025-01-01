@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.ChestType;
@@ -29,6 +30,11 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class TownContainers {
+
+    public static final Predicate<MCTownItem> ACCEPTS_ALL_ITEMS = i -> true;
+    public static final Predicate<MCTownItem> REJECTS_EVERYTHING = i -> false;
+    public static final float NO_BOOST = 1.0f;
+
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> findMatching(
             TownInterface townFlagBlockEntity,
             ContainerTarget.CheckFn<MCTownItem> c
@@ -37,13 +43,13 @@ public class TownContainers {
         if (level == null) {
             return null;
         }
-        Optional<ContainerTarget<MCContainer, MCTownItem>> found = findAllMatching(
+        Optional<ContainerTarget<MCContainer, MCTownItem>> found = findAllChestsMatching(
                 townFlagBlockEntity, c, x -> true, b -> true
         ).findFirst();
         return found.orElse(null);
     }
 
-    public static Stream<ContainerTarget<MCContainer, MCTownItem>> findAllMatching(
+    public static Stream<ContainerTarget<MCContainer, MCTownItem>> findAllChestsMatching(
             TownInterface t,
             ContainerTarget.CheckFn<MCTownItem> c,
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
@@ -53,7 +59,7 @@ public class TownContainers {
         if (level == null) {
             return Stream.empty();
         }
-        List<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllContainersStream(
+        List<ContainerTarget<MCContainer, MCTownItem>> allContainers = getAllChestsStream(
                 t.getRoomHandle(),
                 level,
                 includeRoom,
@@ -74,23 +80,31 @@ public class TownContainers {
             ServerLevel level,
             Predicate<RoomRecipeMatch<MCRoom>> include
     ) {
-        return getAllContainersStream(townFlagBlockEntity.getRoomHandle(), level, include, b -> true).toList();
+        return getAllChestsStream(townFlagBlockEntity.getRoomHandle(), level, include, b -> true).toList();
     }
 
     @NotNull
-    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllContainersStream(
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllChestsStream(
             RoomsHolder townFlagBlockEntity,
             ServerLevel level,
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
+            Predicate<BlockPos> includeBlock
+    ) {
+        return getBlocks(townFlagBlockEntity, includeRoom, includeBlock)
+                .filter(v -> v.b().getValue() instanceof ChestBlock)
+                .map(v -> fromChestBlockMaybe(v.a(), v.b().getKey(), (ChestBlock) v.b().getValue(), level))
+                .filter(Objects::nonNull);
+    }
+
+    private static @NotNull Stream<UtilClean.Pair<MCRoom, Map.Entry<BlockPos, Block>>> getBlocks(
+            RoomsHolder townFlagBlockEntity,
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
             Predicate<BlockPos> includeBlock
     ) {
         return townFlagBlockEntity
                 .getMatches(includeRoom)
                 .stream()
-                .flatMap(v -> getContainedBlocks(includeBlock, v))
-                .filter(v -> v.b().getValue() instanceof ChestBlock)
-                .map(v -> fromChestBlockMaybe(v.a(), v.b().getKey(), (ChestBlock) v.b().getValue(), level))
-                .filter(Objects::nonNull);
+                .flatMap(v -> getContainedBlocks(includeBlock, v));
     }
 
     private static @NotNull Stream<UtilClean.Pair<MCRoom, Map.Entry<BlockPos, Block>>> getContainedBlocks(
@@ -143,7 +157,9 @@ public class TownContainers {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
-                    item -> TownContainers.setWorkSpot(room, p, item)
+                    item -> TownContainers.setWorkSpot(room, p, item),
+                    REJECTS_EVERYTHING,
+                    NO_BOOST
             );
         }
 
@@ -154,7 +170,9 @@ public class TownContainers {
             return new ContainerTarget<>(
                     Positions.FromBlockPos(p), p.getY(), interactPos,
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
-                    item -> TownContainers.setWorkSpot(room, p, item)
+                    item -> TownContainers.setWorkSpot(room, p, item),
+                    REJECTS_EVERYTHING,
+                    NO_BOOST
             );
         }
 
@@ -181,7 +199,9 @@ public class TownContainers {
                 interactPos,
                 mcContainer,
                 () -> level.getBlockState(p) == blockState,
-                item -> TownContainers.setWorkSpot(room, p, item)
+                item -> TownContainers.setWorkSpot(room, p, item),
+                ACCEPTS_ALL_ITEMS,
+                NO_BOOST
         );
     }
 
@@ -204,20 +224,80 @@ public class TownContainers {
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> findClosestMatching(
             TownInterface town,
             ContainerTarget.CheckFn<MCTownItem> checkFn,
-            BlockPos pos
+            BlockPos pos,
+            @Nullable MCTownItem itemThatMustBeInserted
     ) {
-        return findClosestMatching(town, checkFn, pos, x -> true, b -> true);
+        return findClosestMatching(town, checkFn, pos, x -> true, b -> true, itemThatMustBeInserted);
     }
 
+    @SuppressWarnings("unchecked")
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> findClosestMatching(
             TownInterface town,
             ContainerTarget.CheckFn<MCTownItem> checkFn,
             BlockPos pos,
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
-            Predicate<BlockPos> includeBlock
+            Predicate<BlockPos> includeBlock,
+            @Nullable MCTownItem itemThatMustBeInserted
     ) {
-        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllMatching(town, checkFn, includeRoom, includeBlock);
-        return all.min(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos()))).orElse(null);
+        Stream<ContainerTarget<MCContainer, MCTownItem>> chests = findAllChestsMatching(
+                town,
+                checkFn,
+                includeRoom,
+                includeBlock
+        );
+        Stream<ContainerTarget<MCContainer, MCTownItem>> others = getBlocks(
+                town.getRoomHandle(),
+                includeRoom,
+                includeBlock
+        )
+                .map(v -> v.b().getKey())
+                .filter(v -> town.getServerLevel().getBlockEntity(v) instanceof ContainerTarget.Container)
+                .map(v -> fromIA(town.getServerLevel(), v));
+        chests = Stream.concat(chests, others);
+        if (itemThatMustBeInserted != null) {
+            chests = chests.filter(v -> v.canAccept(itemThatMustBeInserted));
+        }
+
+        // FIXME: Remove
+        List<ContainerTarget<MCContainer, MCTownItem>> debag = chests.toList();
+
+        return debag.stream().min(Comparator.comparingDouble(a -> comparison(pos, a))).orElse(null);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static @Nullable ContainerTarget<MCContainer, MCTownItem> fromIA(
+            ServerLevel level,
+            BlockPos p
+    ) {
+        BlockState blockState = level.getBlockState(p);
+        Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
+        Position position = Positions.FromBlockPos(p);
+        Position interactPos = position;
+        if (facing.isPresent()) {
+            interactPos = Positions.FromBlockPos(p.relative(facing.get()));
+        }
+        BlockEntity blockEntity = level.getBlockEntity(p);
+        if (blockEntity == null) {
+            return null;
+        }
+        return new ContainerTarget<MCContainer, MCTownItem>(
+                position,
+                p.getY(),
+                interactPos,
+                (ContainerTarget.Container) blockEntity,
+                () -> level.getBlockState(p) == blockState,
+                item -> {
+                }, // TODO: Allow players to put organizer requests in non-chest containers?
+                item -> ((ContainerTarget.Container) blockEntity).canAccept(item),
+                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost()
+        );
+    }
+
+    private static double comparison(
+            BlockPos pos,
+            ContainerTarget<MCContainer, MCTownItem> a
+    ) {
+        return pos.distSqr(a.getBlockPos()) / a.getRankingBoost();
     }
 
     public static @Nullable List<ContainerTarget<MCContainer, MCTownItem>> findNClosestMatching(
@@ -227,7 +307,12 @@ public class TownContainers {
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
             Predicate<BlockPos> includeBlock
     ) {
-        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllMatching(town, checkFn, includeRoom, includeBlock);
+        Stream<ContainerTarget<MCContainer, MCTownItem>> all = findAllChestsMatching(
+                town,
+                checkFn,
+                includeRoom,
+                includeBlock
+        );
         return all.sorted(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos()))).toList();
     }
 }

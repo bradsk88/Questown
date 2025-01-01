@@ -361,7 +361,15 @@ public abstract class ProductionJob<
             BlockPos entityBlockPos,
             TownInterface town
     ) {
-        return Jobs.setupForDropLoot(town, this.successTarget, entityBlockPos);
+        @Nullable MCTownItem itemThatMustBeInserted = null;
+        for (MCHeldItem item : journal.getItems()) {
+            if (item.isEmpty()) {
+                continue;
+            }
+            itemThatMustBeInserted = item.toItem();
+            break;
+        }
+        return Jobs.setupForDropLoot(town, this.successTarget, entityBlockPos, itemThatMustBeInserted);
     }
 
     protected void setLookTarget(BlockPos jobSite1) {

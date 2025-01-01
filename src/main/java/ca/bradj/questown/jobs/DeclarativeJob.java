@@ -732,12 +732,9 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public void removeItem(
-                    int i,
-                    int quantity
-            ) {
+            public void removeItem(int i) {
                 suppliesTarget.getContainer()
-                              .removeItem(i, quantity);
+                              .removeItem(i);
             }
         };
         Function<List<MCTownItem>, List<UtilClean.Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;

@@ -331,8 +331,7 @@ public class JobsClean {
         List<TOWN_ITEM> getItems();
 
         void removeItem(
-                int i,
-                int quantity
+                int i
         );
     }
 
@@ -352,7 +351,7 @@ public class JobsClean {
                 TOWN_ITEM unit = mcTownItem.b().unit();
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit.getShortName(), start);
                 villager.accept(unit);
-                suppliesTarget.removeItem(mcTownItem.a(), 1);
+                suppliesTarget.removeItem(mcTownItem.a());
                 return true;
             }
         }

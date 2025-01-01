@@ -111,10 +111,11 @@ public class Jobs {
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> setupForDropLoot(
             TownInterface town,
             ContainerTarget<MCContainer, MCTownItem> currentTarget,
-            BlockPos pos
+            BlockPos pos,
+            @Nullable MCTownItem itemThatMustBeInserted
     ) {
         Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
-                town, MCTownItem::isEmpty, pos
+                town, MCTownItem::isEmpty, pos, itemThatMustBeInserted
         );
         if (currentTarget != null) {
             if (!currentTarget.hasItem(MCTownItem::isEmpty)) {

@@ -1,20 +1,25 @@
 package ca.bradj.questown.blocks.entity;
 
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncBlockItemMessage;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Collection;
 
-public class FoodDisplayEntity extends BlockEntity implements ItemAccepting {
+public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTownItem>,
+        ContainerTarget.Container<MCTownItem> {
     private NonNullList<ItemStack> items = NonNullList.withSize(4, ItemStack.EMPTY);
 
     public FoodDisplayEntity(
@@ -43,7 +48,7 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting {
 
     public boolean addFood(ItemStack itemStack) {
         for (int i = 0; i < items.size(); i++) {
-            if (setItem(itemStack, i)) {
+            if (doSetItem(i, MCTownItem.fromMCItemStack(itemStack))) {
                 SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), itemStack, i);
                 QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
                 return true;
@@ -54,41 +59,90 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting {
 
     public ItemStack removeFood() {
         for (int i = 0; i < items.size(); i++) {
-            ItemStack removed = removeItem(i);
+            MCTownItem removed = removeItem(i);
             if (removed != null && !removed.isEmpty()) {
                 SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), ItemStack.EMPTY, i);
                 QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
-                return removed;
+                return removed.toItemStack();
             }
         }
         return ItemStack.EMPTY;
     }
 
-    private ItemStack removeItem(int index) {
+    @Override
+    public MCTownItem removeItem(int index) {
         ItemStack itemStack = items.get(index);
         if (itemStack.isEmpty()) {
-            return ItemStack.EMPTY;
+            return MCTownItem.Air();
         }
         items.set(index, ItemStack.EMPTY);
-        return itemStack;
+        return MCTownItem.fromMCItemStack(itemStack);
     }
 
     @Override
     public boolean setItem(
-            ItemStack item,
-            int index
+            int index,
+            MCTownItem item
     ) {
+        boolean didSet = doSetItem(index, item);
+        if (didSet) {
+            SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), item.toItemStack(), index);
+            QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+        }
+        return didSet;
+    }
+
+    public boolean doSetItem(
+            int index,
+            MCTownItem item
+    ) {
+
         if (item.isEmpty()) {
             if (items.get(index).isEmpty()) {
                 return false;
             }
-            items.set(index, item);
+            items.set(index, item.toItemStack());
             return true;
         }
         if (items.get(index).isEmpty()) {
-            items.set(index, item);
+            items.set(index, item.toItemStack());
             return true;
         }
         return false;
+    }
+
+    @Override
+    public int size() {
+        return items.size();
+    }
+
+    @Override
+    public MCTownItem getItem(int i) {
+        return MCTownItem.fromMCItemStack(items.get(i));
+    }
+
+    @Override
+    public boolean isFull() {
+        return items.stream().noneMatch(ItemStack::isEmpty);
+    }
+
+    @Override
+    public String toShortString() {
+        return items.toString();
+    }
+
+    @Override
+    public String toShortString(boolean includeAir) {
+        return items.toString();
+    }
+
+    @Override
+    public boolean canAccept(MCTownItem item) {
+        return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(item.toItemStack());
+    }
+
+    @Override
+    public float getItemAcceptanceRankBoost() {
+        return 2f;
     }
 }
