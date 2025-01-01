@@ -265,7 +265,7 @@ public class TownContainers {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static @Nullable ContainerTarget<MCContainer, MCTownItem> fromIA(
+    public static @Nullable ContainerTarget<MCContainer, MCTownItem> fromIA(
             ServerLevel level,
             BlockPos p
     ) {
@@ -293,7 +293,7 @@ public class TownContainers {
         );
     }
 
-    private static double comparison(
+    public static double comparison(
             BlockPos pos,
             ContainerTarget<MCContainer, MCTownItem> a
     ) {

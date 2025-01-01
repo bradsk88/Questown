@@ -33,6 +33,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
@@ -429,17 +430,16 @@ public abstract class ProductionJob<
             List<ContainerTarget<MCContainer, MCTownItem>> chests = new ArrayList<>();
             for (RoomRecipeMatch<MCRoom> c : allContainers) {
                 for (Map.Entry<BlockPos, Block> block : c.getContainedBlocks().entrySet()) {
-                    if (!(block.getValue() instanceof ChestBlock cb)) {
+                    if (block.getValue().equals(Blocks.AIR)) {
                         continue;
                     }
-                    BlockPos bp = block.getKey();
-                    ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
-                    chests.add(chest);
+                    addIfChest(c, block, sl, chests);
+                    addIfContainer(c, block, sl, chests);
                 }
             }
             List<ContainerTarget<MCContainer, MCTownItem>> closeChests = chests
                     .stream()
-                    .sorted(Comparator.comparingDouble(a -> pos.distSqr(a.getBlockPos())))
+                    .sorted(Comparator.comparingDouble(a -> TownContainers.comparison(pos, a)))
                     .toList();
             for (ContainerTarget<MCContainer, MCTownItem> chest : closeChests) {
                 if (!chest.hasItem(checkFn)) {
@@ -460,6 +460,33 @@ public abstract class ProductionJob<
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
         }
+    }
+
+    private static void addIfChest(
+            RoomRecipeMatch<MCRoom> c,
+            Map.Entry<BlockPos, Block> block,
+            ServerLevel sl,
+            List<ContainerTarget<MCContainer, MCTownItem>> chests
+    ) {
+        if (!(block.getValue() instanceof ChestBlock cb)) {
+            return;
+        }
+        BlockPos bp = block.getKey();
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
+        chests.add(chest);
+    }
+    private static void addIfContainer(
+            RoomRecipeMatch<MCRoom> c,
+            Map.Entry<BlockPos, Block> block,
+            ServerLevel sl,
+            List<ContainerTarget<MCContainer, MCTownItem>> chests
+    ) {
+        if (!(block.getValue() instanceof ContainerTarget.Container cb)) {
+            return;
+        }
+        BlockPos bp = block.getKey();
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromIA(sl, bp);
+        chests.add(chest);
     }
 
     private boolean shouldUseBlockForSupplies(
