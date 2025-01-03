@@ -361,7 +361,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                 Config.MAX_ROOM_SCAN_ITERATIONS.get(),
                 p -> WallDetection.IsWall(t.getServerLevel(), p, clickedPos.getY()),
                 true,
-                flightRecorder
+                flightRecorder::add
         );
         return () -> {
             @Nullable ImmutableMap<Position, Optional<Room>> done = d.proceed();
