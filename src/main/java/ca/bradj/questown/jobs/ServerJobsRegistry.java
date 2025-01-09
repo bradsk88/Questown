@@ -79,11 +79,17 @@ public class ServerJobsRegistry {
             JobID job,
             IStatus<?> status
     ) {
-        Work work = getWork(job);
-        if (work == null) {
+        try {
+            Work work = getWork(job);
+            if (work == null) {
+                return null;
+            }
+            return work.applyStatusTextOverride(status);
+        } catch (Exception e) {
+            // FIXME: Send this information as a message to the UIs, because "Work" is not Client-Safe
+            QT.JOB_LOGGER.error("Failed to apply status tooltip override");
             return null;
         }
-        return work.applyStatusTextOverride(status);
     }
 
     private static @Nullable Work getWork(JobID job) {
