@@ -81,6 +81,11 @@ public class WorkSpotFromHeldItemSpecialRule extends
             }
 
             @Override
+            public ImmutableList<ResourceLocation> getRecipeIDs() {
+                return ImmutableList.of(getRecipeID());
+            }
+
+            @Override
             public MCRoom getRoom() {
                 return room;
             }

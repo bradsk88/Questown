@@ -80,7 +80,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                         new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord),
                         false
                 );
-                return new RoomRecipeMatch<>(v, recipeId, b.entrySet());
+                return new RoomRecipeMatch<>(v, ImmutableList.of(recipeId), b.entrySet());
             }).toList();
         }
 
@@ -91,7 +91,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         MCRoom mcRoom = Spaces.metaRoomAround(t.getTownFlagBasePos(), Config.META_ROOM_DIAMETER.get());
         ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(t.getServerLevel(), mcRoom, false);
         ResourceLocation questId = SpecialQuests.TOWN_FLAG;
-        return new RoomRecipeMatch<>(mcRoom, questId, blocksInRoom.entrySet());
+        return new RoomRecipeMatch<>(mcRoom, ImmutableList.of(questId), blocksInRoom.entrySet());
     }
 
     @NotNull
@@ -106,7 +106,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                 .stream()
                 .map(p -> Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get()))
                 .map(v -> new RoomRecipeMatch<>(
-                        v, SpecialQuests.TOWN_GATE, fn.apply(v)
+                        v, ImmutableList.of(SpecialQuests.TOWN_GATE), fn.apply(v)
                                                       .entrySet()))
                 .toList();
     }

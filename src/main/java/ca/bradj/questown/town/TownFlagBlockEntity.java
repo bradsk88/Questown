@@ -29,6 +29,7 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomWithBlocks;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -382,7 +383,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private void resetDiningRooms() {
         Collection<RoomRecipeMatch<MCRoom>> diningRooms = roomsHandle.getMatches(
-                m -> m.getRecipeID().equals(Questown.ResourceLocation("dining_room"))
+                m -> m.anyMatch(Questown.ResourceLocation("dining_room"))
         );
         for (RoomRecipeMatch<MCRoom> diningRoom : diningRooms) {
             for (Map.Entry<BlockPos, Block> e : diningRoom.getContainedBlocks().entrySet()) {
@@ -671,15 +672,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         messages.roomRecipeCreated(roomDoorPos, match);
         ;
         BlockPos pos = Positions.ToBlock(roomDoorPos.doorPos, roomDoorPos.yCoord);
-        if (match.getRecipeID().equals(SpecialQuests.JOB_BOARD)) {
+        if (match.anyMatch(SpecialQuests.JOB_BOARD)) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
         }
-        if (match.getRecipeID().equals(Questown.ResourceLocation("store_room"))) {
+        if (match.anyMatch(Questown.ResourceLocation("store_room"))) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstStoreRoom, pos);
         }
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-        quests.markQuestAsComplete(roomDoorPos, match.getRecipeID());
+
+        // FIXME: Choose the most expensive recipe from the list and only mark it as complete
+        quests.markQuestAsComplete(roomDoorPos, match.getRecipeIDs());
     }
 
     private void swapBlocks(
@@ -697,13 +700,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private Void swapJobBoardSign(
             ServerLevel level,
-            RoomRecipeMatch<MCRoom> room
+            RoomWithBlocks<MCRoom, BlockPos, Block> room
     ) {
         BlockPredicate predicate = BlockPredicate.Builder.block()
                                                          .of(BlockTags.SIGNS)
                                                          .build();
-        for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks()
-                                                .entrySet()) {
+        for (Map.Entry<BlockPos, Block> e : room.containedBlocks
+                .entrySet()) {
             if (!predicate.matches(level, e.getKey())) {
                 continue;
             }
@@ -711,15 +714,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     level.getBlockState(e.getKey()).getValue(StandingSignBlock.ROTATION)
             );
             level.setBlockAndUpdate(
-                    e.getKey(), BlocksInit.JOB_BOARD_BLOCK.get()
-                                                          .defaultBlockState()
-                                                          .setValue(HorizontalDirectionalBlock.FACING, value)
+                    e.getKey(),
+                    BlocksInit.JOB_BOARD_BLOCK
+                            .get()
+                            .defaultBlockState()
+                            .setValue(HorizontalDirectionalBlock.FACING, value)
             );
             registerJobsBoard(e.getKey());
             jobHandle.setJobBlockState(e.getKey(), State.freshAtState(WorkSeekerJob.MAX_STATE));
         }
         return null;
     }
+
+    private get
 
     @Override
     public void roomRecipeChanged(
@@ -728,8 +735,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom newRoom,
             RoomRecipeMatch newMatch
     ) {
-        ResourceLocation oldMatchID = oldMatch.getRecipeID();
-        ResourceLocation newMatchID = newMatch.getRecipeID();
+        ResourceLocation oldMatchID = oldMatch.getRecipeIDs();
+        ResourceLocation newMatchID = newMatch.getRecipeIDs();
         messages.roomRecipeChanged(oldMatch, newMatch, newRoom);
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         if (oldMatch == null && newMatch != null) {

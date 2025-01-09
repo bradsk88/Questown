@@ -11,6 +11,6 @@ public class RoomRecipeMatches {
     @SuppressWarnings("ALL")
     public static RoomRecipeMatch<MCRoom> unsafe(@NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in) {
         Iterable containedBlocks = (Iterable) in.getContainedBlocks().entrySet();
-        return new RoomRecipeMatch<>(in.getRoom(), in.getRecipeID(), containedBlocks);
+        return new RoomRecipeMatch<>(in.getRoom(), in.getRecipeIDs(), containedBlocks);
     }
 }

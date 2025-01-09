@@ -257,7 +257,7 @@ public class JobsClean {
                 .filter(v -> additionalPosCheck.test(v.getRoom()))
                 .filter(containsEntity)
                 .findFirst()
-                .map(v -> new EntityCurrentJobSite<>(v.getRoom(), isFarm.test(v.getRecipeID())))
+                .map(v -> new EntityCurrentJobSite<>(v.getRoom(), v.getRecipeIDs().stream().anyMatch(isFarm)))
                 .orElse(null);
     }
 

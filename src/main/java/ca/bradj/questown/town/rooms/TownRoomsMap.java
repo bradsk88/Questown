@@ -164,7 +164,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 ) {
                     ImmutableMap<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(entity, room, false);
                     return Optional.of(new RoomRecipeMatch<>(
-                            room, SpecialQuests.FARM, blocks.entrySet()
+                            room, ImmutableList.of(SpecialQuests.FARM), blocks.entrySet()
                     ));
                 }
             };

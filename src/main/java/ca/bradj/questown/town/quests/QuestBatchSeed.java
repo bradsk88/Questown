@@ -78,7 +78,7 @@ public class QuestBatchSeed {
                 String.join("\n- ", batch.getAll().stream().map(Quest::toShortString).toList())
         );
         ResourceLocation id = generateRandomQuest(level);
-        int newCost = computeCosts(level, id, targetItemWeight);
+        int newCost = computeQuestCost(level, id, targetItemWeight);
         if (checker.questAlreadyRequested(id) || questAlreadyRequested(batch, id)) {
             newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
         }
@@ -154,14 +154,14 @@ public class QuestBatchSeed {
     @NotNull
     private Integer computeCurrentCost(ServerLevel level) {
         return batch.getAll().stream()
-                .map(v -> QuestBatchSeed.computeCosts(level, v.getWantedId(), targetItemWeight))
+                .map(v -> QuestBatchSeed.computeQuestCost(level, v.getWantedId(), targetItemWeight))
                 .reduce(Integer::sum)
                 .orElse(0);
     }
 
     private static Map<ResourceLocation, Integer> cachedCosts = new HashMap<>();
 
-    private static int computeCosts(
+    public static int computeQuestCost(
             ServerLevel level,
             ResourceLocation qID,
             int stopAt

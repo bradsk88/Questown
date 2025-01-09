@@ -98,12 +98,12 @@ public class QuestBatches<
             VillagerProvider villagers,
             ImmutableList<BATCH> bs) {
         Set<IdIgnoring<QUEST>> completedQuests = bs.stream()
-                .flatMap(v -> v.getAll().stream())
-                .filter(Quest::isComplete)
-                .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
-                .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
-                .map(IdIgnoring::new)
-                .collect(Collectors.toSet());
+                                                   .flatMap(v -> v.getAll().stream())
+                                                   .filter(Quest::isComplete)
+                                                   .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
+                                                   .peek(q -> q.ownerUUID = coerceUUID(villagers, q.getUUID()))
+                                                   .map(IdIgnoring::new)
+                                                   .collect(Collectors.toSet());
 
         ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
         bs.forEach(v -> {
@@ -180,9 +180,9 @@ public class QuestBatches<
     ) {
         for (BATCH b : batches) {
             if (b.getAll().stream()
-                    .filter(Quest::isComplete)
-                    .filter(v -> recipeId.equals(v.getWantedId()))
-                    .anyMatch(v -> room.equals(v.completedOn))
+                 .filter(Quest::isComplete)
+                 .filter(v -> recipeId.equals(v.getWantedId()))
+                 .anyMatch(v -> room.equals(v.completedOn))
             ) {
                 QT.QUESTS_LOGGER.debug(marker, "Quest was already marked complete: {} for door {}", recipeId, room.doorPos);
                 return;
@@ -204,8 +204,8 @@ public class QuestBatches<
     public List<HashMap.SimpleEntry<QUEST, REWARD>> getAllForVillagerWithRewards(UUID uuid) {
         ImmutableList.Builder<HashMap.SimpleEntry<QUEST, REWARD>> b = ImmutableList.builder();
         this.batches.stream()
-                .filter(v -> v.getAll().stream().allMatch(z -> uuid.equals(z.ownerUUID)))
-                .forEach(v -> v.getAll().forEach(z -> b.add(new HashMap.SimpleEntry<>(z, v.reward))));
+                    .filter(v -> v.getAll().stream().allMatch(z -> uuid.equals(z.ownerUUID)))
+                    .forEach(v -> v.getAll().forEach(z -> b.add(new HashMap.SimpleEntry<>(z, v.reward))));
         return b.build();
     }
 
