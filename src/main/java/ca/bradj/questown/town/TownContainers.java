@@ -258,10 +258,7 @@ public class TownContainers {
             chests = chests.filter(v -> v.canAccept(itemThatMustBeInserted));
         }
 
-        // FIXME: Remove
-        List<ContainerTarget<MCContainer, MCTownItem>> debag = chests.toList();
-
-        return debag.stream().min(Comparator.comparingDouble(a -> comparison(pos, a))).orElse(null);
+        return chests.min(Comparator.comparingDouble(a -> comparison(pos, a))).orElse(null);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

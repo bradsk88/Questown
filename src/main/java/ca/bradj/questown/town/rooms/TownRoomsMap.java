@@ -436,10 +436,13 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
             ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> recipes = activeRecipes.get(p.scanLevel);
             for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : recipes.entrySet()) {
-                if (m.getKey()
-                     .equals(room.get()) && m.getValue()
-                                             .getRecipeID()
-                                             .equals(recipeId)) {
+                for (ResourceLocation mRecipeId : m.getValue().getRecipeIDs()) {
+                    if (!m.getKey().equals(room.get())) {
+                        continue;
+                    }
+                    if (!mRecipeId.equals(recipeId)) {
+                        continue;
+                    }
                     b.add(m.getValue());
                 }
             }

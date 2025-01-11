@@ -79,6 +79,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
 import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 
@@ -664,14 +665,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public void roomRecipeCreated(
-            MCRoom roomDoorPos,
+            MCRoom room,
             RoomRecipeMatch<MCRoom> match
     ) {
         ServerLevel l = getServerLevel();
         swapBlocks(l, match);
-        messages.roomRecipeCreated(roomDoorPos, match);
-        ;
-        BlockPos pos = Positions.ToBlock(roomDoorPos.doorPos, roomDoorPos.yCoord);
+        messages.roomRecipeCreated(room, getTopMatch(l, match));
+        BlockPos pos = Positions.ToBlock(room.doorPos, room.yCoord);
         if (match.anyMatch(SpecialQuests.JOB_BOARD)) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
         }
@@ -680,9 +680,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
-
-        // FIXME: Choose the most expensive recipe from the list and only mark it as complete
-        quests.markQuestAsComplete(roomDoorPos, match.getRecipeIDs());
     }
 
     private void swapBlocks(
@@ -692,9 +689,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ImmutableMap<ResourceLocation, BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void>> swaps = ImmutableMap.of(
                 Questown.ResourceLocation("job_board"), this::swapJobBoardSign
         );
-        BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void> swap = swaps.get(match.getRecipeID());
-        if (swap != null) {
-            swap.apply(level, match);
+        for (ResourceLocation recipeID : match.getRecipeIDs()) {
+            BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void> swap = swaps.get(recipeID);
+            if (swap != null) {
+                swap.apply(level, match);
+            }
         }
     }
 
@@ -726,47 +725,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return null;
     }
 
-    private get
-
     @Override
     public void roomRecipeChanged(
             MCRoom oldRoom,
-            RoomRecipeMatch oldMatch,
+            RoomRecipeMatch<MCRoom> oldMatch,
             MCRoom newRoom,
-            RoomRecipeMatch newMatch
+            RoomRecipeMatch<MCRoom> newMatch
     ) {
-        ResourceLocation oldMatchID = oldMatch.getRecipeIDs();
-        ResourceLocation newMatchID = newMatch.getRecipeIDs();
-        messages.roomRecipeChanged(oldMatch, newMatch, newRoom);
+        Optional<ResourceLocation> oldMatchID = getTopMatch(getServerLevel(), oldMatch);
+        Optional<ResourceLocation> newMatchID = getTopMatch(getServerLevel(), newMatch);
+        messages.roomRecipeChanged(oldMatchID.get(), newMatchID.get(), newRoom);
         TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
-        if (oldMatch == null && newMatch != null) {
-            quests.markQuestAsComplete(newRoom, newMatchID);
-            return;
-        }
-        if (oldMatchID.equals(newMatchID)) {
-            if (!oldRoom.equals(newRoom)) {
-                quests.changeRoomOnly(oldRoom, newRoom);
-            }
-        }
-        if (!oldMatchID.equals(newMatchID)) {
-            // TODO: Add quests as a listener instead of doing these calls
-            if (quests.canBeUpgraded(oldMatchID, newMatchID)) {
-                quests.markAsConverted(newRoom, oldMatchID, newMatchID);
-            } else {
-                quests.markQuestAsLost(oldRoom, oldMatchID);
-                quests.markQuestAsComplete(newRoom, newMatchID);
-            }
-        }
+        setChanged();
     }
 
     @Override
     public void roomRecipeDestroyed(
             MCRoom roomDoorPos,
-            RoomRecipeMatch oldRecipeId
+            RoomRecipeMatch<MCRoom> oldRecipeId
     ) {
-        messages.roomRecipeDestroyed(roomDoorPos, oldRecipeId);
+        messages.roomRecipeDestroyed(roomDoorPos, getTopMatch(getServerLevel(), oldRecipeId).orElse(null));
         TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
-        quests.markQuestAsLost(roomDoorPos, oldRecipeId.getRecipeID());
+        setChanged();
     }
 
     @Override

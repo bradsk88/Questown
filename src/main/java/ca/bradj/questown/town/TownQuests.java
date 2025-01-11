@@ -7,8 +7,13 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
-import ca.bradj.questown.town.rewards.*;
+import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
+import ca.bradj.questown.town.rewards.ChangeJobReward;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
@@ -17,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
@@ -25,15 +31,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
+import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
+import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
+
+public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
+        ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>> {
     private final Stack<QuestBatchSeed> pendingQuests = new Stack<>();
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private QuestBatch.ChangeListener<MCQuest> changeListener;
+    private final UnsafeTown town = new UnsafeTown();
 
     TownQuests() {
         questBatches.addChangeListener(this);
@@ -84,12 +94,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
         Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID)
-                .stream()
-                .filter(Quest::isComplete)
-                .toList();
+                                              .stream()
+                                              .filter(Quest::isComplete)
+                                              .toList();
         Collection<MCQuest> villagerQuests = completed.stream()
-                // TODO: Filter out recipes that have already been slated for upgrade?
-                .filter(v -> v.fromRecipeID().isEmpty()).toList();
+                                                      // TODO: Filter out recipes that have already been slated for upgrade?
+                                                      .filter(v -> v.fromRecipeID().isEmpty()).toList();
 
         // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
         if (villagerQuests.isEmpty()) {
@@ -182,13 +192,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     @NotNull
     private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                .map(v -> Arrays.stream(v.getItems())
-                        .map(ItemStack::getItem)
-                        .map(ForgeRegistries.ITEMS::getKey)
-                        .filter(Objects::nonNull)
-                        .map(ResourceLocation::toString)
-                        .toList())
-                .toList();
+                  .map(v -> Arrays.stream(v.getItems())
+                                  .map(ItemStack::getItem)
+                                  .map(ForgeRegistries.ITEMS::getKey)
+                                  .filter(Objects::nonNull)
+                                  .map(ResourceLocation::toString)
+                                  .toList())
+                  .toList();
     }
 
     public static void addRandomBatchForVisitor(
@@ -202,10 +212,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches()
-                .stream()
-                .map(MCQuestBatch::getOwner)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet())
+                                                      .stream()
+                                                      .map(MCQuestBatch::getOwner)
+                                                      .filter(Objects::nonNull)
+                                                      .collect(Collectors.toSet())
         );
     }
 
@@ -291,9 +301,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
         return ImmutableList.copyOf(questBatches.getAll()
-                .stream()
-                .map(v -> (Quest<ResourceLocation, MCRoom>) v)
-                .toList());
+                                                .stream()
+                                                .map(v -> (Quest<ResourceLocation, MCRoom>) v)
+                                                .toList());
     }
 
     public ImmutableMap<Quest<ResourceLocation, MCRoom>, MCReward> getAllWithRewards() {
@@ -304,10 +314,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
 
     public Collection<MCQuest> getAllForVillager(UUID uuid) {
         return this.questBatches.getAllBatches()
-                .stream()
-                .filter(b -> uuid.equals(b.getOwner()))
-                .flatMap(v -> v.getAll().stream())
-                .toList();
+                                .stream()
+                                .filter(b -> uuid.equals(b.getOwner()))
+                                .flatMap(v -> v.getAll().stream())
+                                .toList();
     }
 
     public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllForVillagerWithRewards(UUID uuid) {
@@ -328,8 +338,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     ) {
         ImmutableList<Quest<ResourceLocation, MCRoom>> all = this.getAll();
         return all.stream()
-                .filter(Predicates.not(Quest::isComplete))
-                .anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
+                  .filter(Predicates.not(Quest::isComplete))
+                  .anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
     }
 
     @NotNull
@@ -350,5 +360,57 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest> {
     public boolean alreadyRequested(ResourceLocation resourceLocation) {
         // TODO: If new quest is an UPGRADE of an existing UNFINISHED quest, also make it more costly.
         return getAll().stream().map(Quest::getWantedId).anyMatch(v -> v.equals(resourceLocation));
+    }
+
+    @Override
+    public void roomRecipeCreated(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> match
+    ) {
+        runForTopMatch(town.getServerLevelUnsafe(), match, r -> markQuestAsComplete(room, r));
+    }
+
+    @Override
+    public void roomRecipeChanged(
+            MCRoom oldRoom,
+            RoomRecipeMatch<MCRoom> oldMatch,
+            MCRoom newRoom,
+            RoomRecipeMatch<MCRoom> newMatch
+    ) {
+        ServerLevel l = town.getServerLevelUnsafe();
+        Optional<ResourceLocation> oldMatchID = getTopMatch(l, oldMatch);
+        Optional<ResourceLocation> newMatchID = getTopMatch(l, newMatch);
+        if (oldMatchID.isEmpty() && newMatchID.isPresent()) {
+            markQuestAsComplete(newRoom, newMatchID.get());
+            return;
+        }
+        if (oldMatchID.equals(newMatchID)) {
+            if (!oldRoom.equals(newRoom)) {
+                changeRoomOnly(oldRoom, newRoom);
+            }
+        }
+        if (!oldMatchID.equals(newMatchID)) {
+            if (oldMatchID.isPresent() && newMatchID.isPresent()) {
+                if (canBeUpgraded(oldMatchID.get(), newMatchID.get())) {
+                    markAsConverted(newRoom, oldMatchID.get(), newMatchID.get());
+                } else {
+
+                    markQuestAsLost(oldRoom, oldMatchID.get());
+                    markQuestAsComplete(newRoom, newMatchID.get());
+                }
+            }
+        }
+    }
+
+    @Override
+    public void roomRecipeDestroyed(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> oldMatch
+    ) {
+        runForTopMatch(town.getServerLevelUnsafe(), oldMatch, rl -> markQuestAsLost(room, rl));
+    }
+
+    public void initialize(TownFlagBlockEntity t) {
+        this.town.initialize(t);
     }
 }

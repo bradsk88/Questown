@@ -62,6 +62,7 @@ public class TownFlagTileData {
 
     private static @NotNull InitPair initQuestBatches() {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            t.quests.initialize(t);
             boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, tag, t.quests.questBatches);
             if (!inited) {
                 t.initializer().setUpQuestsForNewlyPlacedFlag();

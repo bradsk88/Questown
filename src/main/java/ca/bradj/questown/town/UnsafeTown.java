@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import net.minecraft.Util;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

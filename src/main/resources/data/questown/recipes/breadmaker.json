@@ -4,9 +4,6 @@
   "ingredients": [
     {
       "item": "questown:bread_oven_block"
-    },
-    {
-      "item": "questown:food_display"
     }
   ]
 }

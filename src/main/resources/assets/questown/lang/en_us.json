@@ -1,6 +1,7 @@
 {
   "itemGroup.questown": "Questown",
   "messages.building.room_created": "A new room was constructed at location %s",
+  "messages.building.specific_room_created": "A new %s was constructed at location %s",
   "messages.building.recipe_created": "%s created at location %s",
   "messages.building.room_destroyed": "%s destroyed at location %s",
   "messages.building.room_changed": "%s became %s at location %s",
@@ -169,6 +170,7 @@
   "room.brewing_room": "Brewing Room",
   "room.big_brewing_room": "Big Brewing Room",
   "room.potions_room": "Potions Room",
+  "room.breadmaker": "Bread Maker's Shop",
   "room.bakery": "Bakery",
   "room.smithy": "Smithy",
   "room.job_board": "Job Board",

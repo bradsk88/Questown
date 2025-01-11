@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -37,7 +38,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>,
+public class TownRoomsHandle implements RoomsHolder,
         Supplier<TownFlagBlockEntity> {
 
     private final TownRoomsMap roomsMap = new TownRoomsMap();
@@ -50,7 +51,8 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
         this.town = t;
         this.flagMetaRoom = Spaces.metaRoomAround(t.getBlockPos(), 2);
         roomsMap.initializeNew(t);
-        roomsMap.addRecipeListener(this);
+        roomsMap.addRecipeListener(t.quests);
+        roomsMap.addRecipeListener(t);
     }
 
     /**
@@ -107,37 +109,9 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                 .map(p -> Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get()))
                 .map(v -> new RoomRecipeMatch<>(
                         v, ImmutableList.of(SpecialQuests.TOWN_GATE), fn.apply(v)
-                                                      .entrySet()))
+                                                                        .entrySet()
+                ))
                 .toList();
-    }
-
-    @Override
-    public void roomRecipeCreated(
-            MCRoom mcRoom,
-            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
-    ) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
-        t.roomRecipeCreated(mcRoom, mcRoomRoomRecipeMatch);
-    }
-
-    @Override
-    public void roomRecipeChanged(
-            MCRoom mcRoom,
-            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch,
-            MCRoom room1,
-            RoomRecipeMatch<MCRoom> key1
-    ) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
-        t.roomRecipeChanged(mcRoom, mcRoomRoomRecipeMatch, room1, key1);
-    }
-
-    @Override
-    public void roomRecipeDestroyed(
-            MCRoom mcRoom,
-            RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
-    ) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
-        t.roomRecipeDestroyed(mcRoom, mcRoomRoomRecipeMatch);
     }
 
     @Override
@@ -295,10 +269,7 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
                                                       new TownPosition(
                                                               k.getKey().doorPos.x, k.getKey().doorPos.z, scanLevel),
                                                       (pos, cur) -> {
-                                                          String rec = String.format(
-                                                                  "%s", k.getValue()
-                                                                         .getRecipeID()
-                                                          );
+                                                              String rec = Matches.toString(k.getValue());
                                                           String rom = k.getValue().room.getSpace()
                                                                                         .toString();
                                                           return cur == null ? new Result(
@@ -377,7 +348,8 @@ public class TownRoomsHandle implements RoomsHolder, ActiveRecipes.ChangeListene
             QT.FLAG_LOGGER.debug("Room is {}", room);
             room.ifPresent(r -> {
                 Optional<RoomRecipeMatch<MCRoom>> recipe = t.getRoomHandle()
-                                                            .computeRecipe(new MCRoom(r.getDoorPos(),
+                                                            .computeRecipe(new MCRoom(
+                                                                    r.getDoorPos(),
                                                                     r.getSpaces(), clickedPos.getY()
                                                             ));
                 QT.FLAG_LOGGER.debug("Recipe is {}", recipe);

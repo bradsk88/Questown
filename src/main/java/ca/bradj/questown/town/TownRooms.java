@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
@@ -18,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
@@ -103,15 +105,20 @@ public class TownRooms implements
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
         grantAdvancement(doorPos);
-        addParticles(entity.getServerLevel(), room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
+        ServerLevel l = entity.getServerLevel();
+        addParticles(l, room, ParticleTypes.HAPPY_VILLAGER);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(l, room);
         if (roomsToSkipInitialAnnounce.contains(room.doorPos)) {
             roomsToSkipInitialAnnounce.remove(room.doorPos);
         } else {
             changeListeners.forEach(
                     cl -> cl.updateRecipeForRoom(scanLevel, room, room, recipe.orElse(null))
             );
-            entity.messages.roomCreated(recipe, doorPos);
+            Optional<ResourceLocation> name = Optional.empty();
+            if (recipe.isPresent()) {
+                name = Matches.getTopMatch(l, recipe.get());
+            }
+            entity.messages.roomCreated(name.orElse(null), doorPos);
         }
     }
 
@@ -153,7 +160,11 @@ public class TownRooms implements
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
                 )
         );
-        entity.messages.roomSizeChanged(recipe, doorPos);
+        Optional<ResourceLocation> roomName = Optional.empty();
+        if (recipe.isPresent()) {
+            roomName = Matches.getTopMatch(serverLevel, recipe.get());
+        }
+        entity.messages.roomSizeChanged(roomName.orElse(null), doorPos);
     }
 
     @Override
@@ -163,7 +174,12 @@ public class TownRooms implements
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
         Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
-        entity.messages.roomDestroyed(recipe, doorPos);
+        Optional<ResourceLocation> roomName = Optional.empty();
+        if (recipe.isPresent()) {
+            roomName = Matches.getTopMatch(entity.getServerLevel(), recipe.get());
+        }
+
+        entity.messages.roomDestroyed(roomName.orElse(null), doorPos);
         addParticles(entity.getServerLevel(), room, ParticleTypes.SMOKE);
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, null, null)

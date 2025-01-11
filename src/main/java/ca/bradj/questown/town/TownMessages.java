@@ -11,6 +11,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -28,40 +29,47 @@ public class TownMessages {
     ) {
         QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer()
-                .getPlayerList()
-                .getPlayers()) {
+                                   .getPlayerList()
+                                   .getPlayers()) {
             p.displayClientMessage(Compat.translatable(key, args), false);
         }
     }
 
-    public void roomRecipeCreated(MCRoom roomDoorPos, RoomRecipeMatch<MCRoom> match) {
+    public void roomRecipeCreated(
+            MCRoom roomDoorPos,
+            Optional<ResourceLocation> match
+    ) {
         broadcastMessage(
                 "messages.building.recipe_created",
-                RoomRecipes.getName(match.getRecipeID()),
+                RoomRecipes.getName(match),
                 roomDoorPos.getDoorPos()
-                        .getUIString()
+                           .getUIString()
         );
     }
 
-    public void roomRecipeChanged(RoomRecipeMatch<?> oldMatch, RoomRecipeMatch<?> newMatch, MCRoom newRoom) {
-        ResourceLocation oldMatchID = oldMatch.getRecipeID();
-        ResourceLocation newMatchID = newMatch.getRecipeID();
+    public void roomRecipeChanged(
+            ResourceLocation oldMatchID,
+            ResourceLocation newMatchID,
+            MCRoom newRoom
+    ) {
         broadcastMessage(
                 "messages.building.room_changed",
                 Compat.translatable("room." + oldMatchID.getPath()),
                 Compat.translatable("room." + newMatchID.getPath()),
                 newRoom.getDoorPos()
-                        .getUIString()
+                       .getUIString()
         );
     }
 
-    public void roomRecipeDestroyed(MCRoom roomDoorPos, RoomRecipeMatch<?> oldRecipeId) {
+    public void roomRecipeDestroyed(
+            MCRoom roomDoorPos,
+            @Nullable ResourceLocation oldRecipeId
+    ) {
         broadcastMessage(
                 "messages.building.room_destroyed",
-                Compat.translatable("room." + oldRecipeId.getRecipeID()
-                        .getPath()),
+                RoomRecipes.getName(Optional.ofNullable(oldRecipeId)),
                 roomDoorPos.getDoorPos()
-                        .getUIString()
+                           .getUIString()
         );
     }
 
@@ -79,7 +87,10 @@ public class TownMessages {
         );
     }
 
-    public void jobChanged(JobID jobID, UUID visitorUUID) {
+    public void jobChanged(
+            JobID jobID,
+            UUID visitorUUID
+    ) {
         broadcastMessage("messages.jobs.changed", jobID.toNiceString(), visitorUUID);
     }
 
@@ -96,25 +107,42 @@ public class TownMessages {
         broadcastMessage("messages.town_flag.quest_batch_removed_2");
     }
 
-    public void roomCreated(Optional<RoomRecipeMatch<MCRoom>> recipe, Position doorPos) {
-        broadcastMessage(
-                "messages.building.room_created",
-                doorPos.getUIString()
-        );
+    public void roomCreated(
+            @Nullable ResourceLocation recipe,
+            Position doorPos
+    ) {
+        if (recipe == null) {
+            broadcastMessage(
+                    "messages.building.room_created",
+                    doorPos.getUIString()
+            );
+        } else {
+            broadcastMessage(
+                    "messages.building.specific_room_created",
+                    doorPos.getUIString(),
+                    RoomRecipes.getName(recipe)
+            );
+        }
     }
 
-    public void roomSizeChanged(Optional<RoomRecipeMatch<MCRoom>> recipe, Position doorPos) {
+    public void roomSizeChanged(
+            @Nullable ResourceLocation recipe,
+            Position doorPos
+    ) {
         broadcastMessage(
                 "messages.building.room_size_changed",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
+                RoomRecipes.getName(Optional.ofNullable(recipe)),
                 doorPos.getUIString()
         );
     }
 
-    public void roomDestroyed(Optional<RoomRecipeMatch<MCRoom>> recipe, Position doorPos) {
+    public void roomDestroyed(
+            @Nullable ResourceLocation recipe,
+            Position doorPos
+    ) {
         broadcastMessage(
                 "messages.building.room_destroyed",
-                RoomRecipes.getName(recipe.map(RoomRecipeMatch::getRecipeID)),
+                RoomRecipes.getName(Optional.ofNullable(recipe)),
                 doorPos.getUIString()
         );
     }
