@@ -94,7 +94,7 @@ public class RoomRecipes {
                     foundWeight = true;
                 } else {
                     QT.QUESTS_LOGGER.error(
-                            "No weight specified for tag. Default of 100 will be used. [{}]", id
+                            "No weight specified for item. Default of 100 will be used. [{}]", id
                     );
                 }
             }
@@ -106,7 +106,7 @@ public class RoomRecipes {
                     foundWeight = true;
                 } else {
                     QT.QUESTS_LOGGER.error(
-                            "No weight specified for item. Default of 100 will be used. [{}]", id
+                            "No weight specified for tag. Default of 100 will be used. [{}]", id
                     );
                 }
             }

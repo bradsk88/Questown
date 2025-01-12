@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -65,14 +66,22 @@ public class FoodDisplayEntityRenderer implements BlockEntityRenderer<FoodDispla
             boolean isTop
     ) {
         stack.pushPose();
+        Direction value = pbe.getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+
         float leftFromRight = isLeft ? 0.25f : 0.75f;
         float inFromBack = 0.5f;
         float upFromBottom = isTop ? 0.5f : 1f / 16f;
+
+        if (value == Direction.EAST || value == Direction.WEST) {
+            float temp = leftFromRight;
+            leftFromRight = inFromBack;
+            inFromBack = temp;
+        }
         stack.translate(leftFromRight, upFromBottom, inFromBack);
         stack.scale(0.375f, 0.375f, 0.375f);
         stack.mulPose(Vector3f.XP.rotationDegrees(90));
 
-        switch (pbe.getBlockState().getValue(HorizontalDirectionalBlock.FACING)) {
+        switch (value) {
             case NORTH -> stack.mulPose(Vector3f.ZP.rotationDegrees(0));
             case EAST -> stack.mulPose(Vector3f.ZP.rotationDegrees(90));
             case SOUTH -> stack.mulPose(Vector3f.ZP.rotationDegrees(180));

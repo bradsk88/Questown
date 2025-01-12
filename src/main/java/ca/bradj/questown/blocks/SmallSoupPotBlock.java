@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,11 +24,15 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.List;
 
 public class SmallSoupPotBlock extends Block implements InsertedItemAware, StatefulJobBlock {
     public static final String ITEM_ID = "soup_pot_small";
+
+    protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 6.0D, 16.0D);
 
     private static final IntegerProperty LEVEL = IntegerProperty.create(
             "level", 0, 1
@@ -44,6 +49,16 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
         );
+    }
+
+    @Override
+    public VoxelShape getShape(
+            BlockState p_60555_,
+            BlockGetter p_60556_,
+            BlockPos p_60557_,
+            CollisionContext p_60558_
+    ) {
+        return SHAPE;
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {

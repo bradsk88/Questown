@@ -1,7 +1,6 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
@@ -13,6 +12,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,11 +22,15 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.List;
 
 public class BowlRackBlock extends Block implements InsertedItemAware {
     public static final String ITEM_ID = "bowl_rack";
+
+    protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
 
     public static final int MAX = 8;
     private static final IntegerProperty LEVEL = IntegerProperty.create(
@@ -44,6 +48,16 @@ public class BowlRackBlock extends Block implements InsertedItemAware {
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
         );
+    }
+
+    @Override
+    public VoxelShape getShape(
+            BlockState p_60555_,
+            BlockGetter p_60556_,
+            BlockPos p_60557_,
+            CollisionContext p_60558_
+    ) {
+        return SHAPE;
     }
 
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {

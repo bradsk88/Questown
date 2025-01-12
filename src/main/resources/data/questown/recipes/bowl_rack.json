@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    "PWP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:oak_planks"
+    },
+    "W": {
+      "item": "questown:town_wand"
+    }
+  },
+  "result": {
+    "item": "questown:bowl_rack"
+  }
+}
