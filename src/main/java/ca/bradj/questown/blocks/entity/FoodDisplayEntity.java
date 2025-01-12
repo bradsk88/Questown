@@ -6,6 +6,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncBlockItemMessage;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -122,7 +123,8 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
     }
 
     @Override
-    public boolean isFull() {
+    public boolean isFull(
+            ) {
         return items.stream().noneMatch(ItemStack::isEmpty);
     }
 
@@ -137,12 +139,12 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
     }
 
     @Override
-    public boolean canAccept(MCTownItem item) {
+    public boolean canAcceptIfSpaceAllows(MCTownItem item) {
         return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(item.toItemStack());
     }
 
     @Override
-    public float getItemAcceptanceRankBoost() {
-        return 2f;
+    public RankBoost getItemAcceptanceRankBoost() {
+        return RankBoost.SLIGHTLY_PREFERRED;
     }
 }

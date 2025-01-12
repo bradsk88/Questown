@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.town.interfaces.TimerHandle;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -347,7 +346,8 @@ class ProductionTimeWarperTest {
         }
 
         @Override
-        public boolean isFull() {
+        public boolean isFull(
+                ) {
             return delegate.stream().noneMatch(Item::isEmpty);
         }
 

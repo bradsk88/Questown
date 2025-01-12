@@ -285,8 +285,8 @@ public class TownContainers {
                 () -> level.getBlockState(p) == blockState,
                 item -> {
                 }, // TODO: Allow players to put organizer requests in non-chest containers?
-                item -> ((ContainerTarget.Container) blockEntity).canAccept(item),
-                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost()
+                item -> ((ContainerTarget.Container) blockEntity).canAcceptIfSpaceAllows(item),
+                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value()
         );
     }
 

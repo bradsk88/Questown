@@ -15,6 +15,8 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -24,10 +26,11 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class BowlRackBlock extends Block implements InsertedItemAware {
+public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlock {
     public static final String ITEM_ID = "bowl_rack";
 
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
@@ -48,6 +51,25 @@ public class BowlRackBlock extends Block implements InsertedItemAware {
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
         );
+    }
+
+    public static int getLevel(BlockState blockState) {
+        if (!blockState.hasProperty(LEVEL)) {
+            return 0;
+        }
+        return blockState.getValue(LEVEL);
+    }
+
+    public static BlockState reduceLevel(BlockState bs) {
+        int l = getLevel(bs);
+        if (l == 0) {
+            throw new IllegalStateException("Cannot reduce level below zero");
+        }
+        return bs.setValue(LEVEL, l - 1);
+    }
+
+    public static boolean isFull(BlockState blockState) {
+        return getLevel(blockState) == MAX;
     }
 
     @Override
@@ -115,5 +137,13 @@ public class BowlRackBlock extends Block implements InsertedItemAware {
         p_60504_.setBlockAndUpdate(p_60505_, p);
         QT.BLOCK_LOGGER.debug("New level {}", p61126);
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(
+            BlockPos blockPos,
+            BlockState blockState
+    ) {
+        return new BowlRackBlockEntity(blockPos, blockState);
     }
 }

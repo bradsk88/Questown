@@ -50,5 +50,10 @@ public class TilesInit {
                     HospitalBedBlockEntity::new, BlocksInit.HOSPITAL_BED.get()
             ).build(null)
     );
+    public static final RegistryObject<BlockEntityType<BowlRackBlockEntity>> BOWL_RACK = TILES.register(
+            BowlRackBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    BowlRackBlockEntity::new, BlocksInit.BOWL_RACK.get()
+            ).build(null)
+    );
 
 }

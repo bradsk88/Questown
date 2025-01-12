@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
@@ -48,7 +49,8 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
     }
 
     @Override
-    public boolean isFull() {
+    public boolean isFull(
+            ) {
         for (int i = 0; i < container.getContainerSize(); i++) {
             if (container.getItem(i).isEmpty()) {
                 return false;
@@ -82,13 +84,13 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
     }
 
     @Override
-    public boolean canAccept(MCTownItem item) {
+    public boolean canAcceptIfSpaceAllows(MCTownItem item) {
         return true;
     }
 
     @Override
-    public float getItemAcceptanceRankBoost() {
-        return 1f;
+    public RankBoost getItemAcceptanceRankBoost() {
+        return RankBoost.SAME_AS_VANILLA_CHEST;
     }
 
     @Override

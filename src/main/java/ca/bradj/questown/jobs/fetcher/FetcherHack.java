@@ -36,9 +36,10 @@ public class FetcherHack {
     public static @Nullable ContainerTarget<MCContainer, MCTownItem> getTarget(
             TownInterface town
     ) {
+        ServerLevel l = town.getServerLevel();
         for (ContainerTarget<MCContainer, MCTownItem> chest : TownContainers.getAllContainers(
                 town,
-                town.getServerLevel()
+                l
         )) {
             if (containsUsableRequest(town, chest) && !chest.getContainer().isFull()) {
                 return chest;

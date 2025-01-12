@@ -92,7 +92,8 @@ class TownStateTest {
         }
 
         @Override
-        public boolean isFull() {
+        public boolean isFull(
+                ) {
             return items.stream().noneMatch(TestItem::isEmpty);
         }
 

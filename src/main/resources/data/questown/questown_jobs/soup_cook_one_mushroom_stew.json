@@ -19,6 +19,9 @@
     {
       "tools": "#questown:shovels",
       "work": 100
+    },
+    {
+      "ingredient": "minecraft:bowl"
     }
   ],
   "cooldown_ticks": 10,

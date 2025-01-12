@@ -152,9 +152,12 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
         String toShortString(boolean includeAir);
 
-        boolean canAccept(I item);
+        boolean canAcceptIfSpaceAllows(I item);
 
-        float getItemAcceptanceRankBoost();
+        // This boost is factored into decision-making when villagers are
+        // depositing items. It causes them to prefer this container over a
+        // standard chest (or over another container with a lower rank-boost).
+        RankBoost getItemAcceptanceRankBoost();
     }
 
     private final ValidCheck check;
