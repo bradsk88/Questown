@@ -10,7 +10,7 @@
   },
   "initial_request": "minecraft:mushroom_stew",
   "block": "questown:soup_pot_small",
-  "room": "questown:basic_soup_kitchen",
+  "room": "questown:soup_kitchen_small",
   "work_states": [
     {
       "ingredients": "#forge:mushrooms",

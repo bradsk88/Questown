@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "id": "soup_cook/stock_bowls",
+  "priority": 2000,
+  "parent": "soup_cook/one_mushroom_stew",
+  "icon": "minecraft:bowl",
+  "initial_request": "minecraft:mushroom_stew",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": {
+    "id": "questown:bowl_rack",
+    "int_state": "level<8"
+  },
+  "room": "questown:soup_kitchen_big",
+  "work_states": [
+    {
+      "ingredients": "minecraft:bowl"
+    }
+  ],
+  "cooldown_ticks": 10,
+  "sound": {
+    "id": "minecraft:block.wood.place",
+    "chance": 100,
+    "duration": 5
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    }
+  ]
+}

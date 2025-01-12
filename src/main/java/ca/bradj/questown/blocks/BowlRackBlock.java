@@ -92,7 +92,7 @@ public class BowlRackBlock extends Block implements InsertedItemAware {
         if (bs.hasProperty(LEVEL)) {
             curLevel = bs.getValue(LEVEL);
         }
-        bs.setValue(LEVEL, Math.min(MAX, curLevel + 1));
+        bs = bs.setValue(LEVEL, Math.min(MAX, curLevel + 1));
         sl.setBlockAndUpdate(bp, bs);
     }
 
