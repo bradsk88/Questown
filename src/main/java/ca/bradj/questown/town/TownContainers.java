@@ -277,6 +277,9 @@ public class TownContainers {
         if (blockEntity == null) {
             return null;
         }
+        if (!(blockEntity instanceof ContainerTarget.Container<?>)) {
+            return null;
+        }
         return new ContainerTarget<MCContainer, MCTownItem>(
                 position,
                 p.getY(),

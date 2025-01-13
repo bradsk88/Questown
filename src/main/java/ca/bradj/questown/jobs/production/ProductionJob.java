@@ -43,7 +43,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.Jobs.isCloseTo;
 
@@ -475,18 +478,18 @@ public abstract class ProductionJob<
         ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
         chests.add(chest);
     }
+
     private static void addIfContainer(
             RoomRecipeMatch<MCRoom> c,
             Map.Entry<BlockPos, Block> block,
             ServerLevel sl,
             List<ContainerTarget<MCContainer, MCTownItem>> chests
     ) {
-        if (!(block.getValue() instanceof ContainerTarget.Container cb)) {
-            return;
-        }
         BlockPos bp = block.getKey();
         ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromIA(sl, bp);
-        chests.add(chest);
+        if (chest != null) {
+            chests.add(chest);
+        }
     }
 
     private boolean shouldUseBlockForSupplies(
