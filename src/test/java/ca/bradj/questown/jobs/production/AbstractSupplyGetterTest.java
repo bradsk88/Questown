@@ -31,17 +31,19 @@ class AbstractSupplyGetterTest {
     }
 
     private static MonoPredicateCollection<GathererJournalTest.TestItem> itemMustMatch(GathererJournalTest.TestItem item) {
-        return new MonoPredicateCollection<>(new IPredicateCollection<GathererJournalTest.TestItem>() {
-            @Override
-            public boolean isEmpty() {
-                return false;
-            }
+        return new MonoPredicateCollection<>(
+                new IPredicateCollection<GathererJournalTest.TestItem>() {
+                    @Override
+                    public boolean isEmpty() {
+                        return false;
+                    }
 
-            @Override
-            public boolean test(GathererJournalTest.TestItem testItem) {
-                return item.equals(testItem);
-            }
-        }, "item must match " + item.getShortName());
+                    @Override
+                    public boolean test(GathererJournalTest.TestItem testItem) {
+                        return item.equals(testItem);
+                    }
+                }, "item must match " + item.getShortName()
+        );
     }
 
     private static RoomsNeedingIngredientsOrTools<Room, String, Position> ARBITRARY_RNIOT = new RoomsNeedingIngredientsOrTools<>(
@@ -50,6 +52,11 @@ class AbstractSupplyGetterTest {
                         @Override
                         public String getRecipeID() {
                             return "test match";
+                        }
+
+                        @Override
+                        public ImmutableList<String> getRecipeIDs() {
+                            return ImmutableList.of(getRecipeID());
                         }
 
                         @Override
@@ -93,11 +100,8 @@ class AbstractSupplyGetterTest {
             }
 
             @Override
-            public void removeItem(
-                    int i,
-                    int quantity
-            ) {
-                removedFromSlots.compute(i, (k, v) -> v == null ? quantity : v + quantity);
+            public void removeItem(int i) {
+                removedFromSlots.compute(i, (k, v) -> v == null ? 1 : v + 1);
             }
         };
 
@@ -155,10 +159,9 @@ class AbstractSupplyGetterTest {
 
             @Override
             public void removeItem(
-                    int i,
-                    int quantity
+                    int i
             ) {
-                removedFromSlots.compute(i, (k, v) -> v == null ? quantity : v + quantity);
+                removedFromSlots.compute(i, (k, v) -> v == null ? 1 : v + 1);
             }
         };
 
@@ -215,10 +218,9 @@ class AbstractSupplyGetterTest {
 
             @Override
             public void removeItem(
-                    int i,
-                    int quantity
+                    int i
             ) {
-                removedFromSlots.compute(i, (k, v) -> v == null ? quantity : v + quantity);
+                removedFromSlots.compute(i, (k, v) -> v == null ? 1 : v + 1);
             }
         };
 

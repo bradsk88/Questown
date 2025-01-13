@@ -43,6 +43,11 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
+        public ImmutableList<String> getRecipeIDs() {
+            return ImmutableList.of(getRecipeID());
+        }
+
+        @Override
         public Room getRoom() {
             return arbitraryRoom;
         }
@@ -79,7 +84,12 @@ public class StatusesProductionRoutineTest {
             return new LZCD.SimpleDependency("test dep") {
                 @Override
                 protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                    return new LZCD.Populated<>("test", WithReason.always(stopOnTrue, "test dep"), ImmutableMap.of(), null);
+                    return new LZCD.Populated<>(
+                            "test",
+                            WithReason.always(stopOnTrue, "test dep"),
+                            ImmutableMap.of(),
+                            null
+                    );
                 }
 
                 @Override
@@ -330,10 +340,12 @@ public class StatusesProductionRoutineTest {
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
-                new TestInventory(false, false, ImmutableMap.of(
+                new TestInventory(
+                        false, false, ImmutableMap.of(
                         BLOCK_READY_FOR_INGREDIENTS, true, // <- Has ingredients
                         BLOCK_READY_FOR_WORK, false // <- Does not have items for work
-                )),
+                )
+                ),
                 new TestEntityLoc(arbitraryRoom),
                 new TestJobTown(
                         hasSupplies, true,
@@ -361,10 +373,12 @@ public class StatusesProductionRoutineTest {
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
-                new TestInventory(false, false, ImmutableMap.of(
+                new TestInventory(
+                        false, false, ImmutableMap.of(
                         BLOCK_READY_FOR_INGREDIENTS, true, // Has ingredients
                         BLOCK_READY_FOR_WORK, false
-                )),
+                )
+                ),
                 new TestEntityLoc(currentRoom),
                 new TestJobTown(
                         hasSupplies, true,
@@ -386,10 +400,12 @@ public class StatusesProductionRoutineTest {
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.GOING_TO_JOB,
                 true,
-                new TestInventory(false, false, ImmutableMap.of(
+                new TestInventory(
+                        false, false, ImmutableMap.of(
                         BLOCK_READY_FOR_INGREDIENTS, true, // <- Has ingredients
                         BLOCK_READY_FOR_WORK, false
-                )),
+                )
+                ),
                 new TestEntityLoc(null),
                 new TestJobTown(
                         hasSupplies, true,
@@ -411,9 +427,11 @@ public class StatusesProductionRoutineTest {
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
-                new TestInventory(false, false, ImmutableMap.of(
+                new TestInventory(
+                        false, false, ImmutableMap.of(
                         // Inventory is empty. So we don't need to drop loot
-                )),
+                )
+                ),
                 new TestEntityLoc(arbitraryRoom), // <- In a job site already
                 new TestJobTown(
                         hasSupplies, true,
@@ -435,9 +453,11 @@ public class StatusesProductionRoutineTest {
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
-                new TestInventory(false, false, ImmutableMap.of(
+                new TestInventory(
+                        false, false, ImmutableMap.of(
                         // Inventory is empty. So we don't need to drop loot
-                )),
+                )
+                ),
                 new TestEntityLoc(null), // <- Not in a job site
                 new TestJobTown(
                         hasSupplies, true,
@@ -459,9 +479,10 @@ public class StatusesProductionRoutineTest {
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 BLOCK_READY_FOR_INGREDIENTS, true // We have ingredients
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -485,10 +506,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work 2 be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(),
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work 2 be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -514,6 +536,11 @@ public class StatusesProductionRoutineTest {
             }
 
             @Override
+            public ImmutableList<String> getRecipeIDs() {
+                return ImmutableList.of(getRecipeID());
+            }
+
+            @Override
             public Room getRoom() {
                 return new Room(
                         new Position(0, 1),
@@ -532,10 +559,15 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(otherRoom), // There are ing. needed in another room
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done in this room
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS,
+                        ImmutableList.of(otherRoom),
+                        // There are ing. needed in another room
+                        BLOCK_READY_FOR_WORK,
+                        ImmutableList.of(arbitraryMatch)
+                        // There is work to be done in this room
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -565,10 +597,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -605,10 +638,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -641,10 +675,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingredients needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -671,10 +706,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true, // We have the ingredients
                 BLOCK_READY_FOR_WORK, true // We have the items for work
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -701,10 +737,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -729,10 +766,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, true,
                 BLOCK_READY_FOR_WORK, true
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
-                BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryMatch), // There are ingr. needed
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryMatch) // There is work to be done
+                ));
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
                 true,
@@ -797,10 +835,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, false,
                 BLOCK_READY_FOR_WORK, false
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
-                BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
+                        BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
+                ));
 
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,
@@ -828,10 +867,11 @@ public class StatusesProductionRoutineTest {
                 BLOCK_READY_FOR_INGREDIENTS, false,
                 BLOCK_READY_FOR_WORK, false
         );
-        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
-                BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
-        ));
+        RoomsNeedingIngredientsOrTools<Room, String, Position> workToBeDone = new RoomsNeedingIngredientsOrTools<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(), // Ingredients have been provided already
+                        BLOCK_READY_FOR_WORK, ImmutableList.of() // There is no work to be done
+                ));
 
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.IDLE,

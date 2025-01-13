@@ -21,7 +21,7 @@
       "work": 100
     },
     {
-      "ingredient": "minecraft:bowl"
+      "ingredients": "minecraft:bowl"
     }
   ],
   "cooldown_ticks": 10,

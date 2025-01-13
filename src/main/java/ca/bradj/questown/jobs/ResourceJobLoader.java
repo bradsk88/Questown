@@ -20,7 +20,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -132,14 +131,15 @@ public class ResourceJobLoader {
                     "block").getAsString());
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
+            JobID id = JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null));
             Work wb = WorksBehaviour
                     .productionWork(
                             iconItem.getDefaultInstance(),
-                            JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
+                            id,
                             JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
                             description(initReq, object),
                             new WorkLocation(isJobBlock, required(object, "room")),
-                            ResourceJobLoader.workStates(object),
+                            ResourceJobLoader.workStates(id, object),
                             wwi,
                             loadRulesV1(object),
                             loadSoundV1(object)
@@ -237,13 +237,14 @@ public class ResourceJobLoader {
                 );
                 int cooldownTicks = requiredInt(object, "cooldown_ticks");
                 WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
+                JobID id = JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null));
                 return WorksBehaviour.productionWork(
                         iconItem.getDefaultInstance(),
-                        JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null)),
+                        id,
                         JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
                         description(initReq, object),
                         new WorkLocation(isJobBlock, required(object, "room")),
-                        ResourceJobLoader.workStates(object),
+                        ResourceJobLoader.workStates(id, object),
                         wwi,
                         special,
                         loadSoundV1(object)
@@ -481,7 +482,10 @@ public class ResourceJobLoader {
         };
     }
 
-    private static WorkStates workStates(JsonObject object) {
+    private static WorkStates workStates(
+            JobID id,
+            JsonObject object
+    ) {
 
         ImmutableMap.Builder<Integer, Supplier<Ingredient>> ing = ImmutableMap.builder();
         Map<Integer, Supplier<Integer>> qty = new HashMap<>();
@@ -492,37 +496,47 @@ public class ResourceJobLoader {
         JsonArray states = object.get("work_states").getAsJsonArray();
 
         if (states.size() > 3) {
-            QT.INIT_LOGGER.warn("Jobs with more than 3 states are likely to have bugs");
+            QT.INIT_LOGGER.warn("Jobs with more than 3 states are likely to have bugs ({})", id);
         }
 
         int maxState = 0;
         for (int i = 0; i < states.size(); i++) {
             JsonObject v = states.get(i).getAsJsonObject();
+            boolean valid = false;
             if (v.has("ingredients")) {
                 Ingredient ingredients = getIngredient(v.get("ingredients").getAsString());
                 ing.put(i, () -> ingredients);
                 maxState = Math.max(maxState, i + 1);
                 Util.putIfAbsent(qty, i, () -> 1);
+                valid = true;
             }
             if (v.has("quantity")) {
                 int quantity = v.get("quantity").getAsInt();
                 qty.put(i, () -> quantity);
                 maxState = Math.max(maxState, i + 1);
+                valid = true;
             }
             if (v.has("tools")) {
                 Ingredient tools1 = getIngredient(v.get("tools").getAsString());
                 tools.put(i, () -> tools1);
                 maxState = Math.max(maxState, i + 1);
+                valid = true;
             }
             if (v.has("work")) {
                 int work1 = v.get("work").getAsInt();
                 work.put(i, () -> work1);
                 maxState = Math.max(maxState, i + 1);
+                valid = true;
             }
             if (v.has("time")) {
                 int time1 = v.get("time").getAsInt();
                 time.put(i, () -> time1);
                 maxState = Math.max(maxState, i + 1);
+                valid = true;
+            }
+            if (!valid) {
+                String fmt = "Job %s is missing ingredients, tools, work, or time for state at index %d: %s";
+                throw new IllegalJobDefinition(String.format(fmt, id.toNiceString(), i, v));
             }
         }
         return new WorkStates(

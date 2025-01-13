@@ -126,7 +126,7 @@ class QuestBatchesTest {
         qbs.add(incompleteBatch);
         qbs.add(completeBatch);
 
-        qbs.markRecipeAsComplete(sameRoom, ImmutableList.of(1), ImmutableList::copyOf);
+        qbs.markRecipeAsComplete(sameRoom, 1);
 
         ImmutableList<TestQuest> quests = qbs.getAll();
         Assertions.assertEquals(2, quests.size());

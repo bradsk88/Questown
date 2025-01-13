@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.IllegalJobDefinition;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
@@ -49,21 +50,28 @@ public abstract class AbstractItemWI<
             state = State.fresh().setWorkLeft(initWork);
         }
 
-        if (state.processingState() != curState) {
+        int ps = state.processingState();
+        if (ps != curState) {
             return null;
         }
 
-        Integer qty = checks.getQuantityForStep(state.processingState(), 0);
-        if (qty != null && qty == state.ingredientCount()) {
+        Integer qty = checks.getQuantityForStep(ps, 0);
+        if (qty == null || qty == 0) {
+            throw new IllegalJobDefinition(qty + " quantity for non-null ingredient at state " + ps);
+        }
+        if (qty == state.ingredientCount()) {
             return null;
         }
 
         int i = -1;
         Collection<ITEM> heldItems = getHeldItems(extra, villagerIndex);
         String invBefore = String.format(
-                "[%s]", String.join(", ", heldItems.stream()
-                                                   .map(v -> v.toShortString())
-                                                   .toList()));
+                "[%s]", String.join(
+                        ", ", heldItems.stream()
+                                       .map(v -> v.toShortString())
+                                       .toList()
+                )
+        );
         for (ITEM item : heldItems) {
             i++;
             if (item.isEmpty()) {
@@ -76,7 +84,8 @@ public abstract class AbstractItemWI<
             int nextStepWork = checks.getWorkForStep(curState + 1, 0);
             int nextStepTime = checks.getTimeForStep(extra, curState + 1, 0);
             final int ii = i;
-            TOWN town = tryInsertItem(extra, this, state, item, bp, nextStepWork, nextStepTime,
+            TOWN town = tryInsertItem(
+                    extra, this, state, item, bp, nextStepWork, nextStepTime,
                     (uxtra, tuwn) -> setHeldItem(uxtra, tuwn, villagerIndex, ii, item.shrink())
             );
             if (town != null) {
@@ -124,15 +133,16 @@ public abstract class AbstractItemWI<
     ) {
         ImmutableWorkStateContainer<POS, TOWN> ws = getWorkStatuses(extra);
         int curValue = oldState.processingState();
-        boolean canDo = false;
         PredicateCollection<ITEM, ?> ingredient = rules.getIngredientsRequiredAtState(curValue);
         if (ingredient != null) {
-            canDo = ingredient.test(item);
+            if (!ingredient.test(item)) {
+                return null;
+            }
         }
         //noinspection DataFlowIssue
         int qtyRequired = rules.getIngredientQuantityRequiredAtState(curValue, 0);
         int curCount = oldState.ingredientCount();
-        if (canDo && curCount > qtyRequired) {
+        if (curCount > qtyRequired) {
             QT.BLOCK_LOGGER.error(
                     "Somehow exceeded required quantity: can accept up to {}, had {}",
                     qtyRequired,
@@ -141,10 +151,10 @@ public abstract class AbstractItemWI<
         }
 
         int count = curCount + 1;
-        boolean shrink = canDo && count <= qtyRequired;
+        boolean shrink = count <= qtyRequired;
 
         TOWN updatedTown = maybeUpdateBlockState(
-                oldState, bp, workInNextStep, timeInNextStep, canDo, count, qtyRequired, ws);
+                oldState, bp, workInNextStep, timeInNextStep, count, qtyRequired, ws);
 
         if (shrink) {
             return shrinkItem.apply(extra, updatedTown);
@@ -158,17 +168,16 @@ public abstract class AbstractItemWI<
             POS bp,
             int workInNextStep,
             int timeInNextStep,
-            boolean canDo,
             int count,
             int qtyRequired,
             ImmutableWorkStateContainer<POS, TOWN> ws
     ) {
-        if (canDo && count == qtyRequired && oldState.workLeft() > 0) {
+        if (count == qtyRequired && oldState.workLeft() > 0) {
             State blockState = oldState.setCount(count);
             return ws.setJobBlockState(bp, blockState);
         }
 
-        if (canDo && count <= qtyRequired) {
+        if (count <= qtyRequired) {
             State blockState = oldState.setCount(count);
             if (count == qtyRequired) {
                 blockState = blockState.setWorkLeft(workInNextStep)
@@ -194,7 +203,10 @@ public abstract class AbstractItemWI<
     );
 
     @Override
-    public @Nullable Integer getIngredientQuantityRequiredAtState(int state, @Nullable Integer orDefault) {
+    public @Nullable Integer getIngredientQuantityRequiredAtState(
+            int state,
+            @Nullable Integer orDefault
+    ) {
         return checks.getQuantityForStep(state, orDefault);
     }
 

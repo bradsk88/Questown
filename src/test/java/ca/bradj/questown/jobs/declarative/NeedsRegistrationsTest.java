@@ -26,7 +26,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> null
         );
-        r.addUnmet(null, ARB_POS);
+        r.addUnmet(null, ARB_POS, false);
         assertEquals(0, unmetIngredient.get());
     }
 
@@ -43,7 +43,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.fresh()
         );
-        r.addUnmet(null, ARB_POS);
+        r.addUnmet(null, ARB_POS, false);
         assertEquals(0, unmetIngredient.get());
     }
 
@@ -61,7 +61,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.fresh().setWorkLeft(1)
         );
-        r.addUnmet(null, ARB_POS);
+        r.addUnmet(null, ARB_POS, false);
         assertEquals(0, unmetTool.get());
     }
 
@@ -78,7 +78,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.freshAtState(1)
         );
-        r.addUnmet(null, ARB_POS);
+        r.addUnmet(null, ARB_POS, false);
         assertEquals(1, unmetIngredient.get());
     }
 
@@ -96,7 +96,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.freshAtState(1).setWorkLeft(1)
         );
-        r.addUnmet(null, ARB_POS);
+        r.addUnmet(null, ARB_POS, false);
         assertEquals(1, unmetTool.get());
     }
 
@@ -113,7 +113,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.freshAtState(1).setWorkLeft(1)
         );
-        r.addUnmet(null, null);
+        r.addUnmet(null, null, false);
         assertEquals(0, unmetIngr.get());
     }
 }

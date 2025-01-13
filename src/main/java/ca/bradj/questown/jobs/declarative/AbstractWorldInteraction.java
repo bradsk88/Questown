@@ -396,26 +396,28 @@ public abstract class AbstractWorldInteraction<
         }
 
         TOWN initTown = getTown(extra);
-        if (this.checks.getIngredientsForStep(action) != null) {
+        PredicateCollection<HELD_ITEM, HELD_ITEM> ingredientsForStep = this.checks.getIngredientsForStep(action);
+        if (ingredientsForStep != null && !ingredientsForStep.isEmpty()) {
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
                     getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
             );
-            if (o != null) {
-                TOWN ctx = o.contextAfterInsert();
-                HELD_ITEM item = o.itemBeforeInsert();
-                @Nullable TOWN out = postInsertHook(
-                        ctx,
-                        extra,
-                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
-                        item,
-                        maxState
-                );
-                if (out == null) {
-                    out = ctx;
-                }
-                return new WorkOutput<>(true, true, out, workSpot);
+            if (o == null) {
+                return new WorkOutput<>(false, true, initTown, workSpot);
             }
+            TOWN ctx = o.contextAfterInsert();
+            HELD_ITEM item = o.itemBeforeInsert();
+            @Nullable TOWN out = postInsertHook(
+                    ctx,
+                    extra,
+                    getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
+                    item,
+                    maxState
+            );
+            if (out == null) {
+                out = ctx;
+            }
+            return new WorkOutput<>(true, true, out, workSpot);
         }
 
         if (jobBlockState == null) {
@@ -423,7 +425,7 @@ public abstract class AbstractWorldInteraction<
         }
 
         if (this.checks.isWorkRequiredAtStep(action)) {
-            Integer work = this.checks.getWorkForStep(action, 0);
+            int work = this.checks.getWorkForStep(action, 0);
             if (work > 0) {
                 if (action == 0) {
                     if (jobBlockState.workLeft() == 0) {

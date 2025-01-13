@@ -1,11 +1,11 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.ProductionTimeWarper.dropIntoContainers;
@@ -192,7 +191,9 @@ class ProductionTimeWarperTest {
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
                         item -> {
-                        }
+                        },
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -213,7 +214,9 @@ class ProductionTimeWarperTest {
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -234,7 +237,9 @@ class ProductionTimeWarperTest {
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -256,14 +261,18 @@ class ProductionTimeWarperTest {
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 ),
                 new ContainerTarget<>(
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -285,14 +294,18 @@ class ProductionTimeWarperTest {
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 ),
                 new ContainerTarget<>(
                         new Position(1, 2), 3,
                         new Position(2, 2),
                         new TestContainer<>(containerCapacity, () -> new TestItem("")),
                         () -> true,
-                        item -> {}
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
         Collection<TestItem> after = dropIntoContainers(items, containers);
@@ -320,29 +333,31 @@ class ProductionTimeWarperTest {
         }
 
         @Override
-        public boolean hasAnyOf(ImmutableSet<I> items) {
-            for (I item : items) {
-                if (delegate.contains(item)) {
-                    return true;
-                }
+        public RankBoost getItemAcceptanceRankBoost() {
+            return RankBoost.SAME_AS_VANILLA_CHEST;
+        }
+
+        @Override
+        public boolean canAcceptIfSpaceAllows(I item) {
+            return true;
+        }
+
+        @Override
+        public I removeItem(int index) {
+            I out = delegate.get(index);
+            if (out.isEmpty()) {
+                return null;
+            }
+            return out;
+        }
+
+        @Override
+        public boolean setItem(int i, I item) {
+            if (delegate.get(i).isEmpty()) {
+                delegate.set(i, item);
+                return true;
             }
             return false;
-        }
-
-        @Override
-        public void setItems(List<I> newItems) {
-            delegate.clear();
-            delegate.addAll(newItems);
-        }
-
-        @Override
-        public void removeItem(int index, int amount) {
-            delegate.remove(index);
-        }
-
-        @Override
-        public void setItem(int i, I item) {
-            delegate.set(i, item);
         }
 
         @Override

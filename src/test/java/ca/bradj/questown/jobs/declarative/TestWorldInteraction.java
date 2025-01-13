@@ -28,6 +28,12 @@ public class TestWorldInteraction extends
     boolean extracted;
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
     private int degradedTool;
+    private boolean inserted;
+
+    @Override
+    public boolean hasInserted(Void unused) {
+        return inserted;
+    }
 
     public int degradedTool() {
         return degradedTool;
@@ -127,6 +133,11 @@ public class TestWorldInteraction extends
                             public boolean isEmpty() {
                                 return false;
                             }
+
+                            @Override
+                            public String toString() {
+                                return v;
+                            }
                         }, "pc defined in itemPred"
                 )
         ));
@@ -160,6 +171,7 @@ public class TestWorldInteraction extends
             WorkedSpot<Position> position,
             GathererJournalTest.TestItem item
     ) {
+        this.inserted = true;
         return null;
     }
 

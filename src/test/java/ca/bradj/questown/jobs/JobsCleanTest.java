@@ -79,6 +79,11 @@ class JobsCleanTest {
         }
 
         @Override
+        public ImmutableList<String> getRecipeIDs() {
+            return ImmutableList.of(getRecipeID());
+        }
+
+        @Override
         public Room getRoom() {
             return new Room(new Position(0, 0), InclusiveSpace.from(-1, 0).to(1, 2));
         }
@@ -95,6 +100,11 @@ class JobsCleanTest {
 
 
     private static IRoomRecipeMatch<Room, String, Position, String> arbitaryRoomMatch2 = new IRoomRecipeMatch<>() {
+
+        @Override
+        public ImmutableList<String> getRecipeIDs() {
+            return ImmutableList.of(getRecipeID());
+        }
 
         @Override
         public String getRecipeID() {
@@ -124,6 +134,7 @@ class JobsCleanTest {
         Assertions.assertEquals(1, out.size());
         Assertions.assertEquals(arbitaryRoomMatch1, out.get(0));
     }
+
     @Test
     void roomsWithState_shouldReturnNoRoomsIfJobBlockCheckFails() {
         ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
@@ -133,6 +144,7 @@ class JobsCleanTest {
         );
         Assertions.assertEquals(0, out.size());
     }
+
     @Test
     void roomsWithState_shouldReturnNoRoomsIfStateCheckFails() {
         ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
@@ -142,6 +154,7 @@ class JobsCleanTest {
         );
         Assertions.assertEquals(0, out.size());
     }
+
     @Test
     void roomsWithState_shouldReturnNoRoomsIfBothChecksFail() {
         ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
@@ -175,6 +188,7 @@ class JobsCleanTest {
         );
         Assertions.assertNull(site);
     }
+
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
@@ -188,12 +202,15 @@ class JobsCleanTest {
         );
         Assertions.assertEquals(arbitaryRoomMatch1.getRoom(), site.room());
     }
+
     @Test
     void getEntityCurrentJobSite_shouldReturnNull_WhenRoomWithRequirementsExists_AndResultsAreNotAvailable_IfEntityInADifferentRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                        0, ImmutableList.of(arbitaryRoomMatch2) // There is a room needing supplies at state 0 (but the entity is in another room)
+                        0,
+                        ImmutableList.of(arbitaryRoomMatch2)
+                        // There is a room needing supplies at state 0 (but the entity is in another room)
                 )),
                 ImmutableList.of(), // There are no finished results to grab
                 ONLY_CHECK_XZ_COORDINATES,

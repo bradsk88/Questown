@@ -64,6 +64,7 @@ class JobLogicTest {
 
         private TestWorldInteraction wi;
         private Map<Integer, Collection<WorkPosition<Position>>> allWorkSpots = ImmutableMap.of();
+        private boolean inserted;
 
         private TestLogicWorld(JobDefinition definition) {
             this.wi = TestWorldInteraction.forDefinition(
@@ -104,6 +105,12 @@ class JobLogicTest {
 
         @Override
         public void clearInsertedSupplies() {
+            this.inserted = false;
+        }
+
+        @Override
+        public boolean hasInsertedSupplies() {
+            return inserted;
         }
 
         @Override
@@ -585,5 +592,93 @@ class JobLogicTest {
     @Test
     void tick_shouldNotSetJobState_IfFirstStepRequiresItemsOrWork() {
         Assertions.fail("Not implemented");
+    }
+
+
+    @Test
+    void tick_shouldInsertAfterWorkingAfterInserting() {
+        JobDefinition definition = new JobDefinition(
+                new JobID("tester", "test"),
+                3,
+                ImmutableMap.of(
+                        0, "mushroom",
+                        2, "bowl"
+                ),
+                ImmutableMap.of(
+                        0, 2,
+                        2, 1
+                ),
+                ImmutableMap.of(
+                        1, "spoon"
+                ),
+                ImmutableMap.of(
+                        1, 1 // 1 work required
+                ),
+                ImmutableMap.of(
+                        // No timers
+                ),
+                "soup"
+        );
+
+        TestLogicWorld world = new TestLogicWorld(definition);
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
+
+        if (world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS) != null) {
+            throw new IllegalStateException("Should have no state until ticked");
+        }
+
+        world.allWorkSpots = ImmutableMap.of(
+                0, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Runnable ticker = () -> logic.tick(
+                null,
+                () -> ProductionStatus.fromJobBlockStatus(0),
+                definition.jobId(),
+                true,
+                false,
+                false,
+                true,
+                ExpirationRules.never(),
+                new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                world,
+                (a, b) -> world.states.getJobBlockState(b).processingState()
+        );
+
+
+        Assertions.assertNull(world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS));
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("mushroom")); // Give them the needed ingredient
+        ticker.run(); // Insert first
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("mushroom")); // Give them the needed ingredient
+        ticker.run(); // Insert second, bumps up to state 1
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+
+        ticker.run(); // Sanity check. Spoon is required (but not had) so nothing should change.
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("spoon")); // Replace mushroom with them the needed tool
+
+        ticker.run(); // Use spoon to do 1 work. Which bumps state up to 2.
+        Assertions.assertEquals(2, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        ticker.run(); // Sanity check. Bowl is required (but not had) so nothing should change.
+        Assertions.assertEquals(2, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("bowl")); // Replace spoon with them the needed bowl
+        ticker.run();
+        Assertions.assertEquals(3, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
     }
 }

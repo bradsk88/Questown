@@ -2,25 +2,31 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TownStateTest {
 
     private static class TestTownState extends TownState<Container, TestItem, TestItem, Position, TestTownState> {
 
         public TestTownState(
-                @NotNull List<VillagerData<TestItem>> villagers, @NotNull List<ContainerTarget<Container, TestItem>> containers, @NotNull ImmutableMap<Position, State> workStates, @NotNull List<Position> gates, long worldTimeAtSleep) {
+                @NotNull List<VillagerData<TestItem>> villagers,
+                @NotNull List<ContainerTarget<Container, TestItem>> containers,
+                @NotNull ImmutableMap<Position, State> workStates,
+                @NotNull List<Position> gates,
+                long worldTimeAtSleep
+        ) {
             super(villagers, containers, workStates, ImmutableMap.of(), gates, worldTimeAtSleep);
         }
 
@@ -65,35 +71,27 @@ class TownStateTest {
         }
 
         @Override
-        public boolean hasAnyOf(ImmutableSet<TestItem> items) {
+        public TestItem removeItem(int index) {
+            TestItem out = items.get(0);
+            items.set(0, new TestItem(""));
+            return out;
+        }
+
+        @Override
+        public boolean setItem(
+                int i,
+                TestItem item
+        ) {
+            if (items.get(i).isEmpty()) {
+                items.set(i, item);
+                return true;
+            }
             return false;
         }
 
         @Override
-        public void setItems(List<TestItem> newItems) {
-            items.clear();
-            items.addAll(newItems);
-        }
-
-        @Override
-        public void removeItem(
-                int index,
-                int amount
-        ) {
-            items.remove(items.get(index));
-        }
-
-        @Override
-        public void setItem(
-                int i,
-                TestItem item
-        ) {
-            items.set(i, item);
-        }
-
-        @Override
         public boolean isFull(
-                ) {
+        ) {
             return items.stream().noneMatch(TestItem::isEmpty);
         }
 
@@ -106,6 +104,16 @@ class TownStateTest {
         public String toShortString(boolean includeAir) {
             return toShortString();
         }
+
+        @Override
+        public boolean canAcceptIfSpaceAllows(TestItem item) {
+            return false;
+        }
+
+        @Override
+        public RankBoost getItemAcceptanceRankBoost() {
+            return null;
+        }
     }
 
     private TestTownState townState;
@@ -116,7 +124,8 @@ class TownStateTest {
     void depositItems_shouldDepositItemsIntoContainers() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Position(0, 0), new Container(false), () -> true, i -> {}
+                        new Position(0, 0), 0, new Position(0, 0), new Container(false), () -> true, i -> {
+                }, item -> true, RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
 
@@ -155,7 +164,8 @@ class TownStateTest {
     void depositItems_shouldReturnAllInputITemsWhenNoStorageAvailable() {
         List<ContainerTarget<Container, TestItem>> containers = ImmutableList.of(
                 new ContainerTarget<>(
-                        new Position(0, 0), 0, new Position(0, 0), new Container(true), () -> true, i -> {}
+                        new Position(0, 0), 0, new Position(0, 0), new Container(true), () -> true, i -> {
+                }, item -> true, RankBoost.SAME_AS_VANILLA_CHEST.value()
                 )
         );
 
