@@ -60,7 +60,7 @@ public class TownPossibleWork {
             QT.FLAG_LOGGER.debug(
                     "Prepared for {}: [{}]",
                     root,
-                    Strings.join(jobs.stream().map(JobID::toNiceString).toList(), ",")
+                    Strings.join(jobs.stream().map(JobID::jobId).toList(), ",")
             );
         });
         shouldRecompute = false;

@@ -225,9 +225,9 @@ public class TownContainers {
             TownInterface town,
             ContainerTarget.CheckFn<MCTownItem> checkFn,
             BlockPos pos,
-            @Nullable MCTownItem itemThatMustBeInserted
+            Collection<MCTownItem> itemsThatMustBeInserted
     ) {
-        return findClosestMatching(town, checkFn, pos, x -> true, b -> true, itemThatMustBeInserted);
+        return findClosestMatching(town, checkFn, pos, x -> true, b -> true, itemsThatMustBeInserted);
     }
 
     @SuppressWarnings("unchecked")
@@ -237,7 +237,7 @@ public class TownContainers {
             BlockPos pos,
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
             Predicate<BlockPos> includeBlock,
-            @Nullable MCTownItem itemThatMustBeInserted
+            Collection<MCTownItem> itemsThatMustBeInserted
     ) {
         Stream<ContainerTarget<MCContainer, MCTownItem>> chests = findAllChestsMatching(
                 town,
@@ -254,8 +254,8 @@ public class TownContainers {
                 .filter(v -> town.getServerLevel().getBlockEntity(v) instanceof ContainerTarget.Container)
                 .map(v -> fromIA(town.getServerLevel(), v));
         chests = Stream.concat(chests, others);
-        if (itemThatMustBeInserted != null) {
-            chests = chests.filter(v -> v.canAccept(itemThatMustBeInserted));
+        if (!itemsThatMustBeInserted.isEmpty()) {
+            chests = chests.filter(v -> itemsThatMustBeInserted.stream().anyMatch(v::canAccept));
         }
 
         return chests.min(Comparator.comparingDouble(a -> comparison(pos, a))).orElse(null);

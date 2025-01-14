@@ -112,10 +112,10 @@ public class Jobs {
             TownInterface town,
             ContainerTarget<MCContainer, MCTownItem> currentTarget,
             BlockPos pos,
-            @Nullable MCTownItem itemThatMustBeInserted
+            Collection<MCTownItem> itemsThatMustBeInserted
     ) {
         Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> TownContainers.findClosestMatching(
-                town, MCTownItem::isEmpty, pos, itemThatMustBeInserted
+                town, MCTownItem::isEmpty, pos, itemsThatMustBeInserted
         );
         if (currentTarget != null) {
             if (!currentTarget.hasItem(MCTownItem::isEmpty)) {

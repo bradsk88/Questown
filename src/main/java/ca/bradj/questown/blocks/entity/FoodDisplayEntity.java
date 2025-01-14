@@ -109,8 +109,10 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
             return true;
         }
         if (items.get(index).isEmpty()) {
-            items.set(index, item.toItemStack());
-            return true;
+            if (canAcceptIfSpaceAllows(item)) {
+                items.set(index, item.toItemStack());
+                return true;
+            }
         }
         return false;
     }
