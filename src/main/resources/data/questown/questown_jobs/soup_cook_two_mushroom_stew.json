@@ -17,6 +17,10 @@
   "room": "questown:soup_kitchen_big",
   "work_states": [
     {
+      "ingredients": "minecraft:bowl",
+      "quantity": 2
+    },
+    {
       "tools": "#questown:shovels",
       "work": 60
     }
