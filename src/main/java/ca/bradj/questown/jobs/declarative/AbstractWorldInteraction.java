@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -39,6 +40,7 @@ public abstract class AbstractWorldInteraction<
     private WithReason<@Nullable WorkPosition<POS>> workspot = new WithReason<>(null, "Never set");
 
     private final ImmutableMap<ProductionStatus, Collection<String>> specialRules;
+    private final List<BiConsumer<EXTRA, POS>> extractionListeners = new ArrayList<>();
 
 
     public <S, T> AbstractWorldInteraction(
@@ -480,6 +482,10 @@ public abstract class AbstractWorldInteraction<
                 Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
 
                 town = tryGiveItems(inputs, generatedResult, position);
+
+                if (town != null && ImmutableList.copyOf(generatedResult).stream().anyMatch(v -> !v.isEmpty())) {
+                    extractionListeners.forEach(l -> l.accept(inputs, position));
+                }
             }
             if (town != null) {
                 jobCompletedListeners.forEach(Runnable::run);
@@ -601,25 +607,21 @@ public abstract class AbstractWorldInteraction<
         this.itemWI.addItemInsertionListener(listener);
     }
 
-    ;
+    public void addItemExtractionListener(BiConsumer<EXTRA, POS> listener) {
+        this.extractionListeners.add(listener);
+    }
 
     public void removeItemInsertionListener(TriConsumer<EXTRA, POS, HELD_ITEM> listener) {
         this.itemWI.removeItemInsertionListener(listener);
     }
 
-    ;
-
     public void addJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.add(listener);
     }
 
-    ;
-
     public void removeJobCompletionListener(Runnable listener) {
         this.jobCompletedListeners.remove(listener);
     }
-
-    ;
 
     public abstract boolean tryGrabbingInsertedSupplies(
             EXTRA mcExtra

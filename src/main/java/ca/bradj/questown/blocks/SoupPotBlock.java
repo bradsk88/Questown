@@ -1,13 +1,12 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -25,11 +24,12 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
 
-public class SoupPotBlock extends Block implements InsertedItemAware {
+public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedItemAware {
     public static final String ITEM_ID = "soup_pot";
 
+    public static final int MAX = 12;
     private static final IntegerProperty LEVEL = IntegerProperty.create(
-            "level", 0, 12
+            "level", 0, MAX
     );
 
     public SoupPotBlock(
@@ -66,10 +66,34 @@ public class SoupPotBlock extends Block implements InsertedItemAware {
     }
 
     @Override
-    public void handleInsertedItem(MCExtra extra, BlockPos bp, MCHeldItem item) {
-        ((ItemAccepting<MCTownItem>) extra.town().getServerLevel().getBlockEntity(bp)).setItem(
-                0, item.get()
-        );
+    public void handleInsertedItem(
+            MCExtra extra,
+            BlockPos bp,
+            MCHeldItem item
+    ) {
+        ServerLevel sl = extra.town().getServerLevel();
+        int curLevel = 0;
+        BlockState bs = sl.getBlockState(bp);
+        if (bs.hasProperty(LEVEL)) {
+            curLevel = bs.getValue(LEVEL);
+        }
+        bs = bs.setValue(LEVEL, Math.min(MAX, curLevel + 1));
+        sl.setBlockAndUpdate(bp, bs);
+    }
+
+    @Override
+    public void handleExtractedItem(
+            MCExtra extra,
+            BlockPos bp
+    ) {
+        ServerLevel sl = extra.town().getServerLevel();
+        int curLevel = 0;
+        BlockState bs = sl.getBlockState(bp);
+        if (bs.hasProperty(LEVEL)) {
+            curLevel = bs.getValue(LEVEL);
+        }
+        bs = bs.setValue(LEVEL, Math.max(0, curLevel - 1));
+        sl.setBlockAndUpdate(bp, bs);
     }
 
     @Override

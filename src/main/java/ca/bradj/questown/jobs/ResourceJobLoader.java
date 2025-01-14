@@ -613,13 +613,23 @@ public class ResourceJobLoader {
             String[] eq = stateStr.split("=");
             if (eq.length > 1) {
                 return Optional.of(new BlockStateComparator(eq[0], value -> value.equals(Integer.parseInt(eq[1]))));
-            } else {
-                String[] lt = stateStr.split("<");
+            }
+            String[] lt = stateStr.split("<");
+            if (lt.length > 1) {
                 return Optional.of(new BlockStateComparator(
                         lt[0],
                         value -> value.compareTo(Integer.parseInt(lt[1])) < 0
                 ));
             }
+
+            String[] gt = stateStr.split(">");
+            if (gt.length > 1) {
+                return Optional.of(new BlockStateComparator(
+                        gt[0],
+                        value -> value.compareTo(Integer.parseInt(gt[1])) > 0
+                ));
+            }
+            return Optional.empty();
         }
     }
 

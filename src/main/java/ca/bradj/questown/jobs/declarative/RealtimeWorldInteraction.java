@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -76,6 +77,12 @@ public class RealtimeWorldInteraction extends
             Block block = extra.town().getServerLevel().getBlockState(bp).getBlock();
             if (block instanceof InsertedItemAware iia) {
                 iia.handleInsertedItem(extra, bp, item);
+            }
+        });
+        super.addItemExtractionListener((extra, bp) -> {
+            Block block = extra.town().getServerLevel().getBlockState(bp).getBlock();
+            if (block instanceof ExtractedItemAware iia) {
+                iia.handleExtractedItem(extra, bp);
             }
         });
     }

@@ -3,7 +3,7 @@
   "recipe_strength": 1,
   "ingredients": [
     {
-      "tag": "questown:soup_pots"
+      "item": "questown:soup_pot"
     },
     {
       "item": "questown:bowl_rack"

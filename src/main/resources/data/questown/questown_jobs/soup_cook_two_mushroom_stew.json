@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "id": "soup_cook/two_mushroom_stew",
+  "priority": 500,
+  "parent": "soup_cook/one_mushroom_stew",
+  "icon": "questown:soup_pot",
+  "initial_request": "minecraft:mushroom_stew",
+  "result": {
+    "type": "item",
+    "item": "minecraft:mushroom_stew",
+    "quantity": 2
+  },
+  "block": {
+    "id": "questown:soup_pot",
+    "int_state": "level>0"
+  },
+  "room": "questown:soup_kitchen_big",
+  "work_states": [
+    {
+      "tools": "#questown:shovels",
+      "work": 60
+    }
+  ],
+  "cooldown_ticks": 10,
+  "sound": {
+    "id": "minecraft:block.lava.ambient",
+    "chance": 80,
+    "duration": 5
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    }
+  ]
+}
