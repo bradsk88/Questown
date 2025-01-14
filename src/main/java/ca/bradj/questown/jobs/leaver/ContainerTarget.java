@@ -234,7 +234,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
     @Override
     public String toString() {
-        return "FoodTarget{" +
+        return "ContainerTarget{" +
                 "position=" + position +
                 ", container=" + container +
                 '}';

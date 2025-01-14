@@ -35,7 +35,10 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
         super.load(p_155349_);
         this.items = NonNullList.withSize(4, ItemStack.EMPTY);
         ContainerHelper.loadAllItems(p_155349_, this.items);
-
+        for (int i = 0; i < this.items.size(); i++) {
+            SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), this.items.get(i), i);
+            QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+        }
     }
 
     protected void saveAdditional(CompoundTag p_187489_) {
