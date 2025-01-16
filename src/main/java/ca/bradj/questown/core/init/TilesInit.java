@@ -2,9 +2,7 @@ package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
-import ca.bradj.questown.blocks.entity.FoodDisplayEntity;
-import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
-import ca.bradj.questown.blocks.entity.PlateBlockEntity;
+import ca.bradj.questown.blocks.entity.*;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -53,6 +51,11 @@ public class TilesInit {
     public static final RegistryObject<BlockEntityType<BowlRackBlockEntity>> BOWL_RACK = TILES.register(
             BowlRackBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     BowlRackBlockEntity::new, BlocksInit.BOWL_RACK.get()
+            ).build(null)
+    );
+    public static final RegistryObject<BlockEntityType<SeedBinBlockEntity>> SEED_BIN = TILES.register(
+            SeedBinBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    SeedBinBlockEntity::new, BlocksInit.SEED_BIN.get()
             ).build(null)
     );
 

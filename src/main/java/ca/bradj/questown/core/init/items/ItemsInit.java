@@ -96,6 +96,14 @@ public class ItemsInit {
             )
     );
 
+    public static final RegistryObject<Item> SEED_BIN_BLOCK = ITEMS.register(
+            SeedBinBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.SEED_BIN.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
     public static final RegistryObject<Item> FOOD_DISPLAY_BLOCK = ITEMS.register(
             FoodDisplayBlock.ITEM_ID,
             () -> new BlockItem(

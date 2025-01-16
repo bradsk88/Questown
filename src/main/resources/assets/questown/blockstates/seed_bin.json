@@ -1,0 +1,105 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "questown:block/seed_bin"
+      }
+    },
+    {
+      "when": {
+        "level": "1"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents1"
+      }
+    },
+    {
+      "when": {
+        "level": "2"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents2"
+      }
+    },
+    {
+      "when": {
+        "level": "3"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents3"
+      }
+    },
+    {
+      "when": {
+        "level": "4"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents4"
+      }
+    },
+    {
+      "when": {
+        "level": "5"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents5"
+      }
+    },
+    {
+      "when": {
+        "level": "6"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents6"
+      }
+    },
+    {
+      "when": {
+        "level": "7"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents7"
+      }
+    },
+    {
+      "when": {
+        "level": "8"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents8"
+      }
+    },
+    {
+      "when": {
+        "level": "9"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents9"
+      }
+    },
+    {
+      "when": {
+        "level": "10"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents10"
+      }
+    },
+    {
+      "when": {
+        "level": "11"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents11"
+      }
+    },
+    {
+      "when": {
+        "level": "12"
+      },
+      "apply": {
+        "model": "questown:block/seed_bin_contents12"
+      }
+    }
+  ]
+}

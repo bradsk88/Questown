@@ -58,4 +58,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> FOOD_DISPLAY = BLOCKS.register(
             FoodDisplayBlock.ITEM_ID, FoodDisplayBlock::new
     );
+    public static final RegistryObject<Block> SEED_BIN = BLOCKS.register(
+            SeedBinBlock.ITEM_ID, SeedBinBlock::new
+    );
 }

@@ -14,7 +14,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -26,27 +25,23 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlock {
-    public static final String ITEM_ID = "bowl_rack";
+public class SeedBinBlock extends Block implements InsertedItemAware, EntityBlock {
+    public static final String ITEM_ID = "seed_bin";
 
-    protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
-
-    public static final int MAX = 8;
+    public static final int MAX = 12;
     private static final IntegerProperty LEVEL = IntegerProperty.create(
             "level", 0, MAX
     );
 
-    public BowlRackBlock(
+    public SeedBinBlock(
     ) {
         super(
                 Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                        .of(Material.WOOD, MaterialColor.WOOD)
                         .strength(1.0F, 10.0F)
                         .noOcclusion()
         );
@@ -74,16 +69,6 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
         return getLevel(blockState) == MAX;
     }
 
-    @Override
-    public VoxelShape getShape(
-            BlockState p_60555_,
-            BlockGetter p_60556_,
-            BlockPos p_60557_,
-            CollisionContext p_60558_
-    ) {
-        return SHAPE;
-    }
-
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         return this.defaultBlockState()
                    .setValue(LEVEL, 0);
@@ -100,11 +85,11 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
     ) {
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
         b.add(
-                ItemsInit.BOWL_RACK_BLOCK.get().getDefaultInstance()
+                ItemsInit.SEED_BIN_BLOCK.get().getDefaultInstance()
         );
         int level = getLevel(p_60537_);
         for (int i = 0; i < level; i++) {
-            b.add(Items.BOWL.getDefaultInstance());
+            b.add(Items.WHEAT_SEEDS.getDefaultInstance());
         }
         return b.build();
     }
