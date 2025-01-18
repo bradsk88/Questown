@@ -46,6 +46,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+@SuppressWarnings("UnnecessaryLocalVariable")
 public class Jobs {
     public static ImmutableList<ItemStack> getItems(Job<MCHeldItem, ?, ?> job) {
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
@@ -176,7 +177,6 @@ public class Jobs {
             RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
-        //noinspection UnnecessaryLocalVariable
         EntityCurrentJobSite<MCRoom> in = JobsClean.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
@@ -291,7 +291,7 @@ public class Jobs {
     ) {
         return JobsClean.roomsWithState(
                 rooms, isCorrectBlock, hasCorrectState
-        ).stream().map(RoomRecipeMatches::unsafe).toList();
+        ).stream().map(RoomRecipeMatchUtils::unsafe).toList();
     }
 
     public static ImmutableList<MCHeldItem> getHeldItems(

@@ -3,6 +3,7 @@ package ca.bradj.questown.town.rooms;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.town.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.LevelRoomDetector;
@@ -102,10 +103,10 @@ public class MultiLevelRoomDetector {
 
         if (!roomsToScan.isEmpty()) {
             RoomWithlevel room = roomsToScan.remove();
-            Optional<RoomRecipeMatch<MCRoom>> recipe = RecipeDetection.getActiveRecipe(
+            Optional<RoomRecipeMatches<MCRoom>> recipe = RecipeDetection.getActiveRecipes(
                     level,
                     room.room,
-                    p -> isDoor.test(new TownPosition(p.x, p.z, room.scanLevel))
+                    false
             );
             ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> rs = recipes.apply(room.scanLevel);
             rs.update(
@@ -134,10 +135,7 @@ public class MultiLevelRoomDetector {
                 );
                 return mcRoom;
             });
-            b.put(
-                    k,
-                    value
-            );
+            b.put(k, value);
             value.ifPresent(r -> roomsToScan.add(new RoomWithlevel(r, scanLevel)));
         });
         ImmutableMap<Position, Optional<MCRoom>> build = b.build();

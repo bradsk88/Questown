@@ -3,6 +3,8 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.OnScreenTextMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.town.workstatus.State;
@@ -16,8 +18,10 @@ import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -340,5 +344,16 @@ public class Util {
     ) {
         RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/tabs.png"));
         blit(stack, x + 12, y + 10, i * 16, 0, 16, 16, 256, 256);
+    }
+
+    public static void onScreenText(
+            Supplier<ServerPlayer> player,
+            String msgKey,
+            Object... msgArgs
+    ) {
+        QuestownNetwork.CHANNEL.send(
+                PacketDistributor.PLAYER.with(player),
+                new OnScreenTextMessage(msgKey, msgArgs)
+        );
     }
 }

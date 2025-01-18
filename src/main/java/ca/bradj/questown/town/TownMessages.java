@@ -119,8 +119,8 @@ public class TownMessages {
         } else {
             broadcastMessage(
                     "messages.building.specific_room_created",
-                    doorPos.getUIString(),
-                    RoomRecipes.getName(recipe)
+                    RoomRecipes.getName(recipe),
+                    doorPos.getUIString()
             );
         }
     }

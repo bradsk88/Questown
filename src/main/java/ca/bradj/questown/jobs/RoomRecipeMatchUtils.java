@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-public class RoomRecipeMatches {
+public class RoomRecipeMatchUtils {
     @SuppressWarnings("ALL")
     public static RoomRecipeMatch<MCRoom> unsafe(@NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?> in) {
         Iterable containedBlocks = (Iterable) in.getContainedBlocks().entrySet();

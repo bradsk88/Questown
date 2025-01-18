@@ -107,7 +107,7 @@ public class TownRooms implements
         grantAdvancement(doorPos);
         ServerLevel l = entity.getServerLevel();
         addParticles(l, room, ParticleTypes.HAPPY_VILLAGER);
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(l, room);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(l, room);
         if (roomsToSkipInitialAnnounce.contains(room.doorPos)) {
             roomsToSkipInitialAnnounce.remove(room.doorPos);
         } else {
@@ -122,11 +122,11 @@ public class TownRooms implements
         }
     }
 
-    protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(
-            ServerLevel entity,
+    protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipes(
+            ServerLevel level,
             MCRoom room
     ) {
-        return RecipeDetection.getActiveRecipe(entity, room, this);
+        return RecipeDetection.getActiveRecipe(level, room, this);
     }
 
     private void grantAdvancement(
@@ -154,7 +154,7 @@ public class TownRooms implements
         TownFlagBlockEntity entity = entitySupplier.get();
         addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
         ServerLevel serverLevel = entity.getServerLevel();
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(serverLevel, newRoom);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(serverLevel, newRoom);
         this.changeListeners.forEach(
                 changeListener -> changeListener.updateRecipeForRoom(
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
@@ -167,13 +167,24 @@ public class TownRooms implements
         entity.messages.roomSizeChanged(roomName.orElse(null), doorPos);
     }
 
+    public void recheckRecipes(Supplier<ServerLevel> level) {
+        for (MCRoom newRoom : rooms.getAll()) {
+            Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(level.get(), newRoom);
+            this.changeListeners.forEach(
+                    changeListener -> changeListener.updateRecipeForRoom(
+                            scanLevel, newRoom, newRoom, recipe.orElse(null)
+                    )
+            );
+        }
+    }
+
     @Override
     public void roomDestroyed(
             Position doorPos,
             MCRoom room
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipe(entity.getServerLevel(), room);
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(entity.getServerLevel(), room);
         Optional<ResourceLocation> roomName = Optional.empty();
         if (recipe.isPresent()) {
             roomName = Matches.getTopMatch(entity.getServerLevel(), recipe.get());

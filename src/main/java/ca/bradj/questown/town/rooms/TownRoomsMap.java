@@ -10,6 +10,7 @@ import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.LevelRoomDetection;
@@ -25,7 +26,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.Tags;
@@ -86,6 +86,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 .toList();
         ImmutableMap<Position, Optional<MCRoom>> mcRooms = ImmutableMap.copyOf(array);
         ars.update(mcRooms);
+        ars.recheckRecipes(() -> level);
     }
 
     private static boolean isFence(
@@ -158,14 +159,19 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     this::unsafeGetTown
             ) {
                 @Override
-                protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipe(
-                        ServerLevel entity,
+                protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipes(
+                        ServerLevel level,
                         MCRoom room
                 ) {
-                    ImmutableMap<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(entity, room, false);
-                    return Optional.of(new RoomRecipeMatch<>(
-                            room, ImmutableList.of(SpecialQuests.FARM), blocks.entrySet()
-                    ));
+                    Optional<RoomRecipeMatches<MCRoom>> active = RecipeDetection.getActiveRecipes(
+                            level,
+                            room,
+                            true
+                    );
+                    return active
+                            .map(v -> v.with(SpecialQuests.FARM))
+                            .or(() -> Optional.of(justFarm(room, level)))
+                            .map(v -> v);
                 }
             };
             v.addRecipeRoomChangeListener(this);
@@ -173,6 +179,17 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
 
         return activeFarms.get(scanLevel);
+    }
+
+    private RoomRecipeMatches<MCRoom> justFarm(
+            MCRoom room,
+            ServerLevel level
+    ) {
+        return new RoomRecipeMatches<>(
+                room,
+                ImmutableList.of(SpecialQuests.FARM),
+                RecipeDetection.getBlocksInRoom(level, room, false).entrySet()
+        );
     }
 
     public void tick(
@@ -376,7 +393,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             int scanLevel,
             MCRoom oldRoom,
             MCRoom newRoom,
-            @Nullable RoomRecipeMatch resourceLocation
+            @Nullable RoomRecipeMatch<MCRoom> resourceLocation
     ) {
         getOrCreateRooms(scanLevel);
         activeRecipes.get(scanLevel)
