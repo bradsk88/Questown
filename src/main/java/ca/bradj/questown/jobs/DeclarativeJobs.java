@@ -205,6 +205,7 @@ public class DeclarativeJobs {
                 b.put("relevant ingredients", neededIngredients);
                 b.put("relevant tools", neededTools);
 
+                // FIXME: Likely doesn't include non-chest containers
                 List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
                         rooms,
                         level,

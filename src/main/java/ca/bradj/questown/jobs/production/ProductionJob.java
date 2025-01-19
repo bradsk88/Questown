@@ -485,7 +485,7 @@ public abstract class ProductionJob<
             List<ContainerTarget<MCContainer, MCTownItem>> chests
     ) {
         BlockPos bp = block.getKey();
-        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromIA(sl, bp);
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromEntity(sl, bp);
         if (chest != null) {
             chests.add(chest);
         }

@@ -15,6 +15,10 @@
   "room": "questown:special_quest.farm",
   "work_states": [
     {
+      "tools": "minecraft:wheat_seeds",
+      "work": 30
+    },
+    {
       "ingredients": "minecraft:wheat_seeds"
     }
   ],

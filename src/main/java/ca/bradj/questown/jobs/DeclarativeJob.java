@@ -677,6 +677,13 @@ public class DeclarativeJob extends
         };
     }
 
+    @Override
+    public String toString() {
+        return "DeclarativeJob{" +
+                "jobId=" + jobId.toNiceString() +
+                '}';
+    }
+
     private @NotNull Supplier<ProductionStatus> getStateComputer(
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory,

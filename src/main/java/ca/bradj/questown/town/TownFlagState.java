@@ -62,7 +62,7 @@ public class TownFlagState {
         long dayTime = parent.getServerLevel().getDayTime();
         return new MCTownState(
                 vB.build(),
-                TownContainers.findAllChestsMatching(parent, item -> true, room -> true, block -> true).toList(),
+                TownContainers.findAllContainersMatching(parent, item -> true).toList(),
                 // TODO[Warp]: Store statuses for all villagers
                 parent.getWorkStatusHandle(null).getAll(),
                 ImmutableMap.of(), // TODO: Store timers from world
@@ -76,7 +76,7 @@ public class TownFlagState {
             TownFlagBlockEntity e,
             ServerLevel sl,
             @Nullable Long optionalWarpDuration
-            ) {
+    ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) { // TODO[Warp]: Plus or minus some ticks?
             QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
@@ -137,7 +137,10 @@ public class TownFlagState {
 
             final int ii = i;
             vWarper.getTicks(dayTime, ticksPassed).forEach(
-                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(tick.tick(), ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)))
+                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
+                            tick.tick(),
+                            ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
+                    ))
             );
         }
 
@@ -212,7 +215,11 @@ public class TownFlagState {
     }
 
     // Returns true if changes detected
-    public boolean tick(TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level) {
+    public boolean tick(
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level
+    ) {
         if (!e.isInitialized()) {
             return false;
         }
@@ -220,7 +227,10 @@ public class TownFlagState {
         long start = System.currentTimeMillis();
         long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
-        long timeSinceWake = Math.max(0, gt - lastTick); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
+        long timeSinceWake = Math.max(
+                0,
+                gt - lastTick
+        ); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
@@ -230,12 +240,10 @@ public class TownFlagState {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
 
-        // TODO: Run less often?
-        Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllChestsMatching(
+        // TODO[Performance]: Run less often?
+        Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllContainersMatching(
                 e,
-                item -> true,
-                room -> true,
-                block -> true
+                item -> true
         ).iterator();
 
         boolean changes = checkForContainerChanges(level, matchIter);
@@ -245,7 +253,10 @@ public class TownFlagState {
     }
 
     void warp(
-            TownFlagBlockEntity e, CompoundTag flagTag, ServerLevel level, long timeSinceWake
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level,
+            long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
         try {
@@ -324,7 +335,10 @@ public class TownFlagState {
         return itemNames.hashCode();
     }
 
-    void putStateOnTile(CompoundTag flagTag, UUID uuid) {
+    void putStateOnTile(
+            CompoundTag flagTag,
+            UUID uuid
+    ) {
         @Nullable MCTownState state = captureState();
         if (state == null) {
             QT.FLAG_LOGGER.warn("TownState was null. Will not store.");

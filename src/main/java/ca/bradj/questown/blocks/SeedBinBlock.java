@@ -1,7 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.blocks.entity.BowlRackBlockEntity;
+import ca.bradj.questown.blocks.entity.SeedBinBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
@@ -9,7 +9,6 @@ import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -153,6 +152,6 @@ public class SeedBinBlock extends Block implements InsertedItemAware, EntityBloc
             BlockPos blockPos,
             BlockState blockState
     ) {
-        return new BowlRackBlockEntity(blockPos, blockState);
+        return new SeedBinBlockEntity(blockPos, blockState);
     }
 }
