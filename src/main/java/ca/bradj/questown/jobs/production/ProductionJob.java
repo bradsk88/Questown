@@ -436,7 +436,12 @@ public abstract class ProductionJob<
                         continue;
                     }
                     addIfChest(c, block, sl, chests);
-                    addIfContainer(c, block, sl, chests);
+                    if (!isJobBlock(block.getKey())) {
+                        // TODO[ASAP]: Also prevent status from becoming
+                        //  "collecting supplies" if the only source is the job
+                        //  block. Otherwise, the villager may get stuck.
+                        addIfContainer(c, block, sl, chests);
+                    }
                 }
             }
             List<ContainerTarget<MCContainer, MCTownItem>> closeChests = chests

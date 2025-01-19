@@ -440,7 +440,11 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
         ImmutableList.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableList.builder();
-        for (TownPosition p : registeredDoors) {
+        List<TownPosition> all = Stream.concat(
+                registeredDoors.stream(),
+                registeredFenceGates.stream()
+        ).toList();
+        for (TownPosition p : all) {
             Position pz = new Position(p.x, p.z);
             TownRooms rooms = getOrCreateRooms(p.scanLevel);
             Optional<MCRoom> room = rooms.getAll()
@@ -449,7 +453,15 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                                                        .equals(pz))
                                          .findFirst();
             if (room.isEmpty()) {
-                continue;
+                rooms = getOrCreateFarms(p.scanLevel);
+                room = rooms.getAll()
+                            .stream()
+                            .filter(v -> v.getDoorPos()
+                                          .equals(pz))
+                            .findFirst();
+                if (room.isEmpty()) {
+                    continue;
+                }
             }
             ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>> recipes = activeRecipes.get(p.scanLevel);
             for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : recipes.entrySet()) {

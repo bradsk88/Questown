@@ -1137,10 +1137,12 @@ public class DeclarativeJob extends
                 Ingredients::toString
         );
     }
+
     public String getTool(@Nullable Integer integer) {
         return Util.orNull(
                 initialTools.get(integer),
                 Ingredients::toString
         );
     }
+
 }

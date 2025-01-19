@@ -734,8 +734,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         Optional<ResourceLocation> oldMatchID = getTopMatch(getServerLevel(), oldMatch);
         Optional<ResourceLocation> newMatchID = getTopMatch(getServerLevel(), newMatch);
-        messages.roomRecipeChanged(oldMatchID.get(), newMatchID.get(), newRoom);
-        TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
+        if (oldMatchID.isPresent() && newMatchID.isPresent() && !oldMatchID.equals(newMatchID)) {
+            messages.roomRecipeChanged(oldMatchID.get(), newMatchID.get(), newRoom);
+            TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
+        }
         setChanged();
     }
 
