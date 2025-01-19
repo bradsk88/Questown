@@ -435,8 +435,12 @@ public abstract class ProductionJob<
                     if (block.getValue().equals(Blocks.AIR)) {
                         continue;
                     }
-                    addIfChest(c, block, sl, chests);
-                    if (!isJobBlock(block.getKey())) {
+                    boolean containerIsNotInJobSite = !c.getRecipeIDs().contains(location.baseRoom());
+                    boolean containerIsNotJobTarget = !isJobBlock(block.getKey());
+                    if (containerIsNotInJobSite || containerIsNotJobTarget) {
+                        addIfChest(c, block, sl, chests);
+                    }
+                    if (containerIsNotJobTarget) {
                         // TODO[ASAP]: Also prevent status from becoming
                         //  "collecting supplies" if the only source is the job
                         //  block. Otherwise, the villager may get stuck.

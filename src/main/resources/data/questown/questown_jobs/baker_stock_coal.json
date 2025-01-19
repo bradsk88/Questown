@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "baker/stock_coal",
+  "priority": "3000",
+  "parent": "baker/bread",
+  "icon": "minecraft:chest",
+  "initial_request": "minecraft:bread",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": "#forge:chests",
+  "room": "questown:breadmaker_stocked",
+  "work_states": [
+    {
+      "tools": "#minecraft:coals",
+      "work": 10
+    },
+    {
+      "ingredients": "#minecraft:coals"
+    }
+  ],
+  "cooldown_ticks": 5,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["add_item_to_container"]
+    }
+  ]
+}

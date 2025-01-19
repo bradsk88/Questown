@@ -10,13 +10,14 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "questown:seed_bin"
+    "id": "questown:seed_bin",
+    "int_state": "level<48"
   },
   "room": "questown:stocked_farm",
   "work_states": [
     {
       "tools": "minecraft:wheat_seeds",
-      "work": 20
+      "work": 15
     },
     {
       "ingredients": "minecraft:wheat_seeds"

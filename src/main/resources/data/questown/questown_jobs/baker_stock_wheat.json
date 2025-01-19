@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "baker/stock_wheat",
+  "priority": "2000",
+  "parent": "baker/bread",
+  "icon": "minecraft:chest",
+  "initial_request": "minecraft:bread",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": "#forge:chests",
+  "room": "questown:breadmaker_stocked",
+  "work_states": [
+    {
+      "tools": "minecraft:wheat",
+      "work": 10
+    },
+    {
+      "ingredients": "minecraft:wheat"
+    }
+  ],
+  "cooldown_ticks": 5,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["add_item_to_container"]
+    }
+  ]
+}
