@@ -5,9 +5,12 @@ import ca.bradj.questown.blocks.entity.BowlRackBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -139,11 +142,25 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
             return InteractionResult.CONSUME;
         }
         BlockState p = p_60504_.getBlockState(p_60505_);
-        int p61126 = (p.getValue(LEVEL) + 1) % (MAX + 1);
-        p = p.setValue(LEVEL, p61126);
-        p_60504_.setBlockAndUpdate(p_60505_, p);
-        QT.BLOCK_LOGGER.debug("New level {}", p61126);
+        addBowl(p_60504_, p_60505_, p);
         return InteractionResult.CONSUME;
+    }
+
+    public static boolean addBowl(
+            Level p_60504_,
+            BlockPos p_60505_,
+            BlockState p
+    ) {
+        int oldVal = p.getValue(LEVEL);
+        int newVal = (oldVal + 1) % (MAX + 1);
+        p = p.setValue(LEVEL, newVal);
+        p_60504_.setBlockAndUpdate(p_60505_, p);
+        QT.BLOCK_LOGGER.debug("New level {}", newVal);
+        boolean b = oldVal != newVal;
+        if (!b && (p_60504_ instanceof ServerLevel sl)) {
+            Compat.playSound(sl, p_60505_, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS);
+        }
+        return b;
     }
 
     @Override

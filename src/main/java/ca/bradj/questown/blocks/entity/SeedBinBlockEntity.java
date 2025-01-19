@@ -82,6 +82,6 @@ public class SeedBinBlockEntity extends BlockEntity implements ContainerTarget.C
             int index,
             MCTownItem item
     ) {
-        return false;
+        return SeedBinBlock.addSeed(level, getBlockPos(), getBlockState());
     }
 }

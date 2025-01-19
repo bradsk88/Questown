@@ -49,6 +49,14 @@ public class BowlRackBlockEntity extends BlockEntity implements ContainerTarget.
     }
 
     @Override
+    public boolean setItem(
+            int index,
+            MCTownItem item
+    ) {
+        return BowlRackBlock.addBowl(getLevel(), getBlockPos(), getBlockState());
+    }
+
+    @Override
     public boolean isFull() {
         return BowlRackBlock.isFull(getBlockState());
     }
@@ -71,13 +79,5 @@ public class BowlRackBlockEntity extends BlockEntity implements ContainerTarget.
     @Override
     public RankBoost getItemAcceptanceRankBoost() {
         return RankBoost.SLIGHTLY_PREFERRED;
-    }
-
-    @Override
-    public boolean setItem(
-            int index,
-            MCTownItem item
-    ) {
-        return false;
     }
 }

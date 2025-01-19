@@ -20,11 +20,6 @@
     }
   ],
   "cooldown_ticks": 10,
-  "sound": {
-    "id": "minecraft:block.wood.place",
-    "chance": 100,
-    "duration": 5
-  },
   "special": [
     {
       "type": "global",

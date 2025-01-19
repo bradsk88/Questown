@@ -5,9 +5,13 @@ import ca.bradj.questown.blocks.entity.BowlRackBlockEntity;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -32,7 +36,7 @@ import java.util.List;
 public class SeedBinBlock extends Block implements InsertedItemAware, EntityBlock {
     public static final String ITEM_ID = "seed_bin";
 
-    public static final int MAX = 12;
+    public static final int MAX = 48;
     private static final IntegerProperty LEVEL = IntegerProperty.create(
             "level", 0, MAX
     );
@@ -123,12 +127,25 @@ public class SeedBinBlock extends Block implements InsertedItemAware, EntityBloc
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
-        BlockState p = p_60504_.getBlockState(p_60505_);
-        int p61126 = (p.getValue(LEVEL) + 1) % (MAX + 1);
-        p = p.setValue(LEVEL, p61126);
-        p_60504_.setBlockAndUpdate(p_60505_, p);
-        QT.BLOCK_LOGGER.debug("New level {}", p61126);
+        addSeed(p_60504_, p_60505_, p_60503_);
         return InteractionResult.CONSUME;
+    }
+
+    public static boolean addSeed(
+            Level p_60504_,
+            BlockPos p_60505_,
+            BlockState p
+    ) {
+        int oldVal = p.getValue(LEVEL);
+        int newVal = (oldVal + 1) % (MAX + 1);
+        p = p.setValue(LEVEL, newVal);
+        p_60504_.setBlockAndUpdate(p_60505_, p);
+        QT.BLOCK_LOGGER.debug("New level {}", newVal);
+        boolean b = oldVal != newVal;
+        if (b && (p_60504_ instanceof ServerLevel sl)) {
+            Compat.playSound(sl, p_60505_, SoundEvents.COMPOSTER_FILL_SUCCESS, SoundSource.BLOCKS);
+        }
+        return b;
     }
 
     @Override
