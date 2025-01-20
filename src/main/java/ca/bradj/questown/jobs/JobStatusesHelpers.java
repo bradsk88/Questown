@@ -13,7 +13,10 @@ public class JobStatusesHelpers {
         private final Supplier<Boolean> s;
         private WithReason<Boolean> value;
 
-        public PrePopDep(String name, Supplier<Boolean> s) {
+        public PrePopDep(
+                String name,
+                Supplier<Boolean> s
+        ) {
             this.name = name;
             this.s = s;
         }
@@ -28,7 +31,12 @@ public class JobStatusesHelpers {
                     value,
                     ImmutableMap.of(),
                     null
-            );
+            ) {
+                @Override
+                protected String stringRep() {
+                    return "PrePopulated[" + s.get() + "]";
+                }
+            };
         }
 
         @Override

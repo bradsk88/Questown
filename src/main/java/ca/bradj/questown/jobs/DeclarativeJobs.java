@@ -31,7 +31,6 @@ import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -264,12 +263,18 @@ public class DeclarativeJobs {
 
                 b.put("supply checks", ImmutableMap.copyOf(b2));
                 b.put("predicate", ingredients);
+                ImmutableMap<String, Object> build = b.build();
                 return new LZCD.Populated<>(
                         "town has supplies",
                         found,
-                        b.build(),
+                        build,
                         null
-                );
+                ) {
+                    @Override
+                    protected String stringRep() {
+                        return "town has supplies [" + build + "]";
+                    }
+                };
             }
         };
     }
@@ -300,14 +305,16 @@ public class DeclarativeJobs {
         };
 
         for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {
-            b.put(ProductionStatus.fromJobBlockStatus(i), (
-                    HandlerInputs ii
-            ) -> {
-                if (!ii.status.isWorkingOnProduction()) {
-                    return ii.inState.town();
-                }
-                return tryWorking.apply(ii);
-            });
+            b.put(
+                    ProductionStatus.fromJobBlockStatus(i), (
+                            HandlerInputs ii
+                    ) -> {
+                        if (!ii.status.isWorkingOnProduction()) {
+                            return ii.inState.town();
+                        }
+                        return tryWorking.apply(ii);
+                    }
+            );
         }
         b.put(
                 ProductionStatus.EXTRACTING_PRODUCT,
@@ -399,7 +406,11 @@ public class DeclarativeJobs {
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,
-                                new RoomRecipeMatch<>(fakeRoom, ImmutableList.of(new ResourceLocation("fake")), ImmutableList.of()),
+                                new RoomRecipeMatch<>(
+                                        fakeRoom,
+                                        ImmutableList.of(new ResourceLocation("fake")),
+                                        ImmutableList.of()
+                                ),
                                 fakePos,
                                 outState.containers
                         ),
@@ -495,16 +506,25 @@ public class DeclarativeJobs {
             ImmutableMap.Builder<String, Object> crs = ImmutableMap.builder();
             v.b().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
 
-            this.value = new LZCD.Populated<>(name, hasSpot, ImmutableMap.of(
-                    "spots", css.build(),
-                    "rooms", crs.build()
-            ), null);
+            ImmutableMap<String, Object> bSpots = css.build();
+            ImmutableMap<String, Object> bRooms = crs.build();
+            this.value = new LZCD.Populated<>(
+                    name, hasSpot, ImmutableMap.of(
+                    "spots", bSpots,
+                    "rooms", bRooms
+            ), null
+            ) {
+                @Override
+                protected String stringRep() {
+                    return "RoomsWithState=[" + bRooms + "]";
+                }
+            };
             return value;
         }
 
         @Override
         public String describe() {
-            return "TODO"; // TODO:
+            return "RoomsContainWorkState=" + value.value();
         }
 
         @Override

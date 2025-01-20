@@ -5,10 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -16,20 +13,45 @@ import java.util.function.Supplier;
 
 public class LZCD<T> implements ILZCD<T> {
 
+    public static Dependency<Void> invert(Dependency<Void> voidDependency) {
+        return new SimpleDependency(voidDependency.getName() + " (result inverted)") {
+            @Override
+            protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                Populated<WithReason<Boolean>> p = voidDependency.populate();
+                return new Populated<>(p.name, p.value.map(v -> !v).wrap("inverted"), p.conditions, p.ifCondFailOrNull) {
+                    @Override
+                    protected String stringRep() {
+                        return "inverted value of " + voidDependency.getName();
+                    }
+                };
+            }
+
+            @Override
+            public String describe() {
+                return voidDependency.describe() + "(result inverted)";
+            }
+        };
+    }
+
     public static class ConstantDep extends SimpleDependency {
         private final Populated<WithReason<Boolean>> value;
 
         public ConstantDep(
                 String name,
-                boolean value
+                boolean bVal
         ) {
             super(name);
             this.value = new LZCD.Populated<>(
                     "test supplies",
-                    WithReason.always(value, "input"),
+                    WithReason.always(bVal, "input"),
                     ImmutableMap.of(),
                     null
-            );
+            ) {
+                @Override
+                protected String stringRep() {
+                    return "Constant [" + bVal + "]";
+                }
+            };
         }
 
         @Override
@@ -43,12 +65,65 @@ public class LZCD<T> implements ILZCD<T> {
         }
     }
 
-    public record Populated<T>(
-            String name,
-            @Nullable T value,
-            Map<String, Object> conditions,
-            Populated<T> ifCondFailOrNull
-    ) {
+    public static abstract class Populated<T> {
+        private final String name;
+        private final @Nullable T value;
+        private final Map<String, Object> conditions;
+        private final Populated<T> ifCondFailOrNull;
+
+        public Populated(
+                String name,
+                @Nullable T value,
+                Map<String, Object> conditions,
+                Populated<T> ifCondFailOrNull
+        ) {
+            this.name = name;
+            this.value = value;
+            this.conditions = conditions;
+            this.ifCondFailOrNull = ifCondFailOrNull;
+        }
+
+        public String name() {
+            return name;
+        }
+
+        public @Nullable T value() {
+            return value;
+        }
+
+        public Map<String, Object> conditions() {
+            return conditions;
+        }
+
+        public Populated<T> ifCondFailOrNull() {
+            return ifCondFailOrNull;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (Populated) obj;
+            return Objects.equals(this.name, that.name) && Objects.equals(
+                    this.value,
+                    that.value
+            ) && Objects.equals(this.conditions, that.conditions) && Objects.equals(
+                    this.ifCondFailOrNull,
+                    that.ifCondFailOrNull
+            );
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, value, conditions, ifCondFailOrNull);
+        }
+
+        @Override
+        public String toString() {
+            return stringRep();
+        }
+
+        protected abstract String stringRep();
 
     }
 
@@ -59,7 +134,6 @@ public class LZCD<T> implements ILZCD<T> {
         String describe();
 
         String getName();
-
     }
 
     public final String name;
@@ -107,7 +181,8 @@ public class LZCD<T> implements ILZCD<T> {
             Supplier<T> o,
             Predicate<T> isNull
     ) {
-        return new LZCD<>(name, new ILZCD<T>() {
+        return new LZCD<>(
+                name, new ILZCD<T>() {
             private Populated<T> populated = null;
             private T val;
 
@@ -133,10 +208,16 @@ public class LZCD<T> implements ILZCD<T> {
                 if (populated != null) {
                     return populated;
                 }
-                populated = new Populated<>(name, resolve(), ImmutableMap.of(), null);
+                populated = new Populated<>(name, resolve(), ImmutableMap.of(), null) {
+                    @Override
+                    protected String stringRep() {
+                        return name + " [no dependencies]";
+                    }
+                };
                 return populated;
             }
-        }, ImmutableList.of(), leaf(() -> null, (v) -> true));
+        }, ImmutableList.of(), leaf(() -> null, (v) -> true)
+        );
     }
 
     public static <T> ILZCD<T> leaf(
@@ -146,8 +227,7 @@ public class LZCD<T> implements ILZCD<T> {
         return new ILZCD<T>() {
 
             private Populated<T> populated = null;
-            @Nullable
-            T value = null;
+            @Nullable T value = null;
 
             @Override
             public void initializeAll() {
@@ -170,7 +250,12 @@ public class LZCD<T> implements ILZCD<T> {
                     return populated;
                 }
                 value = resolve();
-                populated = new Populated<>("value resolver", value, ImmutableMap.of(), null);
+                populated = new Populated<>("value resolver", value, ImmutableMap.of(), null) {
+                    @Override
+                    protected String stringRep() {
+                        return "leaf node [" + value + "]";
+                    }
+                };
                 return populated;
             }
         };
@@ -217,7 +302,6 @@ public class LZCD<T> implements ILZCD<T> {
         return value == null;
     }
 
-
     public Populated<T> populate() {
         Map<String, Object> b = new HashMap<>();
         for (ILZCD<Dependency<T>> d : conditions) {
@@ -232,11 +316,12 @@ public class LZCD<T> implements ILZCD<T> {
             b.put("wrapped value", "null (so fallback will be used)");
         }
 
-        return new Populated<>(
-                name, resolve,
-                Collections.unmodifiableMap(b),
-                ifCondFail.populate()
-        );
+        return new Populated<>(name, resolve, Collections.unmodifiableMap(b), ifCondFail.populate()) {
+            @Override
+            protected String stringRep() {
+                return name; // TODO: Good enough?
+            }
+        };
     }
 
     @Override
@@ -246,16 +331,15 @@ public class LZCD<T> implements ILZCD<T> {
             return name + "=" + v;
         }
         return String.format(
-                "(%s=%s) if [%s] else (%s)",
-                name, v,
-                String.join(",", conditions.stream().map(z -> {
-                    Populated<Dependency<T>> resolve = z.populate();
-                    if (resolve == null) {
-                        return "null";
-                    }
-                    return resolve.toString();
-                }).toList()),
-                ifCondFail
+                "(%s=%s) if [%s] else (%s)", name, v, String.join(
+                        ",", conditions.stream().map(z -> {
+                            Populated<Dependency<T>> resolve = z.populate();
+                            if (resolve == null) {
+                                return "null";
+                            }
+                            return resolve.toString();
+                        }).toList()
+                ), ifCondFail
         );
     }
 

@@ -50,15 +50,21 @@ public class JobTownStates {
         public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
             for (Integer i : rooms.keySet()) {
                 roomCache.put(i, rooms.get(i).populate());
-            };
+            }
             ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
             roomCache.forEach((k, v) -> b.put(k.toString(), v));
+            ImmutableMap<String, Object> build = b.build();
             return new LZCD.Populated<>(
                     getName(),
                     apply(() -> null),
-                    b.build(),
+                    build,
                     null
-            );
+            ) {
+                @Override
+                protected String stringRep() {
+                    return "SupplyNeeds[" + build + "]";
+                }
+            };
         }
 
         @Override

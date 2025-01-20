@@ -87,7 +87,9 @@ public class JobStatuses {
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSpace = fromVoid(town.hasSpace());
         ILZCD<LZCD.Dependency<STATUS>> dTimerActive = fromVoid(town.isTimerActive());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = fromVoid(town.hasSupplies());
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSupplies = fromVoid(LZCD.invert(town.hasSupplies()));
         ILZCD<LZCD.Dependency<STATUS>> dHasPlaceToUseSupplies = fromVoid(town.canUseMoreSupplies());
+        ILZCD<LZCD.Dependency<STATUS>> dHasNoPlaceToUseSupplies = fromVoid(LZCD.invert(town.canUseMoreSupplies()));
         LZCD<STATUS> root = new LZCD<>(
                 "work without items",
                 LZCD.leaf(job::tryChoosingItemlessWork, Objects::isNull),
@@ -150,7 +152,7 @@ public class JobStatuses {
                                                                                                 dTimerActive
                                                                                         ),
                                                                                         new LZCD<>(
-                                                                                                "stop when nowhere to work and town has items",
+                                                                                                "stop (nojobsite) when nowhere to work and town has items",
                                                                                                 leaf(factory::noJobSite),
                                                                                                 ImmutableList.of(
                                                                                                         dTownHasSupplies,
@@ -162,7 +164,17 @@ public class JobStatuses {
                                                                                                         ImmutableList.of(
                                                                                                                 dHasAnyItems
                                                                                                         ),
-                                                                                                        leaf(factory::noSupplies)
+
+                                                                                                        new LZCD<>(
+                                                                                                                "stop when no jobsite and no supplies in town",
+                                                                                                                leaf(factory::noJobSite),
+                                                                                                                ImmutableList.of(
+                                                                                                                        dInventoryEmpty,
+                                                                                                                        dTownHasNoSupplies,
+                                                                                                                        dHasNoPlaceToUseSupplies
+                                                                                                                ),
+                                                                                                                leaf(factory::noSupplies)
+                                                                                                        )
                                                                                                 )
                                                                                         )
                                                                                 )
@@ -330,7 +342,12 @@ public class JobStatuses {
                                 value,
                                 ImmutableMap.of(),
                                 null
-                        );
+                        ) {
+                            @Override
+                            protected String stringRep() {
+                                return "PrePopulatable[" + value + "]";
+                            }
+                        };
                     }
 
                     @Override
@@ -368,7 +385,12 @@ public class JobStatuses {
                                 WithReason.always(null, "cannot be pre-computed"),
                                 ImmutableMap.of(),
                                 null
-                        );
+                        ) {
+                            @Override
+                            protected String stringRep() {
+                                return "Input[Value TBD]";
+                            }
+                        };
                         // TODO: Pass dependencies as inputs to usualRoutine
                     }
 

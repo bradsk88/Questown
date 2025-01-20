@@ -288,16 +288,16 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_NoSupplies_WhenInvEmptyTownEmpty() {
+    void StatusShouldBe_NoSupplies_WhenInvEmptyTownEmptyNowhereToUseSupplies() {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(false, false, ImmutableMap.of()),
-                new ConstTown(false, true, true),
+                new ConstTown(false, true, false),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_SUPPLIES, s);
+        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
     }
 
     @Test
@@ -446,7 +446,7 @@ class JobStatusesTest {
     @Test
     void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndOnlyAvailableSuppliesAreInTown() {
         boolean canDoWork = false;
-        boolean hasSupplies = true;
+        boolean townHasSupplies = true;
         boolean suppliesInInventory = false;
 
         boolean hasNonSupplyItems = false;
@@ -459,7 +459,7 @@ class JobStatusesTest {
                         TestStatus.ITEM_WORK, suppliesInInventory,
                         TestStatus.ITEM_WORK_2, suppliesInInventory
                 )),
-                new ConstTown(hasSupplies, townHasSpace, canDoWork),
+                new ConstTown(townHasSupplies, townHasSpace, canDoWork),
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
@@ -467,26 +467,56 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_NoSupplies_WhenThereIsNowhereToWork_AndNoSuppliesAvailable() {
-        boolean canDoWork = false;
-        boolean hasSupplies = false;
-        boolean suppliesInInventory = false;
+    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndThereAreNoSuppliesAreInTown() {
+        boolean canUseSupplies = false;
+        boolean townHasSupplies = false;
 
         boolean hasNonSupplyItems = false;
         boolean townHasSpace = true;
 
-        TestStatus s = JobStatuses.usualRoutine(
-                TestStatus.IDLE,
+        @NotNull LZCD<TestStatus> s = JobStatuses.usualRoutineRoot(
                 true,
-                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
-                        TestStatus.ITEM_WORK, suppliesInInventory,
-                        TestStatus.ITEM_WORK_2, suppliesInInventory
-                )),
-                new ConstTown(hasSupplies, townHasSpace, canDoWork),
+                new EntityInvStateProvider<>() {
+                    @Override
+                    public boolean inventoryFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasNonSupplyItems() {
+                        return hasNonSupplyItems;
+                    }
+
+                    @Override
+                    public Map<TestStatus, Boolean> getSupplyItemStatus() {
+                        return Map.of();
+                    }
+                }, new TownStateProvider() {
+                    @Override
+                    public LZCD.Dependency<Void> hasSupplies() {
+                        return new LZCD.ConstantDep("test town supplies", townHasSupplies);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> hasSpace() {
+                        return new LZCD.ConstantDep("test town space", townHasSpace);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> isTimerActive() {
+                        return new LZCD.ConstantDep("test timers", false);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> canUseMoreSupplies() {
+                        return new LZCD.ConstantDep("test town can use supplies", canUseSupplies);
+                    }
+                },
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_SUPPLIES, s);
+        TestStatus resolve = s.resolve();
+        Assertions.assertEquals(TestStatus.NO_JOBSITE, resolve);
     }
 
     @Test
@@ -580,7 +610,6 @@ class JobStatusesTest {
         }
         return hs;
     }
-
 
     @Test
     void usualRoutineRoot_resolve_shouldReturnGoingToJob_IfItemWorkIsGTJ_AndItemlessWorkIsNull() {
