@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -12,6 +13,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.DoorDetection;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
 import ca.bradj.roomrecipes.recipes.RoomAnnouncing;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.render.RoomEffects;
 import ca.bradj.roomrecipes.rooms.ActiveRooms;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -116,10 +118,15 @@ public class TownRooms implements
             );
             Optional<ResourceLocation> name = Optional.empty();
             if (recipe.isPresent()) {
-                name = Matches.getTopMatch(l, recipe.get());
+                name = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
             }
             entity.messages.roomCreated(name.orElse(null), doorPos);
         }
+    }
+
+
+    private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
+        return RoomRecipes.hydrate(entitySupplier.get().getServerLevel().getRecipeManager());
     }
 
     protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipes(
@@ -153,8 +160,8 @@ public class TownRooms implements
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
         addParticles(entity.getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
-        ServerLevel serverLevel = entity.getServerLevel();
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(serverLevel, newRoom);
+        ServerLevel l = entity.getServerLevel();
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(l, newRoom);
         this.changeListeners.forEach(
                 changeListener -> changeListener.updateRecipeForRoom(
                         scanLevel, oldRoom, newRoom, recipe.orElse(null)
@@ -162,7 +169,7 @@ public class TownRooms implements
         );
         Optional<ResourceLocation> roomName = Optional.empty();
         if (recipe.isPresent()) {
-            roomName = Matches.getTopMatch(serverLevel, recipe.get());
+            roomName = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
         }
         entity.messages.roomSizeChanged(roomName.orElse(null), doorPos);
     }
@@ -184,14 +191,15 @@ public class TownRooms implements
             MCRoom room
     ) {
         TownFlagBlockEntity entity = entitySupplier.get();
-        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(entity.getServerLevel(), room);
+        ServerLevel l = entity.getServerLevel();
+        Optional<RoomRecipeMatch<MCRoom>> recipe = getActiveRecipes(l, room);
         Optional<ResourceLocation> roomName = Optional.empty();
         if (recipe.isPresent()) {
-            roomName = Matches.getTopMatch(entity.getServerLevel(), recipe.get());
+            roomName = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
         }
 
         entity.messages.roomDestroyed(roomName.orElse(null), doorPos);
-        addParticles(entity.getServerLevel(), room, ParticleTypes.SMOKE);
+        addParticles(l, room, ParticleTypes.SMOKE);
         changeListeners.forEach(
                 cl -> cl.updateRecipeForRoom(scanLevel, room, null, null)
         );

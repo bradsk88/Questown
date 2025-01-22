@@ -1,25 +1,22 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
-// TODO: Decouple from MC and test
-public class QuestBatchSeed {
+public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLocation> {
 
-    private final AlreadyAddedChecker checker;
+    private final ServerLevel level;
     MCQuestBatch batch;
 
     public MCQuestBatch get(
@@ -31,145 +28,78 @@ public class QuestBatchSeed {
         return batch;
     }
 
-    public interface AlreadyAddedChecker {
-        boolean questAlreadyRequested(ResourceLocation questId);
-    }
-
     public QuestBatchSeed(
+            ServerLevel level,
             UUID batchUUID,
-            AlreadyAddedChecker checker,
             int targetItemWeight
     ) {
-        this.checker = checker;
-        this.targetItemWeight = targetItemWeight;
+        super(Config.IDEAL_QUEST_THRESHOLD_TICKS.get(), Config.QUEST_GENERATION_MAX_TICKS.get(), targetItemWeight);
+        this.level = level;
         this.batch = new MCQuestBatch(batchUUID, null, null);
     }
 
     int targetItemWeight;
     int attempts = 0;
-    boolean hasBed = false;
 
-    // Returns true if the batch can still grow, or false if it has reached the
-    // desired weight or exceeded a limit.
-    public boolean grow(TownInterface town) {
-        Integer maxTicks = Config.QUEST_GENERATION_MAX_TICKS.get();
-        if (attempts >= maxTicks && batch.size() > 0) {
-            return false;
-        }
-
-        if (!hasBed && !town.hasEnoughBeds()) {
-            debugLog("Adding bed quest");
-            batch.addNewQuest(null, SpecialQuests.BEDROOM);
-            hasBed = true;
-        }
-
-        ServerLevel level = town.getServerLevel();
-        if (level == null) {
-            QT.QUESTS_LOGGER.error("Server level is null in PendingQuests");
-            return false;
-        }
-
-        attempts++;
-        int currentCost = computeCurrentCost(level);
-        debugLog(
-                "Current weight: {} of {} \n- {}",
-                currentCost,
-                targetItemWeight,
-                String.join("\n- ", batch.getAll().stream().map(Quest::toShortString).toList())
-        );
-        ResourceLocation id = generateRandomQuest(level);
-        int newCost = computeQuestCost(level, id, targetItemWeight);
-        if (checker.questAlreadyRequested(id) || questAlreadyRequested(batch, id)) {
-            newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
-        }
-        int idealTicks = Config.IDEAL_QUEST_THRESHOLD_TICKS.get();
-        debugLog("Iteration: {} of ideal {} max {}", attempts, idealTicks, maxTicks);
-        debugLog("Trying to add {} [Cost: {}]", id, newCost);
-        if (attempts < idealTicks && (newCost < targetItemWeight / 4)) {
-            // Ignore small rooms early on
-            // TODO: compartmentalize pre-computed costs so we can grab expensive
-            //  recipes first and then fill empty space with cheaper ones later.
-            debugLog("Ignoring {} for now. Looking for more interesting quests", id);
-            return true;
-        }
-        if ((newCost > targetItemWeight / 2)) {
-            debugLog("Room is more than 50% of target weight. Not adding {}", id);
-            return true;
-        }
-        if (newCost > targetItemWeight - currentCost) {
-            debugLog("Room would exceed weight limit {}. Not adding {}", targetItemWeight, id);
-            return true;
-        }
-        debugLog("Successfully added to quest batch: {}", id);
-        batch.addNewQuest(null, id);
-        return true;
+    @Override
+    protected MCQuestBatch getEmptyBatch() {
+        return new MCQuestBatch();
     }
 
-    private void debugLog(String msg) {
-        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
-            QT.QUESTS_LOGGER.debug(msg);
-        }
+    @Override
+    protected ResourceLocation getRandomRoom(Collection<ResourceLocation> rooms) {
+        return ImmutableList.copyOf(rooms).get(level.getRandom().nextInt(rooms.size()));
     }
 
-    private void debugLog(
-            String msg,
-            Object p1
+    @Override
+    protected boolean questAlreadyRequested(
+            MCQuestBatch mcQuestBatch,
+            ResourceLocation id
     ) {
-        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
-            QT.QUESTS_LOGGER.debug(msg, p1);
-        }
-    }
-
-    private void debugLog(
-            String msg,
-            Object p1,
-            Object p2
-    ) {
-        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
-            QT.QUESTS_LOGGER.debug(msg, p1, p2);
-        }
-    }
-
-    private void debugLog(
-            String msg,
-            Object p1,
-            Object p2,
-            Object p3
-    ) {
-        if (Config.LOG_QUEST_BATCH_GENERATION.get()) {
-            QT.QUESTS_LOGGER.debug(msg, p1, p2, p3);
-        }
-    }
-
-    private boolean questAlreadyRequested(MCQuestBatch batch, ResourceLocation id) {
         return batch.getAll().stream().anyMatch(v -> id.equals(v.getWantedId()));
     }
 
-    private static ResourceLocation generateRandomQuest(ServerLevel level) {
-        List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-        List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
-        return ids.get(level.getRandom().nextInt(ids.size()));
+    @Override
+    protected int getBedCost() {
+        return computeQuestCost(this::recipesFromLevel, SpecialQuests.BEDROOM, Integer.MAX_VALUE);
     }
 
-    @NotNull
-    private Integer computeCurrentCost(ServerLevel level) {
-        return batch.getAll().stream()
-                .map(v -> QuestBatchSeed.computeQuestCost(level, v.getWantedId(), targetItemWeight))
-                .reduce(Integer::sum)
-                .orElse(0);
+    @Override
+    protected int getCost(ResourceLocation randomRoom) {
+        return computeQuestCost(this::recipesFromLevel, randomRoom, Integer.MAX_VALUE);
     }
 
-    private static Map<ResourceLocation, Integer> cachedCosts = new HashMap<>();
+    @Override
+    protected void addQuest(
+            MCQuestBatch mcQuestBatch,
+            ResourceLocation next
+    ) {
+        mcQuestBatch.addNewQuest(null, next);
+    }
+
+    @Override
+    protected void addBedQuest(
+            UUID ownerUUID,
+            MCQuestBatch mcQuestBatch
+    ) {
+        addQuest(batch, SpecialQuests.BEDROOM);
+    }
+
+    private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
+        return RoomRecipes.hydrate(level.getRecipeManager());
+    }
+
+    private static final Map<ResourceLocation, Integer> cachedCosts = new HashMap<>();
 
     public static int computeQuestCost(
-            ServerLevel level,
+            Supplier<Map<ResourceLocation, RoomRecipe>> recipes,
             ResourceLocation qID,
             int stopAt
     ) {
         if (cachedCosts.containsKey(qID)) {
             return cachedCosts.get(qID);
         }
-        Map<ResourceLocation, RoomRecipe> hydrated = RoomRecipes.hydrate(level);
+        Map<ResourceLocation, RoomRecipe> hydrated = recipes.get();
         if (!hydrated.containsKey(qID)) {
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
@@ -184,7 +114,6 @@ public class QuestBatchSeed {
                 "batch=" + batch +
                 ", targetItemWeight=" + targetItemWeight +
                 ", attempts=" + attempts +
-                ", hasBed=" + hasBed +
                 '}';
     }
 }

@@ -19,7 +19,7 @@ public class PendingQuestsSerializer {
     private static final String NBT_WEIGHT_THRESHOLD = "weight_threshold";
 
     public CompoundTag serializeNBT(
-        Collection<QuestBatchSeed> batches
+            Collection<QuestBatchSeed> batches
     ) {
         CompoundTag ct = new CompoundTag();
         ct.putInt(NBT_NUM_BATCHES, batches.size());
@@ -37,7 +37,8 @@ public class PendingQuestsSerializer {
     }
 
     public Collection<QuestBatchSeed> deserializeNBT(
-            TownInterface town, CompoundTag nbt
+            TownInterface town,
+            CompoundTag nbt
     ) {
 
         ImmutableList.Builder<QuestBatchSeed> aqs = ImmutableList.builder();
@@ -47,7 +48,7 @@ public class PendingQuestsSerializer {
             CompoundTag tag = aq.getCompound(i);
             MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(town, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
-            QuestBatchSeed pendingQuests = new QuestBatchSeed(b.getBatchUUID(), town::alreadyHasQuest, threshold);
+            QuestBatchSeed pendingQuests = new QuestBatchSeed(town.getServerLevel(), b.getBatchUUID(), threshold);
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
                 pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }

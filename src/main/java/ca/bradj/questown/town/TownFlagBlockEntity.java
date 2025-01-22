@@ -20,6 +20,7 @@ import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -34,6 +35,7 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -670,7 +672,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         ServerLevel l = getServerLevel();
         swapBlocks(l, match);
-        messages.roomRecipeCreated(room, getTopMatch(l, match));
+        messages.roomRecipeCreated(room, getTopMatch(this::recipesFromLevel, match));
         BlockPos pos = Positions.ToBlock(room.doorPos, room.yCoord);
         if (match.anyMatch(SpecialQuests.JOB_BOARD)) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
@@ -680,6 +682,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
+    }
+
+
+    private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
+        return RoomRecipes.hydrate(getServerLevel().getRecipeManager());
     }
 
     private void swapBlocks(
@@ -732,11 +739,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom newRoom,
             RoomRecipeMatch<MCRoom> newMatch
     ) {
-        Optional<ResourceLocation> oldMatchID = getTopMatch(getServerLevel(), oldMatch);
-        Optional<ResourceLocation> newMatchID = getTopMatch(getServerLevel(), newMatch);
+        ServerLevel l = getServerLevel();
+        Optional<ResourceLocation> oldMatchID = getTopMatch(this::recipesFromLevel, oldMatch);
+        Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
         if (oldMatchID.isPresent() && newMatchID.isPresent() && !oldMatchID.equals(newMatchID)) {
             messages.roomRecipeChanged(oldMatchID.get(), newMatchID.get(), newRoom);
-            TownRooms.addParticles(getServerLevel(), newRoom, ParticleTypes.HAPPY_VILLAGER);
+            TownRooms.addParticles(l, newRoom, ParticleTypes.HAPPY_VILLAGER);
         }
         setChanged();
     }
@@ -746,8 +754,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom roomDoorPos,
             RoomRecipeMatch<MCRoom> oldRecipeId
     ) {
-        messages.roomRecipeDestroyed(roomDoorPos, getTopMatch(getServerLevel(), oldRecipeId).orElse(null));
-        TownRooms.addParticles(getServerLevel(), roomDoorPos, ParticleTypes.SMOKE);
+        ServerLevel l = getServerLevel();
+        messages.roomRecipeDestroyed(roomDoorPos, getTopMatch(this::recipesFromLevel, oldRecipeId).orElse(null));
+        TownRooms.addParticles(l, roomDoorPos, ParticleTypes.SMOKE);
         setChanged();
     }
 

@@ -14,6 +14,7 @@ import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
+import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
@@ -39,7 +41,7 @@ import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>> {
-    private final Stack<QuestBatchSeed> pendingQuests = new Stack<>();
+    private @Nullable QuestBatchSeed pendingQuests = null;
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private QuestBatch.ChangeListener<MCQuest> changeListener;
@@ -222,27 +224,33 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void tick(TownInterface town) {
         // TODO: Check if target weight (based on town size) has changed since last tick
         //  If it has, discard the pending quests and start over.
-        if (pendingQuests.isEmpty()) {
+        ServerLevel level = town.getServerLevel();
+        if (pendingQuests == null) {
             int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
                     Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
             ) / 2;
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
-            QuestBatchSeed theNewQuests = new QuestBatchSeed(
+            pendingQuests = new QuestBatchSeed(
+                    level,
                     UUID.randomUUID(),
-                    town::alreadyHasQuest,
                     targetItemWeight
             );
-            pendingQuests.push(theNewQuests);
         }
 
-        QuestBatchSeed pop = pendingQuests.pop();
-        boolean canGrowMore = pop.grow(town);
+        QuestBatchSeed pop = pendingQuests;
+        pendingQuests = null;
+
+        boolean canGrowMore = pop.grow(town::hasEnoughBeds, town.getEconomicsHandle()::getNeededRooms, () -> {
+            List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+            List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
+            return ids;
+        });
 
         if (canGrowMore) {
             if (!questRequests.isEmpty()) {
                 QT.QUESTS_LOGGER.warn("Quest batch was not ready when requested"); // TODO: Track how far behind we get
             }
-            pendingQuests.push(pop);
+            pendingQuests = pop;
             return;
         }
 
@@ -255,7 +263,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return;
         }
 
-        pendingQuests.push(pop); // Can't grow more (at the moment) and not needed. Push back for next tick.
+        pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
     public void markQuestAsComplete(
@@ -367,7 +375,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             RoomRecipeMatch<MCRoom> match
     ) {
-        runForTopMatch(town.getServerLevelUnsafe(), match, r -> markQuestAsComplete(room, r));
+        ServerLevel l = town.getServerLevelUnsafe();
+        runForTopMatch(this::recipesFromLevel, match, r -> markQuestAsComplete(room, r));
+    }
+
+    private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
+        return RoomRecipes.hydrate(town.getServerLevelUnsafe().getRecipeManager());
     }
 
     @Override
@@ -377,9 +390,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom newRoom,
             RoomRecipeMatch<MCRoom> newMatch
     ) {
-        ServerLevel l = town.getServerLevelUnsafe();
-        Optional<ResourceLocation> oldMatchID = getTopMatch(l, oldMatch);
-        Optional<ResourceLocation> newMatchID = getTopMatch(l, newMatch);
+        Optional<ResourceLocation> oldMatchID = getTopMatch(this::recipesFromLevel, oldMatch);
+        Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
         if (oldMatchID.isEmpty() && newMatchID.isPresent()) {
             markQuestAsComplete(newRoom, newMatchID.get());
             return;
@@ -407,7 +419,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             RoomRecipeMatch<MCRoom> oldMatch
     ) {
-        runForTopMatch(town.getServerLevelUnsafe(), oldMatch, rl -> markQuestAsLost(room, rl));
+        runForTopMatch(this::recipesFromLevel, oldMatch, rl -> markQuestAsLost(room, rl));
     }
 
     public void initialize(TownFlagBlockEntity t) {

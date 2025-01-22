@@ -3,18 +3,20 @@ package ca.bradj.questown.roomrecipes;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.quests.QuestBatchSeed;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class Matches {
     public static void runForTopMatch(
-            ServerLevel l,
+            Supplier<Map<ResourceLocation, RoomRecipe>> l,
             RoomRecipeMatch<MCRoom> match,
             Consumer<ResourceLocation> rlFunc
     ) {
@@ -23,7 +25,7 @@ public class Matches {
     }
 
     public static @NotNull Optional<ResourceLocation> getTopMatch(
-            ServerLevel l,
+            Supplier<Map<ResourceLocation, RoomRecipe>> l,
             RoomRecipeMatch<MCRoom> match
     ) {
         if (match == null) {
@@ -35,7 +37,7 @@ public class Matches {
     }
 
     private static int getCost(
-            ServerLevel l,
+            Supplier<Map<ResourceLocation, RoomRecipe>> l,
             ResourceLocation r
     ) {
         return QuestBatchSeed.computeQuestCost(l, r, Integer.MAX_VALUE);
