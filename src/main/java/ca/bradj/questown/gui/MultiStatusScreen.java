@@ -104,28 +104,10 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             CardCoordinates coords,
             UUID uuid
     ) {
-        float texStartX = 8;
-        float texStartY = 8;
-        int texFileWidth = 64;
-        int texFileHeight = 64;
-        int drawNumPixelsX = 8;
-        int drawNumPixelsY = 8;
         int x = coords.leftXPadded();
-        ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
-        RenderSystem.setShaderTexture(0, texture);
         int destY = coords.topYPadded();
-        Util.blit(
-                stack,
-                x,
-                destY,
-                texStartX,
-                texStartY,
-                drawNumPixelsX,
-                drawNumPixelsY,
-                texFileWidth,
-                texFileHeight
-        );
-        int nameX = x + drawNumPixelsX + 4;
+        Util.blitFace(stack, uuid, x, destY);
+        int nameX = x + Util.faceWidth + 4;
         Compat.drawDarkText(
                 font,
                 stack,

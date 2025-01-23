@@ -3,7 +3,7 @@
 	"textures": {
 		"0": "questown:blocks/bowl_rack",
 		"2": "block/oak_planks",
-		"particle": "bowl_rack"
+		"particle": "questown:blocks/bowl_rack"
 	},
 	"elements": [
 		{

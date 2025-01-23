@@ -121,9 +121,11 @@ public class TownPois {
     public void tick(ServerLevel level, BlockPos flagPos) {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
-        Optional<BlockPos> fire = TownCycle.findCampfire(flagPos, level);
-        fire.ifPresent((bp) -> listener.campfireFound(bp));
-
+        Optional<BlockPos> fire = Optional.empty();
+        if (visitorSpot == null) {
+            fire = TownCycle.findCampfire(flagPos, level);
+            fire.ifPresent((bp) -> listener.campfireFound(bp));
+        }
         BlockPos welcomePos = getWelcomeMatPos(level);
         if (welcomePos == null) {
             visitorSpot = fire.orElse(visitorSpot);

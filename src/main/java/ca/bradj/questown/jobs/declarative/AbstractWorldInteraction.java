@@ -59,6 +59,7 @@ public abstract class AbstractWorldInteraction<
             );
         }
         this.needsReg = new NeedsRegistrations<>(
+                this::registerUnmetRoom,
                 this::registerUnmetNeed,
                 this::getJobBlockState
         );
@@ -653,5 +654,15 @@ public abstract class AbstractWorldInteraction<
     protected abstract void registerUnmetNeed(
             EXTRA extra,
             NeedsRegistrations.Need need
+    );
+
+    public void registerUnmetRooms(
+            EXTRA extra
+    ) {
+        needsReg.addUnmetRoom(extra);
+    }
+
+    protected abstract void registerUnmetRoom(
+            EXTRA extra
     );
 }

@@ -34,16 +34,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class MCTownStateWorldInteraction extends
         AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
-    public record Inputs(
-            MCTownState town,
-            ServerLevel level,
-            UUID uuid
-    ) {
+    public record Inputs(MCTownState town, ServerLevel level, UUID uuid) {
     }
 
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
@@ -58,23 +57,14 @@ public class MCTownStateWorldInteraction extends
             Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
-        super(
-                jobId,
-                villagerIndex,
-                interval,
-                maxState,
-                checks,
-                claimSpots,
-                specialRules
-        );
+        super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
         this.resultGenerator = resultGenerator;
     }
 
     @Override
     protected int getWorkSpeedOf10(Inputs inputs) {
-        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
-                Util.getTick(inputs.level())
-        );
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
+                                           .getEffectsAndClearExpired(Util.getTick(inputs.level()));
         return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
     }
 
@@ -87,9 +77,8 @@ public class MCTownStateWorldInteraction extends
     }
 
     private float getTimeFactor(Inputs inputs) {
-        Collection<Effect> effects = inputs.town().getVillager(villagerIndex).getEffectsAndClearExpired(
-                Util.getTick(inputs.level())
-        );
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
+                                           .getEffectsAndClearExpired(Util.getTick(inputs.level()));
         return WorkEffects.calculateTimeFactor(effects);
     }
 
@@ -190,10 +179,12 @@ public class MCTownStateWorldInteraction extends
             Inputs inputs,
             WorkSpot<Integer, BlockPos> position
     ) {
-        PreStateChangeHook.run(rules, (pose) -> {
-        }, (job) -> {
-            // TODO[Warp]: Set Job
-        });
+        PreStateChangeHook.run(
+                rules, (pose) -> {
+                }, (job) -> {
+                    // TODO[Warp]: Set Job
+                }
+        );
     }
 
     @Override
@@ -204,13 +195,7 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(
-                mcTownState,
-                rules,
-                inputs.level(),
-                position,
-                item.get().toItemStack()
-        );
+        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toItemStack());
     }
 
     @Override
@@ -221,12 +206,11 @@ public class MCTownStateWorldInteraction extends
             BlockPos position
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
-        return PreExtractHook.run(town, rules, inputs.level(), (ctx, i, s) -> {
+        return PreExtractHook.run(
+                town, rules, inputs.level(), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
                     return tryGiveItems(in, ImmutableList.of(i), position);
-                },
-                (ctx, up) -> ctx.withHungerFilledBy(inputs.uuid, up),
-                position, insertedItem, () -> {
+                }, (ctx, up) -> ctx.withHungerFilledBy(inputs.uuid, up), position, insertedItem, () -> {
                 }
         );
     }
@@ -249,9 +233,11 @@ public class MCTownStateWorldInteraction extends
     ) {
         ItemStack s = newItem.get().toItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(s);
-        return ts.withVillagerData(villagerIndex, ts.getVillager(villagerIndex).withEffect(
-                new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level)))
-        ));
+        return ts.withVillagerData(
+                villagerIndex,
+                ts.getVillager(villagerIndex)
+                  .withEffect(new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level))))
+        );
     }
 
     @Override
@@ -322,6 +308,11 @@ public class MCTownStateWorldInteraction extends
         // TODO[WARP]: Implement tracking of needs
     }
 
+    @Override
+    protected void registerUnmetRoom(Inputs inputs) {
+        // TODO[WARP]: Implement tracking of needs
+    }
+
     public void injectTicks(int interval) {
         ticksSinceLastAction += interval;
     }
@@ -387,20 +378,15 @@ public class MCTownStateWorldInteraction extends
             @Override
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
-                        () -> ImmutableList.of(
-                                () -> ImmutableList.of(roomBlock)
-                        ),
-                        bp -> workStates,
-                        (bp) -> true
+                        () -> ImmutableList.of(() -> ImmutableList.of(
+                                roomBlock)), bp -> workStates, (bp) -> true
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
-                statesWithUnfinishedWork.forEach(
-                        state -> {
-                            if (checks.getToolsForStep(state) == null) {
-                                b.add(state);
-                            }
-                        }
-                );
+                statesWithUnfinishedWork.forEach(state -> {
+                    if (checks.getToolsForStep(state) == null) {
+                        b.add(state);
+                    }
+                });
                 return b.build();
             }
 
@@ -460,13 +446,8 @@ public class MCTownStateWorldInteraction extends
             @Override
             public Map<Integer, Boolean> getSupplyItemStatus() {
                 return JobsClean.getSupplyItemStatuses(
-                        heldItems,
-                        checks.getAllRequiredIngredients(),
-                        (s) -> true, // TODO[WARP]: Implement this?
-                        Jobs.unTown(checks.getAllRequiredTools()),
-                        (s) -> true,
-                        checks.getAllRequiredWork(),
-                        maxState
+                        heldItems, checks.getAllRequiredIngredients(), (s) -> true, // TODO[WARP]: Implement this?
+                        Jobs.unTown(checks.getAllRequiredTools()), (s) -> true, checks.getAllRequiredWork(), maxState
                 );
             }
         };
@@ -476,9 +457,7 @@ public class MCTownStateWorldInteraction extends
             MCTownState inState,
             ProductionStatus status
     ) {
-        return ProductionTimeWarper.simulateDropLoot(
-                inState, status, villagerIndex, MCHeldItem::Air
-        );
+        return ProductionTimeWarper.simulateDropLoot(inState, status, villagerIndex, MCHeldItem::Air);
     }
 
     public @Nullable MCTownState simulateCollectSupplies(
@@ -488,7 +467,12 @@ public class MCTownStateWorldInteraction extends
         Map<Integer, ? extends Predicate<MCHeldItem>> ingr = checks.getAllRequiredIngredients();
         Map<Integer, ? extends Predicate<MCHeldItem>> tool = Jobs.unTown(checks.getAllRequiredTools());
         return ProductionTimeWarper.simulateCollectSupplies(
-                inState, processingState, villagerIndex, ingr, tool, MCHeldItem::fromTown
+                inState,
+                processingState,
+                villagerIndex,
+                ingr,
+                tool,
+                MCHeldItem::fromTown
         );
     }
 }

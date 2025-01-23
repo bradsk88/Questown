@@ -266,6 +266,10 @@ public class TestWorldInteraction extends
     }
 
     @Override
+    protected void registerUnmetRoom(Void unused) {
+    }
+
+    @Override
     protected int getWorkSpeedOf10(Void unused) {
         return 10;
     }

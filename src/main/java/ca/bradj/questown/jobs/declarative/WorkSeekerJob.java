@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
@@ -74,6 +75,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
             BiFunction<MCExtra, NeedsRegistrations.Need, String> needs,
+            Supplier<String> location,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -96,6 +98,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                     }
                     return null;
                 },
+                location,
                 interval,
                 sound
         ) {

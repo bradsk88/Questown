@@ -153,6 +153,7 @@ public class DeclarativeJob extends
                             Ingredients::toString
                     );
                 },
+                () -> location.baseRoom().toString(),
                 workInterval,
                 sound
         );
@@ -257,6 +258,7 @@ public class DeclarativeJob extends
             Map<ProductionStatus, Collection<String>> specialRules,
             Function<MCExtra, Claim> claimSpots,
             BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed,
+            Supplier<String> location,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -268,6 +270,7 @@ public class DeclarativeJob extends
                 resultGenerator,
                 claimSpots,
                 getUnmetNeed,
+                location,
                 interval,
                 sound
         );
@@ -613,13 +616,13 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public boolean hasInsertedSupplies() {
-                return world.hasInserted(extra);
+            public void registerUnmetRooms() {
+                world.registerUnmetRooms(extra);
             }
 
             @Override
-            public boolean canDropLoot() {
-                return logic.isWrappingUp() && !hasAnyLootToDrop();
+            public boolean hasInsertedSupplies() {
+                return world.hasInserted(extra);
             }
 
             @Override
@@ -657,12 +660,6 @@ public class DeclarativeJob extends
                         entity.blockPosition(),
                         Util.getTick(town.getServerLevel())
                 );
-            }
-
-            @Override
-            public void seekFallbackWork() {
-                JobID id = WorkSeekerJob.getIDForRoot(jobId);
-                extra.town().getVillagerHandle().changeJobForVillager(ownerUUID, id, false);
             }
 
             @Override

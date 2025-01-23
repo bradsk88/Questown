@@ -21,6 +21,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -33,7 +34,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
@@ -224,11 +224,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void tick(TownInterface town) {
         // TODO: Check if target weight (based on town size) has changed since last tick
         //  If it has, discard the pending quests and start over.
+        // FIXME: When a player discards a quest batch, the new batch is generated
+        //  with a bigger target size than it should have. Because there are now more
+        //  villagers in town than there were when the original batch was generated.
         ServerLevel level = town.getServerLevel();
+        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
+                Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
+        ) / 2;
         if (pendingQuests == null) {
-            int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
-                    Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
-            ) / 2;
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
             pendingQuests = new QuestBatchSeed(
                     level,
@@ -240,11 +243,30 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QuestBatchSeed pop = pendingQuests;
         pendingQuests = null;
 
-        boolean canGrowMore = pop.grow(town::hasEnoughBeds, town.getEconomicsHandle()::getNeededRooms, () -> {
-            List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
-            List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
-            return ids;
-        });
+        boolean canGrowMore = pop.grow(
+                town::hasEnoughBeds, town.getEconomicsHandle()::getNeededRooms, () -> {
+                    List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+                    List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
+                    return ids;
+                }
+        );
+
+        if (canGrowMore) {
+            QT.QUESTS_LOGGER.debug(
+                    "Batch after growth is: ({}/{})[{}]",
+                    pop.getCostSoFar(),
+                    targetItemWeight,
+                    Strings.join(
+                            pop.get()
+                               .getAll()
+                               .stream()
+                               .map(Quest::getWantedId)
+                               .map(ResourceLocation::toString)
+                               .toList(),
+                            ", "
+                    )
+            );
+        }
 
         if (canGrowMore) {
             if (!questRequests.isEmpty()) {

@@ -4,6 +4,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -189,7 +190,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         if (showHead) {
             int headX = card.coords().rightX() - 19 - 20;
             int headY = shiftedUp.topYPadded() - 1;
-            this.itemRenderer.renderAndDecorateItem(heads.get(card.index()), headX, headY);
+            Util.blitFace(poseStack, UUID.fromString(vID), headX, headY + 1, 2);
             if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
                 fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
                 renderTooltip(poseStack, tooltip, mouseX, mouseY);

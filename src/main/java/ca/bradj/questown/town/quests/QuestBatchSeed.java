@@ -1,23 +1,23 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.crafting.Ingredient;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLocation> {
 
     private final ServerLevel level;
-    MCQuestBatch batch;
 
     public MCQuestBatch get(
             MCReward rw,
@@ -52,6 +52,29 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
     }
 
     @Override
+    protected boolean hasBedAlready(MCQuestBatch mcQuestBatch) {
+        return mcQuestBatch.getAll().stream().anyMatch(v -> this.hasBeds(level, v));
+    }
+
+    private boolean hasBeds(
+            ServerLevel level,
+            MCQuest quest
+    ) {
+        Map<ResourceLocation, RoomRecipe> rr = RoomRecipes.hydrate(level.getRecipeManager());
+        NonNullList<Ingredient> roomIngredients = rr.get(quest.getWantedId()).getIngredients();
+        return roomIngredients.stream().anyMatch(this::isBed);
+    }
+
+    private boolean isBed(Ingredient ing) {
+        String tag = Ingredients.getTag(ing);
+        if (tag != null) {
+            return ItemTags.BEDS.location().equals(new ResourceLocation(tag));
+        }
+        // Otherwise, must be specific item. Check if it's a bed.
+        return Arrays.stream(ing.getItems()).anyMatch(v -> v.is(ItemTags.BEDS));
+    }
+
+    @Override
     protected boolean questAlreadyRequested(
             MCQuestBatch mcQuestBatch,
             ResourceLocation id
@@ -82,7 +105,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             UUID ownerUUID,
             MCQuestBatch mcQuestBatch
     ) {
-        addQuest(batch, SpecialQuests.BEDROOM);
+        addQuest(mcQuestBatch, SpecialQuests.BEDROOM);
     }
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {

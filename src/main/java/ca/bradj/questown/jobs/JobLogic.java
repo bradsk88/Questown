@@ -39,13 +39,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean tryGrabbingInsertedSupplies();
 
-        boolean canDropLoot();
-
         boolean tryDropLoot();
 
         void tryGetSupplies();
-
-        void seekFallbackWork();
 
         Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
 
@@ -68,6 +64,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         );
 
         boolean hasInsertedSupplies();
+
+        void registerUnmetRooms();
     }
 
     private WorkPosition<POS> workSpot;
@@ -126,7 +124,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (ticksSinceStart % 200 == 0 && status.isExtractingProduct()) {
             // This is for handling villagers who get stuck as work seekers
-            worldBeforeTick.registerUnmetNeeds(status, Util.orNull(workSpot, WorkPosition::jobBlock),
+            worldBeforeTick.registerUnmetNeeds(
+                    status, Util.orNull(workSpot, WorkPosition::jobBlock),
                     worldBeforeTick.hasInsertedSupplies()
             );
         }
@@ -192,11 +191,15 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     entityCurrentJob.jobId()
             );
             this.grabbingInsertedSupplies = true;
-            worldBeforeTick.registerUnmetNeeds(
-                    status,
-                    Util.orNull(workSpot, WorkPosition::jobBlock),
-                    worldBeforeTick.hasInsertedSupplies()
-            );
+            if (status == ProductionStatus.NO_SUPPLIES) {
+                worldBeforeTick.registerUnmetNeeds(
+                        status,
+                        Util.orNull(workSpot, WorkPosition::jobBlock),
+                        worldBeforeTick.hasInsertedSupplies()
+                );
+            } else if (status == ProductionStatus.NO_JOBSITE) {
+                worldBeforeTick.registerUnmetRooms();
+            }
             return;
         }
 

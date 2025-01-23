@@ -114,10 +114,16 @@ class JobLogicTest {
         }
 
         @Override
+        public void registerUnmetRooms() {
+
+        }
+
+        @Override
         public void registerUnmetNeeds(
                 ProductionStatus status,
                 Position workspot,
-                boolean hasInserted // TODO[Bugs]: Replace with number
+                boolean hasInserted
+                // TODO[Bugs]: Replace with number
         ) {
 
         }
@@ -133,11 +139,6 @@ class JobLogicTest {
         }
 
         @Override
-        public boolean canDropLoot() {
-            return false;
-        }
-
-        @Override
         public boolean tryDropLoot() {
 
             return false;
@@ -145,11 +146,6 @@ class JobLogicTest {
 
         @Override
         public void tryGetSupplies() {
-
-        }
-
-        @Override
-        public void seekFallbackWork() {
 
         }
 

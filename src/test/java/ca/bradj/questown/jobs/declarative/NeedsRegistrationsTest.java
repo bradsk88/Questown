@@ -17,6 +17,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterFirstIngredientIfStateIsEmpty() {
         AtomicInteger unmetIngredient = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
@@ -34,6 +36,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterFirstIngredientIfStateIsZero() {
         AtomicInteger unmetIngredient = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
@@ -51,6 +55,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterFirstToolIfStateIsZeroWithWorkRemaining() {
         AtomicInteger unmetTool = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         unmetTool.set(idx.toolIndex());
@@ -69,6 +75,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterSecondIngredientIfStateIsOne() {
         AtomicInteger unmetIngredient = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
@@ -86,6 +94,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterSecondToolIfStateIsOneAndWorkRemains() {
         AtomicInteger unmetTool = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         unmetTool.set(idx.toolIndex());
@@ -104,6 +114,8 @@ class NeedsRegistrationsTest {
     void addUnmetShouldRegisterFirstIngredientIfWorkSpotIsNUll() {
         AtomicInteger unmetIngr = new AtomicInteger();
         NeedsRegistrations<Position, Void> r = new NeedsRegistrations<Position, Void>(
+                (room) -> {
+                },
                 (no, idx) -> {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");

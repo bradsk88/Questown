@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.ItemEconomicsData;
+import ca.bradj.questown.town.quests.RoomNeed;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -17,6 +18,7 @@ public class TownEconomics {
 
     // TODO[ASAP]: Validate need record size
     private final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(100);
+    private final EvictingQueue<UnmetNeed> unmetRoomsRecord = EvictingQueue.create(100);
     private boolean needAggregate;
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
@@ -87,6 +89,14 @@ public class TownEconomics {
         unmetNeedsRecord.add(new UnmetNeed(tick, villagerId, requested));
         this.needAggregate = true;
     }
+    public void registerUnmetRoom(
+            long tick,
+            UUID villagerId,
+            String requested
+    ) {
+        unmetRoomsRecord.add(new UnmetNeed(tick, villagerId, requested));
+        this.needAggregate = true;
+    }
 
     public ImmutableList<ItemEconomicsData> getAggregated(UUID villagerId) {
         ImmutableList<ItemEconomicsData> l = aggregatedAll;
@@ -100,6 +110,11 @@ public class TownEconomics {
         return ImmutableList.copyOf(
                 l.stream().sorted((a, b) -> Integer.compare(b.timesNeeded(), a.timesNeeded())).toList()
         );
+    }
+
+    public Collection<RoomNeed<String>> getNeededRooms() {
+        // FIXME: Implement
+        return ImmutableList.of();
     }
 
     public record UnmetNeed(

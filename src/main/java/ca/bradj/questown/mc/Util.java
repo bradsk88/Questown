@@ -7,6 +7,7 @@ import ca.bradj.questown.core.network.OnScreenTextMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.WithReason;
+import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -17,6 +18,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -312,6 +314,7 @@ public class Util {
         );
     }
 
+
     public static void blit(
             PoseStack stack,
             int screenX,
@@ -323,10 +326,40 @@ public class Util {
             int widthOfEntireFile,
             int texFileHeight
     ) {
+        blit(
+                stack,
+                screenX,
+                screenY,
+                firstPixelInFilex,
+                firstPixelInFileY,
+                drawNumPixelsX,
+                drawNumPixelsY,
+                widthOfEntireFile,
+                texFileHeight,
+                drawNumPixelsX,
+                drawNumPixelsY
+        );
+    }
+
+    public static void blit(
+            PoseStack stack,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY,
+            int widthOfEntireFile,
+            int texFileHeight,
+            int drawWidth,
+            int drawHeight
+    ) {
         GuiComponent.blit(
                 stack,
                 screenX,
                 screenY,
+                drawWidth,
+                drawHeight,
                 firstPixelInFilex,
                 firstPixelInFileY,
                 drawNumPixelsX,
@@ -354,6 +387,45 @@ public class Util {
         QuestownNetwork.CHANNEL.send(
                 PacketDistributor.PLAYER.with(player),
                 new OnScreenTextMessage(msgKey, msgArgs)
+        );
+    }
+
+    public static final int faceWidth = 8;
+
+    public static void blitFace(
+            PoseStack stack,
+            UUID uuid,
+            int x,
+            int y
+    ) {
+        blitFace(stack, uuid, x, y, 1);
+    }
+
+    public static void blitFace(
+            PoseStack stack,
+            UUID uuid,
+            int x,
+            int y,
+            int scale
+    ) {
+        float texStartX = 8;
+        float texStartY = 8;
+        int texFileWidth = 64;
+        int texFileHeight = 64;
+        ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
+        RenderSystem.setShaderTexture(0, texture);
+        Util.blit(
+                stack,
+                x,
+                y,
+                texStartX,
+                texStartY,
+                faceWidth,
+                faceWidth,
+                texFileWidth,
+                texFileHeight,
+                faceWidth * scale,
+                faceWidth * scale
         );
     }
 }

@@ -37,11 +37,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class RealtimeWorldInteraction extends
         AbstractWorldInteraction<MCExtra, BlockPos, MCTownItem, MCHeldItem, Boolean> {
 
     private final BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed;
+    private final Supplier<String> jobRoom;
     private int soundTicksLeft;
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
@@ -56,6 +58,7 @@ public class RealtimeWorldInteraction extends
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<MCExtra, Claim> claimSpots,
             BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed,
+            Supplier<String> jobRoom,
             int interval,
             @Nullable SoundInfo sound
     ) {
@@ -70,6 +73,7 @@ public class RealtimeWorldInteraction extends
                 specialRules
         );
         this.getUnmetNeed = getUnmetNeed;
+        this.jobRoom = jobRoom;
         this.journal = journal;
         this.resultGenerator = resultGenerator;
         this.sound = sound;
@@ -326,6 +330,22 @@ public class RealtimeWorldInteraction extends
                 mcExtra.entity().getUUID(),
                 apply
         );
+    }
+
+    @Override
+    protected void registerUnmetRoom(
+            MCExtra mcExtra
+    ) {
+        ServerLevel serverLevel = mcExtra.town().getServerLevel();
+        if (serverLevel == null) {
+            throw new UnsupportedOperationException("Cannot run without server level");
+        }
+        mcExtra.town().getEconomicsHandle().registerUnmetRoom(
+                Util.getTick(serverLevel),
+                mcExtra.entity().getUUID(),
+                jobRoom.get()
+        );
+
     }
 
     public void clearInsertedSupplies(MCExtra extra) {

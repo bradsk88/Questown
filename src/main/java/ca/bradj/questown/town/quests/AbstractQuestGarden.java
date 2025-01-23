@@ -60,27 +60,24 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
-        if (hasEnoughBeds.get()) {
+        if (hasEnoughBeds.get() || hasBedAlready(batch)) {
             Collection<RoomNeed<ROOM_ID>> nr = neededRooms.get();
             if (nr.isEmpty()) {
                 ROOM_ID randomRoom = getRandomRoom(allRecipes.get());
                 if (shouldSkip(randomRoom)) {
                     return true;
                 }
-                addQuest(batch, randomRoom);
-                costSoFar += getCost(randomRoom);
+                addAndRecord(randomRoom);
                 return true;
             }
 
             if (nr.size() == 1) {
                 ROOM_ID id = nr.iterator().next().id();
-                addQuest(batch, id);
-                costSoFar += getCost(id);
+                addAndRecord(id);
                 return true;
             }
             ROOM_ID randomNeededRoom = getRandomRoom(nr.stream().map(RoomNeed::id).toList());
-            addQuest(batch, randomNeededRoom);
-            costSoFar += getCost(randomNeededRoom);
+            addAndRecord(randomNeededRoom);
             return true;
         }
         // TODO: Can we pre-compute the next villager's name?
@@ -90,6 +87,13 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
         costSoFar += getBedCost();
         return true;
     }
+
+    private void addAndRecord(ROOM_ID randomRoom) {
+        addQuest(batch, randomRoom);
+        costSoFar += getCost(randomRoom);
+    }
+
+    protected abstract boolean hasBedAlready(BATCH batch);
 
     private boolean shouldSkip(
             ROOM_ID id

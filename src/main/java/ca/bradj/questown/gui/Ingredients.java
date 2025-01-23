@@ -10,13 +10,14 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.Nullable;
 
 public class Ingredients {
     public static Component getName(Ingredient item) {
         JsonElement j = item.toJson();
-        if (j.getAsJsonObject().has("tag")) {
-            String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
-            return new TranslatableComponent(tKey);
+        String tag = getTag(j);
+        if (tag != null) {
+            return new TranslatableComponent("#" + tag);
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -30,9 +31,9 @@ public class Ingredients {
 
     public static WorkRequest asWorkRequest(Ingredient item) {
         JsonElement j = item.toJson();
-        if (j.getAsJsonObject().has("tag")) {
-            String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
-            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tKey)));
+        String tag = getTag(j);
+        if (tag != null) {
+            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation("#" + tag)));
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -56,8 +57,9 @@ public class Ingredients {
 
     public static String toString(Ingredient item) {
         JsonElement j = item.toJson();
-        if (j.getAsJsonObject().has("tag")) {
-            String tKey = "#" + j.getAsJsonObject().get("tag").getAsString();
+        String tag = getTag(j);
+        if (tag != null) {
+            String tKey = "#" + tag;
             return tKey;
         }
         if (j.getAsJsonObject().has("item")) {
@@ -65,5 +67,17 @@ public class Ingredients {
             return tKey;
         }
         throw new IllegalArgumentException("Ingredient must have tag or item");
+    }
+
+    public static @Nullable String getTag(Ingredient ing) {
+        JsonElement j = ing.toJson();
+        return getTag(j);
+    }
+
+    private static @Nullable String getTag(JsonElement j) {
+        if (!j.getAsJsonObject().has("tag")) {
+            return null;
+        }
+        return j.getAsJsonObject().get("tag").getAsString();
     }
 }

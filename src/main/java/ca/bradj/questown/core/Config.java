@@ -123,7 +123,7 @@ public class Config {
                 "When a new batch of quests is added, the mod makes several attempts to find a random" +
                         ", complex room quest to add to the batch. This setting determines how many ticks" +
                         " it will try before giving up and filling the empty space with simpler quests."
-        ).define("IdealQuestThresholdTicks", 25);
+        ).define("IdealQuestThresholdTicks", 40);
         QUEST_GENERATION_MAX_TICKS = BUILDER.comment(
                 "When a new batch of quests is added, the mod makes several attempts to find quests to add" +
                         " to the batch randomly. This determines how many ticks it will try before giving up and " +
