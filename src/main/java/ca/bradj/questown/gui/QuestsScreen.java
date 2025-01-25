@@ -202,10 +202,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private static @NotNull String getVillagerName(String vID) {
-        if (vID.length() <= 8) {
-            return vID;
-        }
-        return vID.substring(0, 4) + "..." + vID.substring(vID.length() - 4, vID.length() - 1);
+        return UtilClean.truncateMiddle(vID);
     }
 
     private void renderRemovalButton(

@@ -244,8 +244,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = null;
 
         boolean canGrowMore = pop.grow(
-                town::hasEnoughBeds, town.getEconomicsHandle()::getNeededRooms, () -> {
-                    List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+                town::hasEnoughBeds, () -> getNeededRooms(town.getEconomicsHandle())
+                        .stream()
+                        .filter(v -> TownQuests.isNotSpecial(v.id()))
+                        .toList(), () -> {
+                    List<RoomRecipe> recipes = level
+                            .getRecipeManager()
+                            .getAllRecipesFor(RecipesInit.ROOM)
+                            .stream()
+                            .filter(v -> TownQuests.isNotSpecial(v.getId()))
+                            .toList();
                     List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }
@@ -281,11 +289,29 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCDelayedReward rw = new MCDelayedReward(town, pr.reward());
             MCQuestBatch q = pop.get(rw, pr.owner());
             questBatches.add(q);
-            QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q);
+            QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());
             return;
         }
 
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
+    }
+
+    private static boolean isNotSpecial(ResourceLocation id) {
+        if (SpecialQuests.FARM.equals(id)) {
+            return true;
+        }
+        if (SpecialQuests.SPECIAL_QUESTS.containsKey(id)) {
+            return false;
+        }
+        return true;
+    }
+
+    private ImmutableList<RoomNeed<ResourceLocation>> getNeededRooms(NoMCEconomics economicsHandle) {
+        ImmutableList.Builder<RoomNeed<ResourceLocation>> b = ImmutableList.builder();
+        for (RoomNeed<String> v : economicsHandle.getAggregatedRooms()) {
+            b.add(new RoomNeed<>(new ResourceLocation(v.id()), v.timesNeeded(), v.timesNeeded()));
+        }
+        return b.build();
     }
 
     public void markQuestAsComplete(
@@ -402,7 +428,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
-        return RoomRecipes.hydrate(town.getServerLevelUnsafe().getRecipeManager());
+        return RoomRecipes.hydrate(town.getServerLevelUnsafe().getRecipeManager(), true);
     }
 
     @Override

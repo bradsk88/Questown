@@ -25,6 +25,8 @@ public abstract class MCReward extends Reward {
         return rType.getRegistryName().toString();
     }
 
+    public abstract String toNiceString();
+
     public static class Serializer {
 
         private static final String NBT_REWARD_TYPE = "reward_type";
@@ -56,6 +58,8 @@ public abstract class MCReward extends Reward {
             return tag;
         }
     }
+
+    public abstract boolean addsQuestsWhenApplied();
 
     protected abstract CompoundTag serializeNbt();
     protected abstract void deserializeNbt(TownInterface entity, CompoundTag tag);

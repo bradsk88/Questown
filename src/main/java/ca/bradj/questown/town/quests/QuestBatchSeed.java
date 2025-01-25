@@ -60,7 +60,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             ServerLevel level,
             MCQuest quest
     ) {
-        Map<ResourceLocation, RoomRecipe> rr = RoomRecipes.hydrate(level.getRecipeManager());
+        Map<ResourceLocation, RoomRecipe> rr = RoomRecipes.hydrate(level.getRecipeManager(), true);
         NonNullList<Ingredient> roomIngredients = rr.get(quest.getWantedId()).getIngredients();
         return roomIngredients.stream().anyMatch(this::isBed);
     }
@@ -109,7 +109,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
     }
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
-        return RoomRecipes.hydrate(level.getRecipeManager());
+        return RoomRecipes.hydrate(level.getRecipeManager(), false);
     }
 
     private static final Map<ResourceLocation, Integer> cachedCosts = new HashMap<>();

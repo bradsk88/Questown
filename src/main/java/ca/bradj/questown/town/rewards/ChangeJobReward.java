@@ -61,6 +61,11 @@ public class ChangeJobReward extends MCReward {
     }
 
     @Override
+    public boolean addsQuestsWhenApplied() {
+        return false;
+    }
+
+    @Override
     protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
@@ -83,5 +88,10 @@ public class ChangeJobReward extends MCReward {
 
     public String getJobName() {
         return jobName;
+    }
+
+    @Override
+    public String toNiceString() {
+        return "ChangeJob:"+jobName;
     }
 }

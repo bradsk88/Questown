@@ -1,5 +1,6 @@
 package ca.bradj.questown.commands;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
@@ -12,12 +13,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 public class LogDataCommand {
     public static void register(CommandDispatcher<CommandSourceStack> p_137808_) {
         p_137808_.register(Commands.literal("qt_data_log")
-                .requires((p_137812_) -> {
-                    return p_137812_.hasPermission(2);
-                })
-                .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(css -> {
-                            return run(css.getSource(), BlockPosArgument.getLoadedBlockPos(css, "pos"));
-                        })));
+                                   .requires((p_137812_) -> {
+                                       return p_137812_.hasPermission(2);
+                                   })
+                                   .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(css -> {
+                                       return run(css.getSource(), BlockPosArgument.getLoadedBlockPos(css, "pos"));
+                                   })));
     }
 
     private static int run(
@@ -34,6 +35,8 @@ public class LogDataCommand {
         tfbe.writeTownData(tTag);
 
         TownFlagBlockEntity.logStoredData(tfbe, tTag);
+
+        QT.FLAG_LOGGER.info("NeededRooms: {}", tfbe.getEconomicsHandle().getAggregatedRooms());
         return 0;
     }
 }

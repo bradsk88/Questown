@@ -42,6 +42,11 @@ public class MCDelayedReward extends MCReward implements MCRewardContainer {
         this.town = town;
     }
 
+    @Override
+    public boolean addsQuestsWhenApplied() {
+        return child.addsQuestsWhenApplied();
+    }
+
     public CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         tag.put(NBT_CHILD, MCReward.SERIALIZER.serializeNBT(child));
@@ -68,5 +73,10 @@ public class MCDelayedReward extends MCReward implements MCRewardContainer {
         return "MCDelayedReward{" +
                 "child=" + child +
                 '}';
+    }
+
+    @Override
+    public String toNiceString() {
+        return "InMorning{" + child.toNiceString() + "}";
     }
 }

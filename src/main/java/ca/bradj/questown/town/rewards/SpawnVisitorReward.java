@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
@@ -90,6 +91,11 @@ public class SpawnVisitorReward extends MCReward {
     }
 
     @Override
+    public boolean addsQuestsWhenApplied() {
+        return false;
+    }
+
+    @Override
     protected CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         if (this.visitorUUID != null) {
@@ -106,5 +112,10 @@ public class SpawnVisitorReward extends MCReward {
         if (tag.contains(NBT_VISITOR_UUID)) {
             this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
         }
+    }
+
+    @Override
+    public String toNiceString() {
+        return "SpawnNewVillager[" + UtilClean.truncateMiddle(visitorUUID.toString()) + "]";
     }
 }

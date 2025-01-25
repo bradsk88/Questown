@@ -272,8 +272,8 @@ public class TownVillagerHandle implements VillagerHolder {
                 },
                 OpenVillagerMenuMessage.ECONOMICS,
                 () -> {
-                    TownEconomics tEcon = flag.getEconomicsHandle();
-                    ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregated(villagerId);
+                    NoMCEconomics tEcon = flag.getEconomicsHandle();
+                    ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(villagerId);
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> sender),
                             new EconomicsUpdate(aggregated)

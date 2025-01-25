@@ -62,7 +62,7 @@ public class TownFlagMenus {
                 () -> {
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> sender),
-                            new EconomicsUpdate(flag.getEconomicsHandle().getAggregated(null))
+                            new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null))
                     );
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(

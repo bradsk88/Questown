@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.gui.ItemEconomicsData;
+import ca.bradj.questown.town.quests.RoomNeed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
@@ -16,12 +17,12 @@ class TownEconomicsTest {
 
     @Test
     void aggregateForUIShouldHandleSimpleList() {
-        ImmutableList<TownEconomics.UnmetNeed> data = ImmutableList.of(
-                new TownEconomics.UnmetNeed(1, UUID1, "books"),
-                new TownEconomics.UnmetNeed(2, UUID1, "food"),
-                new TownEconomics.UnmetNeed(3, UUID1, "books")
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of(
+                new NoMCEconomics.UnmetNeed(1, UUID1, "books"),
+                new NoMCEconomics.UnmetNeed(2, UUID1, "food"),
+                new NoMCEconomics.UnmetNeed(3, UUID1, "books")
         );
-        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = TownEconomics.aggregateForUI(data);
+        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = NoMCEconomics.aggregateForUI(data);
         ImmutableList<ItemEconomicsData> vList = out.get(UUID1);
         assertNotNull(vList);
         assertEquals(2, vList.size());
@@ -31,14 +32,14 @@ class TownEconomicsTest {
 
     @Test
     void aggregateForUIShouldHandleSimpleMultiVillagerList() {
-        ImmutableList<TownEconomics.UnmetNeed> data = ImmutableList.of(
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of(
                 // Villager 1
-                new TownEconomics.UnmetNeed(1, UUID1, "books"),
-                new TownEconomics.UnmetNeed(2, UUID1, "food"),
+                new NoMCEconomics.UnmetNeed(1, UUID1, "books"),
+                new NoMCEconomics.UnmetNeed(2, UUID1, "food"),
                 // Villager 2
-                new TownEconomics.UnmetNeed(3, UUID2, "books")
+                new NoMCEconomics.UnmetNeed(3, UUID2, "books")
         );
-        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = TownEconomics.aggregateForUI(data);
+        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = NoMCEconomics.aggregateForUI(data);
 
         ImmutableList<ItemEconomicsData> vList = out.get(UUID1);
         assertNotNull(vList);
@@ -54,8 +55,44 @@ class TownEconomicsTest {
 
     @Test
     void aggregateForUIShouldHandleEmptyList() {
-        ImmutableList<TownEconomics.UnmetNeed> data = ImmutableList.of();
-        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = TownEconomics.aggregateForUI(data);
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of();
+        ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> out = NoMCEconomics.aggregateForUI(data);
         assertEquals(0, out.size());
+    }
+
+    @Test
+    void getMostNeededRoomsShouldHandleEmptyList() {
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of(
+        );
+        ImmutableList<RoomNeed<String>> out = NoMCEconomics.aggregateRooms(data);
+        assertEquals(0, out.size());
+    }
+
+    @Test
+    void getMostNeededRoomsShouldHandleSimpleSingleVillagerList() {
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of(
+                new NoMCEconomics.UnmetNeed(1, UUID1, "library"),
+                new NoMCEconomics.UnmetNeed(2, UUID1, "diner"),
+                new NoMCEconomics.UnmetNeed(3, UUID1, "library")
+        );
+        ImmutableList<RoomNeed<String>> out = NoMCEconomics.aggregateRooms(data);
+        assertEquals(2, out.size());
+        assertTrue(out.contains(new RoomNeed<>("library", 2, 1)));
+        assertTrue(out.contains(new RoomNeed<>("diner", 1, 1)));
+    }
+
+    @Test
+    void getMostNeededRoomsShouldHandleSimpleMultiVillagerList() {
+        ImmutableList<NoMCEconomics.UnmetNeed> data = ImmutableList.of(
+                // Villager 1
+                new NoMCEconomics.UnmetNeed(1, UUID1, "library"),
+                new NoMCEconomics.UnmetNeed(2, UUID1, "diner"),
+                // Villager 2
+                new NoMCEconomics.UnmetNeed(3, UUID2, "library")
+        );
+        ImmutableList<RoomNeed<String>> out = NoMCEconomics.aggregateRooms(data);
+        assertEquals(2, out.size());
+        assertTrue(out.contains(new RoomNeed<>("library", 2, 2)));
+        assertTrue(out.contains(new RoomNeed<>("diner", 1, 1)));
     }
 }

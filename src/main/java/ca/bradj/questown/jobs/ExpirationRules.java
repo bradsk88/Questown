@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.Config;
+
 import javax.annotation.Nullable;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -31,10 +33,15 @@ public class ExpirationRules {
 
     public static ExpirationRules never() {
         return new ExpirationRules(
-                () -> Long.MAX_VALUE,
-                () -> Long.MAX_VALUE,
+                // "Giving up" is important for town data. For example, it helps
+                // us calculate which rooms are needed but not found. These
+                // rules will just fall back to original job, so it will
+                // effectively keep doing this job forever - even though it
+                // does technically "expire".
+                Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES::get,
+                Config.MAX_TICKS_WITHOUT_SUPPLIES::get,
                 jobID -> jobID,
-                () -> Long.MAX_VALUE,
+                () -> 3000L,
                 jobID -> jobID
         );
     }

@@ -7,14 +7,12 @@ import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @SuppressWarnings("UnstableApiUsage")
-public class TownEconomics {
+public class NoMCEconomics {
 
     // TODO[ASAP]: Validate need record size
     private final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(100);
@@ -22,6 +20,7 @@ public class TownEconomics {
     private boolean needAggregate;
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
+    private ImmutableList<RoomNeed<String>> roomsAll = ImmutableList.of();
 
     public static ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> aggregateForUI(
             Collection<UnmetNeed> unmetNeedsRecord
@@ -40,6 +39,22 @@ public class TownEconomics {
             b.put(villagerMap.getKey(), b2.build());
         }
         return b.build();
+    }
+
+    public static ImmutableList<RoomNeed<String>> aggregateRooms(Collection<UnmetNeed> data) {
+        Map<UUID, Map<String, Integer>> map = generateCounts(data);
+        Map<String, RoomNeed<String>> needsOut = new HashMap<>();
+        for (Map.Entry<UUID, Map<String, Integer>> villagerMap : map.entrySet()) {
+            for (Map.Entry<String, Integer> reqMap : villagerMap.getValue().entrySet()) {
+                String k = reqMap.getKey();
+                RoomNeed<String> current = UtilClean.getOrDefault(needsOut, k, new RoomNeed<>(k, 0, 0));
+                RoomNeed<String> newVal = current
+                        .withVillagers(current.villagersWhoNeed() + 1)
+                        .withTimes(current.timesNeeded() + reqMap.getValue());
+                needsOut.put(k, newVal);
+            }
+        }
+        return ImmutableList.copyOf(needsOut.values());
     }
 
     private static @NotNull Map<UUID, Map<String, Integer>> generateCounts(Collection<UnmetNeed> unmetNeedsRecord) {
@@ -65,6 +80,11 @@ public class TownEconomics {
             return;
         }
         this.aggregated = aggregateForUI(unmetNeedsRecord);
+        this.aggregatedAll = buildOverallData();
+        this.roomsAll = aggregateRooms(unmetRoomsRecord);
+    }
+
+    private @Nullable ImmutableList<ItemEconomicsData> buildOverallData() {
         HashMap<String, Integer> b = new HashMap<>();
         for (ImmutableList<ItemEconomicsData> v : aggregated.values()) {
             for (ItemEconomicsData i : v) {
@@ -78,7 +98,8 @@ public class TownEconomics {
         Map<UUID, ImmutableList<ItemEconomicsData>> x = aggregateCounts(
                 ImmutableMap.of(standIn, b)
         );
-        this.aggregatedAll = x.get(standIn);
+        ImmutableList<ItemEconomicsData> aggregatedAll1 = x.get(standIn);
+        return aggregatedAll1;
     }
 
     public void registerUnmetNeed(
@@ -89,6 +110,7 @@ public class TownEconomics {
         unmetNeedsRecord.add(new UnmetNeed(tick, villagerId, requested));
         this.needAggregate = true;
     }
+
     public void registerUnmetRoom(
             long tick,
             UUID villagerId,
@@ -98,11 +120,27 @@ public class TownEconomics {
         this.needAggregate = true;
     }
 
-    public ImmutableList<ItemEconomicsData> getAggregated(UUID villagerId) {
-        ImmutableList<ItemEconomicsData> l = aggregatedAll;
+    public ImmutableList<ItemEconomicsData> getAggregatedItems(UUID villagerId) {
+        return getAggregated(aggregatedAll, aggregated, villagerId);
+    }
+
+    public Collection<RoomNeed<String>> getAggregatedRooms() {
+        return roomsAll;
+    }
+
+    public interface Needable {
+        int timesNeeded();
+    }
+
+    private static <S extends Needable> ImmutableList<S> getAggregated(
+            List<S> all,
+            Map<UUID, ? extends List<S>> allSplitByVillager,
+            UUID villagerId
+    ) {
+        List<S> l = all;
         if (villagerId != null) {
             l = UtilClean.getOrDefaultCollection(
-                    aggregated,
+                    allSplitByVillager,
                     villagerId,
                     ImmutableList.of()
             );
@@ -110,11 +148,6 @@ public class TownEconomics {
         return ImmutableList.copyOf(
                 l.stream().sorted((a, b) -> Integer.compare(b.timesNeeded(), a.timesNeeded())).toList()
         );
-    }
-
-    public Collection<RoomNeed<String>> getNeededRooms() {
-        // FIXME: Implement
-        return ImmutableList.of();
     }
 
     public record UnmetNeed(

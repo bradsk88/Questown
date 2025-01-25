@@ -40,6 +40,11 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
         this.town = town;
     }
 
+    @Override
+    public boolean addsQuestsWhenApplied() {
+        return child.addsQuestsWhenApplied();
+    }
+
     public CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         tag.put(NBT_CHILD, MCReward.SERIALIZER.serializeNBT(child));
@@ -59,5 +64,10 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
     @Override
     public Collection<MCReward> getContainedRewards() {
         return ImmutableList.of(child);
+    }
+
+    @Override
+    public String toNiceString() {
+        return "Instantly{" + child.toNiceString() + "}";
     }
 }

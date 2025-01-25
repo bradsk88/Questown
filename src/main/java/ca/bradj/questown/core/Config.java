@@ -135,7 +135,7 @@ public class Config {
         ).define("DefaultItemWeight", 100);
         MIN_WEIGHT_PER_QUEST_BATCH = BUILDER.comment(
                 "Minimum weight of quests in a batch. Quests are weighted by the items in the room. See questown-item-weights-server.toml"
-        ).defineInRange("MinWeightPerQuestBatch", 100, 0, 500);
+        ).defineInRange("MinWeightPerQuestBatchV2", 50, 0, 500);
         QUEST_BATCH_VILLAGER_BOOST_FACTOR = BUILDER.comment(
                 "The minimum weight for a quest batch includes this factor, which is multiplied by the number of villagers. This causes a village to have an exponential difficulty curve as it grows."
         ).defineInRange("QuestBatchVillagerBoostFactor", 100, 0, 500);

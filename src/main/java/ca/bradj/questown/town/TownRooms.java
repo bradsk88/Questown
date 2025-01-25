@@ -126,7 +126,7 @@ public class TownRooms implements
 
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
-        return RoomRecipes.hydrate(entitySupplier.get().getServerLevel().getRecipeManager());
+        return RoomRecipes.hydrate(entitySupplier.get().getServerLevel().getRecipeManager(), true);
     }
 
     protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipes(

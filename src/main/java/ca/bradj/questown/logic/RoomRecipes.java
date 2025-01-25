@@ -46,7 +46,10 @@ public class RoomRecipes {
         return b.build();
     }
 
-    public static Optional<RoomRecipe> getById(Level level, ResourceLocation id) {
+    public static Optional<RoomRecipe> getById(
+            Level level,
+            ResourceLocation id
+    ) {
         List<RoomRecipe> recipes = getAllRecipes(level);
         for (RoomRecipe r : recipes) {
             if (id.equals(r.getId())) {
@@ -70,17 +73,27 @@ public class RoomRecipes {
 
     public static Component getName(Optional<ResourceLocation> recipe) {
         return recipe.map(RoomRecipes::getName)
-                .orElseGet(() -> new TranslatableComponent("room.no_recipe"));
+                     .orElseGet(() -> new TranslatableComponent("room.no_recipe"));
     }
 
-    public static Map<ResourceLocation, RoomRecipe> hydrate(RecipeManager recipes) {
+    public static Map<ResourceLocation, RoomRecipe> hydrate(
+            RecipeManager recipes,
+            boolean includeSpecial
+    ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
-        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        if (includeSpecial) {
+            SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        } else {
+            rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
+        }
         recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         return rMapB.build();
     }
 
-    public static int getRecipeWeight(RoomRecipe recipe, int stopAt) {
+    public static int getRecipeWeight(
+            RoomRecipe recipe,
+            int stopAt
+    ) {
         Config allWeights = RecipeItemConfig.itemWeights.get();
         int weight = 0;
         for (Ingredient in : recipe.getIngredients()) {

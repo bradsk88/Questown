@@ -109,7 +109,7 @@ class QuestGardenTest {
         );
         Assertions.assertTrue(qg.grow(
                 () -> true,
-                () -> ImmutableList.of(new RoomNeed<>("baker", 1)),
+                () -> ImmutableList.of(new RoomNeed<>("baker", 1, 1)),
                 () -> {
                     Assertions.fail("Test should not access recipes");
                     return null;
@@ -137,8 +137,8 @@ class QuestGardenTest {
         Assertions.assertTrue(qg.grow(
                 () -> true,
                 () -> ImmutableList.of(
-                        new RoomNeed<>("baker", 1),
-                        new RoomNeed<>("mineshaft", 1)
+                        new RoomNeed<>("baker", 1, 1),
+                        new RoomNeed<>("mineshaft", 1, 1)
                 ),
                 () -> {
                     Assertions.fail("Test should not access recipes");

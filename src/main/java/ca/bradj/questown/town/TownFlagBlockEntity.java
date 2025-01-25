@@ -94,22 +94,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
     private boolean isMorning = false;
-    private final TownEconomics economics = new TownEconomics();
+    private final NoMCEconomics economics = new NoMCEconomics();
+    private int ticksWithoutQuests;
 
     public static void logStoredData(
             TownFlagBlockEntity entity,
             CompoundTag tTag
     ) {
         List<String> qss = entity.getAllQuests().stream().map(Quest::toShortString).toList();
-        QT.FLAG_LOGGER.debug("Town UUID: {}", entity.getUUID());
-        QT.FLAG_LOGGER.debug("Quests:\n{}", Strings.join(qss, '\n'));
-        QT.FLAG_LOGGER.debug("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
-        QT.FLAG_LOGGER.debug("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
-        QT.FLAG_LOGGER.debug("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(x -> true), '\n'));
+        QT.FLAG_LOGGER.info("Town UUID: {}", entity.getUUID());
+        QT.FLAG_LOGGER.info("Quests:\n{}", Strings.join(qss, '\n'));
+        QT.FLAG_LOGGER.info("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
+        QT.FLAG_LOGGER.info("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
+        QT.FLAG_LOGGER.info("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(x -> true), '\n'));
 
         String prettyJsonString = new GsonBuilder().setPrettyPrinting().create()
                                                    .toJson(JsonParser.parseString(tTag.toString()));
-        QT.FLAG_LOGGER.debug("NBT: {}", prettyJsonString);
+        QT.FLAG_LOGGER.info("NBT: {}", prettyJsonString);
     }
 
     public TownKnownBiomes getBiomesHandle() {
@@ -120,7 +121,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return healing;
     }
 
-    public TownEconomics getEconomicsHandle() {
+    public NoMCEconomics getEconomicsHandle() {
         return economics;
     }
 
@@ -264,6 +265,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
+        e.villagerHandle.entities().stream().findFirst().filter(v -> isMissingQuests(e)).ifPresent(v -> {
+            if (e.ticksWithoutQuests < 500) {
+                e.ticksWithoutQuests++;
+                return;
+            }
+
+            QT.FLAG_LOGGER.warn("No quests found. This is a bug. Adding a batch for {}", v.getUUID());
+            e.addBatchOfRandomQuestsForVisitor(e.uuid);
+            e.setChanged();
+            e.ticksWithoutQuests = 0;
+        });
+
         Player nearestPlayer = level.getNearestPlayer(
                 blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
         if (nearestPlayer == null) {
@@ -369,6 +382,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         e.everScanned = true;
 
         profileTick(e, start);
+    }
+
+    private static boolean isMissingQuests(TownFlagBlockEntity e) {
+        if (e.questsHandle.getAllQuestsWithRewards().size() > 1) {
+            return false;
+        }
+        if (e.morningRewards.children.stream().anyMatch(MCReward::addsQuestsWhenApplied)) {
+            return false;
+        }
+        return true;
     }
 
     private void morningTick(Long newTime) {
@@ -686,7 +709,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
-        return RoomRecipes.hydrate(getServerLevel().getRecipeManager());
+        return RoomRecipes.hydrate(getServerLevel().getRecipeManager(), true);
     }
 
     private void swapBlocks(

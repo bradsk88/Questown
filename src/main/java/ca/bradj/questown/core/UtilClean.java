@@ -2,6 +2,7 @@ package ca.bradj.questown.core;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Function;
@@ -41,6 +42,13 @@ public class UtilClean {
             int height
     ) {
         return mouseX >= leftX && mouseY >= topY && mouseX < leftX + width && mouseY < topY + height;
+    }
+
+    public static @NotNull String truncateMiddle(String vID) {
+        if (vID.length() <= 8) {
+            return vID;
+        }
+        return vID.substring(0, 4) + "..." + vID.substring(vID.length() - 4, vID.length() - 1);
     }
 
     public record Pair<A, B>(A a, B b){

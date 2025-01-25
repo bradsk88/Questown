@@ -54,6 +54,11 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
     }
 
     @Override
+    public boolean addsQuestsWhenApplied() {
+        return children.stream().anyMatch(MCReward::addsQuestsWhenApplied);
+    }
+
+    @Override
     protected CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
         ListTag cs = new ListTag();
@@ -99,6 +104,14 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
         return "MCRewardList{" +
                 // Log4J doesn't like when this contains newlines
                 "children=" + String.join(", ", children.stream().map(Object::toString).toList()) +
+                '}';
+    }
+
+    @Override
+    public String toNiceString() {
+        return "MCRewardList{" +
+                // Log4J doesn't like when this contains newlines
+                "children=" + String.join(", ", children.stream().map(MCReward::toNiceString).toList()) +
                 '}';
     }
 }

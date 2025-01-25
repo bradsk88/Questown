@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.rewards;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
@@ -40,6 +41,11 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     }
 
     @Override
+    public boolean addsQuestsWhenApplied() {
+        return true;
+    }
+
+    @Override
     protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         if (this.visitorUUID != null) {
@@ -64,5 +70,11 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
                 "town=" + town.getUUID() +
                 ", visitorUUID=" + visitorUUID +
                 '}';
+    }
+
+    @Override
+    public String toNiceString() {
+        String vid = visitorUUID == null ? "unowned" : visitorUUID.toString();
+        return "AddRandomQuestBatch[" + UtilClean.truncateMiddle(vid) + "]";
     }
 }

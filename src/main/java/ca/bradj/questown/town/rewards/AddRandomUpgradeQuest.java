@@ -43,6 +43,11 @@ public class AddRandomUpgradeQuest extends MCReward {
     }
 
     @Override
+    public boolean addsQuestsWhenApplied() {
+        return true;
+    }
+
+    @Override
     protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
@@ -57,5 +62,10 @@ public class AddRandomUpgradeQuest extends MCReward {
         if (tag.contains(NBT_VISITOR_UUID)) {
             this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
         }
+    }
+
+    @Override
+    public String toNiceString() {
+        return "AddRandomUpgradeQuest";
     }
 }

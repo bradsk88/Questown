@@ -5,6 +5,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import joptsimple.internal.Strings;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -71,6 +72,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     public void assignTo(@NotNull UUID owner) {
         this.owner = owner;
         super.assignTo(owner);
+    }
+
+    public String toNiceString() {
+        return String.format("%s from [%s]", reward.toNiceString(), Strings.join(
+                this.getAll().stream().map(Quest::toShortString).toList(), ","
+        ));
     }
 
     public static class Serializer {
