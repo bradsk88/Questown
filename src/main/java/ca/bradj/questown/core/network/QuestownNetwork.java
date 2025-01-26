@@ -131,6 +131,12 @@ public class QuestownNetwork {
                         decoder(EconomicsUpdate::decode),
                 EconomicsUpdate::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(WorkRequestConfirmMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(WorkRequestConfirmMessage::encode).
+                        decoder(WorkRequestConfirmMessage::decode),
+                WorkRequestConfirmMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(

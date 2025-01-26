@@ -82,7 +82,20 @@ public class NewLeaverWork {
                 ),
                 new WorkWorldInteractions(
                         0,
-                        resultGenerator
+                        new ResultGenerator<>() {
+                            @Override
+                            public Iterable<MCHeldItem> generate(
+                                    ServerLevel level,
+                                    Collection<MCHeldItem> heldItems
+                            ) {
+                                return resultGenerator.apply(level, heldItems);
+                            }
+
+                            @Override
+                            public boolean isResultAlwaysEmpty() {
+                                return false;
+                            }
+                        }
                 ),
                 new WorkSpecialRules(
                         specialRules,

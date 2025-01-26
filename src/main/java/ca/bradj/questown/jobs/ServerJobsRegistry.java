@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
@@ -112,13 +113,37 @@ public class ServerJobsRegistry {
         return work.jobFunc.apply(villagerUUID);
     }
 
-    private record SpecialJob(
-            Predicate<JobID> idTest,
-            BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
-            TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
-            TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest,
-            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
+    public static ImmutableMap<JobID, ResourceLocation> getAllJobsThatProduce(
+            WorksBehaviour.TownData data,
+            Ingredient wantedResult
     ) {
+        ImmutableMap.Builder<JobID, ResourceLocation> b = ImmutableMap.builder();
+        for (Supplier<Work> value : Works.values()) {
+            Work w = value.get();
+            if (w.hasNoOutput()) {
+                continue;
+            }
+            ResourceLocation name = w.icon.getItem().getRegistryName();
+            if (wantedResult.test(w.initialRequest)) {
+                b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
+                continue;
+            }
+            ImmutableSet<MCTownItem> wResults = w.results.apply(data);
+            for (MCTownItem wr : wResults) {
+                if (wantedResult.test(wr.toItemStack())) {
+                    b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
+                    break;
+                }
+            }
+        }
+        return b.build();
+    }
+
+    private record SpecialJob(Predicate<JobID> idTest,
+                              BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
+                              TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
+                              TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest,
+                              BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs) {
 
         static SpecialJob fromWork(
                 Predicate<JobID> idTest,
@@ -197,9 +222,7 @@ public class ServerJobsRegistry {
     }
 
     public static Set<JobID> getAllJobs() {
-        return Works.ids().stream()
-                    .filter(v -> !isSeekingWork(v))
-                    .collect(Collectors.toSet());
+        return Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet());
     }
 
     public static ResourceLocation getRoomForJobRootId(
@@ -214,10 +237,8 @@ public class ServerJobsRegistry {
             ServerLevel rand,
             String rootId
     ) {
-        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
-                                                        .stream()
-                                                        .filter(v -> v.getKey().rootId().equals(rootId))
-                                                        .toList();
+        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId).stream()
+                                                        .filter(v -> v.getKey().rootId().equals(rootId)).toList();
         Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
         return work;
     }
@@ -344,8 +365,7 @@ public class ServerJobsRegistry {
     }
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
-        List<Ingredient> list = Works.values().stream()
-                                     .map(v -> {
+        List<Ingredient> list = Works.values().stream().map(v -> {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
                                          work.results.apply(t).forEach(z -> b.add(z.toItemStack()));
@@ -353,15 +373,8 @@ public class ServerJobsRegistry {
                                              b.add(work.initialRequest);
                                          }
                                          return b.build();
-                                     })
-                                     .flatMap(Collection::stream)
-                                     .map(Ingredient::of)
-                                     .filter(v -> !v.isEmpty())
-                                     .map(Ingredients::asWorkRequest)
-                                     .collect(Collectors.toSet())
-                                     .stream()
-                                     .map(WorkRequest::asIngredient)
-                                     .toList();
+                                     }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
+                                     .collect(Collectors.toSet()).stream().map(WorkRequest::asIngredient).toList();
         return ImmutableSet.copyOf(list);
     }
 
@@ -375,19 +388,14 @@ public class ServerJobsRegistry {
             Signals.DayTime currentTick
     ) {
         Work w = Works.get(p).get();
-        long jobDuration = w.jobFunc
-                .apply(villagerID)
-                .getTotalDuration();
+        long jobDuration = w.jobFunc.apply(villagerID).getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
         Signals currentSegment = Signals.fromDayTime(currentTick);
         if (nextSegment.compareTo(currentSegment) < 0) {
             return false;
         }
-        return ImmutableList.of(
-                Signals.MORNING,
-                Signals.NOON
-        ).contains(nextSegment);
+        return ImmutableList.of(Signals.MORNING, Signals.NOON).contains(nextSegment);
     }
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {
@@ -407,28 +415,17 @@ public class ServerJobsRegistry {
         });
 
         ps.forEach((rootId, w) -> {
-            b.put(
-                    rootId, new Jerb(
-                            w.stream().map(x -> x.id).toList(),
-                            ImmutableList.of()
-                    )
-            );
+            b.put(rootId, new Jerb(w.stream().map(x -> x.id).toList(), ImmutableList.of()));
         });
         jobs = b.build();
     }
 
-    private record Jerb(
-            ImmutableList<JobID> preferredWork,
-            ImmutableList<JobID> defaultWork
-    ) {
+    private record Jerb(ImmutableList<JobID> preferredWork, ImmutableList<JobID> defaultWork) {
         public Jerb(
                 List<JobID> preferredWork,
                 List<JobID> defaultWork
         ) {
-            this(
-                    ImmutableList.copyOf(preferredWork),
-                    ImmutableList.copyOf(defaultWork)
-            );
+            this(ImmutableList.copyOf(preferredWork), ImmutableList.copyOf(defaultWork));
         }
     }
 

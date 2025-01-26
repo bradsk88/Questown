@@ -17,7 +17,10 @@ public record RemoveWorkFromUIMessage(
         int flagX, int flagY, int flagZ
 ) {
 
-    public static void encode(RemoveWorkFromUIMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(
+            RemoveWorkFromUIMessage msg,
+            FriendlyByteBuf buffer
+    ) {
         msg.requested.toNetwork(buffer);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
@@ -42,13 +45,16 @@ public record RemoveWorkFromUIMessage(
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
             Optional<TownFlagBlockEntity> flag = sender.getLevel()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
+                                                       .getBlockEntity(
+                                                               new BlockPos(flagX, flagY, flagZ),
+                                                               TilesInit.TOWN_FLAG.get()
+                                                       );
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Work will not be added.", flagX, flagY, flagZ);
                 return;
             }
             flag.get().getWorkHandle().removeWorkRequest(requested);
-            flag.get().openJobsMenu(sender);
+            flag.get().openJobsMenu(sender, false);
         });
         ctx.get().setPacketHandled(true);
 

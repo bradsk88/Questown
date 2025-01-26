@@ -40,6 +40,7 @@ public class Questown {
     public static final Logger LOGGER = QT.LOGGER;
     public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
+    public static ResourceLocation ResourceLocationError = ResourceLocation("error");
 
     public Questown() {
         // Register the setup method for modloading

@@ -14,6 +14,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.INQUIRED;
+
 public class AddWorkContainer extends AbstractContainerMenu {
 
     private final Collection<Ingredient> work;
@@ -31,14 +33,14 @@ public class AddWorkContainer extends AbstractContainerMenu {
 
     public static Collection<Ingredient> readWorkResults(FriendlyByteBuf data) {
         int size = data.readInt();
-        ArrayList<Ingredient> r = data.readCollection(
-                c -> new ArrayList<>(size),
-                Ingredient::fromNetwork
-        );
+        ArrayList<Ingredient> r = data.readCollection(c -> new ArrayList<>(size), Ingredient::fromNetwork);
         return r;
     }
 
-    public static void writeWorkResults(ImmutableCollection<Ingredient> allOutputs, FriendlyByteBuf data) {
+    public static void writeWorkResults(
+            ImmutableCollection<Ingredient> allOutputs,
+            FriendlyByteBuf data
+    ) {
         data.writeInt(allOutputs.size());
         data.writeCollection(allOutputs, (v, i) -> i.toNetwork(v));
     }
@@ -64,8 +66,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
     }
 
     public void sendRequest(ItemStack item) {
-        QuestownNetwork.CHANNEL.sendToServer(
-                new AddWorkFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ())
-        );
+        AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ(), INQUIRED);
+        QuestownNetwork.CHANNEL.sendToServer(msg);
     }
 }

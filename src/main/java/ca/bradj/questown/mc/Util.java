@@ -428,4 +428,11 @@ public class Util {
                 faceWidth * scale
         );
     }
+
+    public static <X> X ifNull(
+            @Nullable X input,
+            X fallback
+    ) {
+        return input == null ? fallback : input;
+    }
 }

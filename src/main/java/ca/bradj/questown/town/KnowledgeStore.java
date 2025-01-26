@@ -6,14 +6,14 @@ import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.town.interfaces.KnowledgeHolder;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.function.TriFunction;
 
 import java.util.*;
 import java.util.function.Function;
 
-public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OUT extends Item<?>> implements KnowledgeHolder<BIOME, ITEM_IN, ITEM_OUT> {
+public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OUT extends Item<?>> implements
+        KnowledgeHolder<BIOME, ITEM_IN, ITEM_OUT> {
 
 
     private final ImmutableSet<ITEM_OUT> baseKnowledge;
@@ -37,22 +37,20 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
 
     @Override
     public ImmutableSet<ITEM_OUT> getAllKnownGatherResults(
-            Collection<BIOME> mapBiomes, GathererTools.LootTablePrefix ltPrefix
+            Collection<BIOME> mapBiomes,
+            GathererTools.LootTablePrefix ltPrefix
     ) {
         ImmutableSet.Builder<ITEM_OUT> b = ImmutableSet.builder();
         b.addAll(baseKnowledge);
 
-        ImmutableList.Builder<Map<GathererTools.LootTablePrefix, ImmutableSet<ITEM_OUT>>> vb = ImmutableList.builder();
-        knownGatherResults.forEach((k, v) -> {
-            if (mapBiomes.contains(k)) {
-                vb.add(v);
+        for (Map.Entry<BIOME, ? extends Map<?, ImmutableSet<ITEM_OUT>>> e : knownGatherResults.entrySet()) {
+            if (!mapBiomes.contains(e.getKey())) {
+                continue;
             }
-        });
-
-        vb.build()
-                .stream()
-                .flatMap(v -> v.getOrDefault(ltPrefix, ImmutableSet.of()).stream())
-                .forEach(b::add);
+            for (Map.Entry<?, ImmutableSet<ITEM_OUT>> e2 : e.getValue().entrySet()) {
+                b.addAll(e2.getValue());
+            }
+        }
         return b.build();
     }
 

@@ -104,6 +104,9 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         this.nextPage.y = pageStringY;
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
+        if (getMenu().skipToAdd()) {
+            addMoreWork();;
+        }
     }
 
 

@@ -6,7 +6,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -18,12 +17,15 @@ public record ChangeVillagerJobMessage(
         int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce
 ) {
 
-    public static void encode(ChangeVillagerJobMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(
+            ChangeVillagerJobMessage msg,
+            FriendlyByteBuf buffer
+    ) {
         buffer.writeInt(msg.flagX());
         buffer.writeInt(msg.flagY());
         buffer.writeInt(msg.flagZ());
         buffer.writeUUID(msg.villagerUUID());
-        buffer.writeResourceLocation(msg.newJob().id());
+        NetworkCompat.toNetwork(buffer, msg.newJob());
         buffer.writeBoolean(msg.announce());
     }
 
@@ -32,9 +34,9 @@ public record ChangeVillagerJobMessage(
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
         UUID id = buffer.readUUID();
-        ResourceLocation resourceLocation = buffer.readResourceLocation();
+        JobID job = NetworkCompat.fromNetworkJobID(buffer);
         boolean announce1 = buffer.readBoolean();
-        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, JobID.fromRL(resourceLocation), announce1);
+        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, job, announce1);
     }
 
 
@@ -46,7 +48,10 @@ public record ChangeVillagerJobMessage(
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
             Optional<TownFlagBlockEntity> flag = sender.getLevel()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
+                                                       .getBlockEntity(
+                                                               new BlockPos(flagX, flagY, flagZ),
+                                                               TilesInit.TOWN_FLAG.get()
+                                                       );
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;

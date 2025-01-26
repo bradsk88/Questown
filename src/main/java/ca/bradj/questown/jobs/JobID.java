@@ -1,7 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -43,17 +41,6 @@ public record JobID(
         return Objects.hash(rootId, jobId);
     }
 
-    public ResourceLocation id() {
-        return Questown.ResourceLocation("jobs/%s/%s", rootId, jobId);
-    }
-
-    public static JobID fromRL(ResourceLocation resourceLocation) {
-        if (!resourceLocation.toString().startsWith("questown:jobs/")) {
-            throw new IllegalArgumentException("Invalid ResourceLocation for JobID: " + resourceLocation);
-        }
-        String[] parts = resourceLocation.toString().split("/");
-        return new JobID(parts[1], parts[2]);
-    }
 
     public String toNiceString() {
         return String.format("%s:%s", rootId, jobId);
@@ -62,4 +49,5 @@ public record JobID(
     public boolean sameRoot(JobID other) {
         return rootId.equals(other.rootId);
     }
+
 }

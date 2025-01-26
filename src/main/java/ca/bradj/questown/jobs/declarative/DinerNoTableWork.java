@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -80,7 +81,20 @@ public class DinerNoTableWork {
                 ),
                 new WorkWorldInteractions(
                         PAUSE_FOR_ACTION,
-                        (lvl, hand) -> MCHeldItem.fromMCItemStacks(RESULTS)
+                        new ResultGenerator<>() {
+                            @Override
+                            public Iterable<MCHeldItem> generate(
+                                    ServerLevel level,
+                                    Collection<MCHeldItem> heldItems
+                            ) {
+                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                            }
+
+                            @Override
+                            public boolean isResultAlwaysEmpty() {
+                                return true;
+                            }
+                        }
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(), // No stage rules

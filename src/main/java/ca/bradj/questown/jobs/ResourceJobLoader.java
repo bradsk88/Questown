@@ -325,7 +325,7 @@ public class ResourceJobLoader {
             }
             JsonObject rizz = object.get("result").getAsJsonObject();
             String type = rizz.get("type").getAsString();
-            BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> g = switch (type) {
+            ResultGenerator<MCHeldItem> g = switch (type) {
                 case "item" -> itemResult(object, rizz);
                 case "biome_loot" -> biomeLootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
@@ -359,6 +359,7 @@ public class ResourceJobLoader {
     ) {
         String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
         GathererTools.LootTablePrefix lootTablePrefix = new GathererTools.LootTablePrefix(resultPrefix);
+        // TODO: Validate that the initial request is present in the loot table
         return new WorkDescription(
                 t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
                 initReq == null ? null : initReq.getDefaultInstance()
@@ -402,83 +403,120 @@ public class ResourceJobLoader {
         return productionStatus;
     }
 
-    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> itemResult(
+    private static @NotNull ResultGenerator<MCHeldItem> itemResult(
             JsonObject object,
             JsonObject rizz
     ) {
         Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
-        return (l, i) -> {
-            if (resultItem == null) {
-                throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
-                                                                                          .getAsString());
+        return new ResultGenerator<>() {
+            @Override
+            public Iterable<MCHeldItem> generate(
+                    ServerLevel level,
+                    Collection<MCHeldItem> heldItems
+            ) {
+                if (resultItem == null) {
+                    throw new IllegalArgumentException("Result item does not exist: " + object.get("icon")
+                                                                                              .getAsString());
+                }
+                ItemStack s = resultItem.getDefaultInstance();
+                int qty = 1;
+                if (rizz.has("quantity")) {
+                    qty = rizz.get("quantity").getAsInt();
+                }
+                s.setCount(qty);
+                MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
+                return ImmutableList.of(mci);
             }
-            ItemStack s = resultItem.getDefaultInstance();
-            int qty = 1;
-            if (rizz.has("quantity")) {
-                qty = rizz.get("quantity").getAsInt();
+
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                return resultItem == null || resultItem.getDefaultInstance().isEmpty();
             }
-            s.setCount(qty);
-            MCHeldItem mci = MCHeldItem.fromMCItemStack(s);
-            return ImmutableList.of(mci);
         };
     }
 
-    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> biomeLootResult(
+    private static @NotNull ResultGenerator<MCHeldItem> biomeLootResult(
             JsonObject rizz
     ) {
         String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
         String resultDefault = required(rizz, "default", JsonElement::getAsString);
         int resultAttempts = requiredInt(rizz, "attempts");
-        return (l, i) -> Loots.getFromLootTables(
-                l,
-                i,
-                resultAttempts,
-                new GathererTools.LootTableParameters(
-                        new GathererTools.LootTablePrefix(resultPrefix),
-                        new GathererTools.LootTablePath(resultDefault)
-                )
-        );
+        return new ResultGenerator<MCHeldItem>() {
+            @Override
+            public Iterable<MCHeldItem> generate(
+                    ServerLevel level,
+                    Collection<MCHeldItem> heldItems
+            ) {
+                return Loots.getFromLootTables(
+                        level,
+                        heldItems,
+                        resultAttempts,
+                        new GathererTools.LootTableParameters(
+                                new GathererTools.LootTablePrefix(resultPrefix),
+                                new GathererTools.LootTablePath(resultDefault)
+                        )
+                );
+            }
+
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                return false;
+            }
+        };
     }
 
-    private static @NotNull BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> craftingTableResult(
+    private static @NotNull ResultGenerator<MCHeldItem> craftingTableResult(
             JsonObject rizz
     ) {
-        JsonArray resultPrefix = required(rizz, "recipe", JsonElement::getAsJsonArray);
+        JsonArray ingredientChar = required(rizz, "recipe", JsonElement::getAsJsonArray);
         @Nullable String fallback = optional(rizz, "fallback", JsonElement::getAsString);
         int qty = requiredInt(rizz, "quantity");
-        return (l, i) -> {
-            ItemStack itemstack = ItemStack.EMPTY;
-            CraftingContainer cc = new CraftingContainer(
-                    new AbstractContainerMenu(null, 0) {
-                        @Override
-                        public boolean stillValid(Player p_38874_) {
-                            return false;
+        return new ResultGenerator<MCHeldItem>() {
+            @Override
+            public Iterable<MCHeldItem> generate(
+                    ServerLevel l,
+                    Collection<MCHeldItem> heldItems
+            ) {
+                ItemStack itemstack = ItemStack.EMPTY;
+                CraftingContainer cc = new CraftingContainer(
+                        new AbstractContainerMenu(null, 0) {
+                            @Override
+                            public boolean stillValid(Player p_38874_) {
+                                return false;
+                            }
+                        }, 3, 3
+                );
+
+                for (int j = 0; j < ingredientChar.size(); j++) {
+                    String rowStr = ingredientChar.get(j).getAsString();
+                    for (int k = 0; k < rowStr.length(); k++) {
+                        if (Character.isWhitespace(rowStr.charAt(k))) {
+                            continue;
                         }
-                    }, 3, 3
-            );
-
-            for (int j = 0; j < resultPrefix.size(); j++) {
-                String rowStr = resultPrefix.get(j).getAsString();
-                for (int k = 0; k < rowStr.length(); k++) {
-                    if (Character.isWhitespace(rowStr.charAt(k))) {
-                        continue;
+                        // TODO: Actually get the item from the character
+                        ItemStack itemFromChar = Items.OAK_LOG.getDefaultInstance();
+                        cc.setItem((j + 1) * k, itemFromChar);
                     }
-                    ItemStack itemFromChar = Items.OAK_LOG.getDefaultInstance();
-                    cc.setItem((j + 1) * k, itemFromChar);
                 }
+
+                Optional<CraftingRecipe> optional = l.getServer().getRecipeManager()
+                                                     .getRecipeFor(RecipeType.CRAFTING, cc, l);
+                if (optional.isPresent()) {
+                    CraftingRecipe craftingrecipe = optional.get();
+                    itemstack = craftingrecipe.assemble(cc);
+                }
+                if (itemstack.isEmpty() && fallback != null) {
+                    itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
+                }
+                itemstack.setCount(1);
+                return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
+
             }
 
-            Optional<CraftingRecipe> optional = l.getServer().getRecipeManager()
-                                                 .getRecipeFor(RecipeType.CRAFTING, cc, l);
-            if (optional.isPresent()) {
-                CraftingRecipe craftingrecipe = optional.get();
-                itemstack = craftingrecipe.assemble(cc);
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                return false;
             }
-            if (itemstack.isEmpty() && fallback != null) {
-                itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
-            }
-            itemstack.setCount(1);
-            return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
         };
     }
 

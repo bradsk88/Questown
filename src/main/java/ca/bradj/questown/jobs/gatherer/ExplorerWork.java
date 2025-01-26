@@ -53,8 +53,10 @@ public class ExplorerWork {
     public static final ItemStack RESULT = ItemsInit.GATHERER_MAP.get().getDefaultInstance();
     private static final boolean TIMER_SHARING = false;
     public static final ImmutableMap<ProductionStatus, Collection<String>> SPECIAL_RULES = ImmutableMap.of(
-            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
-            ProductionStatus.FACTORY.waitingForTimedState(), ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
+            ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM),
+            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
+            ProductionStatus.FACTORY.waitingForTimedState(),
+            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
     );
 
 
@@ -136,7 +138,20 @@ public class ExplorerWork {
                         )
                 ),
                 new WorkWorldInteractions(
-                        0, ExplorerWork::getFromLootTables
+                        0, new ResultGenerator<MCHeldItem>() {
+                    @Override
+                    public Iterable<MCHeldItem> generate(
+                            ServerLevel level,
+                            Collection<MCHeldItem> heldItems
+                    ) {
+                        return getFromLootTables(level, heldItems);
+                    }
+
+                    @Override
+                    public boolean isResultAlwaysEmpty() {
+                        return false;
+                    }
+                }
                 ),
                 new WorkSpecialRules(
                         SPECIAL_RULES,

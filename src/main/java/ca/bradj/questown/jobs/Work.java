@@ -36,6 +36,7 @@ public class Work {
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;
     final int priority;
     private Overrides overrides;
+    private boolean hasNoOutput;
 
     public Work(
             JobID id,
@@ -50,7 +51,8 @@ public class Work {
             @Nullable ItemStack initialRequest,
             Function<List<MCHeldItem>, Collection<Ingredient>> needs,
             Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
-            int priority
+            int priority,
+            boolean hasNoOutput
     ) {
         this.id = id;
         this.parentID = parentID;
@@ -66,13 +68,14 @@ public class Work {
         this.warper = warper;
         this.priority = priority;
         this.overrides = Overrides.none();
+        this.hasNoOutput = hasNoOutput;
     }
 
     public Work withPriority(int priority) {
         return new Work(
                 id, parentID, icon, jobFunc, snapshotFunc,
                 isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
-                priority
+                priority, hasNoOutput
         );
     }
 
@@ -80,7 +83,7 @@ public class Work {
         return new Work(
                 id, parentID, icon, jobFunc, snapshotFunc,
                 isJobBlock, baseRoom, initialStatus, results, initialRequest, needz, warper,
-                priority
+                priority, hasNoOutput
         );
     }
 
@@ -96,9 +99,13 @@ public class Work {
         Work work = new Work(
                 id, parentID, icon, jobFunc, snapshotFunc,
                 isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
-                priority
+                priority, hasNoOutput
         );
         work.overrides = overrides;
         return work;
+    }
+
+    public boolean hasNoOutput() {
+        return hasNoOutput;
     }
 }

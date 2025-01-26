@@ -39,7 +39,8 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     public record Change(
             @Nullable WorkRequest removed
-    ) {}
+    ) {
+    }
 
     final Collection<WorkRequest> requestedResults = new ArrayList<>();
 
@@ -52,7 +53,8 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     public TownWorkHandle(
             TownFlagSubBlocks subBlocks,
-            BlockPos parentPos) {
+            BlockPos parentPos
+    ) {
         this.parentPos = parentPos;
         this.subBlocks = subBlocks;
     }
@@ -85,7 +87,10 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     }
 
     @Override
-    public void openMenuRequested(ServerPlayer sp) {
+    public void openMenuRequested(
+            ServerPlayer sp,
+            boolean skipToAdd
+    ) {
         BlockEntity p = sp.getLevel().getBlockEntity(parentPos);
         if (!(p instanceof TownFlagBlockEntity parent)) {
             QT.FLAG_LOGGER.error("No flag found at work handle parent pos");
@@ -95,29 +100,33 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        NetworkHooks.openGui(
+                sp, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return TextComponent.EMPTY;
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
-                return new TownWorkContainer(windowId, requestedResults.stream().map(UIWork::new).toList(), r,
-                        flagPos
-                );
-            }
-        }, data -> {
-            AddWorkContainer.writeWorkResults(allOutputs, data);
-            AddWorkContainer.writeFlagPosition(flagPos, data);
-            TownWorkContainer.writeWork(requestedResults, data);
-            TownWorkContainer.writeFlagPosition(flagPos, data);
-        });
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
+                        return new TownWorkContainer(
+                                windowId, requestedResults.stream().map(UIWork::new).toList(), r,
+                                flagPos, skipToAdd
+                        );
+                    }
+                }, data -> {
+                    AddWorkContainer.writeWorkResults(allOutputs, data);
+                    AddWorkContainer.writeFlagPosition(flagPos, data);
+                    TownWorkContainer.writeWork(requestedResults, data);
+                    TownWorkContainer.writeFlagPosition(flagPos, data);
+                    data.writeBoolean(skipToAdd);
+                }
+        );
     }
 
     public ImmutableList<WorkRequest> getRequestedResults() {

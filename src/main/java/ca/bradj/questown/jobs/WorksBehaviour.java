@@ -181,7 +181,7 @@ public class WorksBehaviour {
                         special.specialStatusRules(),
                         special.specialGlobalRules(),
                         expiration,
-                        world.resultGenerator(),
+                        world.resultGenerator()::generate,
                         workSound
                 ),
                 productionJobSnapshot(jobId),
@@ -203,10 +203,11 @@ public class WorksBehaviour {
                         },
                         world.actionDuration(),
                         states,
-                        world.resultGenerator(),
+                        world.resultGenerator()::generate,
                         special.specialStatusRules()
                 ),
-                1
+                1,
+                world.resultGenerator().isResultAlwaysEmpty()
         );
     }
 

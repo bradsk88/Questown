@@ -1243,8 +1243,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.setChanged();
     }
 
-    public void openJobsMenu(ServerPlayer sender) {
-        workHandle.openMenuRequested(sender);
+    public void openJobsMenu(ServerPlayer sender, boolean skipStraightToAdd) {
+        workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
     public void warpTime(int ticks) {

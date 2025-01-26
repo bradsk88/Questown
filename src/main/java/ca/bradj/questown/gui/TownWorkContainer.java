@@ -18,6 +18,7 @@ public class TownWorkContainer extends AbstractContainerMenu {
     private final Collection<UIWork> work;
     public final ca.bradj.questown.gui.AddWorkContainer addWorkContainer;
     private final BlockPos flag;
+    private boolean skipToAdd;
 
     public static TownWorkContainer ForClientSide(
             int windowId,
@@ -31,7 +32,8 @@ public class TownWorkContainer extends AbstractContainerMenu {
         );
         return new TownWorkContainer(
                 windowId, readWork(buf), qMenu,
-                readFlagPosition(buf)
+                readFlagPosition(buf),
+                buf.readBoolean()
         );
     }
 
@@ -43,12 +45,14 @@ public class TownWorkContainer extends AbstractContainerMenu {
             int windowId,
             Collection<UIWork> quests,
             AddWorkContainer awc,
-            BlockPos flag
+            BlockPos flag,
+            boolean skipToAdd
     ) {
         super(MenuTypesInit.TOWN_WORK.get(), windowId);
         this.work = quests;
         this.addWorkContainer = awc;
         this.flag = flag;
+        this.skipToAdd = skipToAdd;
     }
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
@@ -59,7 +63,10 @@ public class TownWorkContainer extends AbstractContainerMenu {
         );
     }
 
-    public static void writeWork(Collection<WorkRequest> requestedResults, FriendlyByteBuf data) {
+    public static void writeWork(
+            Collection<WorkRequest> requestedResults,
+            FriendlyByteBuf data
+    ) {
         data.writeInt(requestedResults.size());
         data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
     }
@@ -84,5 +91,9 @@ public class TownWorkContainer extends AbstractContainerMenu {
         QuestownNetwork.CHANNEL.sendToServer(
                 new RemoveWorkFromUIMessage(jobPosting.getResultWanted(), flag.getX(), flag.getY(), flag.getZ())
         );
+    }
+
+    public boolean skipToAdd() {
+        return this.skipToAdd;
     }
 }

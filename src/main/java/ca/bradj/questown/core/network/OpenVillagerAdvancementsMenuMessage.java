@@ -17,19 +17,22 @@ public record OpenVillagerAdvancementsMenuMessage(
         BlockPos flagPos, UUID villagerUUID, JobID currentJob
 ) {
 
-    public static void encode(OpenVillagerAdvancementsMenuMessage msg, FriendlyByteBuf buffer) {
-         buffer.writeInt(msg.flagPos.getX());
-         buffer.writeInt(msg.flagPos.getY());
-         buffer.writeInt(msg.flagPos.getZ());
-         buffer.writeUUID(msg.villagerUUID);
-         buffer.writeResourceLocation(msg.currentJob.id());
+    public static void encode(
+            OpenVillagerAdvancementsMenuMessage msg,
+            FriendlyByteBuf buffer
+    ) {
+        buffer.writeInt(msg.flagPos.getX());
+        buffer.writeInt(msg.flagPos.getY());
+        buffer.writeInt(msg.flagPos.getZ());
+        buffer.writeUUID(msg.villagerUUID);
+        NetworkCompat.toNetwork(buffer, msg.currentJob());
     }
 
     public static OpenVillagerAdvancementsMenuMessage decode(FriendlyByteBuf buffer) {
         return new OpenVillagerAdvancementsMenuMessage(
                 new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt()),
                 buffer.readUUID(),
-                JobID.fromRL(buffer.readResourceLocation())
+                NetworkCompat.fromNetworkJobID(buffer)
         );
     }
 

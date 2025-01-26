@@ -4,7 +4,7 @@
   "priority": "2000",
   "parent": "farmer/plant_wheat",
   "icon": "minecraft:bone_meal",
-  "initial_request": "minecraft:wheat",
+  "initial_request": "minecraft:bone_meal",
   "result": {
     "type": "item",
     "item": "minecraft:air"

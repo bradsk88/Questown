@@ -106,7 +106,7 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
         boolean clientSide = p_60504_.isClientSide();
         if (!clientSide) {
             for (OpenMenuListener l : openMenuListeners) { // TODO: make listeners survive a reboot
-                l.openMenuRequested((ServerPlayer) p_60506_);
+                l.openMenuRequested((ServerPlayer) p_60506_, false);
                 informed = true;
             }
         }
