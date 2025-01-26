@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -27,6 +28,10 @@ public class ClientAccess {
             BlockPos flagPos
     ) {
         openScreen(() -> new WorkRequestConfirmScreen(itemRequested, iconsForJobsWhichProduceResult, flagPos));
+    }
+
+    public static void openItemJobs(Collection<UIJob> jobs) {
+        openScreen(() -> new ItemJobsScreen(jobs));
     }
 
     public static boolean openScreen(Supplier<Screen> screen) {

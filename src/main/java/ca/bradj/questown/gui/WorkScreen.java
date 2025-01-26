@@ -217,12 +217,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         int iconX = x + 8;
 
-        ItemStack[] matchingStacks = ing.getItems();
-        if (matchingStacks.length > 0) {
-            int curSeconds = (int) (System.currentTimeMillis() / 1000);
-            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-            this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-
+        ItemStack itemStack = Ingredients.render(itemRenderer, ing, iconX, y);
+        if (itemStack != null) {
             highlightAndTooltip(poseStack, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);
             element.set(itemStack);

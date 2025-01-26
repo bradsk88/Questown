@@ -2,12 +2,14 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.gson.JsonElement;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
@@ -79,5 +81,21 @@ public class Ingredients {
             return null;
         }
         return j.getAsJsonObject().get("tag").getAsString();
+    }
+
+    public static @Nullable ItemStack render(
+            ItemRenderer itemRenderer,
+            Ingredient ing,
+            int iconX,
+            int y
+    ) {
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        ItemStack[] matchingStacks = ing.getItems();
+        if (matchingStacks.length > 0) {
+            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
+            itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+            return itemStack;
+        }
+        return null;
     }
 }

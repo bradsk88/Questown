@@ -20,6 +20,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -31,7 +32,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int backgroundHeight = 166;
 
     private static final int TEXT_COLOR = 0x404040;
-
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
@@ -299,34 +299,32 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         for (Ingredient ing : ingredients) {
             int iconX = x + j * 18;
 
-            ItemStack[] matchingStacks = ing.getItems();
-            if (matchingStacks.length > 0) {
-                int curSeconds = (int) (System.currentTimeMillis() / 1000);
-                ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-                this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+            @Nullable ItemStack is = Ingredients.render(itemRenderer, ing, iconX, y + 1);
+            if (is != null) {
                 if (UtilClean.mouseInBox(mouseX, mouseY, iconX, y, 16, 17)) {
-                    fill(
-                            poseStack,
-                            iconX,
-                            y + 1,
-                            iconX + 16,
-                            y + 17,
-                            0x80FFFFFF
-                    ); // transparent white square behind hovered item slot
-                    renderTooltip(
-                            poseStack,
-                            itemStack.getItem().getName(itemStack),
-                            mouseX,
-                            mouseY
-                    ); // render hovered item's name as a tooltip
+                    highlightAndTooltip(poseStack, y, mouseX, mouseY, iconX, is);
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);
-                element.set(itemStack);
+                element.set(is);
                 b.add(element);
             }
             j++;
         }
         return b.build();
+    }
+
+    private void highlightAndTooltip(
+            PoseStack poseStack,
+            int y,
+            int mouseX,
+            int mouseY,
+            int iconX,
+            @NotNull ItemStack is
+    ) {
+        // transparent white square behind hovered item slot
+        fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF);
+        // render hovered item's name as a tooltip
+        renderTooltip(poseStack, is.getItem().getName(is), mouseX, mouseY);
     }
 
     @Override

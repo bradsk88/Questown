@@ -17,8 +17,10 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D> extends AbstractContainerScreen<T> {
     protected static final int backgroundWidth = 176;
@@ -86,7 +88,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
-    protected record Card<D>(
+    public record Card<D>(
             int index,
             CardCoordinates coords,
             D data
@@ -121,15 +123,28 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     protected Iterable<Card<D>> cards() {
-        int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        return getCardLayout(width, height, backgroundWidth, backgroundHeight, currentPage, this::cardsData);
+    }
+
+    public static @NotNull <D> ImmutableList<Card<D>> getCardLayout(
+            int screenWidth,
+            int screenHeight,
+            int bgWidth,
+            int bgHeight,
+            int currentPage,
+            Supplier<? extends List<D>> cardsDataFn
+    ) {
+        int bgX = (screenWidth - bgWidth) / 2;
+        int bgY = (screenHeight - bgHeight) / 2;
         int x = bgX;
         int y = bgY;
         int pageStringY = y + BIG_PADDING;
         y = pageStringY + BIG_PADDING;
+        int MAX_CARDS_PER_PAGE = (bgHeight - BIG_PADDING) / (CARD_HEIGHT + SMALL_PADDING);
 
         int startIndex = currentPage * MAX_CARDS_PER_PAGE;
-        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, cardsData().size());
+        List<D> cardsData = cardsDataFn.get();
+        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, cardsData.size());
 
         x = x + BIG_PADDING;
         y = y + BIG_PADDING;
@@ -138,7 +153,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         for (int i = startIndex; i < endIndex; i++) {
             int row = i - startIndex;
             int cardY = getCardY(y, row);
-            D data = cardsData().get(i);
+            D data = cardsData.get(i);
             CardCoordinates coords = new CardCoordinates(
                     x,
                     x + BIG_PADDING,
@@ -198,6 +213,19 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
                     leftXPadded,
                     topY - i,
                     topYPadded - i,
+                    rightX,
+                    rightXPadded,
+                    bottomY,
+                    bottomYPadded
+            );
+        }
+
+        public CardCoordinates shiftedDown() {
+            return new CardCoordinates(
+                    leftX,
+                    leftXPadded,
+                    topY + borderPadding,
+                    topYPadded + borderPadding,
                     rightX,
                     rightXPadded,
                     bottomY,

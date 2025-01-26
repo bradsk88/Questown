@@ -168,7 +168,13 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
-        this.font.draw(poseStack, new TranslatableComponent("menu.quests.confirm_remove_top", quests.size()), x, y, TEXT_COLOR);
+        this.font.draw(
+                poseStack,
+                new TranslatableComponent("menu.quests.confirm_remove_top", quests.size()),
+                x,
+                y,
+                TEXT_COLOR
+        );
 
         y = y + this.font.lineHeight + CARD_PADDING;
 
@@ -229,8 +235,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 int headY = idY - 6;
                 this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
                 if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
-                    fill(poseStack, headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
-                    renderTooltip(poseStack, tooltip, mouseX, mouseY);
+                    highlightAndTooltip(poseStack, headX, headY, tooltip, mouseX, mouseY);
                 }
             }
         }
@@ -238,7 +243,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         slots.addAll(b.build());
 
         int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
-        this.font.draw(poseStack ,new TranslatableComponent("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+        this.font.draw(poseStack, new TranslatableComponent("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
 
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
@@ -258,7 +263,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks
-                (ingredients);
+                                         (ingredients);
         int j = 0;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
@@ -266,26 +271,10 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         for (Ingredient ing : ingredients) {
             int iconX = x + 8 + j * 18;
 
-            ItemStack[] matchingStacks = ing.getItems();
-            if (matchingStacks.length > 0) {
-                int curSeconds = (int) (System.currentTimeMillis() / 1000);
-                ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-                this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+            ItemStack itemStack = Ingredients.render(itemRenderer, ing, iconX, y + 1);
+            if (itemStack != null) {
                 if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-                    fill(
-                            poseStack,
-                            iconX,
-                            y + 1,
-                            iconX + 16,
-                            y + 17,
-                            0x80FFFFFF
-                    ); // transparent white square behind hovered item slot
-                    renderTooltip(
-                            poseStack,
-                            itemStack.getItem().getName(itemStack),
-                            mouseX,
-                            mouseY
-                    ); // render hovered item's name as a tooltip
+                    highlightAndTooltip(poseStack, iconX, y, itemStack.getItem().getName(itemStack), mouseX, mouseY);
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);
                 element.set(itemStack);
@@ -294,6 +283,20 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             j++;
         }
         return b.build();
+    }
+
+    private void highlightAndTooltip(
+            PoseStack poseStack,
+            int iconX,
+            int y,
+            Component itemStack,
+            int mouseX,
+            int mouseY
+    ) {
+        // transparent white square behind hovered item slot
+        fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF);
+        // render hovered item's name as a tooltip
+        renderTooltip(poseStack, itemStack, mouseX, mouseY);
     }
 
     private void renderPageNum(
