@@ -80,6 +80,12 @@ public class QuestownNetwork {
                         decoder(OpenMultiVillagerMenuMessage::decode),
                 OpenMultiVillagerMenuMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(OpenItemJobsMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(OpenItemJobsMessage::encode).
+                        decoder(OpenItemJobsMessage::decode),
+                OpenItemJobsMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {

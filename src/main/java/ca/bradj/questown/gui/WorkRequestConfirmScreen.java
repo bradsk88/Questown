@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
+import ca.bradj.questown.core.network.OpenItemJobsMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
@@ -18,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.lwjgl.glfw.GLFW;
 
@@ -66,7 +68,9 @@ public class WorkRequestConfirmScreen extends Screen {
         this.requestWork = () -> this.send(flagPos, CONFIRMED);
         this.backToRequestedJobs = () -> this.send(flagPos, REJECTED);
         this.openJobsInfoScreen = () -> {
-        }; // TODO[ASAP]: Open New UI
+            OpenItemJobsMessage msg = new OpenItemJobsMessage(flagPos, Ingredient.of(this.itemRequested));
+            QuestownNetwork.CHANNEL.sendToServer(msg);
+        };
     }
 
     private void send(
@@ -153,7 +157,7 @@ public class WorkRequestConfirmScreen extends Screen {
         x += 24;
         Compat.drawDarkText(
                 this.font, stack, Compat.translatable(
-                            "menu.work_add_confirm.there_are_n_known_jobs",
+                        "menu.work_add_confirm.there_are_n_known_jobs",
                         iconsForJobsWhichProduceResult.size()
                 ), x, mainItemTextY
         );

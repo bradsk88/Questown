@@ -81,8 +81,6 @@ public class ItemJobsScreen extends Screen {
                 Ingredients.render(itemRenderer, ing, c.leftXPadded() + (i++ * 24), (c = c.shiftedDown()).topYPadded());
                 // TODO: Hihlight and tooltip
             }
-            Compat.drawDarkText(font, stack, Compat.literal("Output"), x, (c = c.shiftedDown()).topYPadded());
-            this.itemRenderer.renderAndDecorateItem(d.output(), c.leftXPadded(), (c = c.shiftedDown()).topYPadded());
             Compat.drawDarkText(font, stack, Compat.literal("Villagers"), x, (c = c.shiftedDown()).topYPadded());
             i = 0;
             for (UUID uuid : d.villagersWhoCanDoJob()) {

@@ -76,8 +76,8 @@ public class DeclarativeJob extends
     private final long totalDuration;
     private final int workInterval;
     private final RecipeProvider recipe;
-    private final ImmutableMap<Integer, Ingredient> initialIngredients;
-    private final ImmutableMap<Integer, Ingredient> initialTools;
+    public final ImmutableMap<Integer, Ingredient> initialIngredients;
+    public final ImmutableMap<Integer, Ingredient> initialTools;
     private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;

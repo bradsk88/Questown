@@ -7,6 +7,7 @@ import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -89,4 +90,6 @@ public interface VillagerHolder {
     void clearPoseRequests(UUID uuid);
 
     void showMultiStatusUI(ServerPlayer sender);
+
+    void showItemJobsUI(ServerPlayer sender, Ingredient itemToShowJobsFor);
 }

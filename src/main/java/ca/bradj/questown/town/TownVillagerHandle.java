@@ -29,6 +29,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
@@ -39,6 +40,8 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TownVillagerHandle implements VillagerHolder {
@@ -601,5 +604,45 @@ public class TownVillagerHandle implements VillagerHolder {
                     FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
                 }
         );
+    }
+
+    @Override
+    public void showItemJobsUI(
+            ServerPlayer sender,
+            Ingredient itemToShowJobsFor
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (!(entity instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            Util.addOrInitialize(vb, vme.getJobId(), vme.getUUID());
+        }
+
+        ImmutableList.Builder<UIJob> b = ImmutableList.builder();
+        for (JobID job : ServerJobsRegistry.getAllJobs()) {
+            if (!canJobProduceItem(job, itemToShowJobsFor)) {
+                continue;
+            }
+            Supplier<Work> w = Works.get(job);
+            Job<?, ?, ?> j = w.get().jobFunc.apply(UUID.randomUUID());
+            if (!(j instanceof DeclarativeJob dj)) {
+                continue;
+            }
+            b.add(new UIJob(
+                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                    ImmutableList.copyOf(dj.initialIngredients.values()),
+                    ImmutableList.copyOf(dj.initialTools.values())
+            ));
+        }
+        Object msg = new ShowItemJobsMessage(b.build());
+        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+    }
+
+    private boolean canJobProduceItem(
+            JobID job,
+            Ingredient itemToShowJobsFor
+    ) {
+        return ServerJobsRegistry.canSatisfy(town.getUnsafe().getTownData(), job, itemToShowJobsFor);
     }
 }
