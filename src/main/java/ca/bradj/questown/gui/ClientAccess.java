@@ -7,6 +7,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
 import java.util.Map;
@@ -30,8 +31,11 @@ public class ClientAccess {
         openScreen(() -> new WorkRequestConfirmScreen(itemRequested, iconsForJobsWhichProduceResult, flagPos));
     }
 
-    public static void openItemJobs(Collection<UIJob> jobs) {
-        openScreen(() -> new ItemJobsScreen(jobs));
+    public static void openItemJobs(
+            Ingredient requestedItem,
+            Collection<UIJob> jobs
+    ) {
+        openScreen(() -> new ItemJobsScreen(requestedItem, jobs));
     }
 
     public static boolean openScreen(Supplier<Screen> screen) {

@@ -13,6 +13,9 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
+import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.recipes.RecipesInit;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -619,6 +622,14 @@ public class TownVillagerHandle implements VillagerHolder {
             Util.addOrInitialize(vb, vme.getJobId(), vme.getUUID());
         }
 
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.getLevel()
+              .getRecipeManager()
+              .getAllRecipesFor(RecipesInit.ROOM)
+              .forEach(v -> rMapB.put(v.getId(), v));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : ServerJobsRegistry.getAllJobs()) {
             if (!canJobProduceItem(job, itemToShowJobsFor)) {
@@ -629,13 +640,17 @@ public class TownVillagerHandle implements VillagerHolder {
             if (!(j instanceof DeclarativeJob dj)) {
                 continue;
             }
+
+            RoomRecipe r = rMap.get(dj.location().baseRoom());
             b.add(new UIJob(
                     ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
                     ImmutableList.copyOf(dj.initialIngredients.values()),
-                    ImmutableList.copyOf(dj.initialTools.values())
+                    ImmutableList.copyOf(dj.initialTools.values()),
+                    dj.location().baseRoom(),
+                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients())
             ));
         }
-        Object msg = new ShowItemJobsMessage(b.build());
+        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
     }
 

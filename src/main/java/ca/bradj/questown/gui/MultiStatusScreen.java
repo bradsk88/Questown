@@ -6,7 +6,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -19,6 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+
+import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, UUID> {
 
@@ -76,7 +77,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     @Override
     protected void renderCardContent(
             PoseStack poseStack,
-            Card<UUID> card,
+            PagedCardScreen.Card<UUID> card,
             int mouseX,
             int mouseY
     ) {
@@ -119,7 +120,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     private void renderStatus(
             PoseStack stack,
-            CardCoordinates coords,
+            PagedCardScreen.CardCoordinates coords,
             UUID uuid
     ) {
         int drawWidth = 32;
@@ -186,10 +187,10 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             if (mouseX > rightX) {
                 continue;
             }
-            if (mouseY < topY + (i * CARD_HEIGHT)) {
+            if (mouseY < topY + (i * cardHeight)) {
                 continue;
             }
-            if (mouseY > botY + (i * CARD_HEIGHT)) {
+            if (mouseY > botY + (i * cardHeight)) {
                 continue;
             }
             UUID villagerUUID = uuids.get(i);
@@ -212,5 +213,9 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int bgY = (this.height - backgroundHeight) / 2;
         tabs.mouseClicked(bgX, bgY, p_97748_, p_97749_);
         return super.mouseClicked(p_97748_, p_97749_, p_97750_);
+    }
+
+    @Override
+    protected void setRenderColorForCard(UUID uuid) {
     }
 }

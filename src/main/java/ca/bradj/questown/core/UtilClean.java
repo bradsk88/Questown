@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -51,7 +52,10 @@ public class UtilClean {
         return vID.substring(0, 4) + "..." + vID.substring(vID.length() - 4, vID.length() - 1);
     }
 
-    public record Pair<A, B>(A a, B b){
+    public static <X> void noOpConsumer(X input) {
+    }
+
+    public record Pair<A, B>(A a, B b) {
         public static <X> ImmutableList<X> toList(Pair<X, X> in) {
             return ImmutableList.of(in.a, in.b);
         }
@@ -62,7 +66,9 @@ public class UtilClean {
         ) {
             return new Pair<>(mapper.apply(in.a), mapper.apply(in.b));
         }
-    };
+    }
+
+    ;
 
     // If you make any changes to the returned map (when mutable), remember to PUT it back into the map.
     private static <K, I, X> Map<I, X> getOrDefaultMap(

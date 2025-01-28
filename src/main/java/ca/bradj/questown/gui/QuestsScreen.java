@@ -7,6 +7,8 @@ import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.questown.gui.PagedCardScreen.Card;
+import ca.bradj.questown.gui.PagedCardScreen.CardCoordinates;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -26,6 +28,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import static ca.bradj.questown.gui.PagedCardScreen.buttonWidth;
 
 public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPagedCardScreen<C, UIQuest> {
     private static final int backgroundWidth = 176;

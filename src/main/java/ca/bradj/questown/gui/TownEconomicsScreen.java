@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.EconomicsUpdate;
+import ca.bradj.questown.gui.PagedCardScreen.*;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -13,6 +14,8 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Optional;
+
+import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMenu, ItemEconomicsData> {
     private final FlagTabs tabs;
@@ -80,7 +83,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         for (Card<ItemEconomicsData> card : cards()) {
             int x = card.coords().leftX();
             int y = card.coords().topY();
-            if (UtilClean.mouseInBox(mouseX, mouseY, x, y, CARD_WIDTH, CARD_HEIGHT)) {
+            if (UtilClean.mouseInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
@@ -111,7 +114,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     @Override
     protected void renderCardContent(
             PoseStack poseStack,
-            Card<ItemEconomicsData> card,
+            PagedCardScreen.Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
@@ -178,4 +181,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 
+    @Override
+    protected void setRenderColorForCard(ItemEconomicsData itemEconomicsData) {
+    }
 }
