@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.NetworkCompat;
+import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record UIJob(
+        JobID jobId,
         ImmutableList<UUID> villagersWhoCanDoJob,
         ImmutableList<Ingredient> ingredients,
         ImmutableList<Ingredient> tools,
@@ -17,18 +20,20 @@ public record UIJob(
         ImmutableList<Ingredient> roomRecipe
 ) {
     public static UIJob fromNetwork(FriendlyByteBuf buf) {
+        JobID jobId = NetworkCompat.fromNetworkJobID(buf);
         List<UUID> vs = buf.readList(FriendlyByteBuf::readUUID);
         List<String> in = buf.readList(FriendlyByteBuf::readUtf);
         List<String> tl = buf.readList(FriendlyByteBuf::readUtf);
         ResourceLocation rrName = buf.readResourceLocation();
         List<String> rr = buf.readList(FriendlyByteBuf::readUtf);
-        return fromBufferData(in, tl, vs, rrName, rr);
+        return fromBufferData(jobId, in, tl, vs, rrName, rr);
     }
 
     public static void toNetwork(
             FriendlyByteBuf buf,
             UIJob uiJob
     ) {
+        NetworkCompat.toNetwork(buf, uiJob.jobId());
         List<String> ingIDs = uiJob.ingredients().stream().map(Ingredients::toString).toList();
         List<String> toolIDs = uiJob.tools().stream().map(Ingredients::toString).toList();
         List<String> roomRecipe = uiJob.roomRecipe().stream().map(Ingredients::toString).toList();
@@ -41,6 +46,7 @@ public record UIJob(
     }
 
     private static @NotNull UIJob fromBufferData(
+            JobID jobId,
             List<String> in,
             List<String> tl,
             List<UUID> vs,
@@ -61,6 +67,7 @@ public record UIJob(
             bRoom.add(Ingredients.fromString(s));
         }
         return new UIJob(
+                jobId,
                 ImmutableList.copyOf(vs),
                 bIngredients.build(),
                 bTools.build(),

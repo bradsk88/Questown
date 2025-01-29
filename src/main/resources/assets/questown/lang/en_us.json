@@ -293,6 +293,7 @@
   "menu.common.yes": "Yes",
   "menu.common.no": "No",
   "menu.common.learn_more": "Learn More",
+  "menu.common.job_name": "%s - %s",
   "menu.work_add_confirm.title": "Requesting %s",
   "menu.work_add_confirm.there_are_n_known_jobs": "There are %d known jobs",
   "menu.work_add_confirm.which_produce_this_item": "which produce this item.",

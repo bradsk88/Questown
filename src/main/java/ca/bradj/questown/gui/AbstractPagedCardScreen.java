@@ -26,7 +26,9 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
                 this::cardsData,
                 this::setRenderColorForCard,
                 (s, c, p) -> this.renderCardContent(s, c, p.a(), p.b()),
-                1
+                1,
+                0,
+                0
         );
         this.cardHeight = delegate.cardHeight;
     }
@@ -94,5 +96,9 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
 
     public List<Rect2i> getExtraAreas() {
         return this.delegate.getExtraAreas();
+    }
+
+    protected int backgroundHeight() {
+        return delegate.backgroundHeight;
     }
 }

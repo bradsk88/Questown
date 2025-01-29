@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
@@ -19,7 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
-import static ca.bradj.questown.gui.PagedCardScreen.backgroundHeight;
 import static ca.bradj.questown.gui.PagedCardScreen.backgroundWidth;
 
 public class ItemJobsScreen extends Screen {
@@ -40,7 +40,9 @@ public class ItemJobsScreen extends Screen {
                 () -> ImmutableList.copyOf(jobs),
                 UtilClean::noOpConsumer,
                 this::renderCardContent,
-                3
+                3,
+                16,
+                32
         );
         this.jobs = ImmutableList.copyOf(jobs);
         this.requestedItem = requestedItem;
@@ -78,7 +80,7 @@ public class ItemJobsScreen extends Screen {
         String sizeString = "Jobs:XXX";
         String renderString = "Jobs:";
         ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
-        pageArea = pageArea.addOffset(0, delegate.nextPage.getHeight() + 4);
+        pageArea = pageArea.moveUp(16);
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, sizeString);
         Compat.drawLightText(font, stack, renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
@@ -114,12 +116,14 @@ public class ItemJobsScreen extends Screen {
                     0x30000000
             );
             renderTooltip(
-                    stack, ImmutableList.of(
+                    stack,
+                    ImmutableList.of(
                             Compat.translatable("menu.item_jobs.title_tooltip"),
                             Ingredients.getName(requestedItem)
                     ),
                     Optional.empty(),
-                    mouseX, mouseY
+                    mouseX,
+                    mouseY
             );
         }
     }
@@ -146,9 +150,12 @@ public class ItemJobsScreen extends Screen {
 
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down = (cc) -> cc.shiftedDown(16);
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down2 = (cc) -> cc.shiftedDown(font.lineHeight);
+        Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down3 = (cc) -> cc.shiftedDown(30);
+
+        renderJobTitle(stack, d);
 
         // TODO: Translate
-        Compat.drawDarkText(font, stack, Compat.literal("Items"), x, (c = down.apply(c)).topY());
+        Compat.drawDarkText(font, stack, Compat.literal("Items"), x, (c = down3.apply(c)).topY());
         c = renderItems(d.ingredients(), c, i, down2);
         if (d.ingredients().isEmpty()) {
             c = down2.apply(c);
@@ -177,15 +184,31 @@ public class ItemJobsScreen extends Screen {
         }
 
         int bgX = (width - backgroundWidth) / 2;
-        int bgY = (height - backgroundHeight) / 2;
-        int stripHeight = Util.faceWidth * 2;
-        int stripY = bgY + backgroundHeight - stripHeight;
-        fill(stack, bgX, bgY + backgroundHeight, bgX + backgroundWidth, stripY, 0x30000000);
+        int bgY = (height - delegate.backgroundHeight) / 2;
+        int stripHeight = Util.faceWidth * 3;
+        int stripY = bgY + delegate.backgroundHeight - stripHeight;
+        fill(stack, bgX, bgY + delegate.backgroundHeight, bgX + backgroundWidth, stripY, 0x30000000);
         i = 0;
         for (UUID uuid : d.villagersWhoCanDoJob()) {
-            int stripOffset = (stripHeight - Util.faceWidth) / 2;
+            int stripOffset = (stripHeight - (Util.faceWidth * 2)) / 2;
+            stripOffset -= 1;
             blitFace(stack, bgX + Util.faceWidth, stripY + stripOffset, uuid, i++);
         }
+    }
+
+    private void renderJobTitle(
+            PoseStack stack,
+            UIJob d
+    ) {
+        ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
+        pageArea = pageArea.moveDown(20);
+        TranslatableComponent jobName = Compat.translatable(
+                "menu.common.job_name",
+                Jobs.getRootNameComponent(d.jobId()),
+                Compat.literal(d.jobId().jobId())
+        );
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, jobName);
+        Compat.drawDarkText(font, stack, jobName, textArea.getX(), textArea.getY());
     }
 
     private PagedCardScreen.CardCoordinates renderItems(
@@ -209,7 +232,7 @@ public class ItemJobsScreen extends Screen {
             UUID uuid,
             int i
     ) {
-        Util.blitFace(stack, uuid, x + (Util.faceWidth * 2 * i), y, 1);
+        Util.blitFace(stack, uuid, x + (Util.faceWidth * 4 * i), y, 2);
     }
 
     @Override

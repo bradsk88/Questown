@@ -643,6 +643,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
             RoomRecipe r = rMap.get(dj.location().baseRoom());
             b.add(new UIJob(
+                    j.getId(),
                     ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
                     ImmutableList.copyOf(dj.initialIngredients.values()),
                     ImmutableList.copyOf(dj.initialTools.values()),

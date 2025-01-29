@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -327,9 +328,13 @@ public class Jobs {
 
     public static ImmutableList<Component> getComponentsForTooltip(JobID job) {
         return ImmutableList.of(
-                Compat.translatable("jobs."+job.rootId()),
+                getRootNameComponent(job),
                 Compat.literal(job.jobId())
         );
+    }
+
+    public static @NotNull TranslatableComponent getRootNameComponent(JobID job) {
+        return Compat.translatable("jobs." + job.rootId());
     }
 
     public interface LootDropper<I> {

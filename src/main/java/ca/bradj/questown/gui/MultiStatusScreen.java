@@ -62,7 +62,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             float partialTicks
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - super.backgroundHeight()) / 2;
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
@@ -164,7 +164,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - backgroundHeight()) / 2;
 
         if (this.tabs.renderTooltip(
                 bgX, bgY, mouseX, mouseY,
@@ -210,7 +210,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int p_97750_
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - backgroundHeight()) / 2;
         tabs.mouseClicked(bgX, bgY, p_97748_, p_97749_);
         return super.mouseClicked(p_97748_, p_97749_, p_97750_);
     }

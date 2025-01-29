@@ -68,7 +68,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - backgroundHeight()) / 2;
         if (this.tabs.renderTooltip(
                 bgX,
                 bgY,
@@ -145,7 +145,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     ) {
         super.renderBg(stack, partialTicks, mouseX, mouseY);
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - backgroundHeight()) / 2;
         this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
     }
 
@@ -156,8 +156,8 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
 
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        int y = (this.height - backgroundHeight()) / 2;
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight()));
     }
 
     @Override
@@ -175,7 +175,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             int p_97750_
     ) {
         int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
+        int y = (this.height - backgroundHeight()) / 2;
         this.tabs.mouseClicked(x, y, mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }

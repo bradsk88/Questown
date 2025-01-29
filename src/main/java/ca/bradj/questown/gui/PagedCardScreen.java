@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 public final class PagedCardScreen<D> {
 
     protected static final int backgroundWidth = 176;
-    protected static final int backgroundHeight = 166;
+    public final int backgroundHeight;
     protected static final int borderPadding = 6;
     protected static final int buttonWidth = 13;
     protected static final int SMALL_PADDING = 1;
@@ -48,6 +48,7 @@ public final class PagedCardScreen<D> {
     private final Supplier<List<D>> cardsData;
     private final int MAX_CARDS_PER_PAGE;
     public final int cardHeight;
+    private final int buttonY;
     private int currentPage = 0;
 
     public PagedCardScreen(
@@ -56,10 +57,15 @@ public final class PagedCardScreen<D> {
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
             TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent,
-            int heightScale
+            int heightScale,
+            int buttonY,
+            int extraHeight
     ) {
         this.height = height;
         this.width = width;
+
+        this.backgroundHeight = 166 + extraHeight;
+
         Textures textures = Internal.getTextures();
         this.background = textures.getRecipeGuiBackground();
         IDrawableStatic arrowNext = JEI.getArrowNext();
@@ -78,6 +84,7 @@ public final class PagedCardScreen<D> {
         this.renderCardContent = renderCardContent;
         this.cardHeight = UNSCALED_CARD_HEIGHT * heightScale;
         this.MAX_CARDS_PER_PAGE = (backgroundHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
+        this.buttonY = buttonY;
     }
 
     public @NotNull <D> ImmutableList<Card<D>> getCardLayout(
@@ -136,9 +143,9 @@ public final class PagedCardScreen<D> {
         int pageStringY = y + borderPadding;
         int x = ((this.width.get() - backgroundWidth) / 2);
         this.previousPage.x = x + borderPadding;
-        this.previousPage.y = pageStringY;
+        this.previousPage.y = pageStringY + buttonY;
         this.nextPage.x = x + backgroundWidth - buttonWidth - borderPadding;
-        this.nextPage.y = pageStringY;
+        this.nextPage.y = pageStringY + buttonY;
         addRenderableWidget.accept(this.previousPage);
         addRenderableWidget.accept(this.nextPage);
     }
