@@ -305,7 +305,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
             @Nullable ItemStack is = Ingredients.render(itemRenderer, ing, iconX, y + 1);
             if (is != null) {
-                if (UtilClean.mouseInBox(mouseX, mouseY, iconX, y, 16, 17)) {
+                if (UtilClean.coordInBox(mouseX, mouseY, iconX, y, 16, 17)) {
                     highlightAndTooltip(poseStack, y, mouseX, mouseY, iconX, is);
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);

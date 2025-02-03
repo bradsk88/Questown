@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 
 public record AddWorkFromUIMessage(
         ItemStack requested,
-        int flagX, int flagY, int flagZ,
+        BlockPos flagPos,
         Action action
 ) {
 
@@ -34,19 +34,15 @@ public record AddWorkFromUIMessage(
             FriendlyByteBuf buffer
     ) {
         buffer.writeItem(msg.requested);
-        buffer.writeInt(msg.flagX);
-        buffer.writeInt(msg.flagY);
-        buffer.writeInt(msg.flagZ);
+        buffer.writeBlockPos(msg.flagPos);
         buffer.writeInt(msg.action().ordinal());
     }
 
     public static AddWorkFromUIMessage decode(FriendlyByteBuf buffer) {
         ItemStack requested = buffer.readItem();
-        int flagX = buffer.readInt();
-        int flagY = buffer.readInt();
-        int flagZ = buffer.readInt();
+        BlockPos flagPos = buffer.readBlockPos();
         Action confirmed = Action.values()[buffer.readInt()];
-        return new AddWorkFromUIMessage(requested, flagX, flagY, flagZ, confirmed);
+        return new AddWorkFromUIMessage(requested, flagPos, confirmed);
     }
 
 
@@ -57,10 +53,9 @@ public record AddWorkFromUIMessage(
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
-            BlockEntity flag = sender.getLevel()
-                                     .getBlockEntity(new BlockPos(flagX, flagY, flagZ));
+            BlockEntity flag = sender.getLevel().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
-                QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Work will not be added.", flagX, flagY, flagZ);
+                QT.GUI_LOGGER.error("No flag at position {}. Work will not be added.", flagPos);
                 return;
             }
             switch (action) {

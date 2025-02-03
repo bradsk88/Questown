@@ -77,7 +77,7 @@ public class WorkRequestConfirmScreen extends Screen {
             BlockPos p,
             AddWorkFromUIMessage.Action action
     ) {
-        AddWorkFromUIMessage m = new AddWorkFromUIMessage(itemRequested, p.getX(), p.getY(), p.getZ(), action);
+        AddWorkFromUIMessage m = new AddWorkFromUIMessage(itemRequested, p, action);
         QuestownNetwork.CHANNEL.sendToServer(m);
     }
 
@@ -184,7 +184,7 @@ public class WorkRequestConfirmScreen extends Screen {
             ItemStack v = ForgeRegistries.ITEMS.getValue(item).getDefaultInstance();
             int itemX = xRef + (24 * i);
             itemRenderer.renderAndDecorateItem(v, itemX, y);
-            if (UtilClean.mouseInBox(mouseX, mouseY, itemX, y, 16, 16)) {
+            if (UtilClean.coordInBox(mouseX, mouseY, itemX, y, 16, 16)) {
                 fill(stack, itemX, y, itemX + 16, y + 16, 0x80FFFFFF);
                 renderTooltip(stack, Jobs.getComponentsForTooltip(ii.getKey()), Optional.empty(), itemX + 8, y - 6);
             }
@@ -192,7 +192,7 @@ public class WorkRequestConfirmScreen extends Screen {
         if (iconsForJobsWhichProduceResult.size() > maxItemsOnX) {
             int itemX = xRef + (24 * maxItemsOnX);
             Compat.drawDarkText(font, stack, Compat.literal("…"), itemX + 4, y + 2);
-            if (UtilClean.mouseInBox(mouseX, mouseY, itemX, y, 16, 16)) {
+            if (UtilClean.coordInBox(mouseX, mouseY, itemX, y, 16, 16)) {
                 fill(stack, itemX, y, itemX + 16, y + 16, 0x80FFFFFF);
                 TranslatableComponent andMore = Compat.translatable(
                         "menu.work_add_confirm.and_n_more",

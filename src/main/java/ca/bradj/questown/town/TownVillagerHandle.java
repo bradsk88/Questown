@@ -651,7 +651,7 @@ public class TownVillagerHandle implements VillagerHolder {
                     r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients())
             ));
         }
-        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build());
+        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), town.getUnsafe().getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
     }
 

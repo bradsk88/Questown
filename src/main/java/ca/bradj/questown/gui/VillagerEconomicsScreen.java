@@ -82,7 +82,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
         for (Card<ItemEconomicsData> card : cards()) {
             int x = card.coords().leftX();
             int y = card.coords().topY();
-            if (UtilClean.mouseInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
+            if (UtilClean.coordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());

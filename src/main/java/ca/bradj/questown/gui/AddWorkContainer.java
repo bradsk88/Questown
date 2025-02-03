@@ -66,7 +66,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
     }
 
     public void sendRequest(ItemStack item) {
-        AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ(), INQUIRED);
+        AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag, INQUIRED);
         QuestownNetwork.CHANNEL.sendToServer(msg);
     }
 }

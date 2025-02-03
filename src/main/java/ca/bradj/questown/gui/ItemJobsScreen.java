@@ -1,6 +1,8 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.AddWorkFromUIMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -10,8 +12,11 @@ import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
@@ -27,10 +32,12 @@ public class ItemJobsScreen extends Screen {
     private final List<UIJob> jobs;
     private final PagedCardScreen<UIJob> delegate;
     private final Ingredient requestedItem;
+    private final BlockPos flagPos;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
-            Collection<UIJob> jobs
+            Collection<UIJob> jobs,
+            BlockPos flagPos
     ) {
         super(Compat.translatable("menu.work_add_confirm.title"));
 
@@ -46,6 +53,7 @@ public class ItemJobsScreen extends Screen {
         );
         this.jobs = ImmutableList.copyOf(jobs);
         this.requestedItem = requestedItem;
+        this.flagPos = flagPos;
     }
 
     @Override
@@ -77,11 +85,8 @@ public class ItemJobsScreen extends Screen {
         this.delegate.renderBg(stack, partialTicks, mouseX, mouseY);
         super.render(stack, mouseX, mouseY, partialTicks);
 
-        String sizeString = "Jobs:XXX";
         String renderString = "Jobs:";
-        ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
-        pageArea = pageArea.moveUp(16);
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, sizeString);
+        ImmutableRect2i textArea = getTitleArea();
         Compat.drawLightText(font, stack, renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
                 itemRenderer,
@@ -93,13 +98,36 @@ public class ItemJobsScreen extends Screen {
         renderTooltips(stack, mouseX, mouseY, textArea.expandBy(4));
     }
 
+    @Override
+    public boolean mouseClicked(
+            double x,
+            double y,
+            int p_94697_
+    ) {
+        @NotNull ImmutableRect2i ta = getTitleArea();
+        if (UtilClean.coordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight())) {
+            BlockPos p = flagPos;
+            AddWorkFromUIMessage m = new AddWorkFromUIMessage(ItemStack.EMPTY, p, AddWorkFromUIMessage.Action.REJECTED);
+            QuestownNetwork.CHANNEL.sendToServer(m);
+        }
+        return super.mouseClicked(x, y, p_94697_);
+    }
+
+    private @NotNull ImmutableRect2i getTitleArea() {
+        String sizeString = "Jobs:XXX";
+        ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
+        pageArea = pageArea.moveUp(16);
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, sizeString);
+        return textArea;
+    }
+
     private void renderTooltips(
             PoseStack stack,
             int mouseX,
             int mouseY,
             ImmutableRect2i textArea
     ) {
-        if (UtilClean.mouseInBox(
+        if (UtilClean.coordInBox(
                 mouseX,
                 mouseY,
                 textArea.getX(),
@@ -154,45 +182,34 @@ public class ItemJobsScreen extends Screen {
 
         renderJobTitle(stack, d);
 
-        // TODO: Translate
-        Compat.drawDarkText(font, stack, Compat.literal("Items"), x, (c = down3.apply(c)).topY());
+        TranslatableComponent itemsText = Compat.translatable("menu.item_jobs.items_used");
+        Compat.drawDarkText(font, stack, itemsText, x, (c = down3.apply(c)).topY());
         c = renderItems(d.ingredients(), c, i, down2);
-        if (d.ingredients().isEmpty()) {
-            c = down2.apply(c);
-        }
-
         c = c.shiftedDown(font.lineHeight);
 
-        Compat.drawDarkText(font, stack, Compat.literal("Tools"), x, (c = down.apply(c)).topY());
+        TranslatableComponent toolsText = Compat.translatable("menu.item_jobs.tools_used");
+        Compat.drawDarkText(font, stack, toolsText, x, (c = down.apply(c)).topY());
         i = 0;
         c = renderItems(d.tools(), c, i, down2);
-        if (d.tools().isEmpty()) {
-            c = down2.apply(c);
-        }
-
         c = c.shiftedDown(font.lineHeight);
 
-        TranslatableComponent translatable = Compat.translatable(
-                "menu.item_jobs.room",
-                Compat.translatable("room." + d.roomNameTranslationKey().getPath())
-        );
+        TranslatableComponent roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
+        TranslatableComponent translatable = Compat.translatable("menu.item_jobs.room", roomName);
         Compat.drawDarkText(font, stack, translatable, x, (c = down.apply(c)).topY());
         i = 0;
-        c = renderItems(d.roomRecipe(), c, i, down2);
-        if (d.roomRecipe().isEmpty()) {
-            c = down2.apply(c);
-        }
+        renderItems(d.roomRecipe(), c, i, down2);
 
         int bgX = (width - backgroundWidth) / 2;
         int bgY = (height - delegate.backgroundHeight) / 2;
         int stripHeight = Util.faceWidth * 3;
+        stripHeight -= 1;
         int stripY = bgY + delegate.backgroundHeight - stripHeight;
         fill(stack, bgX, bgY + delegate.backgroundHeight, bgX + backgroundWidth, stripY, 0x30000000);
         i = 0;
         for (UUID uuid : d.villagersWhoCanDoJob()) {
             int stripOffset = (stripHeight - (Util.faceWidth * 2)) / 2;
             stripOffset -= 1;
-            blitFace(stack, bgX + Util.faceWidth, stripY + stripOffset, uuid, i++);
+            blitFace(stack, bgX + Util.faceWidth - 3, stripY + stripOffset, uuid, i++);
         }
     }
 

@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,9 +33,9 @@ public class UtilClean {
         return b.build();
     }
 
-    public static boolean mouseInBox(
-            int mouseX,
-            int mouseY,
+    public static boolean coordInBox(
+            double mouseX,
+            double mouseY,
             int leftX,
             int topY,
             int width,

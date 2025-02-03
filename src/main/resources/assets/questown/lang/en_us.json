@@ -310,6 +310,8 @@
   "menu.mood": "Mood",
   "menu.item_jobs.room": "Room: %s",
   "menu.item_jobs.title_tooltip": "Jobs that can produce:",
+  "menu.item_jobs.items_used": "Items Used:",
+  "menu.item_jobs.tools_used": "Tools Used:",
   "questown.menu.needs_in_period_1": "%s was needed %d",
   "questown.menu.needs_in_period_2": "times in the past %d days",
   "#questown:villager_food": "Food",

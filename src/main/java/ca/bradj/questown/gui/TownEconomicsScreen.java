@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.EconomicsUpdate;
-import ca.bradj.questown.gui.PagedCardScreen.*;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -83,7 +82,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         for (Card<ItemEconomicsData> card : cards()) {
             int x = card.coords().leftX();
             int y = card.coords().topY();
-            if (UtilClean.mouseInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
+            if (UtilClean.coordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());

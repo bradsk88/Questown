@@ -33,9 +33,10 @@ public class ClientAccess {
 
     public static void openItemJobs(
             Ingredient requestedItem,
-            Collection<UIJob> jobs
+            Collection<UIJob> jobs,
+            BlockPos flagPos
     ) {
-        openScreen(() -> new ItemJobsScreen(requestedItem, jobs));
+        openScreen(() -> new ItemJobsScreen(requestedItem, jobs, flagPos));
     }
 
     public static boolean openScreen(Supplier<Screen> screen) {
