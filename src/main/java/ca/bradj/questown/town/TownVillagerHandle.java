@@ -631,12 +631,14 @@ public class TownVillagerHandle implements VillagerHolder {
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
+        TownFlagBlockEntity unsafeTown = town.getUnsafe();
         for (JobID job : ServerJobsRegistry.getAllJobs()) {
             if (!canJobProduceItem(job, itemToShowJobsFor)) {
                 continue;
             }
             Supplier<Work> w = Works.get(job);
-            Job<?, ?, ?> j = w.get().jobFunc.apply(UUID.randomUUID());
+            Work gotWork = w.get();
+            Job<?, ?, ?> j = gotWork.jobFunc.apply(UUID.randomUUID());
             if (!(j instanceof DeclarativeJob dj)) {
                 continue;
             }
@@ -648,10 +650,11 @@ public class TownVillagerHandle implements VillagerHolder {
                     ImmutableList.copyOf(dj.initialIngredients.values()),
                     ImmutableList.copyOf(dj.initialTools.values()),
                     dj.location().baseRoom(),
-                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients())
+                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
+                    gotWork.results.apply(unsafeTown.getTownData()).iterator().next().toItemStack()
             ));
         }
-        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), town.getUnsafe().getTownFlagBasePos());
+        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
     }
 

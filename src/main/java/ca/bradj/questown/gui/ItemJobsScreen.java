@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -25,14 +26,17 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
-import static ca.bradj.questown.gui.PagedCardScreen.backgroundWidth;
+import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRMED;
+import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class ItemJobsScreen extends Screen {
 
+    public static final int EXTRA_HEIGHT = 56;
     private final List<UIJob> jobs;
     private final PagedCardScreen<UIJob> delegate;
     private final Ingredient requestedItem;
     private final BlockPos flagPos;
+    private final Runnable requestWork;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
@@ -49,11 +53,23 @@ public class ItemJobsScreen extends Screen {
                 this::renderCardContent,
                 3,
                 16,
-                32
+                EXTRA_HEIGHT
         );
         this.jobs = ImmutableList.copyOf(jobs);
         this.requestedItem = requestedItem;
         this.flagPos = flagPos;
+        this.requestWork = () -> this.send(flagPos, CONFIRMED);
+
+    }
+
+    private void send(
+            BlockPos p,
+            AddWorkFromUIMessage.Action action
+    ) {
+        Iterable<PagedCardScreen.Card<UIJob>> cards = delegate.cards();
+        PagedCardScreen.Card<UIJob> next = cards.iterator().next();
+        AddWorkFromUIMessage m = new AddWorkFromUIMessage(next.data().result(), p, action);
+        QuestownNetwork.CHANNEL.sendToServer(m);
     }
 
     @Override
@@ -72,6 +88,19 @@ public class ItemJobsScreen extends Screen {
     protected void init() {
         super.init();
         this.delegate.afterInit(this::addRenderableWidget);
+        int pageTopY = ((this.height - delegate.backgroundHeight)) / 2;
+        int pageLeftX = ((this.width - backgroundWidth) / 2);
+        int buttonHeight = (2 * font.lineHeight) + 2;
+        this.addRenderableWidget(
+                new Button(
+                        pageLeftX + BIG_PADDING,
+                        pageTopY + delegate.backgroundHeight - buttonHeight - BIG_PADDING,
+                        backgroundWidth - (2 * BIG_PADDING),
+                        buttonHeight,
+                        Compat.translatable("menu.item_jobs.add_to_work_requests"),
+                        (p_96776_) -> this.requestWork.run()
+                )
+        );
     }
 
     @Override
@@ -202,9 +231,8 @@ public class ItemJobsScreen extends Screen {
         int bgX = (width - backgroundWidth) / 2;
         int bgY = (height - delegate.backgroundHeight) / 2;
         int stripHeight = Util.faceWidth * 3;
-        stripHeight -= 1;
-        int stripY = bgY + delegate.backgroundHeight - stripHeight;
-        fill(stack, bgX, bgY + delegate.backgroundHeight, bgX + backgroundWidth, stripY, 0x30000000);
+        int stripY = bgY + delegate.backgroundHeight - stripHeight - buttonHeight - 4 - (BIG_PADDING * 2);
+        fill(stack, bgX, stripY, bgX + backgroundWidth, stripY + stripHeight -2, 0x30000000);
         i = 0;
         for (UUID uuid : d.villagersWhoCanDoJob()) {
             int stripOffset = (stripHeight - (Util.faceWidth * 2)) / 2;

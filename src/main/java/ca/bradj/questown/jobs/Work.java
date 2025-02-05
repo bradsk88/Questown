@@ -30,7 +30,7 @@ public class Work {
     final BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock;
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
-    final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
+    public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
     final @Nullable ItemStack initialRequest;
     final Function<List<MCHeldItem>, Collection<Ingredient>> needs;
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;

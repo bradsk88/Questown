@@ -145,6 +145,7 @@ public class WorkRequestConfirmScreen extends Screen {
             int mouseY,
             float partialTicks
     ) {
+        this.fillGradient(stack, 0, 0, this.width, this.height, -1072689136, -804253680);
         this.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         int x = pageLeftX;
@@ -161,7 +162,6 @@ public class WorkRequestConfirmScreen extends Screen {
                         iconsForJobsWhichProduceResult.size()
                 ), x, mainItemTextY
         );
-        String id = itemRequested.getItem().getRegistryName().getPath();
         TranslatableComponent translatable = Compat.translatable("menu.work_add_confirm.which_produce_this_item");
         Compat.drawDarkText(this.font, stack, translatable, x, mainItemTextY2);
         renderJobIcons(stack, mouseX, mouseY, xRef, jobIconsY);

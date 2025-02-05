@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,7 +18,8 @@ public record UIJob(
         ImmutableList<Ingredient> ingredients,
         ImmutableList<Ingredient> tools,
         ResourceLocation roomNameTranslationKey,
-        ImmutableList<Ingredient> roomRecipe
+        ImmutableList<Ingredient> roomRecipe,
+        ItemStack result
 ) {
     public static UIJob fromNetwork(FriendlyByteBuf buf) {
         JobID jobId = NetworkCompat.fromNetworkJobID(buf);
@@ -26,7 +28,8 @@ public record UIJob(
         List<String> tl = buf.readList(FriendlyByteBuf::readUtf);
         ResourceLocation rrName = buf.readResourceLocation();
         List<String> rr = buf.readList(FriendlyByteBuf::readUtf);
-        return fromBufferData(jobId, in, tl, vs, rrName, rr);
+        ItemStack result = buf.readItem();
+        return fromBufferData(jobId, in, tl, vs, rrName, rr, result);
     }
 
     public static void toNetwork(
@@ -43,6 +46,7 @@ public record UIJob(
         buf.writeCollection(toolIDs, FriendlyByteBuf::writeUtf);
         buf.writeUtf(uiJob.roomNameTranslationKey().toString());
         buf.writeCollection(roomRecipe, FriendlyByteBuf::writeUtf);
+        buf.writeItem(uiJob.result());
     }
 
     private static @NotNull UIJob fromBufferData(
@@ -51,7 +55,8 @@ public record UIJob(
             List<String> tl,
             List<UUID> vs,
             ResourceLocation rrNameKey,
-            List<String> rr
+            List<String> rr,
+            ItemStack result
     ) {
         ImmutableList.Builder<Ingredient> bIngredients = ImmutableList.builder();
         ImmutableList.Builder<Ingredient> bTools = ImmutableList.builder();
@@ -66,13 +71,15 @@ public record UIJob(
         for (String s : rr) {
             bRoom.add(Ingredients.fromString(s));
         }
+
         return new UIJob(
                 jobId,
                 ImmutableList.copyOf(vs),
                 bIngredients.build(),
                 bTools.build(),
                 rrNameKey,
-                bRoom.build()
+                bRoom.build(),
+                result
         );
     }
 }
