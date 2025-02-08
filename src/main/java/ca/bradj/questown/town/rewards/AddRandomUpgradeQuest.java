@@ -4,7 +4,6 @@ import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -39,7 +38,7 @@ public class AddRandomUpgradeQuest extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> town.addRandomUpgradeQuestForVisitor(visitorUUID);
+        return () -> town.getQuestHandle().addRandomUpgradeQuestForVisitor(visitorUUID);
     }
 
     @Override

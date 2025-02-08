@@ -58,8 +58,8 @@ public class TownFlagBlock extends BaseEntityBlock {
     public TownFlagBlock() {
         super(
                 BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
-                        .strength(10.0F, 1200.0F)
-                        .noOcclusion()
+                                         .strength(10.0F, 1200.0F)
+                                         .noOcclusion()
         );
     }
 
@@ -150,7 +150,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         ItemStack itemInHand = player.getItemInHand(hand);
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
-            for (UUID uuid : entity.getVillagersWithQuests()) {
+            for (UUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
                 entity.addImmediateReward(
                         new AddRandomUpgradeQuest(entity, uuid)
                 );

@@ -74,7 +74,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 new SpawnVisitorReward(town, nextVisitorUUID),
                 new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
         );
-        if (town.getVillagersWithQuests().isEmpty()) {
+        if (town.getQuestHandle().getVillagersWithQuests().isEmpty()) {
             // Spawn a villager with a set of quests
             return newVisitor;
         }
@@ -352,7 +352,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public void setChangeListener(TownFlagBlockEntity townFlagBlockEntity) {
-        this.changeListener = townFlagBlockEntity;
+        this.changeListener = townFlagBlockEntity.quests;
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {

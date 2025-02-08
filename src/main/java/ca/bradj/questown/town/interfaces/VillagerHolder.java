@@ -92,4 +92,6 @@ public interface VillagerHolder {
     void showMultiStatusUI(ServerPlayer sender);
 
     void showItemJobsUI(ServerPlayer sender, Ingredient itemToShowJobsFor);
+
+    void register(VisitorMobEntity vEntity);
 }

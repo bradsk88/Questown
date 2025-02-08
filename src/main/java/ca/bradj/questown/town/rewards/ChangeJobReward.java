@@ -26,7 +26,8 @@ public class ChangeJobReward extends MCReward {
     public ChangeJobReward(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
-            UUID visitorUUID, // Allowed to be null because rewards get deserialized at runtime.
+            UUID visitorUUID,
+            // Allowed to be null because rewards get deserialized at runtime.
             String jobName
     ) {
         super(rType);
@@ -47,7 +48,7 @@ public class ChangeJobReward extends MCReward {
     protected @NotNull RewardApplier getApplier() {
         return () -> {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
-            town.changeJobForVisitor(visitorUUID, jobID);
+            town.getVillagerHandle().changeJobForVillager(visitorUUID, jobID, false);
             ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
             defaultWork.forEach(v -> {
                 ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(v);
@@ -92,6 +93,6 @@ public class ChangeJobReward extends MCReward {
 
     @Override
     public String toNiceString() {
-        return "ChangeJob:"+jobName;
+        return "ChangeJob:" + jobName;
     }
 }

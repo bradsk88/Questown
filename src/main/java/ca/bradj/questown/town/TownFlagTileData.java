@@ -79,13 +79,15 @@ public class TownFlagTileData {
     }
 
     private static @NotNull InitPair initMorningRewards() {
-        return new InitPair((tag, t) -> {
-            t.initializer().getMorningRewards().deserializeNbt(t, tag);
-            QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
-            return true;
-        }, t -> {
+        return new InitPair(
+                (tag, t) -> {
+                    t.initializer().getMorningRewards().deserializeNbt(t, tag);
+                    QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
+                    return true;
+                }, t -> {
             QT.FLAG_LOGGER.debug("Initialized morning rewards for new flag");
-        });
+        }
+        );
     }
 
     private static @NotNull InitPair initWelcomeMats() {
@@ -100,11 +102,13 @@ public class TownFlagTileData {
     }
 
     private static @NotNull InitPair initJobs() {
-        return new InitPair((tag, t) -> {
-            TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
-            QT.FLAG_LOGGER.debug("Initialized jobs from {}", tag);
-            return true;
-        }, t -> QT.FLAG_LOGGER.debug("Initialized jobs for new flag"));
+        return new InitPair(
+                (tag, t) -> {
+                    TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
+                    QT.FLAG_LOGGER.debug("Initialized jobs from {}", tag);
+                    return true;
+                }, t -> QT.FLAG_LOGGER.debug("Initialized jobs for new flag")
+        );
     }
 
     private static @NotNull InitPair initKnowledge() {
@@ -145,9 +149,9 @@ public class TownFlagTileData {
                 ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
                 Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
                 if (diningRooms.isEmpty()) {
-                    t.changeJobForVisitor(e.getUUID(), DinerNoTableWork.getIdForRoot(rid));
+                    t.getVillagerHandle().changeJobForVillager(e.getUUID(), DinerNoTableWork.getIdForRoot(rid), false);
                 } else {
-                    t.changeJobForVisitor(e.getUUID(), DinerWork.getIdForRoot(rid));
+                    t.getVillagerHandle().changeJobForVillager(e.getUUID(), DinerWork.getIdForRoot(rid), false);
                 }
             });
             villagerHandle.addStatsListener(s -> t.setChanged());
@@ -157,13 +161,15 @@ public class TownFlagTileData {
     }
 
     private static InitPair initHealSpots() {
-        return new InitPair((tag, town) -> {
-            TownHealingHandle.SERIALIZER.deserialize(tag, town.initializer().getHealing());
-            QT.FLAG_LOGGER.debug("Initialized healing spots from {}", tag);
-            return true;
-        }, (town) -> {
+        return new InitPair(
+                (tag, town) -> {
+                    TownHealingHandle.SERIALIZER.deserialize(tag, town.initializer().getHealing());
+                    QT.FLAG_LOGGER.debug("Initialized healing spots from {}", tag);
+                    return true;
+                }, (town) -> {
             town.initializer().getHealing().initialize(town);
-        });
+        }
+        );
     }
 
     public static void write(

@@ -4,10 +4,13 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 public interface QuestsHolder {
@@ -21,5 +24,15 @@ public interface QuestsHolder {
 
     void showQuestsUI(ServerPlayer player);
 
+    List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid);
+
+    ImmutableSet<UUID> getVillagersWithQuests();
+
+    Collection<MCQuest> getQuestsForVillager(UUID uuid);
+
+    void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID);
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
+
+    void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
 }

@@ -695,7 +695,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 ));
             }
             if (town != null) {
-                town.removeEntity(this);
+                town.getVillagerHandle().remove(this);
             }
         }
     }
@@ -1183,7 +1183,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return InteractionResult.PASS;
         }
 
-        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestsWithRewardsForVillager(getUUID());
+        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestHandle().getQuestsWithRewardsForVillager(getUUID());
         Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
@@ -1203,7 +1203,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 .collect(Collectors.toSet());
 
         VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
-                town.getVillagersWithQuests()
+                town.getQuestHandle().getVillagersWithQuests()
                     .stream()
                     .filter(Objects::nonNull)
                     .toList()
@@ -1284,11 +1284,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public Collection<? extends Quest<ResourceLocation, MCRoom>> getQuests() {
-        return town.getQuestsForVillager(uuid);
+        return town.getQuestHandle().getQuestsForVillager(uuid);
     }
 
     public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewards() {
-        return town.getQuestsWithRewardsForVillager(uuid);
+        return town.getQuestHandle().getQuestsWithRewardsForVillager(uuid);
     }
 
     public boolean canAcceptJob() {

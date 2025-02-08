@@ -77,7 +77,7 @@ public class SpawnVisitorReward extends MCReward {
                 )
         );
         vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, initJournal);
-        entity.registerEntity(vEntity);
+        entity.getVillagerHandle().register(vEntity);
         sl.addFreshEntity(vEntity);
         QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
     }

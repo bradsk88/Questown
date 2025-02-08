@@ -39,7 +39,7 @@ public class Ingredients {
         JsonElement j = item.toJson();
         String tag = getTag(j);
         if (tag != null) {
-            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation("#" + tag)));
+            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tag)));
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();

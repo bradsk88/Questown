@@ -33,7 +33,7 @@ public class SetJobCommand {
                 continue;
             }
             TownInterface town = vme.getTown();
-            town.changeJobForVisitor(vme.getUUID(), job);
+            town.getVillagerHandle().changeJobForVillager(vme.getUUID(), job, false);
         }
         return 0;
     }

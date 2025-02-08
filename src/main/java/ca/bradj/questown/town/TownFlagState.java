@@ -199,7 +199,7 @@ public class TownFlagState {
                         v.journal
                 );
                 sl.addFreshEntity(recovered);
-                e.registerEntity(recovered);
+                e.getVillagerHandle().register(recovered);
             }
             QT.FLAG_LOGGER.trace("Loaded villager state from NBT: {}", villagers);
         }

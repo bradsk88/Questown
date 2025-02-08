@@ -5,7 +5,6 @@ import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +36,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> town.addBatchOfRandomQuestsForVisitor(visitorUUID);
+        return () -> town.getQuestHandle().addBatchOfRandomQuestsForVisitor(visitorUUID);
     }
 
     @Override

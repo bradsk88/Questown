@@ -102,18 +102,13 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
             InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        boolean informed = false;
         boolean clientSide = p_60504_.isClientSide();
         if (!clientSide) {
             for (OpenMenuListener l : openMenuListeners) { // TODO: make listeners survive a reboot
                 l.openMenuRequested((ServerPlayer) p_60506_, false);
-                informed = true;
             }
         }
-        if (informed) {
-            return InteractionResult.CONSUME;
-        }
-        return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+        return InteractionResult.CONSUME;
     }
 
     @Override

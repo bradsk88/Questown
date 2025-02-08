@@ -12,8 +12,10 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
+import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerLevel;
@@ -21,14 +23,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class TownQuestsHandle implements QuestsHolder {
+public class TownQuestsHandle implements QuestsHolder, QuestBatch.ChangeListener<MCQuest> {
     @Nullable
     private TownFlagBlockEntity town;
 
@@ -110,6 +115,35 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
+    public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid) {
+        return unsafeGetTown().quests.getAllForVillagerWithRewards(uuid);
+    }
+
+    @Override
+    public ImmutableSet<UUID> getVillagersWithQuests() {
+        return TownQuests.getVillagers(unsafeGetTown().quests);
+    }
+
+    @Override
+    public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
+        return unsafeGetTown().quests.getAllForVillager(uuid);
+    }
+
+    @Override
+    public void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addRandomBatchForVisitor(t, t.quests, visitorUUID);
+        t.setChanged();
+    }
+
+    @Override
+    public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        t.setChanged();
+    }
+
+    @Override
     public Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         return t.quests.getBatches().stream().filter(
@@ -174,5 +208,37 @@ public class TownQuestsHandle implements QuestsHolder {
     @Override
     public ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllQuestsWithRewards() {
         return unsafeGetTown().getAllQuestsWithRewards();
+    }
+
+
+    @Override
+    public void questCompleted(MCQuest quest) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        t.messages.questCompleted(quest);
+        t.setChanged();
+        FireworkRocketEntity firework = new FireworkRocketEntity(
+                t.getServerLevel(),
+                t.getBlockPos().getX(),
+                t.getBlockPos().getY() + 10,
+                t.getBlockPos().getZ(),
+                new ItemStack(
+                        Items.FIREWORK_ROCKET.getDefaultInstance()
+                                             .getItem(), 3
+                )
+        );
+        t.getServerLevel().addFreshEntity(firework);
+    }
+
+    @Override
+    public void questLost(MCQuest quest) {
+        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        t.messages.questLost(quest);
+        t.setChanged();
+    }
+
+    @Override
+    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
+        // TODO: Handle this by informing the user, etc.
+        unsafeGetTown().setChanged();
     }
 }

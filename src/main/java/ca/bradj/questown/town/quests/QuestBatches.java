@@ -45,16 +45,17 @@ public class QuestBatches<
     }
 
     public interface Factory<BATCH, REWARD> {
-        BATCH getNew(UUID batchUUID, UUID owner, REWARD r);
+        BATCH getNew(
+                UUID batchUUID,
+                UUID owner,
+                REWARD r
+        );
     }
 
     public interface VillagerProvider<R extends Room> {
         UUID getRandomVillager();
+
         boolean isVillagerMissing(UUID uuid);
-
-        Optional<R> assignToFarm(UUID ownerUUID);
-
-        Optional<R> getBiggestFarm();
     }
 
 
@@ -62,7 +63,10 @@ public class QuestBatches<
         this.factory = factory;
     }
 
-    public void initialize(VillagerProvider<ROOM> villagers, ImmutableList<BATCH> bs) {
+    public void initialize(
+            VillagerProvider<ROOM> villagers,
+            ImmutableList<BATCH> bs
+    ) {
         if (!batches.isEmpty()) {
             Questown.LOGGER.error("QuestBatches were initialized twice :(");
         }
@@ -96,7 +100,8 @@ public class QuestBatches<
 
     private ImmutableList<BATCH> filterOutDuplicateCompletion(
             VillagerProvider villagers,
-            ImmutableList<BATCH> bs) {
+            ImmutableList<BATCH> bs
+    ) {
         Set<IdIgnoring<QUEST>> completedQuests = bs.stream()
                                                    .flatMap(v -> v.getAll().stream())
                                                    .filter(Quest::isComplete)
@@ -142,7 +147,11 @@ public class QuestBatches<
         return owner;
     }
 
-    private BATCH emptyBatch(UUID batchUUID, UUID owner, REWARD reward) {
+    private BATCH emptyBatch(
+            UUID batchUUID,
+            UUID owner,
+            REWARD reward
+    ) {
         return this.factory.getNew(batchUUID, owner, reward);
     }
 
@@ -185,7 +194,12 @@ public class QuestBatches<
                  .anyMatch(v -> room.equals(v.completedOn))
             ) {
                 // FIXME: Campfire quest causes this to get spammed
-                QT.QUESTS_LOGGER.debug(marker, "Quest was already marked complete: {} for door {}", recipeId, room.doorPos);
+                QT.QUESTS_LOGGER.debug(
+                        marker,
+                        "Quest was already marked complete: {} for door {}",
+                        recipeId,
+                        room.doorPos
+                );
                 return;
             }
         }

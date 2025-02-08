@@ -166,18 +166,11 @@ public class TownVillagerHandle implements VillagerHolder {
         float damagePercent = getDamagePercent(uuid);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
-                fullnessPercent,
-                moods.getMood(uuid),
-                damagePercent
-        );
+                fullnessPercent, moods.getMood(uuid), damagePercent);
     }
 
     public float getDamagePercent(UUID uuid) {
-        return (float) Util.getOrDefault(
-                damage,
-                uuid,
-                0
-        ) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        return (float) Util.getOrDefault(damage, uuid, 0) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
     }
 
     @Override
@@ -186,12 +179,39 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
+
     public void changeJobForVillager(
-            UUID villagerUUID,
-            JobID newJob,
+            UUID visitorUUID,
+            JobID jobID,
             boolean announce
     ) {
-        this.town.getUnsafe().changeJobForVillager(villagerUUID, newJob, announce);
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
+        VisitorMobEntity f = getEntity(visitorUUID);
+        if (f == null) {
+            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
+        } else {
+            doSetJob(visitorUUID, jobID, f);
+            t.setChanged();
+            if (announce) {
+                t.messages.jobChanged(jobID, visitorUUID);
+            }
+        }
+
+        t.possibleWork.invalidate();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void doSetJob(
+            UUID visitorUUID,
+            JobID jobName,
+            VisitorMobEntity f
+    ) {
+        f.setJob(ServerJobsRegistry.getInitializedJob(
+                town.getServerLevelUnsafe(),
+                jobName,
+                f.getJobJournalSnapshot().items(),
+                visitorUUID
+        ));
     }
 
     @Override
@@ -208,6 +228,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void remove(LivingEntity visitorMobEntity) {
         this.entities.remove(visitorMobEntity);
+        town.getUnsafe().setChanged();
     }
 
     @Override
@@ -216,10 +237,8 @@ public class TownVillagerHandle implements VillagerHolder {
             String type,
             UUID villagerId
     ) {
-        Optional<LivingEntity> f = stream()
-                .filter(VisitorMobEntity.class::isInstance)
-                .filter(v -> villagerId.equals(v.getUUID()))
-                .findFirst();
+        Optional<LivingEntity> f = stream().filter(VisitorMobEntity.class::isInstance)
+                                           .filter(v -> villagerId.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No villagers with ID {} while opening UI", villagerId);
             return;
@@ -231,18 +250,14 @@ public class TownVillagerHandle implements VillagerHolder {
 
         TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(e.getFlagPos());
 
-        List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream().map(
-                v -> UIQuest.fromLevel(sender.getLevel(), v)
-        ).flatMap(List::stream).toList();
+        List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
+                                   .map(v -> UIQuest.fromLevel(sender.getLevel(), v)).flatMap(List::stream).toList();
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
-        VillagerEconomicsData econ = new VillagerEconomicsData(
-                ImmutableList.of()
-        );
+        VillagerEconomicsData econ = new VillagerEconomicsData(ImmutableList.of());
 
         ImmutableMap<String, Runnable> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY,
-                () -> openMenu(
+                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(
                         sender, (windowId, inv, p) -> {
                             InventoryAndStatusMenu x = new InventoryAndStatusMenu(
                                     windowId,
@@ -256,28 +271,29 @@ public class TownVillagerHandle implements VillagerHolder {
                             x.connectToServer(e, sender);
                             return x;
                         }, quests, e, stats
-                ),
-                OpenVillagerMenuMessage.QUESTS,
-                () -> openMenu(
-                        sender, (windowId, inv, p) -> new VillagerQuestsContainer(
-                                windowId, e.getUUID(), quests, e.getFlagPos()
-                        ), quests, e, stats
-                ),
-                OpenVillagerMenuMessage.STATS,
-                () -> openMenu(
-                        sender, (windowId, inv, p) -> new VillagerStatsMenu(
-                                windowId, e, e.getFlagPos(), stats
-                        ), quests, e, stats
-                ),
-                OpenVillagerMenuMessage.SKILLS,
-                () -> {
+                ), OpenVillagerMenuMessage.QUESTS, () -> openMenu(
+                        sender,
+                        (windowId, inv, p) -> new VillagerQuestsContainer(
+                                windowId,
+                                e.getUUID(),
+                                quests,
+                                e.getFlagPos()
+                        ),
+                        quests,
+                        e,
+                        stats
+                ), OpenVillagerMenuMessage.STATS, () -> openMenu(
+                        sender,
+                        (windowId, inv, p) -> new VillagerStatsMenu(windowId, e, e.getFlagPos(), stats),
+                        quests,
+                        e,
+                        stats
+                ), OpenVillagerMenuMessage.SKILLS, () -> {
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> sender),
                             new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
                     );
-                },
-                OpenVillagerMenuMessage.ECONOMICS,
-                () -> {
+                }, OpenVillagerMenuMessage.ECONOMICS, () -> {
                     NoMCEconomics tEcon = flag.getEconomicsHandle();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(villagerId);
                     QuestownNetwork.CHANNEL.send(
@@ -285,9 +301,11 @@ public class TownVillagerHandle implements VillagerHolder {
                             new EconomicsUpdate(aggregated)
                     );
                     openMenu(
-                            sender, (windowId, inv, p) -> new VillagerEconomicsMenu(
-                                    windowId, e, e.getFlagPos(), econ
-                            ), quests, e, stats
+                            sender,
+                            (windowId, inv, p) -> new VillagerEconomicsMenu(windowId, e, e.getFlagPos(), econ),
+                            quests,
+                            e,
+                            stats
                     );
                 }
         );
@@ -319,8 +337,7 @@ public class TownVillagerHandle implements VillagerHolder {
             VillagerStatsData stats
     ) {
         Compat.openScreen(
-                sender,
-                new MenuProvider() {
+                sender, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
                         return Compat.literal("");
@@ -334,12 +351,15 @@ public class TownVillagerHandle implements VillagerHolder {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                },
-                data -> VillagerMenus.write(
-                        data, quests, e, e.getInventory().getContainerSize(), e.getJobId(), stats,
-                        new VillagerEconomicsData(
-                                ImmutableList.of()
-                        ) // TODO: Actually send econ data
+                }, data -> VillagerMenus.write(
+                        data,
+                        quests,
+                        e,
+                        e.getInventory().getContainerSize(),
+                        e.getJobId(),
+                        stats,
+                        new VillagerEconomicsData(ImmutableList.of())
+                        // TODO: Actually send econ data
                         // TODO: Finish testing this UI
                 )
         );
@@ -383,8 +403,7 @@ public class TownVillagerHandle implements VillagerHolder {
             Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());
             long ticksHealed = (long) (e.duration() * healFactor);
             damage.compute(
-                    vEntity.getUUID(),
-                    (id, cur) -> {
+                    vEntity.getUUID(), (id, cur) -> {
                         if (cur == null) {
                             return 0;
                         }
@@ -440,20 +459,15 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public boolean isDining(UUID uuid) {
-        return entities.stream()
-                       .filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId()))
-                       .findFirst()
+        return entities.stream().filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
                        .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
-        return entities.stream()
-                       .filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime())
-                       .findFirst()
-                       .orElse(false);
+        return entities.stream().filter(v -> uuid.equals(v.getUUID()))
+                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
     }
 
     @Override
@@ -497,9 +511,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public void freezeVillagers(Integer ticks) {
-        stream()
-                .filter(VisitorMobEntity.class::isInstance)
-                .map(VisitorMobEntity.class::cast)
+        stream().filter(VisitorMobEntity.class::isInstance).map(VisitorMobEntity.class::cast)
                 .forEach(v -> v.freeze(ticks));
     }
 
@@ -523,9 +535,7 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     public VisitorMobEntity getEntity(UUID ownerUUID) {
-        Optional<LivingEntity> f = stream()
-                .filter(v -> ownerUUID.equals(v.getUUID()))
-                .findFirst();
+        Optional<LivingEntity> f = stream().filter(v -> ownerUUID.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No entities found for UUID: {}", ownerUUID);
             return null;
@@ -587,7 +597,8 @@ public class TownVillagerHandle implements VillagerHolder {
                             @NotNull Player p
                     ) {
                         MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
-                                windowId, townFlagBasePos,
+                                windowId,
+                                townFlagBasePos,
                                 this::triggerAdvancement
                         );
                         return multiStatusMenu;
@@ -596,7 +607,8 @@ public class TownVillagerHandle implements VillagerHolder {
                     private void triggerAdvancement() {
                         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                                 player.getLevel(),
-                                RoomTrigger.Triggers.FirstOpenFlagMenu, townFlagBasePos
+                                RoomTrigger.Triggers.FirstOpenFlagMenu,
+                                townFlagBasePos
                         );
                     }
                 }, data -> {
@@ -624,10 +636,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.getLevel()
-              .getRecipeManager()
-              .getAllRecipesFor(RecipesInit.ROOM)
-              .forEach(v -> rMapB.put(v.getId(), v));
+        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
@@ -652,16 +661,23 @@ public class TownVillagerHandle implements VillagerHolder {
                     ImmutableList.copyOf(dj.initialTools.values()),
                     dj.location().baseRoom(),
                     r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
-                    ImmutableList.copyOf(
-                            gotWork.results
-                                    .apply(unsafeTown.getTownData())
-                                    .stream()
-                                    .map(v -> v.get().getDefaultInstance())
-                                    .toList()
-                    )
+                    ImmutableList.copyOf(gotWork.results.apply(unsafeTown.getTownData()).stream()
+                                                        .map(v -> v.get().getDefaultInstance()).toList())
             ));
         }
         Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+    }
+
+    @Override
+    public void register(VisitorMobEntity vEntity) {
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
+        QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", t.getUUID(), vEntity);
+        add(vEntity);
+        vEntity.addChangeListener(() -> {
+            QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
+            t.setChanged();
+        });
+        t.setChanged();
     }
 }
