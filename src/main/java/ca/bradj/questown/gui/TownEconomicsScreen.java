@@ -1,7 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -82,7 +84,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         for (Card<ItemEconomicsData> card : cards()) {
             int x = card.coords().leftX();
             int y = card.coords().topY();
-            if (UtilClean.coordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
+            if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
@@ -117,24 +119,37 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int mouseX,
             int mouseY
     ) {
-        renderDataAndIcons(poseStack, card.coords(), card.data());
+        renderDataAndIcons(poseStack, card.coords(), card.data(), mouseX, mouseY);
     }
 
     private void renderDataAndIcons(
             PoseStack poseStack,
-            CardCoordinates coords,
-            ItemEconomicsData data
+            CardCoordinates c,
+            ItemEconomicsData data,
+            int mouseX,
+            int mouseY
     ) {
-        int iconX = coords.leftX() + MED_PADDING;
-        int iconY = coords.topY() + MED_PADDING;
+        int iconX = getIconX(c);
+        int iconY = getIconY(c);
         Ingredient item = Ingredients.fromString(data.ingredientKey());
+        if (UtilClean.isCoordInBox(mouseX, mouseY, iconX, iconY, 16, 16)) {
+            fill(poseStack, iconX, iconY, iconX + 16, iconY + 16,RenderUtil.SHADOW);
+        }
         ingredientRenderer.render(itemRenderer, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
-        int textY = coords.topYPadded();
+        int textY = c.topYPadded();
         Compat.drawDarkText(font, poseStack, Ingredients.getName(item), textX, textY);
         String count = Integer.toString(data.timesNeeded());
-        int countX = coords.rightXPadded() - font.width(count);
+        int countX = c.rightXPadded() - font.width(count);
         Compat.drawDarkText(font, poseStack, Compat.literal(count), countX, textY);
+    }
+
+    private static int getIconY(CardCoordinates coords) {
+        return coords.topY() + MED_PADDING;
+    }
+
+    private static int getIconX(CardCoordinates coords) {
+        return coords.leftX() + MED_PADDING;
     }
 
     protected void renderBg(
@@ -174,6 +189,16 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             double mouseY,
             int p_97750_
     ) {
+        for (Card<ItemEconomicsData> card : cards()) {
+            CardCoordinates c = card.coords();
+            if (UtilClean.isCoordInBox(mouseX, mouseY, getIconX(c), getIconY(c), 16, 16)) {
+                Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
+                AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
+                AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagPos(), inquired);
+                QuestownNetwork.CHANNEL.sendToServer(msg);
+                return true;
+            }
+        }
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight()) / 2;
         this.tabs.mouseClicked(x, y, mouseX, mouseY);

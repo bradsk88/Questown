@@ -1,7 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
@@ -117,7 +117,7 @@ public class TownContainers {
                 filter(Objects::nonNull);
     }
 
-    private static @NotNull Stream<UtilClean.Pair<MCRoom, Map.Entry<BlockPos, Block>>> getBlocks(
+    private static @NotNull Stream<Pair<MCRoom, Map.Entry<BlockPos, Block>>> getBlocks(
             RoomsHolder townFlagBlockEntity,
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom,
             Predicate<BlockPos> includeBlock
@@ -128,7 +128,7 @@ public class TownContainers {
                 .flatMap(v -> getContainedBlocks(includeBlock, v));
     }
 
-    private static @NotNull Stream<UtilClean.Pair<MCRoom, Map.Entry<BlockPos, Block>>> getContainedBlocks(
+    private static @NotNull Stream<Pair<MCRoom, Map.Entry<BlockPos, Block>>> getContainedBlocks(
             Predicate<BlockPos> includeBlock,
             RoomRecipeMatch<MCRoom> v
     ) {
@@ -136,7 +136,7 @@ public class TownContainers {
                 .entrySet()
                 .stream()
                 .filter(z -> includeBlock.test(z.getKey()))
-                .map(z -> new UtilClean.Pair<>(v.room, z));
+                .map(z -> new Pair<>(v.room, z));
     }
 
     @NotNull

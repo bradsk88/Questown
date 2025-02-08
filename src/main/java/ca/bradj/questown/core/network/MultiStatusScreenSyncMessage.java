@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.MultiStatusScreen;
 import ca.bradj.questown.gui.SessionUniqueOrdinals;
@@ -44,10 +45,10 @@ public record MultiStatusScreenSyncMessage(
     }
 
     public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
-        HashMap<UUID, UtilClean.Pair<JobID, IStatus<?>>> data = buffer.readMap(
+        HashMap<UUID, Pair<JobID, IStatus<?>>> data = buffer.readMap(
                 HashMap::new,
                 FriendlyByteBuf::readUUID,
-                b -> new UtilClean.Pair<>(
+                b -> new Pair<>(
                         Jobs.getIdFromNetwork(b),
                         SessionUniqueOrdinals.getStatus(b.readInt())
                 )

@@ -1,7 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -82,7 +84,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
         for (Card<ItemEconomicsData> card : cards()) {
             int x = card.coords().leftX();
             int y = card.coords().topY();
-            if (UtilClean.coordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
+            if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
                 String key1 = "questown.menu.needs_in_period_1";
                 String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
@@ -174,10 +176,28 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             double mouseY,
             int p_97750_
     ) {
+        for (Card<ItemEconomicsData> card : cards()) {
+            CardCoordinates c = card.coords();
+            if (UtilClean.isCoordInBox(mouseX, mouseY, getIconX(c), getIconY(c), 16, 16)) {
+                Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
+                AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
+                AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagPos(), inquired);
+                QuestownNetwork.CHANNEL.sendToServer(msg);
+                return true;
+            }
+        }
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight()) / 2;
         this.tabs.mouseClicked(x, y, mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, p_97750_);
+    }
+
+    private static int getIconY(CardCoordinates coords) {
+        return coords.topY() + MED_PADDING;
+    }
+
+    private static int getIconX(CardCoordinates coords) {
+        return coords.leftX() + MED_PADDING;
     }
 
     @Override

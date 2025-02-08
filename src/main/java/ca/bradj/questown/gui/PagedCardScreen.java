@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.UtilClean.Pair;
+import ca.bradj.questown.core.Coordinate;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
@@ -56,7 +57,7 @@ public final class PagedCardScreen<D> {
             Supplier<Integer> width,
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
-            TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent,
+            TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent, // TODO: Replace Pair with Coordinate
             int heightScale,
             int buttonY,
             int extraHeight
@@ -331,6 +332,14 @@ public final class PagedCardScreen<D> {
                     bottomY,
                     bottomYPadded
             );
+        }
+
+        public Coordinate topLeft() {
+            return new Coordinate(leftX, topY);
+        }
+
+        public Coordinate bottomRight() {
+            return new Coordinate(rightX, bottomY);
         }
     }
 }

@@ -24,7 +24,7 @@ public class ClientAccess {
     }
 
     public static void openWorkRequestConfirm(
-            ResourceLocation itemRequested,
+            Ingredient itemRequested,
             Map<JobID, ResourceLocation> iconsForJobsWhichProduceResult,
             BlockPos flagPos
     ) {

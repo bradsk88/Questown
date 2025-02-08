@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
@@ -91,7 +91,7 @@ public class Work {
         return overrides.statusTextures().get(status);
     }
 
-    public @Nullable UtilClean.Pair<String, String> applyStatusTextOverride(IStatus<?> status) {
+    public @Nullable Pair<String, String> applyStatusTextOverride(IStatus<?> status) {
         return overrides.statusTextOverrides().get(status);
     }
 

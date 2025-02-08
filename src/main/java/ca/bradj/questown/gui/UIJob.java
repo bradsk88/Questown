@@ -19,7 +19,7 @@ public record UIJob(
         ImmutableList<Ingredient> tools,
         ResourceLocation roomNameTranslationKey,
         ImmutableList<Ingredient> roomRecipe,
-        ItemStack result
+        ImmutableList<ItemStack> result
 ) {
     public static UIJob fromNetwork(FriendlyByteBuf buf) {
         JobID jobId = NetworkCompat.fromNetworkJobID(buf);
@@ -28,7 +28,7 @@ public record UIJob(
         List<String> tl = buf.readList(FriendlyByteBuf::readUtf);
         ResourceLocation rrName = buf.readResourceLocation();
         List<String> rr = buf.readList(FriendlyByteBuf::readUtf);
-        ItemStack result = buf.readItem();
+        List<ItemStack> result = buf.readList(FriendlyByteBuf::readItem);
         return fromBufferData(jobId, in, tl, vs, rrName, rr, result);
     }
 
@@ -46,7 +46,7 @@ public record UIJob(
         buf.writeCollection(toolIDs, FriendlyByteBuf::writeUtf);
         buf.writeUtf(uiJob.roomNameTranslationKey().toString());
         buf.writeCollection(roomRecipe, FriendlyByteBuf::writeUtf);
-        buf.writeItem(uiJob.result());
+        buf.writeCollection(uiJob.result(), FriendlyByteBuf::writeItem);
     }
 
     private static @NotNull UIJob fromBufferData(
@@ -56,7 +56,7 @@ public record UIJob(
             List<UUID> vs,
             ResourceLocation rrNameKey,
             List<String> rr,
-            ItemStack result
+            List<ItemStack> result
     ) {
         ImmutableList.Builder<Ingredient> bIngredients = ImmutableList.builder();
         ImmutableList.Builder<Ingredient> bTools = ImmutableList.builder();
@@ -79,7 +79,7 @@ public record UIJob(
                 bTools.build(),
                 rrNameKey,
                 bRoom.build(),
-                result
+                ImmutableList.copyOf(result)
         );
     }
 }

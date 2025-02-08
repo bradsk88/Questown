@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
@@ -76,7 +76,7 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    public static @Nullable UtilClean.Pair<String, String> getStatusText(
+    public static @Nullable Pair<String, String> getStatusText(
             JobID job,
             IStatus<?> status
     ) {

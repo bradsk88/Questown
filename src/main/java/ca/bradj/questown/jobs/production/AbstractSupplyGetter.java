@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.IStatus;
@@ -41,7 +42,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker,
-            Function<List<TOWN_ITEM>, List<UtilClean.Pair<Integer, TOWN_ITEM>>> adjustOrder
+            Function<List<TOWN_ITEM>, List<Pair<Integer, TOWN_ITEM>>> adjustOrder
     ) {
         // TODO: Introduce this status for farmer
         if (!status.isCollectingSupplies()) {

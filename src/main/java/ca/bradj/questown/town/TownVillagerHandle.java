@@ -632,10 +632,11 @@ public class TownVillagerHandle implements VillagerHolder {
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         TownFlagBlockEntity unsafeTown = town.getUnsafe();
-        for (JobID job : ServerJobsRegistry.getAllJobs()) {
-            if (!canJobProduceItem(job, itemToShowJobsFor)) {
-                continue;
-            }
+        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getAllJobsThatProduce(
+                town.town.getTownData(),
+                itemToShowJobsFor
+        );
+        for (JobID job : jubz.keySet()) {
             Supplier<Work> w = Works.get(job);
             Work gotWork = w.get();
             Job<?, ?, ?> j = gotWork.jobFunc.apply(UUID.randomUUID());
@@ -651,17 +652,16 @@ public class TownVillagerHandle implements VillagerHolder {
                     ImmutableList.copyOf(dj.initialTools.values()),
                     dj.location().baseRoom(),
                     r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
-                    gotWork.results.apply(unsafeTown.getTownData()).iterator().next().toItemStack()
+                    ImmutableList.copyOf(
+                            gotWork.results
+                                    .apply(unsafeTown.getTownData())
+                                    .stream()
+                                    .map(v -> v.get().getDefaultInstance())
+                                    .toList()
+                    )
             ));
         }
         Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
-    }
-
-    private boolean canJobProduceItem(
-            JobID job,
-            Ingredient itemToShowJobsFor
-    ) {
-        return ServerJobsRegistry.canSatisfy(town.getUnsafe().getTownData(), job, itemToShowJobsFor);
     }
 }

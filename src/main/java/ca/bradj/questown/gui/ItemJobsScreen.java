@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -15,8 +16,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -27,6 +28,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRMED;
+import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.REJECTED;
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class ItemJobsScreen extends Screen {
@@ -36,7 +38,6 @@ public class ItemJobsScreen extends Screen {
     private final PagedCardScreen<UIJob> delegate;
     private final Ingredient requestedItem;
     private final BlockPos flagPos;
-    private final Runnable requestWork;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
@@ -50,7 +51,7 @@ public class ItemJobsScreen extends Screen {
                 () -> width,
                 () -> ImmutableList.copyOf(jobs),
                 UtilClean::noOpConsumer,
-                this::renderCardContent,
+                (s, c, p) -> this.renderCardContent(s, c, new Coordinate(p.a(), p.b())),
                 3,
                 16,
                 EXTRA_HEIGHT
@@ -58,17 +59,11 @@ public class ItemJobsScreen extends Screen {
         this.jobs = ImmutableList.copyOf(jobs);
         this.requestedItem = requestedItem;
         this.flagPos = flagPos;
-        this.requestWork = () -> this.send(flagPos, CONFIRMED);
 
     }
 
-    private void send(
-            BlockPos p,
-            AddWorkFromUIMessage.Action action
-    ) {
-        Iterable<PagedCardScreen.Card<UIJob>> cards = delegate.cards();
-        PagedCardScreen.Card<UIJob> next = cards.iterator().next();
-        AddWorkFromUIMessage m = new AddWorkFromUIMessage(next.data().result(), p, action);
+    private void send() {
+        AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, CONFIRMED);
         QuestownNetwork.CHANNEL.sendToServer(m);
     }
 
@@ -98,7 +93,7 @@ public class ItemJobsScreen extends Screen {
                         backgroundWidth - (2 * BIG_PADDING),
                         buttonHeight,
                         Compat.translatable("menu.item_jobs.add_to_work_requests"),
-                        (p_96776_) -> this.requestWork.run()
+                        (p_96776_) -> this.send()
                 )
         );
     }
@@ -134,9 +129,8 @@ public class ItemJobsScreen extends Screen {
             int p_94697_
     ) {
         @NotNull ImmutableRect2i ta = getTitleArea();
-        if (UtilClean.coordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight())) {
-            BlockPos p = flagPos;
-            AddWorkFromUIMessage m = new AddWorkFromUIMessage(ItemStack.EMPTY, p, AddWorkFromUIMessage.Action.REJECTED);
+        if (UtilClean.isCoordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight())) {
+            AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, REJECTED);
             QuestownNetwork.CHANNEL.sendToServer(m);
         }
         return super.mouseClicked(x, y, p_94697_);
@@ -156,7 +150,7 @@ public class ItemJobsScreen extends Screen {
             int mouseY,
             ImmutableRect2i textArea
     ) {
-        if (UtilClean.coordInBox(
+        if (UtilClean.isCoordInBox(
                 mouseX,
                 mouseY,
                 textArea.getX(),
@@ -197,48 +191,80 @@ public class ItemJobsScreen extends Screen {
     private void renderCardContent(
             PoseStack stack,
             PagedCardScreen.Card<UIJob> card,
-            UtilClean.Pair<Integer, Integer> mouse
+            Coordinate mouse
     ) {
         PagedCardScreen.CardCoordinates c = card.coords();
         UIJob d = card.data();
 
         int x = c.leftX();
-        int i = 0;
 
+        Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> scootch = (cc) -> cc.shiftedDown(12);
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down = (cc) -> cc.shiftedDown(16);
-        Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down2 = (cc) -> cc.shiftedDown(font.lineHeight);
+        Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down2 = (cc) -> cc.shiftedDown(24);
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down3 = (cc) -> cc.shiftedDown(30);
 
         renderJobTitle(stack, d);
 
+        TriConsumer<CardCoordinates, List<Ingredient>, Boolean> renderStrip = (cc, ings, shiftRight) -> {
+            RenderUtil.stripOfRequestableItems(
+                    (ing, coord) -> Ingredients.render(itemRenderer, ing, coord.x(), coord.y()),
+                    (ing) -> ImmutableList.of(Ingredients.getName(ing)),
+                    (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
+                    (text, coord) -> renderTooltip(stack, text, Optional.empty(), coord.x(), coord.y()),
+                    (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
+                    ings,
+                    shiftRight ? cc.topLeft().shifted(64, 0) : cc.topLeft(),
+                    cc.bottomRight(),
+                    mouse
+            );
+        };
+
         TranslatableComponent itemsText = Compat.translatable("menu.item_jobs.items_used");
-        Compat.drawDarkText(font, stack, itemsText, x, (c = down3.apply(c)).topY());
-        c = renderItems(d.ingredients(), c, i, down2);
+
+        int labelOffset = 5;
+
+        Compat.drawDarkText(font, stack, itemsText, x, (c = down2.apply(c)).topY() + labelOffset);
+
+        renderStrip.accept(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
         TranslatableComponent toolsText = Compat.translatable("menu.item_jobs.tools_used");
-        Compat.drawDarkText(font, stack, toolsText, x, (c = down.apply(c)).topY());
-        i = 0;
-        c = renderItems(d.tools(), c, i, down2);
+        Compat.drawDarkText(font, stack, toolsText, x, (c = down.apply(c)).topY() + labelOffset);
+        renderStrip.accept(c, d.tools(), true);
+        c = c.shiftedDown(font.lineHeight);
+
+        TranslatableComponent producesText = Compat.translatable("menu.item_jobs.produces");
+        Compat.drawDarkText(font, stack, producesText, x, (c = down.apply(c)).topY() + labelOffset);
+        List<Ingredient> v = Ingredients.fromItems(d.result());
+        renderStrip.accept(c, putRequestedItemFirst(v), true);
         c = c.shiftedDown(font.lineHeight);
 
         TranslatableComponent roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
         TranslatableComponent translatable = Compat.translatable("menu.item_jobs.room", roomName);
         Compat.drawDarkText(font, stack, translatable, x, (c = down.apply(c)).topY());
-        i = 0;
-        renderItems(d.roomRecipe(), c, i, down2);
+        renderStrip.accept(scootch.apply(c), d.roomRecipe(), false);
 
         int bgX = (width - backgroundWidth) / 2;
         int bgY = (height - delegate.backgroundHeight) / 2;
         int stripHeight = Util.faceWidth * 3;
         int stripY = bgY + delegate.backgroundHeight - stripHeight - buttonHeight - 4 - (BIG_PADDING * 2);
-        fill(stack, bgX, stripY, bgX + backgroundWidth, stripY + stripHeight -2, 0x30000000);
-        i = 0;
+        fill(stack, bgX, stripY, bgX + backgroundWidth, stripY + stripHeight - 2, RenderUtil.SHADOW);
+        int i = 0;
         for (UUID uuid : d.villagersWhoCanDoJob()) {
             int stripOffset = (stripHeight - (Util.faceWidth * 2)) / 2;
             stripOffset -= 1;
             blitFace(stack, bgX + Util.faceWidth - 3, stripY + stripOffset, uuid, i++);
         }
+    }
+
+    private List<Ingredient> putRequestedItemFirst(List<Ingredient> v) {
+        if (Ingredients.isTag(requestedItem)) {
+            return v;
+        }
+        ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
+        b.add(requestedItem);
+        v.stream().filter(z -> !Ingredients.equal(z, requestedItem)).forEach(b::add);
+        return b.build();
     }
 
     private void renderJobTitle(
@@ -254,20 +280,6 @@ public class ItemJobsScreen extends Screen {
         );
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, jobName);
         Compat.drawDarkText(font, stack, jobName, textArea.getX(), textArea.getY());
-    }
-
-    private PagedCardScreen.CardCoordinates renderItems(
-            ImmutableList<Ingredient> d,
-            PagedCardScreen.CardCoordinates c,
-            int i,
-            Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down2
-    ) {
-        c = down2.apply(c);
-        for (Ingredient ing : d) {
-            Ingredients.render(itemRenderer, ing, c.leftX() + (i++ * 24), c.topY());
-            // TODO: Hihlight and tooltip
-        }
-        return c;
     }
 
     private static void blitFace(

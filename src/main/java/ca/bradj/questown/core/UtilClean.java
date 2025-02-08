@@ -11,9 +11,9 @@ import java.util.function.Supplier;
 public class UtilClean {
 
     public static <X> List<Pair<Integer, X>> enumerate(List<X> list) {
-        ImmutableList.Builder<UtilClean.Pair<Integer, X>> b = ImmutableList.builder();
+        ImmutableList.Builder<Pair<Integer, X>> b = ImmutableList.builder();
         for (int i = 0; i < list.size(); i++) {
-            b.add(new UtilClean.Pair<>(i, list.get(i)));
+            b.add(new Pair<>(i, list.get(i)));
         }
         return b.build();
     }
@@ -33,7 +33,7 @@ public class UtilClean {
         return b.build();
     }
 
-    public static boolean coordInBox(
+    public static boolean isCoordInBox(
             double mouseX,
             double mouseY,
             int leftX,
@@ -44,6 +44,21 @@ public class UtilClean {
         return mouseX >= leftX && mouseY >= topY && mouseX < leftX + width && mouseY < topY + height;
     }
 
+    public static boolean isCoordInBox(
+            Coordinate coord,
+            Coordinate boxTopLeft,
+            Coordinate boxBottomRight
+    ) {
+        return isCoordInBox(
+                coord.x(),
+                coord.y(),
+                boxTopLeft.x(),
+                boxTopLeft.y(),
+                boxBottomRight.x() - boxTopLeft.x(),
+                boxBottomRight.y() - boxTopLeft.y()
+        );
+    }
+
     public static @NotNull String truncateMiddle(String vID) {
         if (vID.length() <= 8) {
             return vID;
@@ -52,19 +67,6 @@ public class UtilClean {
     }
 
     public static <X> void noOpConsumer(X input) {
-    }
-
-    public record Pair<A, B>(A a, B b) {
-        public static <X> ImmutableList<X> toList(Pair<X, X> in) {
-            return ImmutableList.of(in.a, in.b);
-        }
-
-        public static <X, Y> Pair<Y, Y> monoMap(
-                Pair<X, X> in,
-                Function<X, Y> mapper
-        ) {
-            return new Pair<>(mapper.apply(in.a), mapper.apply(in.b));
-        }
     }
 
     ;

@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -141,7 +141,7 @@ public class DeclarativeJobs {
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
-        Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
+        Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
             Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
             List<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = roomHandle.getMatches();
@@ -154,7 +154,7 @@ public class DeclarativeJobs {
                 spotStatuses.put(bp, jobBlockState.processingState());
                 Util.addOrInitialize(roomStatuses, match.getRoom(), jobBlockState.processingState());
             }));
-            return new UtilClean.Pair<>(spotStatuses.build(), roomStatuses);
+            return new Pair<>(spotStatuses.build(), roomStatuses);
         };
 
         for (int i = 0; i < maxState; i++) {
@@ -232,7 +232,7 @@ public class DeclarativeJobs {
                                 filter(ing -> ing.test(iHeld)).
                                 findFirst();
                         String result = matchedIngredient.map(Object::toString).orElse("No match");
-                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        b2.put(dPos, new Pair<>(result, c.toShortString(false)));
                         if (matchedIngredient.isPresent()) {
                             found = WithReason.always(true, i.getShortName() + " matches " + matchedIngredient.get());
                             if (stopOnTrue) {
@@ -244,7 +244,7 @@ public class DeclarativeJobs {
                                 filter(ing -> ing.test(i)).
                                 findFirst();
                         result = matchedTool.map(Object::toString).orElse("No match");
-                        b2.put(dPos, new UtilClean.Pair<>(result, c.toShortString(false)));
+                        b2.put(dPos, new Pair<>(result, c.toShortString(false)));
                         if (matchedTool.isPresent()) {
                             found = WithReason.always(true, i.getShortName() + " matches " + matchedTool.get());
                             if (stopOnTrue) {
@@ -468,14 +468,14 @@ public class DeclarativeJobs {
 
         private static final String NAME = "rooms contain workstate";
 
-        private final Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
+        private final Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
         private final String name;
         private final int state;
         private LZCD.Populated<WithReason<Boolean>> value;
 
         public RoomStates(
                 int state,
-                Supplier<UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
+                Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
         ) {
             this.inputs = inputs;
             this.name = NAME + " " + state;
@@ -488,7 +488,7 @@ public class DeclarativeJobs {
 //            if (value != null) {
 //                return value;
 //            }
-            UtilClean.Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
+            Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
             Map<BlockPos, Integer> spotStates = v.a();
             Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()
                                                                          .filter(z -> Integer.compare(

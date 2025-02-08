@@ -1,11 +1,12 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.Pair;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 
 public record Overrides(
         ImmutableMap<IStatus<?>, ResourceLocation> statusTextures,
-        ImmutableMap<IStatus<?>, ca.bradj.questown.core.UtilClean.Pair<String, String>> statusTextOverrides
+        ImmutableMap<IStatus<?>, Pair<String, String>> statusTextOverrides
 ) {
 
     public static Overrides none() {

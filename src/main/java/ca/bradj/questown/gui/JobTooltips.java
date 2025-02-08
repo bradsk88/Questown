@@ -1,6 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -19,9 +19,9 @@ public class JobTooltips {
             IStatus<?> status,
             JobID jobId
     ) {
-        UtilClean.Pair<String, String> overrides = ServerJobsRegistry.getStatusText(jobId, status);
+        Pair<String, String> overrides = ServerJobsRegistry.getStatusText(jobId, status);
         if (overrides != null) {
-            return UtilClean.Pair.toList(UtilClean.Pair.monoMap(overrides, TranslatableComponent::new));
+            return Pair.toList(Pair.monoMap(overrides, TranslatableComponent::new));
         }
         return buildStandardTooltipComponents(status, jobId);
     }

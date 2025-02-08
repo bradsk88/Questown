@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
@@ -27,7 +28,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     private final FlagTabs tabs;
 
     public record SyncedData(
-            Map<UUID, UtilClean.Pair<JobID, IStatus<?>>> villagers,
+            Map<UUID, Pair<JobID, IStatus<?>>> villagers,
             Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items
     ) {
     }

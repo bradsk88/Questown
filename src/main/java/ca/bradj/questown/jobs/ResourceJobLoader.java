@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
@@ -154,7 +154,7 @@ public class ResourceJobLoader {
 
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
             ImmutableMap<IStatus<?>, ResourceLocation> textureOverrides = textureOverridesV2(object);
-            ImmutableMap<IStatus<?>, UtilClean.Pair<String, String>> statusTextOverrides = statusTextOverridesV2(object);
+            ImmutableMap<IStatus<?>, Pair<String, String>> statusTextOverrides = statusTextOverridesV2(object);
             return new Overrides(textureOverrides, statusTextOverrides);
         }
 
@@ -186,8 +186,8 @@ public class ResourceJobLoader {
             return textureOverrides.build();
         }
 
-        private ImmutableMap<IStatus<?>, UtilClean.Pair<String, String>> statusTextOverridesV2(JsonObject object) {
-            ImmutableMap.Builder<IStatus<?>, UtilClean.Pair<String, String>> textOverrides = ImmutableMap.builder();
+        private ImmutableMap<IStatus<?>, Pair<String, String>> statusTextOverridesV2(JsonObject object) {
+            ImmutableMap.Builder<IStatus<?>, Pair<String, String>> textOverrides = ImmutableMap.builder();
             if (object.has("status_text_overrides")) {
                 JsonArray rows = object.getAsJsonArray("status_text_overrides");
                 for (JsonElement row : rows) {
@@ -198,7 +198,7 @@ public class ResourceJobLoader {
                             ProductionStatus productionStatus = getCore(rowObj);
                             String newKey1 = rowObj.get("new_key_1").getAsString();
                             String newKey2 = rowObj.get("new_key_2").getAsString();
-                            textOverrides.put(productionStatus, new UtilClean.Pair<>(newKey1, newKey2));
+                            textOverrides.put(productionStatus, new Pair<>(newKey1, newKey2));
                             break;
                         }
                         default:

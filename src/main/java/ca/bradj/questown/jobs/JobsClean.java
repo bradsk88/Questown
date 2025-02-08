@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.town.workstatus.State;
@@ -339,14 +339,14 @@ public class JobsClean {
             Consumer<TOWN_ITEM> villager,
             SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<TOWN_ITEM, Boolean> isRemovalCandidate,
-            Function<List<TOWN_ITEM>, List<UtilClean.Pair<Integer, TOWN_ITEM>>> adjustOrder
+            Function<List<TOWN_ITEM>, List<Pair<Integer, TOWN_ITEM>>> adjustOrder
     ) {
         if (!suppliesTarget.isCloseTo()) {
             return false;
         }
         String start = suppliesTarget.toShortString();
-        List<UtilClean.Pair<Integer, TOWN_ITEM>> items = adjustOrder.apply(suppliesTarget.getItems());
-        for (UtilClean.Pair<Integer, TOWN_ITEM> mcTownItem : items) {
+        List<Pair<Integer, TOWN_ITEM>> items = adjustOrder.apply(suppliesTarget.getItems());
+        for (Pair<Integer, TOWN_ITEM> mcTownItem : items) {
             if (isRemovalCandidate.apply(mcTownItem.b())) {
                 TOWN_ITEM unit = mcTownItem.b().unit();
                 QT.JOB_LOGGER.debug("Villager is taking {} from {}", unit.getShortName(), start);

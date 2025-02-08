@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.network.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.IStatus;
@@ -84,10 +84,10 @@ public class FlagMenus {
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
-        ImmutableMap.Builder<UUID, UtilClean.Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
+        ImmutableMap.Builder<UUID, Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
         es.forEach(v -> b.put(
                 v.getUUID(),
-                new UtilClean.Pair<>(v.getJobId(), v.getStatusForServer())
+                new Pair<>(v.getJobId(), v.getStatusForServer())
         ));
         ImmutableMap.Builder<UUID, ImmutableList<Item>> b2 = ImmutableMap.builder();
         es.forEach(v -> b2.put(

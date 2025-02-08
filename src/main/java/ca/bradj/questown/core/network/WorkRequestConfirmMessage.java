@@ -1,18 +1,20 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.gui.ClientAccess;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Map;
 import java.util.function.Supplier;
 
 public record WorkRequestConfirmMessage(
-        ResourceLocation itemRequested,
+        Ingredient itemRequested,
         Map<JobID, ResourceLocation> iconsForJobsWhichProduceResult,
         BlockPos flagPos
 ) implements ClientRunnable {
@@ -21,7 +23,7 @@ public record WorkRequestConfirmMessage(
             WorkRequestConfirmMessage msg,
             FriendlyByteBuf buffer
     ) {
-        buffer.writeResourceLocation(msg.itemRequested());
+        Ingredients.toNetwork(msg.itemRequested(), buffer);
         buffer.writeMap(
                 msg.iconsForJobsWhichProduceResult(),
                 NetworkCompat::toNetwork,
@@ -31,7 +33,7 @@ public record WorkRequestConfirmMessage(
     }
 
     public static WorkRequestConfirmMessage decode(FriendlyByteBuf buffer) {
-        ResourceLocation itemRequested = buffer.readResourceLocation();
+        Ingredient itemRequested = Ingredients.fromNetwork(buffer);
         Map<JobID, ResourceLocation> l = buffer.readMap(
                 NetworkCompat::fromNetworkJobID,
                 FriendlyByteBuf::readResourceLocation

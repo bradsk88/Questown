@@ -8,13 +8,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.Collection;
-
-import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.INQUIRED;
 
 public class AddWorkContainer extends AbstractContainerMenu {
 
@@ -65,8 +62,8 @@ public class AddWorkContainer extends AbstractContainerMenu {
         return work;
     }
 
-    public void sendRequest(ItemStack item) {
-        AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag, INQUIRED);
+    public void sendRequest(Ingredient item) {
+        AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag, AddWorkFromUIMessage.Action.INQUIRED);
         QuestownNetwork.CHANNEL.sendToServer(msg);
     }
 }

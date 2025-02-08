@@ -1,9 +1,11 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.Registry;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -13,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public class Ingredients {
     public static Component getName(Ingredient item) {
@@ -77,6 +81,9 @@ public class Ingredients {
     }
 
     private static @Nullable String getTag(JsonElement j) {
+        if (!j.isJsonObject()) {
+            return null;
+        }
         if (!j.getAsJsonObject().has("tag")) {
             return null;
         }
@@ -97,5 +104,39 @@ public class Ingredients {
             return itemStack;
         }
         return null;
+    }
+
+    // This one is better than Minecraft's, because it preserves the tag ID
+    public static Ingredient fromNetwork(FriendlyByteBuf buffer) {
+        return fromString(buffer.readUtf());
+    }
+
+    // This one is better than Minecraft's, because it preserves the tag ID
+    public static void toNetwork(
+            // TODO: Lint against usage of Minecraft functions
+            Ingredient requested,
+            FriendlyByteBuf buffer
+    ) {
+        buffer.writeUtf(toString(requested));
+    }
+
+    public static Ingredient fromRL(ResourceLocation value) {
+        @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
+        return Ingredient.of(l);
+    }
+
+    public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {
+        return result.stream().map(Ingredient::of).toList();
+    }
+
+    public static boolean equal(
+            Ingredient z,
+            Ingredient requestedItem
+    ) {
+        return toString(z).equals(toString(requestedItem));
+    }
+
+    public static boolean isTag(Ingredient requestedItem) {
+        return getTag(requestedItem) != null;
     }
 }

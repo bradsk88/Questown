@@ -334,7 +334,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                menu.sendRequest(s.getItem());
+                menu.sendRequest(Ingredient.of(s.getItem()));
                 return true;
             }
         }

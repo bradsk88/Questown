@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
@@ -741,10 +742,10 @@ public class DeclarativeJob extends
                               .removeItem(i);
             }
         };
-        Function<List<MCTownItem>, List<UtilClean.Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;
+        Function<List<MCTownItem>, List<Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;
         if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
             adjustOrder = list -> {
-                ArrayList<UtilClean.Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
+                ArrayList<Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
                 Collections.shuffle(shuffled, town.getServerLevel().getRandom());
                 return shuffled;
             };
