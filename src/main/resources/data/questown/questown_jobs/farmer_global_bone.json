@@ -1,7 +1,7 @@
 {
   "version": 2,
   "id": "farmer/bone_meal",
-  "priority": "2000",
+  "priority": "1900",
   "parent": "farmer/plant_wheat",
   "icon": "minecraft:bone_meal",
   "initial_request": "minecraft:bone_meal",

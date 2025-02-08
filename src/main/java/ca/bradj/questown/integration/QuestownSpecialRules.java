@@ -21,6 +21,10 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("harvest_crop"),
                 new HarvestCropSpecialRule()
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("destroy_bush"),
+                new DestroyBushSpecialRule()
+        );
 
         // If this rule is enabled for work where one or more items are used,
         // the last inserted will be used in the block before "extract" step of
