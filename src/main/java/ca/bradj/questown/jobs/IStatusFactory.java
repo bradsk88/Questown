@@ -20,4 +20,6 @@ public interface IStatusFactory<STATUS extends IStatus<STATUS>> {
     STATUS relaxing();
 
     STATUS waitingForTimedState();
+
+    STATUS noWorkPossible();
 }

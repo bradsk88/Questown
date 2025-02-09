@@ -682,7 +682,7 @@ public class DeclarativeJob extends
                 '}';
     }
 
-    private @NotNull Supplier<ProductionStatus> getStateComputer(
+    protected @NotNull Supplier<ProductionStatus> getStateComputer(
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory,
             JobTownProvider<MCRoom> jtp,

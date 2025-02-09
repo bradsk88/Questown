@@ -66,6 +66,9 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus NO_JOBSITE = register(
             new ProductionStatus("NO_JOBSITE", nextIndex++)
     );
+    public static final ProductionStatus NO_WORK_POSSIBLE = register(
+            new ProductionStatus("NO_WORK_POSSIBLE", nextIndex++)
+    );
 
     public static final IStatusFactory<ProductionStatus> FACTORY = new IStatusFactory<>() {
         @Override
@@ -117,6 +120,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         public ProductionStatus waitingForTimedState() {
             return WAITING_FOR_TIMED_STATE;
         }
+
+        @Override
+        public ProductionStatus noWorkPossible() {
+            return NO_WORK_POSSIBLE;
+        }
     };
     public final String name;
 
@@ -129,7 +137,10 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         return fromJobBlockStatus(s, Integer.MAX_VALUE);
     }
 
-    public static ProductionStatus fromJobBlockStatus(int s, int maxState) {
+    public static ProductionStatus fromJobBlockStatus(
+            int s,
+            int maxState
+    ) {
         if (s >= firstNonCustomIndex) {
             throw new IllegalStateException("Not a valid job block status: " + s);
         }

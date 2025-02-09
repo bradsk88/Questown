@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -119,6 +120,23 @@ public class WorkSeekerJob extends DeclarativeJob {
                 }
                 return true;
             }
+        };
+    }
+
+    @Override
+    protected @NotNull Supplier<ProductionStatus> getStateComputer(
+            TownInterface town,
+            IProductionStatusFactory<ProductionStatus> statusFactory,
+            JobTownProvider<MCRoom> jtp,
+            EntityLocStateProvider<MCRoom> elp
+    ) {
+        return () -> {
+
+            if (town.getPossibleWork().getFor(getId()).isEmpty()) {
+                journal.changeStatus(statusFactory.noWorkPossible());
+                return statusFactory.noWorkPossible();
+            }
+            return super.getStateComputer(town, statusFactory, jtp, elp).get();
         };
     }
 }

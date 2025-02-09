@@ -51,6 +51,11 @@ public class DeclarativeJobs {
         }
 
         @Override
+        public ProductionStatus noWorkPossible() {
+            return ProductionStatus.FACTORY.noWorkPossible();
+        }
+
+        @Override
         public ProductionStatus droppingLoot() {
             return ProductionStatus.FACTORY.droppingLoot();
         }
