@@ -289,7 +289,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.asapRewards.tick();
 
-        e.pois.tick(sl, blockEntityPos);
+        e.pois.tick(sl, blockEntityPos, (int) e.villagerHandle.stream().count());
         if (signals == Signals.NIGHT || signals == Signals.EVENING) {
             AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
                     sl,

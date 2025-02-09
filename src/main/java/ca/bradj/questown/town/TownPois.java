@@ -35,7 +35,10 @@ public class TownPois {
         this.listener = listener;
     }
 
-    public Vec3 getVisitorJoinPos(ServerLevel level, BlockPos fallback) {
+    public Vec3 getVisitorJoinPos(
+            ServerLevel level,
+            BlockPos fallback
+    ) {
         if (this.visitorSpot == null) {
             return new Vec3(fallback.getX(), fallback.getY(), fallback.getZ());
         }
@@ -51,11 +54,17 @@ public class TownPois {
     }
 
     public interface Filter<R extends Room> {
-        boolean include(Position positionIn, R containingRoom);
+        boolean include(
+                Position positionIn,
+                R containingRoom
+        );
     }
 
     public interface PositionFactory<P, R extends Room> {
-        P make(Position p, R containingRoom);
+        P make(
+                Position p,
+                R containingRoom
+        );
     }
 
     public <R extends Room, P> P getWanderTarget(
@@ -111,6 +120,7 @@ public class TownPois {
 
     public interface Listener {
         void campfireFound(BlockPos pos);
+
         void townGateFound(BlockPos pos);
     }
 
@@ -118,11 +128,15 @@ public class TownPois {
 
     private BlockPos visitorSpot = null;
 
-    public void tick(ServerLevel level, BlockPos flagPos) {
+    public void tick(
+            ServerLevel level,
+            BlockPos flagPos,
+            int villagerCount
+    ) {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = Optional.empty();
-        if (visitorSpot == null) {
+        if (visitorSpot == null && villagerCount <= 0) {
             fire = TownCycle.findCampfire(flagPos, level);
             fire.ifPresent((bp) -> listener.campfireFound(bp));
         }
@@ -132,7 +146,8 @@ public class TownPois {
             return;
         }
 
-        BlockPos gate = TownCycle.findTownGate(welcomePos, level,
+        BlockPos gate = TownCycle.findTownGate(
+                welcomePos, level,
                 position -> WallDetection.IsWall(level, position, welcomePos.getY())
         );
         if (gate != null) {
