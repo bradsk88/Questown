@@ -31,7 +31,7 @@ public class PlateBlockEntity extends BlockEntity implements ItemAccepting<MCTow
             int index,
             MCTownItem item
     ) {
-        this.food = item.toItemStack();
+        this.food = item.toQTItemStack();
         if (level.isClientSide()) {
             return false;
         }

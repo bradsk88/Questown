@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -101,7 +102,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         if (quantity == 1) {
             return MCTownItem.Air();
         }
-        ItemStack stack = toItemStack();
+        ItemStack stack = toQTItemStack();
         stack.shrink(1);
         return new MCTownItem(stack.getItem(), stack.getCount(), stack.serializeNBT());
     }
@@ -112,7 +113,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     public MCTownItem withQuantity(int qy) {
-        ItemStack stack = toItemStack();
+        ItemStack stack = toQTItemStack();
         stack.setCount(qy);
         return new MCTownItem(stack.getItem(), qy, stack.serializeNBT());
     }
@@ -135,12 +136,40 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         return name;
     }
 
-    public ItemStack toItemStack() {
-        return ItemStack.of(nbt);
+    public enum StackPolicy {
+        KEEP_QT_NBT,
+        STRIP_QT_NBT
+    }
+
+    public ItemStack toQTItemStack() {
+        return toItemStack(StackPolicy.KEEP_QT_NBT);
+    }
+
+    public ItemStack toMCItemStack() {
+        return toItemStack(StackPolicy.STRIP_QT_NBT);
+    }
+
+    private ItemStack toItemStack(StackPolicy preserveQTNBT) {
+        ItemStack newOne = ItemStack.of(nbt);
+        if (preserveQTNBT == StackPolicy.KEEP_QT_NBT) {
+            return newOne;
+        }
+        CompoundTag stripped = stripQTNBT(newOne.getOrCreateTag());
+        if (stripped.isEmpty()) {
+            newOne.setTag(null);
+        } else {
+            newOne.setTag(stripped);
+        }
+        return newOne;
     }
 
     public boolean hasEmptyNBT() {
-        CompoundTag copy = nbt.copy();
+        CompoundTag copy = stripQTNBT(nbt);
+        return copy.isEmpty();
+    }
+
+    private @NotNull CompoundTag stripQTNBT(CompoundTag in) {
+        CompoundTag copy = in.copy();
         if (copy.contains("id")) {
             copy.remove("id");
         }
@@ -152,7 +181,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
                 copy.remove("tag");
             }
         }
-        return copy.isEmpty();
+        return copy;
     }
 
     public void setNBT(Consumer<CompoundTag> adder) {

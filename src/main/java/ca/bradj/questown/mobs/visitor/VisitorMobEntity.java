@@ -318,7 +318,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
             return;
         }
-        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toItemStack());
+        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
         level.addFreshEntity(item);
     }
 

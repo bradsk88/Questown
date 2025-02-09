@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -93,7 +94,7 @@ public class Jobs {
             if (newItem.equals(curItem)) {
                 continue;
             }
-            inventory.setItem(i, items.get(i).get().toItemStack());
+            inventory.setItem(i, items.get(i).get().toMCItemStack());
         }
     }
 
@@ -154,7 +155,7 @@ public class Jobs {
                 if (nullifyExcess) {
                     return;
                 }
-                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), oneOf.toItem().toItemStack()));
+                level.addFreshEntity(new ItemEntity(level, b.getX(), b.getY(), b.getZ(), oneOf.toItem().toMCItemStack()));
             }
             is = is.shrink();
         }
@@ -263,7 +264,7 @@ public class Jobs {
                             }
                         },
                         (inner) -> v.isEmpty(),
-                        (inner, item) -> v.test(item.toItemStack()),
+                        (inner, item) -> v.test(item.toQTItemStack()),
                         "Ingredient2Predicate"
                 ))
         );
@@ -389,7 +390,7 @@ public class Jobs {
 
             QT.JOB_LOGGER.debug(
                     "Villager {} is putting {} in {} [{}]",
-                    ownerUUID,
+                    UtilClean.truncateMiddle(ownerUUID.toString()),
                     mct.getShortName(),
                     target.getBlockPos(),
                     mct.toShortString()

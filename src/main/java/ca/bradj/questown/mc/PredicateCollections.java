@@ -26,7 +26,7 @@ public class PredicateCollections {
                     }
                 },
                 IPredicateCollection::isEmpty,
-                (ingr, item) -> ingr.test(item.get().toItemStack()),
+                (ingr, item) -> ingr.test(item.get().toQTItemStack()),
                 "MC.Ingredient " + v.toJson()
         );
     }
@@ -40,7 +40,7 @@ public class PredicateCollections {
 
                     @Override
                     public boolean test(MCHeldItem itemStack) {
-                        return v.test(itemStack.get().toItemStack());
+                        return v.test(itemStack.get().toQTItemStack());
                     }
                 },
                 IPredicateCollection::isEmpty,

@@ -95,13 +95,13 @@ public class RealtimeWorldInteraction extends
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
     ) {
         ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toItemStack())));
+        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
         return b.build();
     }
 
     private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
         ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toItemStack())));
+        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
         return b.build();
     }
 
@@ -139,7 +139,7 @@ public class RealtimeWorldInteraction extends
         Optional<MCHeldItem> foundTool = journal.getItems().stream().filter(v -> toolCheck.test(v.get())).findFirst();
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
-            ItemStack is = foundTool.get().get().toItemStack();
+            ItemStack is = foundTool.get().get().toQTItemStack();
             is.hurtAndBreak(
                     1, mcExtra.entity(), (x) -> {
                     }
@@ -190,7 +190,7 @@ public class RealtimeWorldInteraction extends
             Boolean ts,
             MCHeldItem newItem
     ) {
-        ItemStack stack = newItem.get().toItemStack();
+        ItemStack stack = newItem.get().toQTItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(stack);
         Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
         inputs.town().getVillagerHandle().applyEffect(effect, effectExpiry, inputs.entity().getUUID());
@@ -217,7 +217,7 @@ public class RealtimeWorldInteraction extends
 
     @Override
     protected boolean isMulti(MCTownItem mcTownItem) {
-        return mcTownItem.toItemStack().getCount() > 1;
+        return mcTownItem.toQTItemStack().getCount() > 1;
     }
 
     @Override
@@ -382,7 +382,13 @@ public class RealtimeWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toItemStack());
+        return PostInsertHook.run(
+                aBoolean,
+                rules,
+                inputs.town().getServerLevel(),
+                position,
+                item.get().toMCItemStack()
+        );
     }
 
     @Override

@@ -113,7 +113,7 @@ public class MCTownStateWorldInteraction extends
             if (!isExpectedTool.test(item.get())) {
                 continue;
             }
-            ItemStack itemStack = item.get().toItemStack();
+            ItemStack itemStack = item.get().toQTItemStack();
             itemStack.hurt(1, mcTownState.level.getRandom(), null);
             if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
                 itemStack = ItemStack.EMPTY;
@@ -195,7 +195,7 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toItemStack());
+        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack());
     }
 
     @Override
@@ -231,7 +231,7 @@ public class MCTownStateWorldInteraction extends
             MCTownState ts,
             MCHeldItem newItem
     ) {
-        ItemStack s = newItem.get().toItemStack();
+        ItemStack s = newItem.get().toQTItemStack();
         ResourceLocation effect = EffectMetaItem.getEffect(s);
         return ts.withVillagerData(
                 villagerIndex,
@@ -259,7 +259,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected boolean isMulti(MCTownItem mcTownItem) {
-        return mcTownItem.toItemStack().getCount() > 1;
+        return mcTownItem.toQTItemStack().getCount() > 1;
     }
 
     @Override

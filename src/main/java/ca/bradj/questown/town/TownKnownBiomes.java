@@ -68,7 +68,7 @@ public class TownKnownBiomes {
                 .stream()
                 .filter(i -> ItemsInit.GATHERER_MAP.get()
                                                    .equals(i.get()))
-                .map(i -> GathererMap.getBiome(i.toItemStack()))
+                .map(i -> GathererMap.getBiome(i.toQTItemStack()))
                 .filter(Objects::nonNull).toList();
     }
 

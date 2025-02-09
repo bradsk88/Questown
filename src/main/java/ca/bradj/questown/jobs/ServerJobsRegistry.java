@@ -130,7 +130,7 @@ public class ServerJobsRegistry {
             }
             ImmutableSet<MCTownItem> wResults = w.results.apply(data);
             for (MCTownItem wr : wResults) {
-                if (wantedResult.test(wr.toItemStack())) {
+                if (wantedResult.test(wr.toQTItemStack())) {
                     b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                     break;
                 }
@@ -322,7 +322,7 @@ public class ServerJobsRegistry {
         }
 
         for (MCTownItem r : work.results.apply(town)) {
-            if (requestedResult.test(r.toItemStack())) {
+            if (requestedResult.test(r.toQTItemStack())) {
                 return true;
             }
         }
@@ -368,7 +368,7 @@ public class ServerJobsRegistry {
         List<Ingredient> list = Works.values().stream().map(v -> {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-                                         work.results.apply(t).forEach(z -> b.add(z.toItemStack()));
+                                         work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
                                          if (work.initialRequest != null) {
                                              b.add(work.initialRequest);
                                          }

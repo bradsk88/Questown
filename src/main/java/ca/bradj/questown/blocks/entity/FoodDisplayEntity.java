@@ -67,7 +67,7 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
             if (removed != null && !removed.isEmpty()) {
                 SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), ItemStack.EMPTY, i);
                 QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
-                return removed.toItemStack();
+                return removed.toMCItemStack();
             }
         }
         return ItemStack.EMPTY;
@@ -90,7 +90,7 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
     ) {
         boolean didSet = doSetItem(index, item);
         if (didSet) {
-            SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), item.toItemStack(), index);
+            SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), item.toQTItemStack(), index);
             QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
         }
         return didSet;
@@ -105,12 +105,12 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
             if (items.get(index).isEmpty()) {
                 return false;
             }
-            items.set(index, item.toItemStack());
+            items.set(index, item.toQTItemStack());
             return true;
         }
         if (items.get(index).isEmpty()) {
             if (canAcceptIfSpaceAllows(item)) {
-                items.set(index, item.toItemStack());
+                items.set(index, item.toQTItemStack());
                 return true;
             }
         }
@@ -145,7 +145,7 @@ public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTo
 
     @Override
     public boolean canAcceptIfSpaceAllows(MCTownItem item) {
-        return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(item.toItemStack());
+        return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(item.toQTItemStack());
     }
 
     @Override

@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -184,7 +185,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         }
 
         if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toItemStack()));
+            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toMCItemStack()));
             // TODO: Set state to 0
             return InteractionResult.sidedSuccess(level.isClientSide);
         }

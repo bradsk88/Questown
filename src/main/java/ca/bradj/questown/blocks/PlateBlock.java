@@ -121,7 +121,7 @@ public class PlateBlock extends Block implements StatefulJobBlock, EntityBlock, 
     @Override
     public void handleInsertedItem(MCExtra extra, BlockPos bp, MCHeldItem item) {
         ((PlateBlockEntity) extra.town().getServerLevel().getBlockEntity(bp)).setFood(
-                item.get().toItemStack()
+                item.get().toQTItemStack()
         );
     }
 }

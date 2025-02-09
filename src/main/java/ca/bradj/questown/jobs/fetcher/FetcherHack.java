@@ -68,7 +68,7 @@ public class FetcherHack {
             WorkRequest request = StockRequestItem.getRequest(item.getItemNBT());
             if (IngredientsFromHeldItemLogic.ingredientsExist(
                     request,
-                    (otherItem, req) -> req.asIngredient().test(otherItem.toItemStack()),
+                    (otherItem, req) -> req.asIngredient().test(otherItem.toQTItemStack()),
                     elsewhere
             )) {
                 return true;

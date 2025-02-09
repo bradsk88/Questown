@@ -35,7 +35,7 @@ public class KnowledgeMetaItem extends Item {
             return null;
         }
 
-        ItemStack stack = itemStack.get().toItemStack();
+        ItemStack stack = itemStack.get().toQTItemStack();
         ResourceLocation actualItem = QTNBT.getResourceLocation(stack.getOrCreateTag(), "item_knowledge");
 
         Item value = ForgeRegistries.ITEMS.getValue(actualItem);

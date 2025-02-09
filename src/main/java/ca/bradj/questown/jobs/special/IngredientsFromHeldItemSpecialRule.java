@@ -50,7 +50,7 @@ public class IngredientsFromHeldItemSpecialRule extends
                         }
                         return before.test(heldItems, item);
                     }
-                    return ing.test(item.toItemStack());
+                    return ing.test(item.toQTItemStack());
                 }
             });
         } else {
@@ -76,7 +76,7 @@ public class IngredientsFromHeldItemSpecialRule extends
                     if (ing == null) {
                         return before.test(heldItems, item);
                     }
-                    return ing.test(item.toItem().toItemStack());
+                    return ing.test(item.toItem().toQTItemStack());
                 }
             });
         }
