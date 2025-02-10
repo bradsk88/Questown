@@ -23,6 +23,7 @@ public class StatusArt {
         b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/leaving.png");
         b.put(ProductionStatus.NO_SUPPLIES, "menu/gatherer/no_supplies.png");
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
+        b.put(ProductionStatus.NO_WORK_POSSIBLE, "menu/gatherer/no_work_possible.png");
         pArt = b.build();
     }
 

@@ -57,6 +57,7 @@ public class TownPossibleWork {
         roots.forEach(root -> {
             List<JobID> jobs = getJobsSortedByPossibility(root, rjs, t);
             preselectedJobs.put(root, jobs);
+            // FIXME: Report unmet need
             QT.FLAG_LOGGER.debug(
                     "Prepared for {}: [{}]",
                     root,
