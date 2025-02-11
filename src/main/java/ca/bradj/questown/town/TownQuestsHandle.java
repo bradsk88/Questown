@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class TownQuestsHandle implements QuestsHolder, QuestBatch.ChangeListener<MCQuest> {
+public class TownQuestsHandle implements QuestsHolder {
     @Nullable
     private TownFlagBlockEntity town;
 
@@ -211,34 +211,4 @@ public class TownQuestsHandle implements QuestsHolder, QuestBatch.ChangeListener
     }
 
 
-    @Override
-    public void questCompleted(MCQuest quest) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
-        t.messages.questCompleted(quest);
-        t.setChanged();
-        FireworkRocketEntity firework = new FireworkRocketEntity(
-                t.getServerLevel(),
-                t.getBlockPos().getX(),
-                t.getBlockPos().getY() + 10,
-                t.getBlockPos().getZ(),
-                new ItemStack(
-                        Items.FIREWORK_ROCKET.getDefaultInstance()
-                                             .getItem(), 3
-                )
-        );
-        t.getServerLevel().addFreshEntity(firework);
-    }
-
-    @Override
-    public void questLost(MCQuest quest) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
-        t.messages.questLost(quest);
-        t.setChanged();
-    }
-
-    @Override
-    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        // TODO: Handle this by informing the user, etc.
-        unsafeGetTown().setChanged();
-    }
 }

@@ -25,7 +25,9 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -44,7 +46,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private @Nullable QuestBatchSeed pendingQuests = null;
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
-    private QuestBatch.ChangeListener<MCQuest> changeListener;
     private final UnsafeTown town = new UnsafeTown();
 
     TownQuests() {
@@ -336,23 +337,36 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.markRecipeAsLost(oldRoom, recipeID);
     }
 
-    @Override
-    public void questCompleted(MCQuest quest) {
-        this.changeListener.questCompleted(quest);
-    }
 
     @Override
-    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        this.changeListener.questBatchCompleted(quest);
+    public void questCompleted(MCQuest quest) {
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
+        t.messages.questCompleted(quest);
+        t.setChanged();
+        FireworkRocketEntity firework = new FireworkRocketEntity(
+                town.getServerLevelUnsafe(),
+                t.getBlockPos().getX(),
+                t.getBlockPos().getY() + 10,
+                t.getBlockPos().getZ(),
+                new ItemStack(
+                        Items.FIREWORK_ROCKET.getDefaultInstance()
+                                             .getItem(), 3
+                )
+        );
+        town.getServerLevelUnsafe().addFreshEntity(firework);
     }
 
     @Override
     public void questLost(MCQuest quest) {
-        this.changeListener.questLost(quest);
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
+        t.messages.questLost(quest);
+        t.setChanged();
     }
 
-    public void setChangeListener(TownFlagBlockEntity townFlagBlockEntity) {
-        this.changeListener = townFlagBlockEntity.quests;
+    @Override
+    public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
+        // TODO: Handle this by informing the user, etc.
+        town.getUnsafe().setChanged();
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {

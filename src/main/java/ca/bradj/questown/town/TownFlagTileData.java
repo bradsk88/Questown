@@ -72,6 +72,7 @@ public class TownFlagTileData {
             return true;
         };
         Consumer<TownFlagBlockEntity> onPlace = t -> {
+            t.quests.initialize(t);
             t.initializer().getQuests().initialize(t);
             QT.FLAG_LOGGER.debug("Initialized quests for new flag");
         };

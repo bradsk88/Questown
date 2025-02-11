@@ -508,7 +508,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
             }
-            t.quests.setChangeListener(t);
             t.pois.setListener(t);
             t.workHandle.addChangeListener(c -> {
                 updateWorkersAfterRequestChange();

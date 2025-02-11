@@ -276,7 +276,7 @@ public class Util {
         if (value == null) {
             return Direction.WEST;
         }
-        int v = value - 4 % 16;
+        int v = (value + 12) % 16;
         // 0 is south
         // 4 is west
         // 8 is north
