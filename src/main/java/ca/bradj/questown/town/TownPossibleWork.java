@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -12,6 +13,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -20,6 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -57,7 +61,9 @@ public class TownPossibleWork {
         roots.forEach(root -> {
             List<JobID> jobs = getJobsSortedByPossibility(root, rjs, t);
             preselectedJobs.put(root, jobs);
-            // FIXME: Report unmet need
+            if (jobs.isEmpty()) {
+                registerUnmetNeeds(root);
+            }
             QT.FLAG_LOGGER.debug(
                     "Prepared for {}: [{}]",
                     root,
@@ -65,6 +71,32 @@ public class TownPossibleWork {
             );
         });
         shouldRecompute = false;
+    }
+
+    private void registerUnmetNeeds(String root) {
+        ServerLevel sl = town.getServerLevelUnsafe();
+        long tick = Util.getTick(sl);
+        Work work = ServerJobsRegistry.getRandomWork(sl, root);
+        NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
+        town.getUnsafe().getVillagerHandle().entities()
+            .stream()
+            .map(v -> (VisitorMobEntity) v)
+            .filter(v -> root.equals(v.getJobId().rootId()))
+            .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
+    }
+
+    private void registerUnmetNed(
+            Work work,
+            NoMCEconomics econ,
+            long tick,
+            UUID uuid
+    ) {
+        DeclarativeJob x = (DeclarativeJob) work.jobFunc.apply(uuid);
+        Ingredient xx = x.initialIngredients.get(0);
+        if (xx == null) {
+            return;
+        }
+        econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
     }
 
     private static List<JobID> getJobsSortedByPossibility(

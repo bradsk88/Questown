@@ -133,7 +133,9 @@ public class WorkSeekerJob extends DeclarativeJob {
         return () -> {
 
             if (town.getPossibleWork().getFor(getId()).isEmpty()) {
-                journal.changeStatus(statusFactory.noWorkPossible());
+                if (!statusFactory.noWorkPossible().equals(journal.getStatus())) {
+                    journal.changeStatus(statusFactory.noWorkPossible());
+                }
                 return statusFactory.noWorkPossible();
             }
             return super.getStateComputer(town, statusFactory, jtp, elp).get();
