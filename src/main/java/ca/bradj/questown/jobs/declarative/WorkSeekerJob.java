@@ -43,6 +43,8 @@ public class WorkSeekerJob extends DeclarativeJob {
     );
     private static final String WORK_ID = ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.WORK_ID;
 
+    private boolean registeredUnmet = false;
+
     public WorkSeekerJob(
             UUID ownerUUID,
             int inventoryCapacity,
@@ -133,8 +135,9 @@ public class WorkSeekerJob extends DeclarativeJob {
         return () -> {
 
             if (town.getPossibleWork().getFor(getId()).isEmpty()) {
-                if (!statusFactory.noWorkPossible().equals(journal.getStatus())) {
+                if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
                     journal.changeStatus(statusFactory.noWorkPossible());
+                    registeredUnmet = true;
                 }
                 return statusFactory.noWorkPossible();
             }

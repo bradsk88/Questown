@@ -63,8 +63,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     ) {
     }
 
-    @Override
-    protected void renderTooltip(
+    private void renderTooltips(
             PoseStack stack,
             int mouseX,
             int mouseY
@@ -110,6 +109,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     ) {
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
+        renderTooltips(poseStack, mouseX, mouseY);
     }
 
     @Override

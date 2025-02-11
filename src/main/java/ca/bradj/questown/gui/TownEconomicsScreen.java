@@ -63,8 +63,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     ) {
     }
 
-    @Override
-    protected void renderTooltip(
+    private void renderTooltips(
             PoseStack stack,
             int mouseX,
             int mouseY
@@ -110,6 +109,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     ) {
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
+        this.renderTooltips(poseStack, mouseX, mouseY);
     }
 
     @Override
