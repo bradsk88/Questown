@@ -7,13 +7,13 @@ import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
+import mezz.jei.common.Internal;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.Rect2i;
@@ -57,7 +57,8 @@ public final class PagedCardScreen<D> {
             Supplier<Integer> width,
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
-            TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent, // TODO: Replace Pair with Coordinate
+            TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent,
+            // TODO: Replace Pair with Coordinate
             int heightScale,
             int buttonY,
             int extraHeight

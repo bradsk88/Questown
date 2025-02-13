@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.ChangeJobReward;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -12,7 +13,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
@@ -144,7 +144,7 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public Component getName() {
         if (SpecialQuests.isSpecialQuest(recipe.getId())) {
-            return new TranslatableComponent(recipe.getId().getPath());
+            return Compat.translatable(recipe.getId().getPath());
         }
         return RoomRecipes.getName(recipe.getId());
     }

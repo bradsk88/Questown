@@ -15,7 +15,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
@@ -219,7 +219,7 @@ public class ItemJobsScreen extends Screen {
             );
         };
 
-        TranslatableComponent itemsText = Compat.translatable("menu.item_jobs.items_used");
+        Component itemsText = Compat.translatable("menu.item_jobs.items_used");
 
         int labelOffset = 5;
 
@@ -228,19 +228,19 @@ public class ItemJobsScreen extends Screen {
         renderStrip.accept(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
-        TranslatableComponent toolsText = Compat.translatable("menu.item_jobs.tools_used");
+        Component toolsText = Compat.translatable("menu.item_jobs.tools_used");
         Compat.drawDarkText(font, stack, toolsText, x, (c = down.apply(c)).topY() + labelOffset);
         renderStrip.accept(c, d.tools(), true);
         c = c.shiftedDown(font.lineHeight);
 
-        TranslatableComponent producesText = Compat.translatable("menu.item_jobs.produces");
+        Component producesText = Compat.translatable("menu.item_jobs.produces");
         Compat.drawDarkText(font, stack, producesText, x, (c = down.apply(c)).topY() + labelOffset);
         List<Ingredient> v = Ingredients.fromItems(d.result());
         renderStrip.accept(c, putRequestedItemFirst(v), true);
         c = c.shiftedDown(font.lineHeight);
 
-        TranslatableComponent roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
-        TranslatableComponent translatable = Compat.translatable("menu.item_jobs.room", roomName);
+        Component roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
+        Component translatable = Compat.translatable("menu.item_jobs.room", roomName);
         Compat.drawDarkText(font, stack, translatable, x, (c = down.apply(c)).topY());
         renderStrip.accept(scootch.apply(c), d.roomRecipe(), false);
 
@@ -273,7 +273,7 @@ public class ItemJobsScreen extends Screen {
     ) {
         ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
         pageArea = pageArea.moveDown(20);
-        TranslatableComponent jobName = Compat.translatable(
+        Component jobName = Compat.translatable(
                 "menu.common.job_name",
                 Jobs.getRootNameComponent(d.jobId()),
                 Compat.literal(d.jobId().jobId())

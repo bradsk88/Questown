@@ -36,12 +36,12 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -74,6 +74,7 @@ import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Inventory;
@@ -118,8 +119,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             .changeActivityAt(10, Activity.IDLE)
             .changeActivityAt(12500, Activity.REST)
             .build();
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
-            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
+            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
@@ -246,45 +247,49 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Collection<UIQuest> quests,
             VisitorQuestsContainer.VisitorContext ctx
     ) {
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        NetworkHooks.openScreen(
+                sp, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return Compat.literal("");
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new VisitorQuestsContainer(windowId, quests, ctx);
-            }
-        }, data -> {
-            UIQuest.Serializer ser = new UIQuest.Serializer();
-            data.writeInt(quests.size());
-            data.writeCollection(quests, (buf, recipe) -> {
-                ResourceLocation id;
-                if (recipe == null) {
-                    id = SpecialQuests.BROKEN;
-                    recipe = new UIQuest(
-                            null,
-                            SpecialQuests.SPECIAL_QUESTS.get(id),
-                            Quest.QuestStatus.ACTIVE,
-                            null,
-                            null,
-                            null
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        return new VisitorQuestsContainer(windowId, quests, ctx);
+                    }
+                }, data -> {
+                    UIQuest.Serializer ser = new UIQuest.Serializer();
+                    data.writeInt(quests.size());
+                    data.writeCollection(
+                            quests, (buf, recipe) -> {
+                                ResourceLocation id;
+                                if (recipe == null) {
+                                    id = SpecialQuests.BROKEN;
+                                    recipe = new UIQuest(
+                                            null,
+                                            SpecialQuests.SPECIAL_QUESTS.get(id),
+                                            Quest.QuestStatus.ACTIVE,
+                                            null,
+                                            null,
+                                            null
+                                    );
+                                } else {
+                                    id = recipe.getRecipeId();
+                                }
+                                buf.writeResourceLocation(id);
+                                ser.toNetwork(buf, recipe);
+                            }
                     );
-                } else {
-                    id = recipe.getRecipeId();
+                    data.writeBoolean(ctx.isFirstVillager);
+                    data.writeInt(ctx.finishedQuests);
+                    data.writeInt(ctx.unfinishedQuests);
                 }
-                buf.writeResourceLocation(id);
-                ser.toNetwork(buf, recipe);
-            });
-            data.writeBoolean(ctx.isFirstVillager);
-            data.writeInt(ctx.finishedQuests);
-            data.writeInt(ctx.unfinishedQuests);
-        });
+        );
     }
 
 //    public static boolean debuggerReleaseControl() {
@@ -383,7 +388,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             @Override
             public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
                 // Do nothing, this listener gets removed whenever a job changes
-                return () -> {};
+                return () -> {
+                };
             }
 
             @Override
@@ -475,7 +481,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         nudgeForJobNav();
 
         if (isInWall()) {
-            Vec3 nudged = position().add(-1.0 + random.nextDouble(2.0), 0, -1.0 + random.nextDouble(2.0));
+            Vec3 nudged = position().add(-1.0 + (random.nextDouble() * 2.0), 0, -1.0 + (random.nextDouble() * 2.0));
             QT.VILLAGER_LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
             moveTo(nudged);
         }
@@ -517,8 +523,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
-            entityData.set(heldItem, j.getInventory()
-                                      .getItem(0));
+            entityData.set(
+                    heldItem, j.getInventory()
+                               .getItem(0)
+            );
             if (j.getGlobalSpecialRules().contains(SpecialRules.RENDER_LAST_ITEM_IN_OFF_HAND)) {
                 int size = j.getInventory().getContainerSize();
                 boolean holdingMultiple = false;
@@ -534,8 +542,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     entityData.set(lastHeldItem, ItemStack.EMPTY);
                 }
             }
-            entityData.set(heldItem, j.getInventory()
-                                      .getItem(0));
+            entityData.set(
+                    heldItem, j.getInventory()
+                               .getItem(0)
+            );
             if (!job.get().isInitialized()) {
                 QT.VILLAGER_LOGGER.error("Wat");
             }
@@ -935,17 +945,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected Brain.Provider<?> brainProvider() {
-        return Brain.provider(ImmutableList.of(
-                MemoryModuleType.HOME,
-                MemoryModuleType.LAST_SLEPT,
-                MemoryModuleType.LAST_WOKEN,
-                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-                MemoryModuleType.WALK_TARGET,
-                MemoryModuleType.PATH,
-                MemoryModuleType.NEAREST_BED,
-                MemoryModuleType.INTERACTION_TARGET,
-                MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM
-        ), SENSOR_TYPES);
+        return Brain.provider(
+                ImmutableList.of(
+                        MemoryModuleType.HOME,
+                        MemoryModuleType.LAST_SLEPT,
+                        MemoryModuleType.LAST_WOKEN,
+                        MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
+                        MemoryModuleType.WALK_TARGET,
+                        MemoryModuleType.PATH,
+                        MemoryModuleType.NEAREST_BED,
+                        MemoryModuleType.INTERACTION_TARGET,
+                        MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM
+                ), SENSOR_TYPES
+        );
     }
 
     @Override
@@ -1146,8 +1158,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
                           if (serverlevel != null) {
                               PoiManager poimanager = serverlevel.getPoiManager();
-                              Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
-                              BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
+                              Optional<Holder<PoiType>> optional = poimanager.getType(p_186306_.pos());
+                              BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
                               if (optional.isPresent() && bipredicate.test(this, optional.get())) {
                                   poimanager.release(p_186306_.pos());
                                   DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());
@@ -1183,7 +1195,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return InteractionResult.PASS;
         }
 
-        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestHandle().getQuestsWithRewardsForVillager(getUUID());
+        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestHandle()
+                                                               .getQuestsWithRewardsForVillager(getUUID());
         Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
 
         AdvancementsInit.VISITOR_TRIGGER.trigger(
@@ -1242,7 +1255,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public void addStatusListener(StatusListener l) {
         this.cleanupJobListeners.add(
-            job.get().addStatusListener(l)
+                job.get().addStatusListener(l)
         );
     }
 

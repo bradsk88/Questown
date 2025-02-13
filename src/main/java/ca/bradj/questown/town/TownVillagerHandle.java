@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -324,7 +323,7 @@ public class TownVillagerHandle implements VillagerHolder {
         Works.values().forEach(w -> {
             Work work = w.get();
             b.put(work.id, work.parentID);
-            b2.put(work.id, work.icon.getItem().getRegistryName());
+            b2.put(work.id, Compat.getItemId(work.icon.getItem()));
         });
         QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
     }
@@ -583,11 +582,11 @@ public class TownVillagerHandle implements VillagerHolder {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
         BlockPos townFlagBasePos = town.getUnsafe().getTownFlagBasePos();
-        NetworkHooks.openGui(
+        NetworkHooks.openScreen(
                 player, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
-                        return TextComponent.EMPTY;
+                        return Compat.literal("");
                     }
 
                     @Override

@@ -1,11 +1,11 @@
 package ca.bradj.questown.jobs.requests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -106,11 +106,11 @@ public class WorkRequest {
 
     public Component getName() {
         if (tag != null) {
-            return new TranslatableComponent("#" + tag.location());
+            return Component.translatable("#" + tag.location());
         }
         if (item != null) {
-            return new TranslatableComponent(item.getRegistryName().toString());
+            return Compat.getItemName(item);
         }
-        return new TranslatableComponent("invalid.workrequest");
+        return Component.translatable("invalid.workrequest");
     }
 }

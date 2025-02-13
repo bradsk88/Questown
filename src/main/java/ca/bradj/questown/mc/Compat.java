@@ -5,26 +5,25 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
@@ -76,29 +75,29 @@ public class Compat {
         );
     }
 
-    public static TranslatableComponent translatable(String key) {
-        return new TranslatableComponent(key);
+    public static Component translatable(String key) {
+        return Component.translatable(key);
     }
 
-    public static TranslatableComponent translatable(
+    public static MutableComponent translatable(
             String key,
             Object... args
     ) {
-        return new TranslatableComponent(key, args);
+        return Component.translatable(key, args);
     }
 
-    public static TranslatableComponent translatableStyled(
+    public static Component translatableStyled(
             String s,
             Style style,
             Object... args
     ) {
-        TranslatableComponent v = translatable(s, args);
+        MutableComponent v = translatable(s, args);
         v.setStyle(style);
         return v;
     }
 
     public static Component literal(String x) {
-        return new TextComponent(x);
+        return Component.literal(x);
     }
 
     public static <X> ArrayList<X> shuffle(
@@ -125,18 +124,18 @@ public class Compat {
     }
 
     public static void setCutoutRenderType(Block block) {
-        ItemBlockRenderTypes.setRenderLayer(block, RenderType.cutout());
+        // Render layer is set via model JSON files
     }
 
     public static <MSG> SimpleChannel.MessageBuilder<MSG> withConsumer(
             SimpleChannel.MessageBuilder<MSG> decoder,
             BiConsumer<MSG, Supplier<NetworkEvent.Context>> consumer
     ) {
-        return decoder.consumer(consumer);
+        return decoder.consumerNetworkThread(consumer);
     }
 
     public static CompoundTag getBlockStoredTagData(TownFlagBlockEntity e) {
-        return e.getTileData();
+        return e.getPersistentData();
     }
 
     public static void openScreen(
@@ -144,15 +143,15 @@ public class Compat {
             MenuProvider menuProvider,
             Consumer<FriendlyByteBuf> consumer
     ) {
-        NetworkHooks.openGui(sender, menuProvider, consumer);
+        NetworkHooks.openScreen(sender, menuProvider, consumer);
     }
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
-        return DeferredRegister.create(ForgeRegistries.CONTAINERS, modid);
+        return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
     }
 
     public static void enqueueOrLog(
-            ParallelDispatchEvent event,
+            FMLCommonSetupEvent event,
             Runnable staticInitialize
     ) {
         event.enqueueWork(staticInitialize).exceptionally(
@@ -167,7 +166,10 @@ public class Compat {
         return cfg::get;
     }
 
-    public static TownPosition townPos(BlockPos flagPos, BlockPos blockPos) {
+    public static TownPosition townPos(
+            BlockPos flagPos,
+            BlockPos blockPos
+    ) {
         return new TownPosition(blockPos.getX(), blockPos.getZ(), blockPos.getY() - flagPos.getY());
     }
 
@@ -206,6 +208,7 @@ public class Compat {
     ) {
         font.draw(stack, translatable, x, y, 0x00000000);
     }
+
     public static void drawLightText(
             Font font,
             PoseStack stack,
@@ -214,5 +217,13 @@ public class Compat {
             int y
     ) {
         font.drawShadow(stack, translatable, x, y, 0xFFFFFFFF);
+    }
+
+    public static Component getItemName(Item item) {
+        return translatable(getItemId(item).toString());
+    }
+
+    public static ResourceLocation getItemId(Item item) {
+        return ForgeRegistries.ITEMS.getKey(item);
     }
 }

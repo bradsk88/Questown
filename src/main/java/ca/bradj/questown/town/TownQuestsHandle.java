@@ -7,6 +7,7 @@ import ca.bradj.questown.gui.FlagMenus;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -17,7 +18,6 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -80,11 +80,11 @@ public class TownQuestsHandle implements QuestsHolder {
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
 
         Collection entities = t.getVillagerHandle().entities();
-        NetworkHooks.openGui(
+        NetworkHooks.openScreen(
                 player, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
-                        return TextComponent.EMPTY;
+                        return Compat.literal("");
                     }
 
                     @Override
@@ -157,11 +157,11 @@ public class TownQuestsHandle implements QuestsHolder {
     ) {
         final TownInterface t = unsafeGetTown();
         List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);
-        NetworkHooks.openGui(
+        NetworkHooks.openScreen(
                 sp, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
-                        return TextComponent.EMPTY;
+                        return Compat.literal("");
                     }
 
                     @Override

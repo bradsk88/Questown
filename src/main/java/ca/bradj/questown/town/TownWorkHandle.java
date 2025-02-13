@@ -10,11 +10,11 @@ import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -100,11 +100,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
-        NetworkHooks.openGui(
+        NetworkHooks.openScreen(
                 sp, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
-                        return TextComponent.EMPTY;
+                        return Compat.literal("");
                     }
 
                     @Override
