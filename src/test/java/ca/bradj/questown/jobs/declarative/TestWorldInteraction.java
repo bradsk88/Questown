@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 
@@ -351,5 +352,13 @@ public class TestWorldInteraction extends
             int villagerIndex
     ) {
         return inventory.getItems();
+    }
+
+    @Override
+    protected void iterate(
+            Iterable<GathererJournalTest.TestItem> newItemsSource,
+            Function<GathererJournalTest.TestItem, GathererJournalTest.TestItem> push
+    ) {
+        newItemsSource.forEach(push::apply);
     }
 }

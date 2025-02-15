@@ -25,7 +25,7 @@ public class Ingredients {
         if (tag != null) {
             return Compat.translatable("#" + tag);
         }
-        if (j.getAsJsonObject().has("item")) {
+        if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
             Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
             if (i != null) {
@@ -41,7 +41,7 @@ public class Ingredients {
         if (tag != null) {
             return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tag)));
         }
-        if (j.getAsJsonObject().has("item")) {
+        if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
             Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
             if (i != null) {
@@ -68,7 +68,7 @@ public class Ingredients {
             String tKey = "#" + tag;
             return tKey;
         }
-        if (j.getAsJsonObject().has("item")) {
+        if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
             return tKey;
         }
@@ -126,7 +126,7 @@ public class Ingredients {
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {
-        return result.stream().map(Ingredient::of).toList();
+        return result.stream().filter(v -> !v.isEmpty()).map(Ingredient::of).toList();
     }
 
     public static boolean equal(

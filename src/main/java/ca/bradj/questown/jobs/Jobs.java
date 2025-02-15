@@ -10,7 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
@@ -176,7 +176,7 @@ public class Jobs {
 
     public static @Nullable EntityCurrentJobSite<MCRoom> getEntityCurrentJobSite(
             BlockPos entityBlockPos,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
         EntityCurrentJobSite<MCRoom> in = JobsClean.getEntityCurrentJobSite(

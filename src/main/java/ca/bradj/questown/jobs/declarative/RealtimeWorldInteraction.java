@@ -427,4 +427,12 @@ public class RealtimeWorldInteraction extends
     ) {
         return Util.workWithSurfaceInteractionPos(mcExtra.town().getServerLevel(), v);
     }
+
+    @Override
+    protected void iterate(
+            Iterable<MCHeldItem> newItemsSource,
+            Function<MCHeldItem, MCHeldItem> push
+    ) {
+        Util.iterate(newItemsSource, push::apply);
+    }
 }

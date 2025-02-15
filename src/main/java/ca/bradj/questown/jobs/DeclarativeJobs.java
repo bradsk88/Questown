@@ -10,16 +10,15 @@ import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
-import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -36,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.Stream;
 
 public class DeclarativeJobs {
 
@@ -142,22 +142,25 @@ public class DeclarativeJobs {
 
     public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
             @NotNull Integer maxState,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomHandle,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomHandle,
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
         Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
             Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
-            List<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> rooms = roomHandle.getMatches();
+            Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
 
-            rooms.forEach(match -> match.getContainedBlocks().forEach((bp, bv) -> {
+            //TODO: Validate that this is actually needed
+            rooms = rooms.filter(v -> !v.dueToWorkOnly());
+
+            rooms.forEach(match -> match.room().getContainedBlocks().forEach((bp, bv) -> {
                 State jobBlockState = work.getJobBlockState(bp);
                 if (jobBlockState == null) {
                     return;
                 }
                 spotStatuses.put(bp, jobBlockState.processingState());
-                Util.addOrInitialize(roomStatuses, match.getRoom(), jobBlockState.processingState());
+                Util.addOrInitialize(roomStatuses, match.room().getRoom(), jobBlockState.processingState());
             }));
             return new Pair<>(spotStatuses.build(), roomStatuses);
         };

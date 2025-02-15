@@ -224,10 +224,7 @@ public class Util {
             X key,
             Y value
     ) {
-        Map unsafe = map;
-        Collection cur = Util.getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        cur.add(value);
-        unsafe.put(key, cur);
+        UtilClean.addOrInitialize(map, key, value);
     }
 
     public static <K, V> void putIfAbsent(

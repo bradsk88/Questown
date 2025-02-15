@@ -22,7 +22,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
     public boolean tryGetSupplies(
             STATUS status,
             int upToAmount,
-            RoomsNeedingIngredientsOrTools<?, ?, ?> roomsNeedingIngredientsOrTools,
+            RoomsNeedingVillagerInput<?, ?, ?> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
@@ -37,7 +37,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
     public boolean tryGetSupplies(
             STATUS status,
             int upToAmount,
-            RoomsNeedingIngredientsOrTools<?, ?, ?> roomsNeedingIngredientsOrTools,
+            RoomsNeedingVillagerInput<?, ?, ?> roomsNeedingIngredientsOrTools,
             JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,

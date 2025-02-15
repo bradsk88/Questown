@@ -3,6 +3,7 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.world.item.ItemStack;
@@ -77,5 +78,23 @@ public class PredicateCollections {
         ImmutableMap.Builder<Integer, PredicateCollection<MCHeldItem, ItemStack>> builder = ImmutableMap.builder();
         in.forEach((k, v) -> builder.put(k, fromMCIngredient(v)));
         return builder.build();
+    }
+
+    public static <X> MonoPredicateCollection<X> fromSimple(Predicate<X> simple) {
+        return new MonoPredicateCollection<>(new IPredicateCollection<X>() {
+            @Override
+            public boolean isEmpty() {
+                return false;
+            }
+
+            @Override
+            public boolean test(X x) {
+                return simple.test(x);
+            }
+        }, "from simple predicate");
+    }
+
+    public static <X> MonoPredicateCollection<X> fromSimpleEqualityCheck(X value) {
+        return fromSimple(value::equals);
     }
 }

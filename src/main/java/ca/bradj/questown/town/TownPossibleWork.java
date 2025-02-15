@@ -198,7 +198,7 @@ public class TownPossibleWork {
                         r -> true,
                         bp -> dj.location().isJobBlock().test(sl::getBlockState, bp),
                         js -> dj.location().baseRoom().equals(js),
-                        true
+                        false
                 );
                 for (ContainerTarget<MCContainer, MCTownItem> tg : foundContainer) {
                     if (tg.hasItem(zzz -> ing.test(MCHeldItem.fromTown(zzz)))) {

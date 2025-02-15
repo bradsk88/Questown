@@ -39,8 +39,12 @@ public abstract class AbstractItemWI<
     @Override
     public InsertResult<TOWN, ITEM> tryInsertIngredients(
             EXTRA extra,
+            PredicateCollection<ITEM, ITEM> ingredientsForStep,
             WorkedSpot<POS> ws
     ) {
+        if (ingredientsForStep == null || ingredientsForStep.isEmpty()) {
+            return null;
+        }
         POS bp = ws.workPosition();
         int curState = ws.stateAfterWork();
         State state = getWorkStatuses(extra).getJobBlockState(bp);

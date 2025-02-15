@@ -29,6 +29,7 @@ class JobStatusesTest {
         static final TestStatus COLLECTING_PRODUCT = new TestStatus("collecting_product");
         static final TestStatus RELAXING = new TestStatus("relaxing");
         static final TestStatus WAITING_FOR_TIMED_STATE = new TestStatus("waiting");
+        static final TestStatus NO_WORK_POSSIBLE = new TestStatus("no_work_possible");
         static final IStatusFactory<TestStatus> FACTORY = new IStatusFactory<>() {
             @Override
             public TestStatus droppingLoot() {
@@ -78,6 +79,11 @@ class JobStatusesTest {
             @Override
             public TestStatus waitingForTimedState() {
                 return WAITING_FOR_TIMED_STATE;
+            }
+
+            @Override
+            public TestStatus noWorkPossible() {
+                return NO_WORK_POSSIBLE;
             }
         };
 
@@ -318,10 +324,12 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, true, ImmutableMap.of(
+                new ConstInventory(
+                        false, true, ImmutableMap.of(
                         TestStatus.ITEM_WORK, false,
                         TestStatus.ITEM_WORK_2, true
-                )),
+                )
+                ),
                 new ConstTown(false, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -410,9 +418,11 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, false, ImmutableMap.of(
+                new ConstInventory(
+                        false, false, ImmutableMap.of(
                         TestStatus.ITEM_WORK, true // Some supplies
-                )),
+                )
+                ),
                 new ConstTown(false, true, false),
                 new NoOpJob(),
                 TestStatus.FACTORY
@@ -432,10 +442,12 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
+                new ConstInventory(
+                        false, hasNonSupplyItems, ImmutableMap.of(
                         TestStatus.ITEM_WORK, suppliesInInventory,
                         TestStatus.ITEM_WORK_2, suppliesInInventory
-                )),
+                )
+                ),
                 new ConstTown(hasSupplies, townHasSpace, canDoWork),
                 new NoOpJob(),
                 TestStatus.FACTORY
@@ -455,10 +467,12 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, hasNonSupplyItems, ImmutableMap.of(
+                new ConstInventory(
+                        false, hasNonSupplyItems, ImmutableMap.of(
                         TestStatus.ITEM_WORK, suppliesInInventory,
                         TestStatus.ITEM_WORK_2, suppliesInInventory
-                )),
+                )
+                ),
                 new ConstTown(townHasSupplies, townHasSpace, canDoWork),
                 new NoOpJob(),
                 TestStatus.FACTORY

@@ -1,5 +1,6 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -152,5 +153,27 @@ public class UtilClean {
         ImmutableList.Builder<X> b = ImmutableList.builder();
         x.forEach(b::add);
         return b.build();
+    }
+
+    public static <X, Y> void addOrInitialize(
+            Map<X, ? extends Collection<Y>> map,
+            X key,
+            Y value
+    ) {
+        Map unsafe = map;
+        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
+        cur.add(value);
+        unsafe.put(key, cur);
+    }
+
+    public static <X, Y> void addAllOrInitialize(
+            Map<X, ? extends Collection<Y>> map,
+            X key,
+            Collection<Y> values
+    ) {
+        Map unsafe = map;
+        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
+        cur.addAll(values);
+        unsafe.put(key, cur);
     }
 }

@@ -7,7 +7,8 @@ import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.StockRequestItem;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -36,14 +37,14 @@ public class WorkSpotFromHeldItemSpecialRule extends
         }
 
         bxEvent.replaceRoomCheck().accept(before -> {
-            Map<Integer, Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>>> b = new HashMap<>();
+            Map<Integer, Collection<NVIRoom<MCRoom, ResourceLocation, BlockPos>>> b = new HashMap<>();
             int state = bxEvent.getJobBlockState().apply(pos).processingState();
-            Collection<IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, ?>> stateRooms = UtilClean.getOrDefaultCollection(
+            Collection<NVIRoom<MCRoom, ResourceLocation, BlockPos>> stateRooms = UtilClean.getOrDefaultCollection(
                     b, state, new ArrayList<>(), true
             );
             stateRooms.add(match(bxEvent, pos, room));
             b.put(state, ImmutableList.copyOf(stateRooms));
-            return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.copyOf(b));
+            return new RoomsNeedingVillagerInput<>(ImmutableMap.copyOf(b));
         });
     }
 
@@ -69,12 +70,12 @@ public class WorkSpotFromHeldItemSpecialRule extends
         });
     }
 
-    private static @NotNull IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Object> match(
+    private static @NotNull NVIRoom<MCRoom, ResourceLocation, BlockPos> match(
             BeforeTickEvent bxEvent,
             @Nullable BlockPos pos,
             @Nullable MCRoom room
     ) {
-        return new IRoomRecipeMatch<>() {
+        return new NVIRoom<>(new IRoomRecipeMatch<>() {
             @Override
             public ResourceLocation getRecipeID() {
                 return bxEvent.locInfo().baseRoom();
@@ -94,7 +95,7 @@ public class WorkSpotFromHeldItemSpecialRule extends
             public ImmutableMap<BlockPos, Object> getContainedBlocks() {
                 return ImmutableMap.of(pos, true);
             }
-        };
+        }, false);
     }
 
     public static @Nullable MCRoom getRoomFromHeldItems(Collection<MCHeldItem> mcHeldItems) {

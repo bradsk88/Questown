@@ -79,11 +79,13 @@ public abstract class ProductionJob<
     protected final UUID ownerUUID;
 
     // TODO: Stop using this - use a cached supplier instead
-    protected RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools;
+    protected RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools;
 
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
     public final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
+    private BlockPos entityPrevPos;
+    private int stuckTicks;
 
     public @Nullable BlockPos getJobSite(
             TownInterface town
@@ -323,6 +325,14 @@ public abstract class ProductionJob<
         //  if (target = BeforeTargetSelection.run(...)) {
         //    return target;
         if (status.isGoingToJobsite()) {
+            if (entityBlockPos.equals(entityPrevPos)) {
+                stuckTicks++;
+            }
+            entityPrevPos = entityBlockPos;
+            if (stuckTicks > 100) {
+                clearJobSite();
+                stuckTicks = 0;
+            }
             BlockPos jobSite1 = getJobSite(town);
             this.setLookTarget(jobSite1);
             return jobSite1;
@@ -381,14 +391,14 @@ public abstract class ProductionJob<
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
             TownInterface town,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> blocks,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> blocks,
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Predicate<BlockPos> isJobBlock,
             Function<BlockPos, BlockPos> getRandomAdjacent
     );
 
-    public abstract RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
+    public abstract RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
             Predicate<BlockPos> canClaim
@@ -409,7 +419,7 @@ public abstract class ProductionJob<
             WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
             LivingEntity entity,
             Direction facingPos,
-            RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             IProductionStatusFactory<STATUS> statusFactory
     );
 

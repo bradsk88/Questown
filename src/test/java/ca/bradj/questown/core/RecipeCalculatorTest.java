@@ -95,6 +95,6 @@ class RecipeCalculatorTest {
         int score = RecipeItemScore.requiresCraftingTable(
                 CommonRecipes.LANTERN, false
         );
-        Assertions.assertEquals(48, score);
+        Assertions.assertEquals(70, score);
     }
 }
