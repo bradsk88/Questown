@@ -193,7 +193,6 @@ public class QuestBatches<
                  .filter(v -> recipeId.equals(v.getWantedId()))
                  .anyMatch(v -> room.equals(v.completedOn))
             ) {
-                // FIXME: Campfire quest causes this to get spammed
                 QT.QUESTS_LOGGER.debug(
                         marker,
                         "Quest was already marked complete: {} for door {}",

@@ -499,7 +499,9 @@ public class DeclarativeJob extends
                         extra.town(),
                         checks.getAllRequiredIngredients(),
                         checks.getAllRequiredTools(),
-                        checks::shouldCheckContainerForSupplies
+                        checks::shouldCheckContainerForSupplies,
+                        bp -> isJobBlock(bp),
+                        js -> location.baseRoom().equals(js)
                 );
             }
 
