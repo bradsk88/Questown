@@ -1,7 +1,9 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancementsScreen;
 import ca.bradj.questown.jobs.JobID;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -37,6 +39,12 @@ public class ClientAccess {
             BlockPos flagPos
     ) {
         openScreen(() -> new ItemJobsScreen(requestedItem, jobs, flagPos));
+    }
+
+    public static void syncJobsForCommands(
+            ImmutableList<JobID> jobs
+    ) {
+        JobArgument.jobIDs = jobs;
     }
 
     public static boolean openScreen(Supplier<Screen> screen) {
