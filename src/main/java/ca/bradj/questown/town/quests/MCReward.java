@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.Registry;
 import ca.bradj.questown.town.rewards.RewardType;
@@ -22,7 +23,7 @@ public abstract class MCReward extends Reward {
 
     @Override
     protected String getName() {
-        return rType.getRegistryName().toString();
+        return rType.id.toString();
     }
 
     public abstract String toNiceString();
@@ -52,7 +53,7 @@ public abstract class MCReward extends Reward {
 
         public Tag serializeNBT(MCReward reward) {
             CompoundTag tag = new CompoundTag();
-            tag.putString(NBT_REWARD_TYPE, reward.rType.getRegistryName().toString());
+            tag.putString(NBT_REWARD_TYPE, reward.rType.id.toString());
             tag.put(NBT_REWARD_DATA, reward.serializeNbt());
             tag.putBoolean(NBT_REWARD_APPLIED, reward.isApplied());
             return tag;

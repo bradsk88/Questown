@@ -45,7 +45,7 @@ public record CreateStockRequestFromUIMessage(
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             if (sender.getInventory().getFreeSlot() == 0) {
-                sender.sendMessage(Compat.translatable("no_room_for_request"), sender.getUUID());
+                Compat.sendMessage(sender, Compat.translatable("no_room_for_request"));
                 return;
             }
             ItemStack toGive = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
@@ -57,13 +57,10 @@ public record CreateStockRequestFromUIMessage(
                     new CloseScreensMessage()
             );
             sender.containerMenu.broadcastChanges();
-            sender.sendMessage(
-                    Compat.translatable(
-                            "commands.give.success.single",
-                            1, given.getDisplayName(), (sender).getDisplayName()
-                    ),
-                    sender.getUUID()
-            );
+            Compat.sendMessage(sender, Compat.translatable(
+                    "commands.give.success.single",
+                    1, given.getDisplayName(), (sender).getDisplayName()
+            ));
         });
         ctx.get().setPacketHandled(true);
 

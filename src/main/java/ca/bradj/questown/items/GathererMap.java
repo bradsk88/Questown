@@ -4,9 +4,9 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -55,6 +55,6 @@ public class GathererMap extends Item {
         if (biome != null) {
             biomeName = biome.toString();
         }
-        tooltips.add(new TextComponent("Biome: " + biomeName));
+        tooltips.add(Compat.literal("Biome: " + biomeName));
     }
 }

@@ -8,6 +8,7 @@ import ca.bradj.questown.gui.SessionUniqueOrdinals;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.network.FriendlyByteBuf;
@@ -40,7 +41,7 @@ public record MultiStatusScreenSyncMessage(
         );
         buffer.writeMap(
                 msg.data.items(), FriendlyByteBuf::writeUUID, (b, v) ->
-                        b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(item.getRegistryName()))
+                        b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(Compat.getItemId(item)))
         );
     }
 

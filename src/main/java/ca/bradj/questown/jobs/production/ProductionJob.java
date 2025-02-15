@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.TownContainers;
@@ -101,7 +102,7 @@ public abstract class ProductionJob<
                     getWorkStatusHandle(town)::getJobBlockState,
                     bp -> this.isValidWalkTarget(town, bp),
                     this::isJobBlock,
-                    sl.getRandom()
+                    bp -> bp.relative(Compat.getRandomHorizontal(sl))
             );
             this.jobSite = js.value();
             if (this.jobSite != null) {
@@ -387,7 +388,7 @@ public abstract class ProductionJob<
             Function<BlockPos, State> work,
             Predicate<BlockPos> isEmpty,
             Predicate<BlockPos> isJobBlock,
-            Random rand
+            Function<BlockPos, BlockPos> getRandomAdjacent
     );
 
     public abstract RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(

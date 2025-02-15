@@ -8,9 +8,6 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.Internal;
-import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.common.gui.textures.Textures;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
@@ -40,7 +37,7 @@ public final class PagedCardScreen<D> {
     public static final int buttonHeight = 13;
     private final Supplier<Integer> height;
     private final Supplier<Integer> width;
-    private final DrawableNineSliceTexture background;
+    private final JEI.NineNine background;
     final GuiIconButtonSmall nextPage;
     final GuiIconButtonSmall previousPage;
     private final JEI.NineNine cardBackground;
@@ -68,8 +65,7 @@ public final class PagedCardScreen<D> {
 
         this.backgroundHeight = 166 + extraHeight;
 
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
+        this.background = JEI.getRecipeBackground();
         IDrawableStatic arrowNext = JEI.getArrowNext();
         IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
 

@@ -1,13 +1,13 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -23,7 +23,7 @@ public class Ingredients {
         JsonElement j = item.toJson();
         String tag = getTag(j);
         if (tag != null) {
-            return new TranslatableComponent("#" + tag);
+            return Compat.translatable("#" + tag);
         }
         if (j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -32,7 +32,7 @@ public class Ingredients {
                 return i.getName(i.getDefaultInstance());
             }
         }
-        return new TranslatableComponent("this");
+        return Compat.translatable("this");
     }
 
     public static WorkRequest asWorkRequest(Ingredient item) {

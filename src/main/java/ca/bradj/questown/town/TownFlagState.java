@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
@@ -86,9 +87,9 @@ public class TownFlagState {
         e.advancedTimeOnTick = dayTime;
 
         MCTownState storedState;
-        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+        if (Compat.getBlockStoredTagData(e).contains(NBT_TOWN_STATE)) {
             storedState = TownStateSerializer.INSTANCE.load(
-                    e.getTileData().getCompound(NBT_TOWN_STATE),
+                    Compat.getBlockStoredTagData(e).getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
             QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", storedState);
@@ -184,9 +185,9 @@ public class TownFlagState {
             entity.remove(Entity.RemovalReason.DISCARDED);
         }
 
-        if (e.getTileData().contains(NBT_TOWN_STATE)) {
+        if (Compat.getBlockStoredTagData(e).contains(NBT_TOWN_STATE)) {
             @NotNull ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = TownStateSerializer.loadVillagers(
-                    e.getTileData().getCompound(NBT_TOWN_STATE)
+                    Compat.getBlockStoredTagData(e).getCompound(NBT_TOWN_STATE)
             );
             for (TownState.VillagerData<MCHeldItem> v : villagers) {
                 VisitorMobEntity recovered = new VisitorMobEntity(sl, e);
@@ -263,7 +264,7 @@ public class TownFlagState {
             MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
                 QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
-                e.getTileData().put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
+                Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
             }

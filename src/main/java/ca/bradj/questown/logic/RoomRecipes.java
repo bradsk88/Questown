@@ -11,7 +11,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BedItem;
@@ -66,14 +65,14 @@ public class RoomRecipes {
 
     public static Component getName(ResourceLocation id) {
         if (id.getPath().startsWith("special_quest")) {
-            return new TranslatableComponent(id.getPath());
+            return Compat.translatable(id.getPath());
         }
-        return new TranslatableComponent(String.format("room.%s", id.getPath()));
+        return Compat.translatable(String.format("room.%s", id.getPath()));
     }
 
     public static Component getName(Optional<ResourceLocation> recipe) {
         return recipe.map(RoomRecipes::getName)
-                     .orElseGet(() -> new TranslatableComponent("room.no_recipe"));
+                     .orElseGet(() -> Compat.translatable("room.no_recipe"));
     }
 
     public static Map<ResourceLocation, RoomRecipe> hydrate(

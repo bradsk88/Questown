@@ -1,18 +1,15 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.common.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.common.gui.textures.Textures;
-import mezz.jei.gui.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -44,8 +41,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<UIWork> work;
-    private final DrawableNineSliceTexture background;
-    private final DrawableNineSliceTexture cardBackground;
+    private final JEI.NineNine background;
+    private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
     private final GuiIconButtonSmall addMoreBtn;
@@ -65,26 +62,25 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         super.imageHeight = 220;
 
         this.work = ImmutableList.copyOf(container.getWork());
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
-        this.cardBackground = textures.getRecipeBackground();
+        this.background = JEI.getRecipeGuiBackground();
+        this.cardBackground = JEI.getRecipeBackground();
 
-        IDrawableStatic plusIcon = textures.getRecipeTransfer();
+        IDrawableStatic plusIcon = JEI.getPlusIcon();
 
         int btnX = backgroundWidth - (buttonWidth + borderPadding);
 
-        IDrawableStatic arrowNext = textures.getArrowNext();
-        IDrawableStatic arrowPrevious = textures.getArrowPrevious();
-        this.nextPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage(), Internal.getTextures()
+        IDrawableStatic arrowNext = JEI.getArrowNext();
+        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
+        this.nextPage = JEI.guiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = new GuiIconButtonSmall(
-                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage(), Internal.getTextures()
+        this.previousPage = JEI.guiIconButtonSmall(
+                0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
 
         addWorkScreen = new AddWorkScreen(menu.addWorkContainer, playerInv, title);
-        this.addMoreBtn = new GuiIconButtonSmall(
-                btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork(), Internal.getTextures()
+        this.addMoreBtn = JEI.guiIconButtonSmall(
+                btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork()
         );
     }
 
@@ -103,7 +99,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
         if (getMenu().skipToAdd()) {
-            addMoreWork();;
+            addMoreWork();
+            ;
         }
     }
 
@@ -114,8 +111,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             double scrollY,
             double scrollDelta
     ) {
-        final double x = MouseUtil.getX();
-        final double y = MouseUtil.getY();
+        final double x = JEI.getX();
+        final double y = JEI.getY();
         if (isMouseOver(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();
@@ -186,8 +183,21 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             this.font.draw(poseStack, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-            this.font.drawShadow(poseStack, Compat.literal("x"), removeX + borderPadding - 1, iconY + borderPadding - 1, 0xFFFFFF);
-            highlightAndTooltip(poseStack, mouseX, mouseY, removeX, iconY, Compat.translatable("job_board.remove_work"));
+            this.font.drawShadow(
+                    poseStack,
+                    Compat.literal("x"),
+                    removeX + borderPadding - 1,
+                    iconY + borderPadding - 1,
+                    0xFFFFFF
+            );
+            highlightAndTooltip(
+                    poseStack,
+                    mouseX,
+                    mouseY,
+                    removeX,
+                    iconY,
+                    Compat.translatable("job_board.remove_work")
+            );
             this.removes.put(new Position(removeX, iconY), () -> menu.sendRemoveRequest(jobPosting));
         }
         slots.clear();

@@ -86,12 +86,6 @@ public class QuestownJei implements IModPlugin {
                 return is;
             }
         });
-        registration.addGuiContainerHandler(VisitorDialogScreen.class, new IGuiContainerHandler<>() {
-            @Override
-            public List<Rect2i> getGuiExtraAreas(VisitorDialogScreen containerScreen) {
-                return containerScreen.getExtraAreas();
-            }
-        });
         registration.addGuiContainerHandler(MultiStatusScreen.class, new IGuiContainerHandler<>() {
             @Override
             public List<Rect2i> getGuiExtraAreas(MultiStatusScreen containerScreen) {

@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import org.apache.logging.log4j.util.BiConsumer;
 
 import java.util.List;
@@ -40,7 +39,7 @@ public class RenderUtil {
     ) {
         Coordinate itemTopLeft = new Coordinate(itemX, data.topLeft.y());
         renderHighlight.accept(itemTopLeft, itemTopLeft.shifted(16, 16));
-        TranslatableComponent andMore = Compat.translatable(
+        Component andMore = Compat.translatable(
                 "menu.work_add_confirm.and_n_more",
                 data.totalItemCount - data.maxItemsBeforeEllipses
         );

@@ -32,7 +32,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
@@ -582,7 +581,7 @@ public class TownVillagerHandle implements VillagerHolder {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
         BlockPos townFlagBasePos = town.getUnsafe().getTownFlagBasePos();
-        NetworkHooks.openScreen(
+        Compat.openScreen(
                 player, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {

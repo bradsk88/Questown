@@ -4,10 +4,10 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -108,7 +108,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
                 return InteractionResult.SUCCESS;
             } else if (p_49515_.getValue(OCCUPIED)) {
                 if (!this.kickVillagerOutOfBed(p_49516_, p_49517_)) {
-                    p_49518_.displayClientMessage(new TranslatableComponent("block.minecraft.bed.occupied"), true);
+                    p_49518_.displayClientMessage(Compat.translatable("block.minecraft.bed.occupied"), true);
                 }
 
                 return InteractionResult.SUCCESS;

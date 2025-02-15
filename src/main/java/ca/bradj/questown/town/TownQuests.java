@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
@@ -68,7 +69,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
-        Random rand = town.getServerLevel().getRandom();
         UUID nextVisitorUUID = UUID.randomUUID();
         MCRewardList newVisitor = new MCRewardList(
                 town,
@@ -81,7 +81,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
 
         UUID randomVillager = town.getRandomVillager();
-        if (rand.nextBoolean() && randomVillager != null) {
+        if (Compat.getRandomBool(town.getServerLevel()) && randomVillager != null) {
             // Add upgrades for an existing villager's quests
             return new MCRewardList(town, new AddRandomUpgradeQuest(town, randomVillager));
         }
@@ -139,8 +139,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             UUID visitorUUID
     ) {
         List<String> jobs = ImmutableList.copyOf(town.getAvailableRootJobs());
-        Random random = town.getServerLevel().getRandom();
-        int jobIdx = random.nextInt(jobs.size());
+        int jobIdx = Compat.getRandomInt(town.getServerLevel(), jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
                 town,

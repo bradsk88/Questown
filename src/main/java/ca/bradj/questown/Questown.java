@@ -15,7 +15,6 @@ import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.commands.synchronization.ArgumentTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
@@ -64,8 +63,6 @@ public class Questown {
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
-
-        ArgumentTypes.register("job", JobArgument.class, new JobArgument.Serializer());
     }
 
     public static ResourceLocation ResourceLocation(String id) {
@@ -97,7 +94,6 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
         MenuScreens.register(MenuTypesInit.CREATE_STOCK_REQUEST.get(), CreateStockRequestScreen::new);
-        MenuScreens.register(MenuTypesInit.VISITOR_QUESTS.get(), VisitorDialogScreen::new);
         MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
         MenuScreens.register(MenuTypesInit.MULTI_VILLAGER.get(), MultiStatusScreen::new);
         MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);

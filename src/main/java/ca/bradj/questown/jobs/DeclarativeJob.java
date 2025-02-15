@@ -21,6 +21,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -567,7 +568,7 @@ public class DeclarativeJob extends
                             new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
                             bp -> isJobBlock(bp),
-                            () -> Direction.getRandom(sl.random)
+                            bp -> bp.relative(Compat.getRandomHorizontal(sl))
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
                         work.setJobBlockState(p.jobBlock(), State.fresh().setWorkLeft(workRequiredAtFirstState));
@@ -593,7 +594,7 @@ public class DeclarativeJob extends
                         entityCurrentJobSite,
                         bp -> isValidWalkTarget(town, bp),
                         bp -> isJobBlock(bp),
-                        () -> Direction.getRandom(sl.random)
+                        bp -> bp.relative(Compat.getRandomHorizontal(sl))
                 );
             }
 
@@ -746,7 +747,7 @@ public class DeclarativeJob extends
         if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
             adjustOrder = list -> {
                 ArrayList<Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
-                Collections.shuffle(shuffled, town.getServerLevel().getRandom());
+                shuffled = Compat.shuffle(shuffled, town.getServerLevel());
                 return shuffled;
             };
         }
@@ -776,7 +777,7 @@ public class DeclarativeJob extends
             @Nullable EntityCurrentJobSite<MCRoom> jobSite,
             Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
-            Supplier<Direction> randomDirection
+            Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
         if (jobSite == null) {
             return ImmutableMap.of();
@@ -784,7 +785,7 @@ public class DeclarativeJob extends
 
         Function<BlockPos, BlockPos> is = bp -> {
             bp = jobSite.isFarm() ? bp.above() : bp;
-            return findInteractionSpot(bp, jobSite.room(), isValidWalkTarget, randomDirection);
+            return findInteractionSpot(bp, jobSite.room(), isValidWalkTarget, getRandomAdjacent);
         };
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
@@ -825,7 +826,7 @@ public class DeclarativeJob extends
             BlockPos bp,
             Room jobSite,
             Predicate<BlockPos> isValidWalkTarget,
-            Supplier<Direction> random
+            Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
         @Nullable BlockPos spot;
 
@@ -845,7 +846,7 @@ public class DeclarativeJob extends
         }
 
         QT.JOB_LOGGER.warn("choosing to approach job block from random side");
-        return bp.relative(random.get());
+        return getRandomAdjacent.apply(bp);
     }
 
     @Nullable
@@ -957,7 +958,7 @@ public class DeclarativeJob extends
             Function<BlockPos, State> work,
             Predicate<BlockPos> isValidWalkTarget,
             Predicate<BlockPos> isJobBlock,
-            Random rand
+            Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
         // TODO: Use tags to support more tiers of work rooms
         Map<Integer, Boolean> statusItems = getSupplyItemStatus();
@@ -973,7 +974,7 @@ public class DeclarativeJob extends
                 blocksSrc,
                 work,
                 isJobBlock,
-                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, () -> Direction.getRandom(rand))
+                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent)
         );
     }
 

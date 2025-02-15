@@ -25,7 +25,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -100,7 +99,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
-        NetworkHooks.openScreen(
+        Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {

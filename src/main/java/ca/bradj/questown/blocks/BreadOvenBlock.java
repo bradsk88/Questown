@@ -2,15 +2,15 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -56,8 +56,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                         .strength(1.0F, 10.0F)
         );
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BAKE_STATE, 0)
-                .setValue(FACING, Direction.NORTH)
+                                                      .setValue(BAKE_STATE, 0)
+                                                      .setValue(FACING, Direction.NORTH)
         );
     }
 
@@ -191,18 +191,12 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
         }
 
         if (canAcceptWheat(blockState)) {
-            player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_wheat"),
-                    player.getUUID()
-            );
+            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.baker.villagers_will_add_wheat"));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
         if (canAcceptCoal(blockState)) {
-            player.sendMessage(
-                    new TranslatableComponent("message.baker.villagers_will_add_coal"),
-                    player.getUUID()
-            );
+            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.baker.villagers_will_add_coal"));
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 

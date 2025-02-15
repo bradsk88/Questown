@@ -7,11 +7,11 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.CreateStockRequestContainer;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -51,24 +51,26 @@ public class StockRequestClipboardItem extends Item {
         WorksBehaviour.TownData td = parent.getTownData();
         BlockPos flagPos = parent.getTownFlagBasePos();
         ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
-        NetworkHooks.openGui(sp, new MenuProvider() {
-            @Override
-            public @NotNull Component getDisplayName() {
-                return TextComponent.EMPTY;
-            }
+        Compat.openScreen(
+                sp, new MenuProvider() {
+                    @Override
+                    public @NotNull Component getDisplayName() {
+                        return Compat.literal("");
+                    }
 
-            @Override
-            public @NotNull AbstractContainerMenu createMenu(
-                    int windowId,
-                    @NotNull Inventory inv,
-                    @NotNull Player p
-            ) {
-                return new CreateStockRequestContainer(windowId, allOutputs, flagPos);
-            }
-        }, data -> {
-            CreateStockRequestContainer.writeWorkResults(allOutputs, data);
-            CreateStockRequestContainer.writeFlagPosition(flagPos, data);
-        });
+                    @Override
+                    public @NotNull AbstractContainerMenu createMenu(
+                            int windowId,
+                            @NotNull Inventory inv,
+                            @NotNull Player p
+                    ) {
+                        return new CreateStockRequestContainer(windowId, allOutputs, flagPos);
+                    }
+                }, data -> {
+                    CreateStockRequestContainer.writeWorkResults(allOutputs, data);
+                    CreateStockRequestContainer.writeFlagPosition(flagPos, data);
+                }
+        );
         return InteractionResultHolder.sidedSuccess(itemInHand, false);
     }
 }

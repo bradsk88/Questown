@@ -15,7 +15,6 @@ import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
@@ -306,9 +305,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                 return;
             }
         }
-        player.sendMessage(
-                new TranslatableComponent("messages.town_flag.damaged"), null
-        );
+        Compat.sendMessage((ServerPlayer) player, Compat.translatable("messages.town_flag.damaged"));
         informedPlayers.put(player, level.getGameTime());
     }
 

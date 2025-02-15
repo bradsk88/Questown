@@ -2,20 +2,16 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.gui.textures.Textures;
-import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -47,8 +43,8 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     private static final int MAX_CARDS_PER_PAGE = ((backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING)) * (backgroundWidth / CARD_WIDTH);
 
     private final List<Ingredient> work;
-    private final DrawableNineSliceTexture background;
-    private final DrawableNineSliceTexture cardBackground;
+    private final JEI.NineNine background;
+    private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
 
@@ -64,17 +60,16 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
         super.imageHeight = 220;
 
         this.work = ImmutableList.copyOf(container.getAddableWork());
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
-        this.cardBackground = textures.getRecipeBackground();
+        this.background = JEI.getRecipeGuiBackground();
+        this.cardBackground = JEI.getRecipeBackground();
 
-        IDrawableStatic arrowNext = textures.getArrowNext();
-        IDrawableStatic arrowPrevious = textures.getArrowPrevious();
+        IDrawableStatic arrowNext = JEI.getArrowNext();
+        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
 
-        this.nextPage = new GuiIconButtonSmall(
+        this.nextPage = JEI.guiIconButtonSmall(
                 0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = new GuiIconButtonSmall(
+        this.previousPage = JEI.guiIconButtonSmall(
                 0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
     }
@@ -135,7 +130,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, new TranslatableComponent("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        this.font.draw(poseStack, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
         slots.clear();
         slots.addAll(b.build());
 
@@ -314,8 +309,8 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
             double scrollY,
             double scrollDelta
     ) {
-        final double x = MouseUtil.getX();
-        final double y = MouseUtil.getY();
+        final double x = JEI.getX();
+        final double y = JEI.getY();
         if (isMouseOver(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();

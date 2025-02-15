@@ -2,24 +2,20 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.gui.textures.Textures;
-import mezz.jei.input.MouseUtil;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -53,8 +49,8 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     private int MAX_CARDS_PER_PAGE;
 
     private final List<UIQuest> quests;
-    private final DrawableNineSliceTexture background;
-    private final DrawableNineSliceTexture cardBackground;
+    private final JEI.NineNine background;
+    private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
     private final GuiIconButtonSmall previousPage;
     private final List<ItemStack> heads;
@@ -70,17 +66,16 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         super.imageHeight = 220;
 
         this.quests = ImmutableList.copyOf(container.GetQuests());
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
-        this.cardBackground = textures.getRecipeBackground();
+        this.background = JEI.getRecipeGuiBackground();
+        this.cardBackground = JEI.getRecipeBackground();
 
-        IDrawableStatic arrowNext = textures.getArrowNext();
-        IDrawableStatic arrowPrevious = textures.getArrowPrevious();
+        IDrawableStatic arrowNext = JEI.getArrowNext();
+        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
 
-        this.nextPage = new GuiIconButtonSmall(
+        this.nextPage = JEI.guiIconButtonSmall(
                 0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = new GuiIconButtonSmall(
+        this.previousPage = JEI.guiIconButtonSmall(
                 0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
         this.heads = quests.stream().map(v -> {
@@ -117,7 +112,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 new Button(
                         x + borderPadding, maybeY,
                         48, buttonHeight,
-                        new TranslatableComponent("menu.back"),
+                        Compat.translatable("menu.back"),
                         (p_96776_) -> menu.sendOpenQuestsMenuRequest()
                 )
         );
@@ -125,7 +120,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 new Button(
                         maybeX, maybeY,
                         48, buttonHeight,
-                        new TranslatableComponent("menu.decline"),
+                        Compat.translatable("menu.decline"),
                         (p_96776_) -> menu.sendConfirmRemoveRequest()
                 )
         );
@@ -170,7 +165,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
 
         this.font.draw(
                 poseStack,
-                new TranslatableComponent("menu.quests.confirm_remove_top", quests.size()),
+                Compat.translatable("menu.quests.confirm_remove_top", quests.size()),
                 x,
                 y,
                 TEXT_COLOR
@@ -191,12 +186,12 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             Component recipeName = recipe.getName();
             if (recipe.fromRecipe != null) {
                 Component fromName = RoomRecipes.getName(recipe.fromRecipe);
-                recipeName = new TranslatableComponent("quests.upgrade", fromName, recipeName);
+                recipeName = Compat.translatable("quests.upgrade", fromName, recipeName);
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
-                recipeName = new TranslatableComponent("quests.completed_suffix", recipeName);
+                recipeName = Compat.translatable("quests.completed_suffix", recipeName);
             }
             if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
@@ -214,7 +209,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = new TranslatableComponent("quests.job_owner", vID);
+            Component tooltip = Compat.translatable("quests.job_owner", vID);
 
             if (vID.isEmpty()) {
                 continue;
@@ -222,7 +217,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
 
             boolean hasJob = jobName.isEmpty();
             if (!hasJob) {
-                tooltip = new TranslatableComponent("quests.job_change", vID, jobName);
+                tooltip = Compat.translatable("quests.job_change", vID, jobName);
             }
 
             boolean showHead = !hasJob;
@@ -243,7 +238,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         slots.addAll(b.build());
 
         int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
-        this.font.draw(poseStack, new TranslatableComponent("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+        this.font.draw(poseStack, Compat.translatable("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
 
         // Render the page buttons
         this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
@@ -389,8 +384,8 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             double scrollY,
             double scrollDelta
     ) {
-        final double x = MouseUtil.getX();
-        final double y = MouseUtil.getY();
+        final double x = JEI.getX();
+        final double y = JEI.getY();
         if (isMouseOver(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();

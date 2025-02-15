@@ -8,9 +8,9 @@ import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,7 +21,7 @@ public class JobTooltips {
     ) {
         Pair<String, String> overrides = ServerJobsRegistry.getStatusText(jobId, status);
         if (overrides != null) {
-            return Pair.toList(Pair.monoMap(overrides, TranslatableComponent::new));
+            return Pair.toList(Pair.monoMap(overrides, Compat::translatable));
         }
         return buildStandardTooltipComponents(status, jobId);
     }
@@ -48,12 +48,12 @@ public class JobTooltips {
         ) {
             cat = "diner";
         }
-        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId.rootId());
+        Component jobName = Compat.translatable("jobs." + jobId.rootId());
         String key1 = String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2());
         String key2 = String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2());
         components = ImmutableList.of(
-                new TranslatableComponent(key1, jobName),
-                new TranslatableComponent(key2, jobName)
+                Compat.translatable(key1, jobName),
+                Compat.translatable(key2, jobName)
         );
         return components;
     }

@@ -7,16 +7,14 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
@@ -34,7 +32,7 @@ public class WorkRequestConfirmScreen extends Screen {
 
     private static final int PAGE_PADDING = 10;
 
-    private final DrawableNineSliceTexture background;
+    private final JEI.NineNine background;
     private final ImmutableList<Map.Entry<JobID, ResourceLocation>> iconsForJobsWhichProduceResult;
     private final Ingredient itemRequested;
     private final Runnable requestWork;
@@ -59,8 +57,7 @@ public class WorkRequestConfirmScreen extends Screen {
     ) {
         super(Compat.translatable("menu.work_add_confirm.title", Compat.translatable(Ingredients.toString(requested))));
 
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
+        this.background = JEI.getRecipeGuiBackground();
         this.itemRequested = requested;
         this.iconsForJobsWhichProduceResult = ImmutableList.copyOf(iconsForJobsWhichProduceResult.entrySet());
         this.requestWork = () -> send(flagPos, CONFIRMED);
@@ -161,10 +158,10 @@ public class WorkRequestConfirmScreen extends Screen {
                 x,
                 mainItemTextY
         );
-        TranslatableComponent translatable = Compat.translatable("menu.work_add_confirm.which_produce_this_item");
+        Component translatable = Compat.translatable("menu.work_add_confirm.which_produce_this_item");
         Compat.drawDarkText(this.font, stack, translatable, x, mainItemTextY2);
         renderJobIcons(stack, mouseX, mouseY, xRef, jobIconsY);
-        TranslatableComponent confTxt = Compat.translatable("menu.work_add_confirm.confirm_text");
+        Component confTxt = Compat.translatable("menu.work_add_confirm.confirm_text");
         Compat.drawDarkText(this.font, stack, confTxt, xRef, confirmTextY);
     }
 

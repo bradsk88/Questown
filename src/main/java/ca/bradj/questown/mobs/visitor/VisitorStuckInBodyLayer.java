@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -45,16 +46,15 @@ public abstract class VisitorStuckInBodyLayer extends RenderLayer<VisitorMobEnti
             float p_117595_
     ) {
         int i = this.numStuck(p_117589_);
-        Random random = new Random((long) p_117589_.getId());
         if (i > 0) {
             for (int j = 0; j < i; ++j) {
                 p_117586_.pushPose();
-                ModelPart modelpart = this.getParentModel().getRandomModelPart(random);
-                ModelPart.Cube modelpart$cube = modelpart.getRandomCube(random);
+                ModelPart modelpart = this.getParentModel().getRandomModelPart(Compat.RANDOM);
+                ModelPart.Cube modelpart$cube = modelpart.getRandomCube(Compat.RANDOM);
                 modelpart.translateAndRotate(p_117586_);
-                float f = random.nextFloat();
-                float f1 = random.nextFloat();
-                float f2 = random.nextFloat();
+                float f = Compat.RANDOM.nextFloat();
+                float f1 = Compat.RANDOM.nextFloat();
+                float f2 = Compat.RANDOM.nextFloat();
                 float f3 = Mth.lerp(f, modelpart$cube.minX, modelpart$cube.maxX) / 16.0F;
                 float f4 = Mth.lerp(f1, modelpart$cube.minY, modelpart$cube.maxY) / 16.0F;
                 float f5 = Mth.lerp(f2, modelpart$cube.minZ, modelpart$cube.maxZ) / 16.0F;

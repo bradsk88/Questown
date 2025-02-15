@@ -123,7 +123,7 @@ public class ServerJobsRegistry {
             if (w.hasNoOutput()) {
                 continue;
             }
-            ResourceLocation name = w.icon.getItem().getRegistryName();
+            ResourceLocation name = Compat.getItemId(w.icon.getItem());
             if (wantedResult.test(w.initialRequest)) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;

@@ -686,7 +686,7 @@ public class ResourceJobLoader {
         }
         return (BlockState bs) -> {
             ResourceLocation resourceLocation = new ResourceLocation(block);
-            return resourceLocation.equals(bs.getBlock().getRegistryName());
+            return resourceLocation.equals(Compat.getItemId(bs.getBlock()));
         };
     }
 

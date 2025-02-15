@@ -106,11 +106,11 @@ public class WorkRequest {
 
     public Component getName() {
         if (tag != null) {
-            return Component.translatable("#" + tag.location());
+            return Compat.translatable("#" + tag.location());
         }
         if (item != null) {
             return Compat.getItemName(item);
         }
-        return Component.translatable("invalid.workrequest");
+        return Compat.translatable("invalid.workrequest");
     }
 }

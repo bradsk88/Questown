@@ -41,15 +41,16 @@ public class TownHealingHandle extends HealingStore<BlockPos> {
             return;
         }
         BlockPos pos = spot.getKey().above();
-        Random rand = level.random;
-        level.addParticle(
-                ParticleTypes.EFFECT,
-                (double) pos.getX() + 0.5D,
-                (double) pos.getY() + 0.5D,
-                (double) pos.getZ() + 0.5D,
-                (double) (rand.nextFloat() / 2.0F),
-                5.0E-5D,
-                (double) (rand.nextFloat() / 2.0F)
-        );
+        // TODO: Animate healing effect
+//        Random rand = level.random;
+//        level.addParticle(
+//                ParticleTypes.EFFECT,
+//                (double) pos.getX() + 0.5D,
+//                (double) pos.getY() + 0.5D,
+//                (double) pos.getZ() + 0.5D,
+//                (double) (rand.nextFloat() / 2.0F),
+//                5.0E-5D,
+//                (double) (rand.nextFloat() / 2.0F)
+//        );
     }
 }

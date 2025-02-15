@@ -2,7 +2,6 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Works;
-import com.google.gson.JsonObject;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -10,12 +9,9 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.synchronization.ArgumentSerializer;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
@@ -52,30 +48,5 @@ public class JobArgument implements ArgumentType<JobID> {
                 v -> builder.suggest(String.format("%s:%s", v.rootId(), v.jobId()))
         );
         return builder.buildFuture();
-    }
-
-    public static class Serializer implements ArgumentSerializer<JobArgument> {
-        @Override
-        public void serializeToNetwork(JobArgument p_235375_, FriendlyByteBuf p_235376_) {
-            p_235376_.writeCollection(p_235375_.jobIDs.get(), (buf, j) -> {
-                buf.writeUtf(j.rootId());
-                buf.writeUtf(j.jobId());
-            });
-        }
-
-        @Override
-        public JobArgument deserializeFromNetwork(FriendlyByteBuf p_235377_) {
-            JobArgument jobArgument = new JobArgument();
-            ArrayList<JobID> readNow = p_235377_.readCollection(
-                    ArrayList::new,
-                    buf -> new JobID(buf.readUtf(), buf.readUtf())
-            );
-            jobArgument.jobIDs = Lazy.of(() -> readNow);
-            return jobArgument;
-        }
-
-        @Override
-        public void serializeToJson(JobArgument p_235373_, JsonObject p_235374_) {
-        }
     }
 }

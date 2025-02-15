@@ -74,7 +74,6 @@ import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
-import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Inventory;
@@ -100,7 +99,6 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.tags.ITag;
 import org.jetbrains.annotations.NotNull;
@@ -119,8 +117,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             .changeActivityAt(10, Activity.IDLE)
             .changeActivityAt(12500, Activity.REST)
             .build();
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
-            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
+            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
     );
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
@@ -247,7 +245,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Collection<UIQuest> quests,
             VisitorQuestsContainer.VisitorContext ctx
     ) {
-        NetworkHooks.openScreen(
+        Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
                     public @NotNull Component getDisplayName() {
@@ -1158,8 +1156,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
                           if (serverlevel != null) {
                               PoiManager poimanager = serverlevel.getPoiManager();
-                              Optional<Holder<PoiType>> optional = poimanager.getType(p_186306_.pos());
-                              BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
+                              Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
+                              BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
                               if (optional.isPresent() && bipredicate.test(this, optional.get())) {
                                   poimanager.release(p_186306_.pos());
                                   DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());

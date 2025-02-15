@@ -3,18 +3,15 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.Internal;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
-import mezz.jei.gui.textures.Textures;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DataSlot;
@@ -34,7 +31,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
-    private final DrawableNineSliceTexture background;
+    private final JEI.NineNine background;
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
     private final Tabs tabs;
@@ -48,9 +45,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Component title
     ) {
         super(menu, playerInv, title);
-        Textures textures = Internal.getTextures();
-        this.background = textures.getRecipeGuiBackground();
-        this.slot = textures.getSlotDrawable();
+        this.background = JEI.getRecipeGuiBackground();
+        this.slot = JEI.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
         this.tabs = VillagerTabs.forMenu(menu);
@@ -72,7 +68,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 new Button(
                         maybeX, maybeY,
                         48, 20,
-                        new TranslatableComponent("menu.quests"),
+                        Compat.translatable("menu.quests"),
                         (p_96776_) -> {
                             openQuestsScreen();
                         }
@@ -199,7 +195,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 32;
 
         String jobId = menu.getRootJobId();
-        TranslatableComponent jobName = new TranslatableComponent("jobs." + jobId);
+        Component jobName = Compat.translatable("jobs." + jobId);
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
@@ -262,7 +258,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 8;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent component = new TranslatableComponent(
+                Component component = Compat.translatable(
                         "tooltips.villagers.job.inventory.locked"
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
@@ -284,8 +280,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int botY = topY + 16;
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
-                TranslatableComponent jPart = new TranslatableComponent(String.format("jobs.%s", menu.getRootJobId()));
-                TranslatableComponent component = new TranslatableComponent(
+                Component jPart = Compat.translatable(String.format("jobs.%s", menu.getRootJobId()));
+                Component component = Compat.translatable(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
                 super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
