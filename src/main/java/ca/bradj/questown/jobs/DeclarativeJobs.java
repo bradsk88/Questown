@@ -174,7 +174,9 @@ public class DeclarativeJobs {
             TownInterface rooms,
             Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
             Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
-            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom
+            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom,
+            Predicate<BlockPos> isJobBlock,
+            Predicate<ResourceLocation> isJobSite
     ) {
         return new LZCD.SimpleDependency("town has supplies") {
 
@@ -209,12 +211,14 @@ public class DeclarativeJobs {
                 b.put("relevant ingredients", neededIngredients);
                 b.put("relevant tools", neededTools);
 
-                // FIXME: Likely doesn't include non-chest containers
-                List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(
+                List<ContainerTarget<MCContainer, MCTownItem>> containers = Containers.get(
                         rooms,
-                        level,
-                        shouldGetSuppliesFromRoom
+                        shouldGetSuppliesFromRoom,
+                        isJobBlock,
+                        isJobSite,
+                        false
                 );
+
                 b.put("containers", containers);
 
                 @Nullable WithReason<Boolean> found = null;

@@ -12,11 +12,13 @@ import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.IPredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -94,7 +96,10 @@ public class TownPossibleWork {
         DeclarativeJob x = (DeclarativeJob) work.jobFunc.apply(uuid);
         Ingredient xx = x.initialIngredients.get(0);
         if (xx == null) {
-            return;
+            xx = x.initialTools.get(0);
+            if (xx == null) {
+                return;
+            }
         }
         econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
     }
@@ -147,7 +152,8 @@ public class TownPossibleWork {
 
         int hps = getHighestPossibleState(t, dj);
         double v = (double) hps / dj.getMaxState();
-        return v;
+        float shuffler = Compat.nextInt(t.getServerLevel(), 100) / 10000f;
+        return v + shuffler;
     }
 
     private static int getHighestPossibleState(
@@ -158,6 +164,7 @@ public class TownPossibleWork {
             return dj.getMaxState();
         }
         boolean townHasJobSite = false;
+        ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
@@ -168,7 +175,7 @@ public class TownPossibleWork {
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
                         rooms,
-                        (bp) -> dj.location().isJobBlock().test(t.getServerLevel()::getBlockState, bp),
+                        (bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
                         (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {
@@ -186,11 +193,18 @@ public class TownPossibleWork {
             final IPredicateCollection<MCHeldItem> ing = dj.getChecks().getIngredientsForStep(ii);
             if (ing != null) {
                 townHasIngredient = false;
-                @Nullable ContainerTarget<MCContainer, MCTownItem> ingCont = t.findMatchingContainer(
-                        v -> ing.test(MCHeldItem.fromTown(v))
+                List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
+                        t,
+                        r -> true,
+                        bp -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        js -> dj.location().baseRoom().equals(js),
+                        true
                 );
-                if (ingCont != null) {
-                    townHasIngredient = true;
+                for (ContainerTarget<MCContainer, MCTownItem> tg : foundContainer) {
+                    if (tg.hasItem(zzz -> ing.test(MCHeldItem.fromTown(zzz)))) {
+                        townHasIngredient = true;
+                        break;
+                    }
                 }
             }
 

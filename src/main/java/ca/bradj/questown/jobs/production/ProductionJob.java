@@ -33,9 +33,6 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
@@ -427,28 +424,13 @@ public abstract class ProductionJob<
         );
 
         Supplier<ContainerTarget<MCContainer, MCTownItem>> find = () -> {
-            ServerLevel sl = town.getServerLevel();
             Predicate<RoomRecipeMatch<MCRoom>> includeRoom = this::shouldCheckContainerForSupplies;
-            Collection<RoomRecipeMatch<MCRoom>> allContainers = town.getRoomHandle().getMatches(includeRoom);
-            List<ContainerTarget<MCContainer, MCTownItem>> chests = new ArrayList<>();
-            for (RoomRecipeMatch<MCRoom> c : allContainers) {
-                for (Map.Entry<BlockPos, Block> block : c.getContainedBlocks().entrySet()) {
-                    if (block.getValue().equals(Blocks.AIR)) {
-                        continue;
-                    }
-                    boolean containerIsNotInJobSite = !c.getRecipeIDs().contains(location.baseRoom());
-                    boolean containerIsNotJobTarget = !isJobBlock(block.getKey());
-                    if (containerIsNotInJobSite || containerIsNotJobTarget) {
-                        addIfChest(c, block, sl, chests);
-                    }
-                    if (containerIsNotJobTarget) {
-                        // TODO[ASAP]: Also prevent status from becoming
-                        //  "collecting supplies" if the only source is the job
-                        //  block. Otherwise, the villager may get stuck.
-                        addIfContainer(c, block, sl, chests);
-                    }
-                }
-            }
+            List<ContainerTarget<MCContainer, MCTownItem>> chests = Containers.get(
+                    town,
+                    includeRoom,
+                    this::isJobBlock,
+                    js -> location.baseRoom().equals(js), false
+            );
             List<ContainerTarget<MCContainer, MCTownItem>> closeChests = chests
                     .stream()
                     .sorted(Comparator.comparingDouble(a -> TownContainers.comparison(pos, a)))
@@ -471,33 +453,6 @@ public abstract class ProductionJob<
         }
         if (this.suppliesTarget != null) {
             QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
-        }
-    }
-
-    private static void addIfChest(
-            RoomRecipeMatch<MCRoom> c,
-            Map.Entry<BlockPos, Block> block,
-            ServerLevel sl,
-            List<ContainerTarget<MCContainer, MCTownItem>> chests
-    ) {
-        if (!(block.getValue() instanceof ChestBlock cb)) {
-            return;
-        }
-        BlockPos bp = block.getKey();
-        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
-        chests.add(chest);
-    }
-
-    private static void addIfContainer(
-            RoomRecipeMatch<MCRoom> c,
-            Map.Entry<BlockPos, Block> block,
-            ServerLevel sl,
-            List<ContainerTarget<MCContainer, MCTownItem>> chests
-    ) {
-        BlockPos bp = block.getKey();
-        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromEntity(sl, bp);
-        if (chest != null) {
-            chests.add(chest);
         }
     }
 
