@@ -1,6 +1,7 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.CommandsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
@@ -250,5 +252,9 @@ public class Compat {
             Component message
     ) {
         sender.sendSystemMessage(message);
+    }
+
+    public static void initCommands(IEventBus bus) {
+        CommandsInit.register(bus);
     }
 }
