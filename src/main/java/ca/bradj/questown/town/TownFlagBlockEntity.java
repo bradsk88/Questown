@@ -68,6 +68,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
+import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
 import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
 import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 
@@ -635,6 +636,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         // TODO: get room for rendering effect
 //        handleRoomChange(room, ParticleTypes.HAPPY_VILLAGER);
+
+        runForTopMatch(this::recipesFromLevel, match, r -> quests.markQuestAsComplete(room, r));
     }
 
 
@@ -654,6 +657,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
         if (oldMatchID.isPresent() && newMatchID.isPresent() && !oldMatchID.equals(newMatchID)) {
             messages.roomRecipeChanged(oldMatchID.get(), newMatchID.get(), newRoom);
+            quests.roomRecipeChanged(oldRoom, oldMatch, newRoom, newMatch);
             TownRooms.addParticles(l, newRoom, ParticleTypes.HAPPY_VILLAGER);
         }
         setChanged();
@@ -666,6 +670,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         ServerLevel l = getServerLevel();
         messages.roomRecipeDestroyed(roomDoorPos, getTopMatch(this::recipesFromLevel, oldRecipeId).orElse(null));
+        quests.roomRecipeDestroyed(roomDoorPos, oldRecipeId);
         TownRooms.addParticles(l, roomDoorPos, ParticleTypes.SMOKE);
         setChanged();
     }
