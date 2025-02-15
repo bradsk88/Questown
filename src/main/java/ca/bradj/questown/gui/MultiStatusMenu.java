@@ -8,6 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
 
@@ -37,6 +38,14 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
         super(MenuTypesInit.MULTI_VILLAGER.get(), windowId);
         this.flagPos = flagPos;
         triggerAdvancement.run();
+    }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player player,
+            int i
+    ) {
+        return ItemStack.EMPTY;
     }
 
     public boolean stillValid(Player p_38874_) {

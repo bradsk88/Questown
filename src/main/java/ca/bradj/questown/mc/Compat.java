@@ -5,26 +5,26 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.*;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
@@ -36,13 +36,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Compat {
-    public static final Random RANDOM = new Random();
+    public static final RandomSource RANDOM = RandomSource.create();
 
     public static void playNeutralSound(
             ServerLevel serverLevel,
@@ -80,14 +79,14 @@ public class Compat {
     }
 
     public static Component translatable(String key) {
-        return new TranslatableComponent(key);
+        return Component.translatable(key);
     }
 
     public static MutableComponent translatable(
             String key,
             Object... args
     ) {
-        return new TranslatableComponent(key, args);
+        return Component.translatable(key, args);
     }
 
     public static Component translatableStyled(
@@ -101,7 +100,7 @@ public class Compat {
     }
 
     public static Component literal(String x) {
-        return new TextComponent(x);
+        return Component.literal(x);
     }
 
     public static <X> ArrayList<X> shuffle(
@@ -128,18 +127,18 @@ public class Compat {
     }
 
     public static void setCutoutRenderType(Block block) {
-        ItemBlockRenderTypes.setRenderLayer(block, RenderType.cutout());
+        // Render layer is set via model JSON files
     }
 
     public static <MSG> SimpleChannel.MessageBuilder<MSG> withConsumer(
             SimpleChannel.MessageBuilder<MSG> decoder,
             BiConsumer<MSG, Supplier<NetworkEvent.Context>> consumer
     ) {
-        return decoder.consumer(consumer);
+        return decoder.consumerNetworkThread(consumer);
     }
 
     public static CompoundTag getBlockStoredTagData(TownFlagBlockEntity e) {
-        return e.getTileData();
+        return e.getPersistentData();
     }
 
     public static void openScreen(
@@ -147,15 +146,15 @@ public class Compat {
             MenuProvider menuProvider,
             Consumer<FriendlyByteBuf> consumer
     ) {
-        NetworkHooks.openGui(sender, menuProvider, consumer);
+        NetworkHooks.openScreen(sender, menuProvider, consumer);
     }
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
-        return DeferredRegister.create(ForgeRegistries.CONTAINERS, modid);
+        return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
     }
 
     public static void enqueueOrLog(
-            ParallelDispatchEvent event,
+            FMLCommonSetupEvent event,
             Runnable staticInitialize
     ) {
         event.enqueueWork(staticInitialize).exceptionally(
@@ -250,10 +249,6 @@ public class Compat {
             ServerPlayer sender,
             Component message
     ) {
-        sender.sendMessage(message, sender.getUUID());
-    }
-
-    public static void initCommands(IEventBus bus) {
-        // Only required on 1.19+
+        sender.sendSystemMessage(message);
     }
 }

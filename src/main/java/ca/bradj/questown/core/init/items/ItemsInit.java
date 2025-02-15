@@ -162,13 +162,13 @@ public class ItemsInit {
 
     @SubscribeEvent
     public static void onInteractBlock(PlayerInteractEvent.RightClickBlock event) {
-        final var level = event.getWorld();
+        final var level = event.getLevel();
         if (level.isClientSide) return; // Note this is fired both client and server side
         final var itemUsed = event.getItemStack().getItem();
         if (itemUsed instanceof TownWand item) {
             item.onRightClicked(
-                    () -> (ServerPlayer) event.getPlayer(),
-                    (ServerLevel) event.getWorld(),
+                    () -> (ServerPlayer) event.getEntity(),
+                    (ServerLevel) event.getLevel(),
                     event.getPos(),
                     event.getItemStack()
             );

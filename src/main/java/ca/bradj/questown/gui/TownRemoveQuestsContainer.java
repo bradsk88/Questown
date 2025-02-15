@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -95,6 +96,14 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
 
     public static BlockPos readFlagPos(FriendlyByteBuf data) {
         return new BlockPos(data.readInt(), data.readInt(), data.readInt());
+    }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player player,
+            int i
+    ) {
+        return ItemStack.EMPTY;
     }
 
     @Override

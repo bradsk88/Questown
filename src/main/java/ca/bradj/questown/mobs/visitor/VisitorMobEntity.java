@@ -74,6 +74,7 @@ import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Inventory;
@@ -117,8 +118,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             .changeActivityAt(10, Activity.IDLE)
             .changeActivityAt(12500, Activity.REST)
             .build();
-    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, PoiType>> POI_MEMORIES = ImmutableMap.of(
-            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_ == PoiType.HOME
+    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
+            MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
@@ -343,7 +344,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
-     * {@link TownInterface#changeJobForVisitor} instead.
+     * {@link TownInterface#changeJobForVisitorFromBoard(UUID, JobID)} instead.
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
@@ -1156,8 +1157,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
                           if (serverlevel != null) {
                               PoiManager poimanager = serverlevel.getPoiManager();
-                              Optional<PoiType> optional = poimanager.getType(p_186306_.pos());
-                              BiPredicate<VisitorMobEntity, PoiType> bipredicate = POI_MEMORIES.get(p_35429_);
+                              Optional<Holder<PoiType>> optional = poimanager.getType(p_186306_.pos());
+                    BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
                               if (optional.isPresent() && bipredicate.test(this, optional.get())) {
                                   poimanager.release(p_186306_.pos());
                                   DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());

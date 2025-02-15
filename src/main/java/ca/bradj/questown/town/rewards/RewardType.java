@@ -2,10 +2,9 @@ package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 import net.minecraft.resources.ResourceLocation;
 
-public class RewardType<T extends MCReward> extends ForgeRegistryEntry<RewardType<? extends MCReward>> {
+public class RewardType<T extends MCReward> {
 
     private final Factory<T> factory;
     public final ResourceLocation id;

@@ -2,27 +2,28 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Works;
+import com.google.common.collect.ImmutableList;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraftforge.common.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 public class JobArgument implements ArgumentType<JobID> {
-    private Lazy<Collection<JobID>> jobIDs = Lazy.of(Works::ids);
+    public static Collection<JobID> jobIDs = ImmutableList.of();
 
-    public JobArgument() {
+    public JobArgument(CommandBuildContext ctx) {
     }
 
-    public static @NotNull ArgumentType<JobID> job() {
-        return new JobArgument();
+    public static @NotNull ArgumentType<JobID> job(CommandBuildContext ctx) {
+        return new JobArgument(ctx);
     }
 
     public static JobID getJob(
@@ -44,7 +45,7 @@ public class JobArgument implements ArgumentType<JobID> {
             CommandContext<S> context,
             SuggestionsBuilder builder
     ) {
-        jobIDs.get().forEach(
+        jobIDs.forEach(
                 v -> builder.suggest(String.format("%s:%s", v.rootId(), v.jobId()))
         );
         return builder.buildFuture();

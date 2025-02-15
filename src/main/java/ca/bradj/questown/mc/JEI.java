@@ -3,10 +3,10 @@ package ca.bradj.questown.mc;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.Internal;
-import mezz.jei.gui.elements.DrawableNineSliceTexture;
+import mezz.jei.common.Internal;
+import mezz.jei.common.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import mezz.jei.input.MouseUtil;
+import mezz.jei.gui.input.MouseUtil;
 import net.minecraft.client.gui.components.Button;
 
 public class JEI {
@@ -42,7 +42,7 @@ public class JEI {
             int x, int y, int widthIn, int heightIn, IDrawable icon, Button.OnPress pressable
     ) {
         return new GuiIconButtonSmall(
-                x, y, widthIn, heightIn, icon, pressable
+                x, y, widthIn, heightIn, icon, pressable, Internal.getTextures()
         );
     }
 

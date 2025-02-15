@@ -481,6 +481,14 @@ public class ResourceJobLoader {
                 CraftingContainer cc = new CraftingContainer(
                         new AbstractContainerMenu(null, 0) {
                             @Override
+                            public ItemStack quickMoveStack(
+                                    Player player,
+                                    int i
+                            ) {
+                                return ItemStack.EMPTY;
+                            }
+
+                            @Override
                             public boolean stillValid(Player p_38874_) {
                                 return false;
                             }

@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
@@ -51,6 +52,14 @@ public class AddWorkContainer extends AbstractContainerMenu {
             FriendlyByteBuf data
     ) {
         data.writeBlockPos(blockPos);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(
+            Player player,
+            int i
+    ) {
+        return ItemStack.EMPTY;
     }
 
     @Override
