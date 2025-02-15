@@ -3,7 +3,8 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
@@ -50,14 +51,6 @@ public class JobsClean {
             Map<Integer, Integer> workRequiredAtStates,
             int maxState
     ) {
-        if (journal.get().stream().allMatch(Item::isEmpty)) {
-            ImmutableMap.Builder<Integer, Boolean> b = ImmutableMap.builder();
-            for (int i = 0; i < maxState; i++) {
-                b.put(i, false);
-            }
-            return b.build();
-        }
-
         HashMap<Integer, Boolean> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
             if (ingr == null) {
@@ -80,6 +73,9 @@ public class JobsClean {
             if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
                 b.put(work.getKey(), true);
             }
+        }
+        for (int i = 0; i < maxState; i++) {
+            fn.accept(i, null);
         }
         return ImmutableMap.copyOf(b);
     }
@@ -234,7 +230,7 @@ public class JobsClean {
     // TODO[ASAP]: Test "should not return null if entity is in room with finished product"
     public static <ROOM extends Room, RECIPE, POS> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
             Position entityBlockPos,
-            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
             Collection<ROOM> roomsWithCompletedProduct,
             Predicate<ROOM> additionalPosCheck,
             Predicate<RECIPE> isFarm
@@ -251,9 +247,11 @@ public class JobsClean {
             boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), entityBlockPos);
             return contains || v.getRoom().getDoorPos().equals(entityBlockPos);
         };
+        // FIXME: We should also check rooms needing WORK
         return roomsNeedingIngredientsOrTools
                 .getMatches()
                 .stream()
+                .map(RoomsNeedingVillagerInput.NVIRoom::room)
                 .filter(v -> additionalPosCheck.test(v.getRoom()))
                 .filter(containsEntity)
                 .findFirst()
@@ -267,7 +265,7 @@ public class JobsClean {
             Map<Integer, Boolean> statusItems,
             Collection<ROOM> roomsWithFinishedProduct,
             Function<ROOM, BLOCK> getPositionWithin,
-            RoomsNeedingIngredientsOrTools<ROOM, RECIPE, BLOCK> blocksSrc,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, BLOCK> blocksSrc,
             Function<BLOCK, State> work,
             Predicate<BLOCK> isJobBlock,
             BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot
@@ -279,30 +277,31 @@ public class JobsClean {
             );
         }
 
-        ArrayList<IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?>> rooms = new ArrayList<>(blocksSrc.getMatches());
+        ArrayList<NVIRoom<ROOM, RECIPE, BLOCK>> rooms = new ArrayList<>(blocksSrc.getMatches());
         // TODO: Sort by distance and choose the closest (maybe also coordinate
         //  with other workers who need the same type of job site)
         // For now, we use randomization
         Collections.shuffle(rooms);
 
-        boolean roomFoundButNotBlock = false;
+        boolean roomFoundButNotBlock = true;
 
-        for (IRoomRecipeMatch<ROOM, RECIPE, BLOCK, ?> match : rooms) {
-            for (Map.Entry<BLOCK, ?> blocks : match.getContainedBlocks().entrySet()
+        for (NVIRoom<ROOM, RECIPE, BLOCK> match : rooms) {
+            for (Map.Entry<BLOCK, ?> blocks : match.room().getContainedBlocks().entrySet()
             ) {
                 BLOCK blockPos = blocks.getKey();
                 State blockState = work.apply(blockPos);
                 if (blockState == null) {
                     blockState = State.freshAtState(0);
                 }
-                if (!isJobBlock.test(blockPos)) {
-                    roomFoundButNotBlock = true;
+                if (isJobBlock.test(blockPos)) {
+                    roomFoundButNotBlock = false;
+                } else {
                     continue;
                 }
 
                 Supplier<BLOCK> is = () -> findInteractionSpot.apply(
                         blockPos,
-                        match.getRoom()
+                        match.room().getRoom()
                 );
 
                 if (maxState == blockState.processingState()) {

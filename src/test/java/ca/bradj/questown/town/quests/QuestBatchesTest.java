@@ -176,15 +176,6 @@ class QuestBatchesTest {
                 return false;
             }
 
-            @Override
-            public Optional<Room> assignToFarm(UUID ownerUUID) {
-                return Optional.empty();
-            }
-
-            @Override
-            public Optional<Room> getBiggestFarm() {
-                return Optional.empty();
-            }
         }, iqb.build());
 
         ImmutableList<TestQuest> quests = qbs.getAll();

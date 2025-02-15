@@ -100,7 +100,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
             ExpirationRules expiration,
             JobDetails details,
             JLWorld<EXTRA, TOWN, POS> worldBeforeTick,
-            BiFunction<TOWN, POS, Integer> getState
+            BiFunction<TOWN, POS, Integer> getState,
+            int workRecently
+
     ) {
         if (!hasAnyItems && computeState.get().isDroppingLoot()) {
             worldBeforeTick.changeToNextJob();
@@ -210,7 +212,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
                     isSeekingWork,
                     worldBeforeTick,
                     getState,
-                    details.workPause
+                    details.workPause,
+                    workRecently
             );
         }
 
@@ -251,7 +254,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
             boolean isSeekingWork,
             JLWorld<EXTRA, TOWN, POS> world,
             BiFunction<TOWN, POS, Integer> getState,
-            int workPause
+            int workPause,
+            int workedRecently
     ) {
         // TODO: Update listAllWorkSpots to actually find "rich" workspots (an
         //  implemntation of WorkSpot) which have the block name to help with debugging
@@ -272,7 +276,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         WorkOutput<TOWN, WorkPosition<POS>> work = world.getHandle().tryWorking(extra, allSpots);
         this.setWorkSpot(work.spot());
         if (work.worked()) {
-            this.worked = Config.WORKED_RECENTLY_TICKS.get().intValue() + workPause;
+            this.worked = workedRecently + workPause;
             world.setLookTarget(work.spot().jobBlock());
             boolean hasWork = !isSeekingWork;
             Integer stateAfterWork = getState.apply(work.town(), work.spot().jobBlock());

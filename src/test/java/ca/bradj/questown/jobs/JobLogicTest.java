@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
@@ -9,6 +10,7 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -191,10 +193,11 @@ class JobLogicTest {
                     false,
                     new Random().nextBoolean(),
                     false,
-                    ExpirationRules.never(),
+                    getNever(),
                     new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                     world,
-                    (a, b) -> blockState.apply(b)
+                    (a, b) -> blockState.apply(b),
+                    Integer.MAX_VALUE
             );
         }
     }
@@ -301,10 +304,11 @@ class JobLogicTest {
                 false,
                 false,
                 false,
-                ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                getNever().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFAULT_DETAILS,
                 world,
-                (a, b) -> 0
+                (a, b) -> 0,
+                Integer.MAX_VALUE
         );
 
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
@@ -312,6 +316,16 @@ class JobLogicTest {
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+
+    private static @NotNull ExpirationRules getNever() {
+        return new ExpirationRules(
+                () -> Long.MAX_VALUE,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID
+        );
     }
 
     @Test()
@@ -349,7 +363,8 @@ class JobLogicTest {
                 ExpirationRules.never().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
                 DEFAULT_DETAILS,
                 world,
-                (a, b) -> 0
+                (a, b) -> 0,
+                Integer.MAX_VALUE
         );
 
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
@@ -508,10 +523,11 @@ class JobLogicTest {
                 false,
                 false,
                 false,
-                ExpirationRules.never(),
+                getNever(),
                 new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                 world,
-                (a, b) -> world.states.getJobBlockState(b).processingState()
+                (a, b) -> world.states.getJobBlockState(b).processingState(),
+                Integer.MAX_VALUE
         );
 
         Assertions.assertTrue(world.states.getJobBlockState(ARBITRARY_WORKSPOT.jobBlock()).hasWorkLeft());
@@ -563,10 +579,11 @@ class JobLogicTest {
                 false,
                 false,
                 true,
-                ExpirationRules.never(),
+                getNever(),
                 new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                 world,
-                (a, b) -> world.states.getJobBlockState(b).processingState()
+                (a, b) -> world.states.getJobBlockState(b).processingState(),
+                Integer.MAX_VALUE
         );
 
         world.inventory.set(0, new GathererJournalTest.TestItem("hammer")); // Give them the needed tools
@@ -635,10 +652,11 @@ class JobLogicTest {
                 false,
                 false,
                 true,
-                ExpirationRules.never(),
+                getNever(),
                 new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                 world,
-                (a, b) -> world.states.getJobBlockState(b).processingState()
+                (a, b) -> world.states.getJobBlockState(b).processingState(),
+                Integer.MAX_VALUE
         );
 
 

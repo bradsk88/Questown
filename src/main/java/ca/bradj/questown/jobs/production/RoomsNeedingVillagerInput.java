@@ -13,22 +13,31 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
-    private final ImmutableMap<Integer, Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> inner;
+public class RoomsNeedingVillagerInput<ROOM, RECIPE, POS> {
 
-    public RoomsNeedingIngredientsOrTools(
-            Map<Integer, ? extends Collection<? extends IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> kvImmutableMap
+    public record NVIRoom<ROOM, RECIPE, POS>(
+            IRoomRecipeMatch<ROOM, RECIPE, POS, ?> room,
+            boolean dueToWorkOnly
     ) {
-        ImmutableMap.Builder<Integer, Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> builder = ImmutableMap.builder();
+    }
+
+    ;
+
+    private final ImmutableMap<Integer, Collection<NVIRoom<ROOM, RECIPE, POS>>> inner;
+
+    public RoomsNeedingVillagerInput(
+            Map<Integer, ? extends Collection<NVIRoom<ROOM, RECIPE, POS>>> kvImmutableMap
+    ) {
+        ImmutableMap.Builder<Integer, Collection<NVIRoom<ROOM, RECIPE, POS>>> builder = ImmutableMap.builder();
         kvImmutableMap.forEach((k, v) -> {
-            ImmutableList.Builder<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> b = ImmutableList.builder();
+            ImmutableList.Builder<NVIRoom<ROOM, RECIPE, POS>> b = ImmutableList.builder();
             v.forEach(b::add);
             builder.put(k, b.build());
         });
         inner = builder.build();
     }
 
-    public Map<Integer, Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> get() {
+    public Map<Integer, Collection<NVIRoom<ROOM, RECIPE, POS>>> get() {
         return inner;
     }
 
@@ -38,11 +47,11 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<Integer> first = inner.entrySet()
-                                           .stream()
-                                           .filter(v -> !v.getValue()
-                                                          .isEmpty())
-                                           .map(Map.Entry::getKey)
-                                           .findFirst();
+                                       .stream()
+                                       .filter(v -> !v.getValue()
+                                                      .isEmpty())
+                                       .map(Map.Entry::getKey)
+                                       .findFirst();
 
         if (first.isEmpty()) {
             return ImmutableList.of();
@@ -75,33 +84,33 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
                     .collect(Collectors.toSet());
     }
 
-    public RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> floor() {
+    public RoomsNeedingVillagerInput<ROOM, RECIPE, POS> floor() {
         // If a single room needs supplies (for example) for BOTH states 0 and 1, it should only
         // show up as "needing" 0.
-        Map<Integer, Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>>> b = new HashMap<>();
+        Map<Integer, Collection<NVIRoom<ROOM, RECIPE, POS>>> b = new HashMap<>();
         inner.forEach((k, rooms) -> {
-            ImmutableSet.Builder<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> allPrevRooms = ImmutableSet.builder();
+            ImmutableSet.Builder<NVIRoom<ROOM, RECIPE, POS>> allPrevRooms = ImmutableSet.builder();
             for (int i = 0; i < k; i++) {
-                Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> elements = b.get(i);
+                Collection<NVIRoom<ROOM, RECIPE, POS>> elements = b.get(i);
                 if (elements == null) {
                     elements = ImmutableList.of();
                 }
                 allPrevRooms.addAll(elements);
             }
-            ImmutableSet<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> prevRooms = allPrevRooms.build();
-            ImmutableList.Builder<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> bld = ImmutableList.builder();
+            ImmutableSet<NVIRoom<ROOM, RECIPE, POS>> prevRooms = allPrevRooms.build();
+            ImmutableList.Builder<NVIRoom<ROOM, RECIPE, POS>> bld = ImmutableList.builder();
             rooms.forEach(room -> {
                 if (prevRooms.contains(room)) {
                     return;
                 }
                 bld.add(room);
             });
-            ImmutableList<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> build = bld.build();
+            ImmutableList<NVIRoom<ROOM, RECIPE, POS>> build = bld.build();
             if (!build.isEmpty()) {
                 b.put(k, build);
             }
         });
-        return new RoomsNeedingIngredientsOrTools<>(
+        return new RoomsNeedingVillagerInput<>(
                 ImmutableMap.copyOf(b)
         );
     }
@@ -110,11 +119,11 @@ public class RoomsNeedingIngredientsOrTools<ROOM, RECIPE, POS> {
         return inner.containsKey(s);
     }
 
-    public Collection<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> get(Integer s) {
+    public Collection<NVIRoom<ROOM, RECIPE, POS>> get(Integer s) {
         return inner.get(s);
     }
 
-    public ImmutableList<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> getMatches() {
+    public ImmutableList<NVIRoom<ROOM, RECIPE, POS>> getMatches() {
         return ImmutableList.copyOf(inner.values().stream().flatMap(Collection::stream).distinct().iterator());
     }
 }

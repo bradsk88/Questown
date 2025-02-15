@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.MonoPredicateCollection;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -244,7 +245,11 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object update = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object update = wi.tryInsertIngredients(
+                null,
+                alwaysTrue,
+                new WorkedSpot<>(arbitraryPosition, 0)
+        );
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(update);
@@ -270,7 +275,11 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(
+                null,
+                null,
+                new WorkedSpot<>(arbitraryPosition, 0)
+        );
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(res);
@@ -294,7 +303,11 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(
+                null,
+                null,
+                new WorkedSpot<>(arbitraryPosition, 0)
+        );
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertFalse(wi.checkedItems);
@@ -317,7 +330,7 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(null, null, new WorkedSpot<>(arbitraryPosition, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(res);
@@ -337,7 +350,7 @@ class AbstractItemWITest {
                 ImmutableMap.of(),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(null, null, new WorkedSpot<>(arbitraryPosition, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(res);
@@ -363,7 +376,7 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(null, alwaysTrue, new WorkedSpot<>(arbitraryPosition, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(res);
@@ -391,7 +404,7 @@ class AbstractItemWITest {
                 ),
                 inventory
         );
-        Object res = wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        Object res = wi.tryInsertIngredients(null, alwaysFalse, new WorkedSpot<>(arbitraryPosition, 0));
 
         Assertions.assertFalse(inventory.inventoryUpdated);
         Assertions.assertNull(res);
@@ -421,7 +434,7 @@ class AbstractItemWITest {
         );
 
         Assertions.assertNull(wi.statuses.getJobBlockState(arbitraryPosition));
-        wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        wi.tryInsertIngredients(null, alwaysFalse, new WorkedSpot<>(arbitraryPosition, 0));
         Assertions.assertNull(wi.statuses.getJobBlockState(arbitraryPosition));
     }
 
@@ -449,6 +462,7 @@ class AbstractItemWITest {
         );
         InsertResult<TestTownState, GathererJournalTest.TestItem> res = wi.tryInsertIngredients(
                 null,
+                alwaysTrue,
                 new WorkedSpot<>(arbitraryPosition, 0)
         );
         Assertions.assertNotNull(res);
@@ -478,7 +492,7 @@ class AbstractItemWITest {
                 inventory
         );
 
-        wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        wi.tryInsertIngredients(null, alwaysTrue, new WorkedSpot<>(arbitraryPosition, 0));
         State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());
@@ -509,7 +523,7 @@ class AbstractItemWITest {
                 inventory
         );
 
-        wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        wi.tryInsertIngredients(null, alwaysTrue, new WorkedSpot<>(arbitraryPosition, 0));
         Assertions.assertTrue(inventory.inventoryUpdated);
         Assertions.assertEquals(
                 ImmutableList.of(new GathererJournalTest.TestItem("")), // Shrunk, became empty
@@ -544,7 +558,7 @@ class AbstractItemWITest {
                 inventory
         );
 
-        wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        wi.tryInsertIngredients(null, alwaysTrue, new WorkedSpot<>(arbitraryPosition, 0));
         State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, wi.timeLeft(arbitraryPosition));
@@ -579,7 +593,7 @@ class AbstractItemWITest {
                 inventory
         );
 
-        wi.tryInsertIngredients(null, new WorkedSpot<>(arbitraryPosition, 0));
+        wi.tryInsertIngredients(null, alwaysTrue, new WorkedSpot<>(arbitraryPosition, 0));
         State state = wi.statuses.getJobBlockState(arbitraryPosition);
         Assertions.assertNotNull(state);
         Assertions.assertEquals(0, state.workLeft());

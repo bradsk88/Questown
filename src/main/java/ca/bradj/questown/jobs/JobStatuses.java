@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
 import ca.bradj.questown.jobs.production.IProductionStatus;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class JobStatuses {
 
@@ -270,8 +271,8 @@ public class JobStatuses {
                             return null;
                         }
                         ROOM location = entity.getEntityCurrentJobSite();
-                        RoomsNeedingIngredientsOrTools<ROOM, ?, ?> roomNeedsMap = town.roomsNeedingIngredientsByState()
-                                                                                      .floor();
+                        RoomsNeedingVillagerInput<ROOM, ?, ?> roomNeedsMap = town.roomsNeedingIngredientsByState()
+                                                                                 .floor();
 
                         boolean foundWork = false;
 
@@ -288,7 +289,12 @@ public class JobStatuses {
                                                                             .isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
-                                    if (roomNeedsMap.get(s).stream().anyMatch(v -> location.equals(v.getRoom()))) {
+                                    Stream<? extends RoomsNeedingVillagerInput.NVIRoom<ROOM, ?, ?>> stream = roomNeedsMap.get(s).stream();
+
+                                    // TODO: Assess whether this is needed
+                                    stream = stream.filter(v -> !v.dueToWorkOnly());
+
+                                    if (stream.anyMatch(v -> location.equals(v.room().getRoom()))) {
                                         return factory.fromJobBlockState(s);
                                     }
                                 }

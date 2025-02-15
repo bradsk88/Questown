@@ -8,7 +8,8 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -341,23 +342,32 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public RoomsNeedingIngredientsOrTools<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsByState() {
+            public RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsByState() {
                 int curState = workStates.processingState();
                 PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
                 if (ings != null) {
-                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
+                    return new RoomsNeedingVillagerInput<>(ImmutableMap.of(
+                            curState,
+                            ImmutableList.of(new NVIRoom<>(mcRoom, false))
+                    ));
                 }
 
                 PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
                 if (toolChk != null) {
-                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
+                    return new RoomsNeedingVillagerInput<>(ImmutableMap.of(
+                            curState,
+                            ImmutableList.of(new NVIRoom<>(mcRoom, false))
+                    ));
                 }
 
                 if (workStates.workLeft() > 0) {
-                    return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(curState, ImmutableList.of(mcRoom)));
+                    return new RoomsNeedingVillagerInput<>(ImmutableMap.of(
+                            curState,
+                            ImmutableList.of(new NVIRoom<>(mcRoom, false))
+                    ));
                 }
 
-                return new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of());
+                return new RoomsNeedingVillagerInput<>(ImmutableMap.of());
             }
 
             @Override
@@ -474,5 +484,13 @@ public class MCTownStateWorldInteraction extends
                 tool,
                 MCHeldItem::fromTown
         );
+    }
+
+    @Override
+    protected void iterate(
+            Iterable<MCHeldItem> newItemsSource,
+            Function<MCHeldItem, MCHeldItem> push
+    ) {
+        Util.iterate(newItemsSource, push::apply);
     }
 }

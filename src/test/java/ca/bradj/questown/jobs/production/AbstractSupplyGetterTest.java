@@ -11,7 +11,6 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -46,29 +45,31 @@ class AbstractSupplyGetterTest {
         );
     }
 
-    private static RoomsNeedingIngredientsOrTools<Room, String, Position> ARBITRARY_RNIOT = new RoomsNeedingIngredientsOrTools<>(
+    private static RoomsNeedingVillagerInput<Room, String, Position> ARBITRARY_RNIOT = new RoomsNeedingVillagerInput<>(
             ImmutableMap.of(
-                    0, ImmutableList.of(new IRoomRecipeMatch<Room, String, Position, Object>() {
-                        @Override
-                        public String getRecipeID() {
-                            return "test match";
-                        }
+                    0, ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(
+                            new IRoomRecipeMatch<Room, String, Position, Object>() {
+                                @Override
+                                public String getRecipeID() {
+                                    return "test match";
+                                }
 
-                        @Override
-                        public ImmutableList<String> getRecipeIDs() {
-                            return ImmutableList.of(getRecipeID());
-                        }
+                                @Override
+                                public ImmutableList<String> getRecipeIDs() {
+                                    return ImmutableList.of(getRecipeID());
+                                }
 
-                        @Override
-                        public Room getRoom() {
-                            return ARBITRARY_ROOM;
-                        }
+                                @Override
+                                public Room getRoom() {
+                                    return ARBITRARY_ROOM;
+                                }
 
-                        @Override
-                        public ImmutableMap<Position, Object> getContainedBlocks() {
-                            return ImmutableMap.of(new Position(0, 0), null);
-                        }
-                    })
+                                @Override
+                                public ImmutableMap<Position, Object> getContainedBlocks() {
+                                    return ImmutableMap.of(new Position(0, 0), null);
+                                }
+                            }, false
+                    ))
             ));
 
     @Test

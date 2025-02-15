@@ -227,7 +227,7 @@ public abstract class AbstractWorldInteraction<
 
         Stack<HELD_ITEM> stack = new Stack<>();
 
-        Util.iterate(newItemsSource, stack::push);
+        iterate(newItemsSource, stack::push);
 
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
@@ -270,6 +270,11 @@ public abstract class AbstractWorldInteraction<
         }
         return reset.apply(ts);
     }
+
+    protected abstract void iterate(
+            Iterable<HELD_ITEM> newItemsSource,
+            Function<HELD_ITEM, HELD_ITEM> push
+    );
 
     private @NotNull Function<TOWN, TOWN> getResetFunc(
             EXTRA inputs,
@@ -403,24 +408,29 @@ public abstract class AbstractWorldInteraction<
         if (ingredientsForStep != null && !ingredientsForStep.isEmpty()) {
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
+                    ingredientsForStep,
                     getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
             );
             if (o == null) {
-                return new WorkOutput<>(false, true, initTown, workSpot);
+                @SuppressWarnings("DataFlowIssue") int quantityWanted = checks.getQuantityForStep(action, 0);
+                if (jobBlockState != null && jobBlockState.ingredientCount() < quantityWanted) {
+                    return new WorkOutput<>(false, true, initTown, workSpot);
+                }
+            } else {
+                TOWN ctx = o.contextAfterInsert();
+                HELD_ITEM item = o.itemBeforeInsert();
+                @Nullable TOWN out = postInsertHook(
+                        ctx,
+                        extra,
+                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
+                        item,
+                        maxState
+                );
+                if (out == null) {
+                    out = ctx;
+                }
+                return new WorkOutput<>(true, true, out, workSpot);
             }
-            TOWN ctx = o.contextAfterInsert();
-            HELD_ITEM item = o.itemBeforeInsert();
-            @Nullable TOWN out = postInsertHook(
-                    ctx,
-                    extra,
-                    getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
-                    item,
-                    maxState
-            );
-            if (out == null) {
-                out = ctx;
-            }
-            return new WorkOutput<>(true, true, out, workSpot);
         }
 
         if (jobBlockState == null) {
@@ -432,7 +442,10 @@ public abstract class AbstractWorldInteraction<
             if (work > 0) {
                 if (action == 0) {
                     if (jobBlockState.workLeft() == 0) {
-                        TOWN town = workStatuses.setJobBlockState(workSpot.jobBlock(), jobBlockState.setWorkLeft(work));
+                        TOWN town = workStatuses.setJobBlockState(
+                                workSpot.jobBlock(),
+                                jobBlockState.setWorkLeft(work)
+                        );
                         return new WorkOutput<>(false, true, town, workSpot);
                     }
                 }

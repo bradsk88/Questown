@@ -1,12 +1,11 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
-import ca.bradj.questown.jobs.production.RoomsNeedingIngredientsOrTools;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
@@ -169,7 +168,7 @@ class JobsCleanTest {
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityInRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
-                new RoomsNeedingIngredientsOrTools<Room, Object, Object>(ImmutableMap.of()),
+                new RoomsNeedingVillagerInput<Room, Object, Object>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
                 ONLY_CHECK_XZ_COORDINATES,
                 (x) -> false
@@ -181,7 +180,7 @@ class JobsCleanTest {
     void getEntityCurrentJobSite_shouldReturnNull_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityNotInRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 new Position(-100, -100),
-                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of()),
+                new RoomsNeedingVillagerInput<>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
                 ONLY_CHECK_XZ_COORDINATES,
                 x -> false
@@ -193,8 +192,8 @@ class JobsCleanTest {
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
-                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
-                        0, ImmutableList.of(arbitaryRoomMatch1) // There is a room needing supplies at state 0
+                new RoomsNeedingVillagerInput<>(ImmutableMap.of(
+                        0, ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(arbitaryRoomMatch1, false)) // There is a room needing supplies at state 0
                 )),
                 ImmutableList.of(), // There are no finished results to grab
                 ONLY_CHECK_XZ_COORDINATES,
@@ -207,9 +206,9 @@ class JobsCleanTest {
     void getEntityCurrentJobSite_shouldReturnNull_WhenRoomWithRequirementsExists_AndResultsAreNotAvailable_IfEntityInADifferentRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
-                new RoomsNeedingIngredientsOrTools<>(ImmutableMap.of(
+                new RoomsNeedingVillagerInput<>(ImmutableMap.of(
                         0,
-                        ImmutableList.of(arbitaryRoomMatch2)
+                        ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(arbitaryRoomMatch2, false))
                         // There is a room needing supplies at state 0 (but the entity is in another room)
                 )),
                 ImmutableList.of(), // There are no finished results to grab
