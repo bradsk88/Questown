@@ -23,6 +23,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
@@ -250,5 +251,9 @@ public class Compat {
             Component message
     ) {
         sender.sendMessage(message, sender.getUUID());
+    }
+
+    public static void initCommands(IEventBus bus) {
+        // Only required on 1.19+
     }
 }

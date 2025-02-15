@@ -60,6 +60,7 @@ public class Questown {
         RewardsInit.register(bus);
         ScheduleInit.register(bus);
         AdvancementsInit.register();
+        Compat.initCommands(bus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
