@@ -27,6 +27,7 @@ public class TagsInit {
 
         // BLOCKS
         public static final TagKey<Block> TILLABLES = createBlockTag("tillables");
+        public static final TagKey<Block> WEEDS = createBlockTag("weeds");
 
         private static TagKey<Item> createTag(String name) {
             return ItemTags.create(new ResourceLocation(Questown.MODID, name));

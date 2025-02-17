@@ -8,9 +8,11 @@ import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.function.Predicate;
 
 class JobsCleanTest {
@@ -193,7 +195,9 @@ class JobsCleanTest {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingVillagerInput<>(ImmutableMap.of(
-                        0, ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(arbitaryRoomMatch1, false)) // There is a room needing supplies at state 0
+                        0,
+                        ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(arbitaryRoomMatch1, false))
+                        // There is a room needing supplies at state 0
                 )),
                 ImmutableList.of(), // There are no finished results to grab
                 ONLY_CHECK_XZ_COORDINATES,
@@ -216,5 +220,50 @@ class JobsCleanTest {
                 x -> false
         );
         Assertions.assertNull(site);
+    }
+
+    @Test
+    void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld() {
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+                ImmutableList::of,
+                ImmutableMap.of(
+                        0, testItem -> "grapes".equals(testItem.value)
+                        // Nothing required at 1
+                ),
+                ImmutableMap.of(
+                        0, true,
+                        1, false
+                )::get,
+                ImmutableMap.of(), // No tools required
+                ImmutableMap.<Integer, Boolean>of()::get,
+                ImmutableMap.of(), // No work required
+                2
+        );
+        Assertions.assertEquals(SupplyItemStatus.NEEDS_ITEM, sis.get(0));
+        Assertions.assertEquals(SupplyItemStatus.NOT_REQUIRED, sis.get(1));
+    }
+
+    @Test
+    void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld_AddWork() {
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+                ImmutableList::of,
+                ImmutableMap.of(
+                        0, testItem -> "grapes".equals(testItem.value)
+                        // Nothing required at 1
+                ),
+                ImmutableMap.of(
+                        0, true,
+                        1, false
+                )::get,
+                ImmutableMap.of(), // No tools required
+                ImmutableMap.of(
+                        0, false,
+                        1, false
+                )::get,
+                ImmutableMap.of(1, 1), // Work required at state 1
+                2
+        );
+        Assertions.assertEquals(SupplyItemStatus.NEEDS_ITEM, sis.get(0));
+        Assertions.assertEquals(SupplyItemStatus.NOT_REQUIRED, sis.get(1));
     }
 }

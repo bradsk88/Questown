@@ -62,8 +62,14 @@ public class StatusesProductionRoutineTest {
     record TestInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
-            Map<Integer, Boolean> getSupplyItemStatus
+            Map<Integer, Boolean> sis
     ) implements EntityInvStateProvider<Integer> {
+        @Override
+        public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
+            ImmutableMap.Builder<Integer, SupplyItemStatus> b = ImmutableMap.builder();
+            sis.forEach((k, v) -> b.put(k, v ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM));
+            return b.build();
+        }
     }
 
     /**
@@ -297,6 +303,11 @@ public class StatusesProductionRoutineTest {
         public boolean isWaitingForTimers() {
             return this == WAITING;
         }
+
+        @Override
+        public boolean shouldBeMoving() {
+            return false;
+        }
     }
 
     private static class NoOpProductionJob implements IProductionJob<PTestStatus> {
@@ -307,7 +318,7 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, SupplyItemStatus> supplyItemStatus) {
             return null;
         }
 
@@ -332,7 +343,7 @@ public class StatusesProductionRoutineTest {
         }
 
         @Override
-        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+        public @Nullable PTestStatus tryUsingSupplies(Map<Integer, SupplyItemStatus> supplyItemStatus) {
             throw err;
         }
 

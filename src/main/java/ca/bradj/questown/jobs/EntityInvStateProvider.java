@@ -7,5 +7,5 @@ public interface EntityInvStateProvider<SUP_CAT> {
 
     boolean hasNonSupplyItems();
 
-    Map<SUP_CAT, Boolean> getSupplyItemStatus();
+    Map<SUP_CAT, SupplyItemStatus> getSupplyItemStatus();
 }

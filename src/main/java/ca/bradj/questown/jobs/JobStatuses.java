@@ -24,7 +24,7 @@ public class JobStatuses {
         if (inventory.hasNonSupplyItems()) {
             return true;
         }
-        return inventory.getSupplyItemStatus().values().stream().anyMatch(Boolean::booleanValue);
+        return inventory.getSupplyItemStatus().values().stream().anyMatch(v -> v == SupplyItemStatus.HAS_ITEM);
     }
 
     public interface Job<STATUS, SUP_CAT> {
@@ -32,7 +32,7 @@ public class JobStatuses {
         STATUS tryChoosingItemlessWork();
 
         @Nullable
-        STATUS tryUsingSupplies(Map<SUP_CAT, Boolean> supplyItemStatus);
+        STATUS tryUsingSupplies(Map<SUP_CAT, SupplyItemStatus> supplyItemStatus);
     }
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> STATUS usualRoutine(
@@ -55,11 +55,11 @@ public class JobStatuses {
             Job<STATUS, SUP_CAT> job,
             IStatusFactory<STATUS> factory
     ) {
-        Map<SUP_CAT, Boolean> supplyItemStatus = inventory.getSupplyItemStatus();
+        Map<SUP_CAT, SupplyItemStatus> supplyItemStatus = inventory.getSupplyItemStatus();
 
         LZCD<LZCD.Dependency<STATUS>> dHasWorkItems = prePopAble(
                 "hasWorkItems",
-                () -> supplyItemStatus.containsValue(true)
+                () -> supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM)
         );
         LZCD<LZCD.Dependency<STATUS>> dHasNonWorkItems = prePopAble(
                 "hasNonWorkItems",
@@ -67,11 +67,11 @@ public class JobStatuses {
         );
         LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 "hasAnyItems",
-                () -> supplyItemStatus.containsValue(true) || inventory.hasNonSupplyItems()
+                () -> supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM) || inventory.hasNonSupplyItems()
         );
         LZCD<LZCD.Dependency<STATUS>> dInventoryEmpty = prePopAble(
                 "inventory empty",
-                () -> !supplyItemStatus.containsValue(true) || !inventory.hasNonSupplyItems()
+                () -> !supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM) || !inventory.hasNonSupplyItems()
         );
         LZCD<LZCD.Dependency<STATUS>> dInventoryFull = prePopAble(
                 "inventory full",
@@ -266,7 +266,7 @@ public class JobStatuses {
                     }
 
                     @Override
-                    public @Nullable STATUS tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+                    public @Nullable STATUS tryUsingSupplies(Map<Integer, SupplyItemStatus> supplyItemStatus) {
                         if (supplyItemStatus.isEmpty()) {
                             return null;
                         }
@@ -280,8 +280,8 @@ public class JobStatuses {
                                                                .stream()
                                                                .filter(work -> supplyItemStatus.getOrDefault(
                                                                        work,
-                                                                       false
-                                                               ))
+                                                                       SupplyItemStatus.NOT_REQUIRED
+                                                               ) != SupplyItemStatus.NEEDS_ITEM)
                                                                .toList();
 
                         for (Integer s : orderedWithSupplies) {
@@ -289,7 +289,8 @@ public class JobStatuses {
                                                                             .isEmpty()) { // TODO: Unit test the second leg of this condition
                                 foundWork = true;
                                 if (location != null) {
-                                    Stream<? extends RoomsNeedingVillagerInput.NVIRoom<ROOM, ?, ?>> stream = roomNeedsMap.get(s).stream();
+                                    Stream<? extends RoomsNeedingVillagerInput.NVIRoom<ROOM, ?, ?>> stream = roomNeedsMap.get(
+                                            s).stream();
 
                                     // TODO: Assess whether this is needed
                                     stream = stream.filter(v -> !v.dueToWorkOnly());

@@ -25,7 +25,7 @@ public class TypicalProductionJob<S> implements IProductionJob<S> {
     }
 
     @Override
-    public @Nullable S tryUsingSupplies(Map<Integer, Boolean> supplyItemStatus) {
+    public @Nullable S tryUsingSupplies(Map<Integer, SupplyItemStatus> supplyItemStatus) {
         return null;
     }
 }

@@ -9,5 +9,7 @@ public interface IProductionStatus<S extends IProductionStatus<S>> extends IStat
     boolean isExtractingProduct();
 
     boolean isWaitingForTimers();
+
+    boolean shouldBeMoving();
 }
 

@@ -42,7 +42,7 @@ public class JobsClean {
     }
 
     @NotNull
-    static <I extends Item<I>> ImmutableMap<Integer, Boolean> getSupplyItemStatuses(
+    static <I extends Item<I>> ImmutableMap<Integer, SupplyItemStatus> getSupplyItemStatuses(
             Supplier<Collection<I>> journal,
             Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
             Function<Integer, Boolean> anyIngredientsRequiredAtStates,
@@ -51,27 +51,27 @@ public class JobsClean {
             Map<Integer, Integer> workRequiredAtStates,
             int maxState
     ) {
-        HashMap<Integer, Boolean> b = new HashMap<>();
+        HashMap<Integer, SupplyItemStatus> b = new HashMap<>();
         BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
             if (ingr == null) {
                 if (!b.containsKey(state)) {
-                    b.put(state, false);
+                    b.put(state, SupplyItemStatus.NOT_REQUIRED);
                 }
                 return;
             }
 
             // The check passes if the worker has ALL the ingredients needed for the state
-            boolean has = journal.get().stream().anyMatch(ingr);
-            if (!b.getOrDefault(state, false)) {
-                b.put(state, has);
+            boolean hasItem = journal.get().stream().anyMatch(ingr);
+            boolean neededOrUnknown = b.getOrDefault(state, SupplyItemStatus.NEEDS_ITEM) == SupplyItemStatus.NEEDS_ITEM;
+            if (neededOrUnknown) {
+                b.put(state, hasItem ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
             }
         };
         ingredientsRequiredAtStates.forEach(fn);
         toolsRequiredAtStates.forEach(fn);
         for (Map.Entry<Integer, Integer> work : workRequiredAtStates.entrySet()) {
-            // If work is require, but no tools or items are required: pretend we have the necessary supply items
             if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
-                b.put(work.getKey(), true);
+                b.put(work.getKey(), SupplyItemStatus.NOT_REQUIRED);
             }
         }
         for (int i = 0; i < maxState; i++) {
@@ -262,7 +262,7 @@ public class JobsClean {
     public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
             int maxState,
             boolean prioritizeExtraction,
-            Map<Integer, Boolean> statusItems,
+            Map<Integer, SupplyItemStatus> statusItems,
             Collection<ROOM> roomsWithFinishedProduct,
             Function<ROOM, BLOCK> getPositionWithin,
             RoomsNeedingVillagerInput<ROOM, RECIPE, BLOCK> blocksSrc,
@@ -307,8 +307,8 @@ public class JobsClean {
                 if (maxState == blockState.processingState()) {
                     return new WithReason<>(is.get(), "Found extractable product");
                 }
-                boolean shouldGo = statusItems.getOrDefault(blockState.processingState(), false);
-                if (shouldGo) {
+                SupplyItemStatus sis = statusItems.getOrDefault(blockState.processingState(), SupplyItemStatus.NOT_REQUIRED);
+                if (sis != SupplyItemStatus.NEEDS_ITEM) {
                     return new WithReason<>(is.get(), "Found a spot where a held item can be used");
                 }
             }

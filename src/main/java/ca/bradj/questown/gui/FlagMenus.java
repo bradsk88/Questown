@@ -9,7 +9,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,6 +18,7 @@ import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -84,17 +84,21 @@ public class FlagMenus {
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
-        ImmutableMap.Builder<UUID, Pair<JobID, IStatus<?>>> b = ImmutableMap.builder();
-        es.forEach(v -> b.put(
-                v.getUUID(),
-                new Pair<>(v.getJobId(), v.getStatusForServer())
-        ));
-        ImmutableMap.Builder<UUID, ImmutableList<Item>> b2 = ImmutableMap.builder();
-        es.forEach(v -> b2.put(
-                v.getUUID(),
-                ImmutableList.copyOf(v.getJobJournalSnapshot().items().stream().map(z -> z.get().get()).toList())
-        ));
-        MultiStatusScreen.SyncedData data1 = new MultiStatusScreen.SyncedData(b.build(), b2.build());
+        HashMap<UUID, Pair<JobID, IStatus<?>>> b = new HashMap<>();
+        HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
+        for (VisitorMobEntity v : es) {
+            if (b.containsKey(v.getUUID()) || b.containsKey(v.getUUID())) {
+                QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
+            }
+            b.put(v.getUUID(), new Pair<>(v.getJobId(), v.getStatusForServer()));
+            List<Item> list = v.getJobJournalSnapshot()
+                               .items()
+                               .stream()
+                               .map(z -> z.get().get())
+                               .toList();
+            b2.put(v.getUUID(), ImmutableList.copyOf(list));
+        }
+        MultiStatusScreen.SyncedData data1 = new MultiStatusScreen.SyncedData(b, b2);
         return data1;
     }
 
