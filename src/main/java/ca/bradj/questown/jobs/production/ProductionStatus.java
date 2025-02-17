@@ -51,6 +51,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     public static final ProductionStatus COLLECTING_SUPPLIES = register(
             new ProductionStatus("COLLECTING_SUPPLIES", nextIndex++)
     );
+    public static final ImmutableList<ProductionStatus> MOVING_STATUSES = ImmutableList.of(
+            GOING_TO_JOB,
+            DROPPING_LOOT,
+            COLLECTING_SUPPLIES
+    );
     public static final ProductionStatus IDLE = register(
             new ProductionStatus("IDLE", nextIndex++)
     );
@@ -186,6 +191,11 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
     @Override
     public boolean isWaitingForTimers() {
         return WAITING_FOR_TIMED_STATE.equals(this);
+    }
+
+    @Override
+    public boolean shouldBeMoving() {
+        return MOVING_STATUSES.contains(this);
     }
 
     @Override

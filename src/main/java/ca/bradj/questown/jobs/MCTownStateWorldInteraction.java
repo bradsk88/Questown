@@ -454,7 +454,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<Integer, Boolean> getSupplyItemStatus() {
+            public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
                 return JobsClean.getSupplyItemStatuses(
                         heldItems, checks.getAllRequiredIngredients(), (s) -> true, // TODO[WARP]: Implement this?
                         Jobs.unTown(checks.getAllRequiredTools()), (s) -> true, checks.getAllRequiredWork(), maxState

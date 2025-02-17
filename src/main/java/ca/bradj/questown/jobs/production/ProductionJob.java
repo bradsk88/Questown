@@ -84,8 +84,6 @@ public abstract class ProductionJob<
     public final ImmutableMap<STATUS, Collection<String>> specialRules;
     public final ImmutableList<String> specialGlobalRules;
     protected @Nullable BlockPos lookTarget;
-    private BlockPos entityPrevPos;
-    private int stuckTicks;
 
     public @Nullable BlockPos getJobSite(
             TownInterface town
@@ -255,7 +253,7 @@ public abstract class ProductionJob<
         return journal.removeItem(mct);
     }
 
-    protected abstract Map<Integer, Boolean> getSupplyItemStatus();
+    protected abstract Map<Integer, SupplyItemStatus> getSupplyItemStatus();
 
     protected boolean tryDropLoot(
             Long currentTick,
@@ -320,19 +318,20 @@ public abstract class ProductionJob<
         }
 
         STATUS status = journal.getStatus();
+        return doGetTarget(entityBlockPos, entityPos, town, status, sl);
+    }
 
+    private @Nullable BlockPos doGetTarget(
+            BlockPos entityBlockPos,
+            Vec3 entityPos,
+            TownInterface town,
+            STATUS status,
+            @NotNull ServerLevel sl
+    ) {
         // TODO: Allow modders to short-circuit this and set another target (like PreStateChangeHook)
         //  if (target = BeforeTargetSelection.run(...)) {
         //    return target;
         if (status.isGoingToJobsite()) {
-            if (entityBlockPos.equals(entityPrevPos)) {
-                stuckTicks++;
-            }
-            entityPrevPos = entityBlockPos;
-            if (stuckTicks > 100) {
-                clearJobSite();
-                stuckTicks = 0;
-            }
             BlockPos jobSite1 = getJobSite(town);
             this.setLookTarget(jobSite1);
             return jobSite1;
@@ -618,7 +617,7 @@ public abstract class ProductionJob<
             }
 
             @Override
-            public Map<Integer, Boolean> getSupplyItemStatus() {
+            public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
                 return ProductionJob.this.getSupplyItemStatus();
             }
         };

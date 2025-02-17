@@ -171,9 +171,14 @@ class JobStatusesTest {
     record ConstInventory(
             boolean inventoryFull,
             boolean hasNonSupplyItems,
-            Map<TestStatus, Boolean> getSupplyItemStatus
+            Map<TestStatus, Boolean> sis
     ) implements EntityInvStateProvider<TestStatus> {
-
+        @Override
+        public Map<TestStatus, SupplyItemStatus> getSupplyItemStatus() {
+            ImmutableMap.Builder<TestStatus, SupplyItemStatus> b = ImmutableMap.builder();
+            sis.forEach((k, v) -> b.put(k, v ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM));
+            return b.build();
+        }
     }
 
     record ConstTown(
@@ -204,7 +209,7 @@ class JobStatusesTest {
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
             return null;
         }
 
@@ -218,7 +223,7 @@ class JobStatusesTest {
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
             throw new AssertionError("Itemless work is not allowed when using FailJob");
         }
 
@@ -231,7 +236,7 @@ class JobStatusesTest {
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
             return TestStatus.ITEM_WORK;
         }
     };
@@ -243,11 +248,11 @@ class JobStatusesTest {
         }
 
         @Override
-        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
-            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK, false)) {
+        public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK, SupplyItemStatus.NOT_REQUIRED).has()) {
                 return TestStatus.ITEM_WORK;
             }
-            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK_2, false)) {
+            if (supplyItemStatus.getOrDefault(TestStatus.ITEM_WORK_2, SupplyItemStatus.NOT_REQUIRED).has()) {
                 return TestStatus.ITEM_WORK_2;
             }
             return null;
@@ -391,7 +396,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, Boolean> supplyItemStatus) {
+                    public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
                         return TestStatus.ITEM_WORK;
                     }
                 },
@@ -502,7 +507,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public Map<TestStatus, Boolean> getSupplyItemStatus() {
+                    public Map<TestStatus, SupplyItemStatus> getSupplyItemStatus() {
                         return Map.of();
                     }
                 }, new TownStateProvider() {
@@ -549,7 +554,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public Map<String, Boolean> getSupplyItemStatus() {
+                    public Map<String, SupplyItemStatus> getSupplyItemStatus() {
                         return Map.of();
                     }
                 },
@@ -581,7 +586,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
+                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, SupplyItemStatus> supplyItemStatus) {
                         return TestStatus.ITEM_WORK;
                     }
                 },
@@ -641,7 +646,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public Map<String, Boolean> getSupplyItemStatus() {
+                    public Map<String, SupplyItemStatus> getSupplyItemStatus() {
                         return Map.of();
                     }
                 },
@@ -673,7 +678,7 @@ class JobStatusesTest {
                     }
 
                     @Override
-                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, Boolean> supplyItemStatus) {
+                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, SupplyItemStatus> supplyItemStatus) {
                         return null;
                     }
                 },

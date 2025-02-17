@@ -903,7 +903,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<Integer, Boolean> getSupplyItemStatus() {
+    protected Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
         return JobsClean.getSupplyItemStatuses(
                 journal::getItems,
                 checks.getAllRequiredIngredients(),
@@ -940,8 +940,7 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isJobBlock,
             Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
-        // TODO: Use tags to support more tiers of work rooms
-        Map<Integer, Boolean> statusItems = getSupplyItemStatus();
+        Map<Integer, SupplyItemStatus> statusItems = getSupplyItemStatus();
         return JobsClean.findJobSite(
                 maxState,
                 prioritizesExtraction(),

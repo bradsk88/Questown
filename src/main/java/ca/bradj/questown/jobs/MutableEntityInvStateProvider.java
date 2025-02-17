@@ -30,7 +30,7 @@ public class MutableEntityInvStateProvider<HELD_ITEM extends HeldItem<HELD_ITEM,
     }
 
     @Override
-    public Map<Integer, Boolean> getSupplyItemStatus() {
+    public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
         return null;
     }
 

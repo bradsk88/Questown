@@ -10,7 +10,7 @@
     "item": "minecraft:air"
   },
   "block": {
-    "id": "minecraft:tall_grass"
+    "id": "#questown:weeds"
   },
   "room": "questown:special_quest.farm",
   "work_states": [
