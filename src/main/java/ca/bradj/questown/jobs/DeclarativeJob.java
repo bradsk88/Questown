@@ -434,7 +434,10 @@ public class DeclarativeJob extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> extra.town().getRoomHandle().getRoomsMatching(location.baseRoom()).stream()
-                                   .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet())
+                                   .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet()
+                                                                                     .stream()
+                                                                                     .filter(z -> isJobBlock(z))
+                                                                                     .toList())
                                    .toList(), getJobBlockState, (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
