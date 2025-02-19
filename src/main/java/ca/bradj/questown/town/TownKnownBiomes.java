@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class TownKnownBiomes {
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
     private boolean initialized = false;

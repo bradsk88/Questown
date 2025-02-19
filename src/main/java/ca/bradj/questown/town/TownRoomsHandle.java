@@ -60,7 +60,7 @@ public class TownRoomsHandle implements RoomsHolder,
      */
     private @NotNull TownFlagBlockEntity unsafeGetTown() {
         if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
+            throw new IllegalStateException("Town has not been initialized on rooms handle yet");
         }
         return town;
     }

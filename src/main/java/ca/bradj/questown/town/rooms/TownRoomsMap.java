@@ -289,6 +289,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     "De-registered door at {} because {} full town scans finished without finding a valid room",
                     Positions.FromBlockPos(p).getUIString(), ticksToKeepNonRoomDoors
             );
+            // TODO: Why isn't this just "remove(deadDoor)"?
             doorsToDrop.remove(new TownPosition(p.getX(), p.getZ(), p.getY() - flagPos.getY()));
         });
     }
@@ -304,14 +305,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         times.add((int) (end - start));
 
         if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
-            String msg = "[TownRoomsMap:{}] Average tick length: {}";
+            String msg = "[TownRoomsMap:{}] Average tick length: {} sec";
             OptionalDouble val = times.stream()
                                       .mapToInt(Integer::intValue)
                                       .average();
             if (val.isPresent() && val.getAsDouble() > 10) {
-                QT.PROFILE_LOGGER.error(msg, prefix, val);
+                QT.PROFILE_LOGGER.error(msg, prefix, (int) val.getAsDouble());
             } else if (val.isPresent() && val.getAsDouble() > 1) {
-                QT.PROFILE_LOGGER.warn(msg, prefix, val);
+                QT.PROFILE_LOGGER.warn(msg, prefix, (int) val.getAsDouble());
             } else {
                 QT.PROFILE_LOGGER.debug(msg, prefix, val);
             }
@@ -375,7 +376,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
      */
     private @NotNull TownFlagBlockEntity unsafeGetTown() {
         if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
+            throw new IllegalStateException("Town has not been initialized on rooms map yet");
         }
         return town;
     }

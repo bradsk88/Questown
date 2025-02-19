@@ -11,7 +11,7 @@ import java.util.Random;
 
 public class TownHealingHandle extends HealingStore<BlockPos> {
     public static final TownHealingSerializer SERIALIZER = new TownHealingSerializer();
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     public void initialize(TownFlagBlockEntity t) {
         town.initialize(t);

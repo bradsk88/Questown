@@ -139,7 +139,7 @@ public class TownContainers {
                 .map(z -> new Pair<>(v.room, z));
     }
 
-    @NotNull
+    @Nullable
     public static ContainerTarget<MCContainer, MCTownItem> fromChestBlock(
             MCRoom room,
             BlockPos p,
@@ -152,9 +152,6 @@ public class TownContainers {
                 block,
                 level
         );
-        if (maybe == null) {
-            throw new IllegalStateException("Null ContainerTarget is not allowed in this context");
-        }
         return maybe;
     }
 

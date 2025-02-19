@@ -47,7 +47,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private @Nullable QuestBatchSeed pendingQuests = null;
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     TownQuests() {
         questBatches.addChangeListener(this);

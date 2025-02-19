@@ -6,8 +6,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class UnsafeTown {
 
+    private final Class<?> owner;
+
     @Nullable
     TownFlagBlockEntity town = null;
+
+    public UnsafeTown(Class<?> owner) {
+        this.owner = owner;
+    }
 
     public void initialize(TownFlagBlockEntity t) {
         this.town = t;
@@ -16,7 +22,7 @@ public class UnsafeTown {
     // Only safe to call after initialized
     public @NotNull TownFlagBlockEntity getUnsafe() {
         if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
+            throw new IllegalStateException(String.format("Town has not been initialized on %s yet", owner));
         }
         return town;
     }

@@ -25,7 +25,7 @@ import java.util.function.BiFunction;
 
 public class TownWorldInteraction {
 
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     TownWorldInteraction() {}
 

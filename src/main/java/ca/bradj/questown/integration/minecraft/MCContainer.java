@@ -2,12 +2,9 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.leaver.RankBoost;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.mc.Util;
 import net.minecraft.world.Container;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -66,21 +63,14 @@ public class MCContainer implements ContainerTarget.Container<MCTownItem> {
 
     @Override
     public String toShortString(boolean includeAir) {
-        ImmutableList.Builder<String> names = ImmutableList.builder();
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            Item item = container.getItem(i).getItem();
-            if (Items.AIR.equals(item)) {
-                if (!includeAir) {
-                    continue;
-                }
-            }
-            if (ForgeRegistries.ITEMS.getKey(item) == null) {
-                names.add("<No ID>");
-            } else {
-                names.add(ForgeRegistries.ITEMS.getKey(item).getPath());
-            }
-        }
-        return String.join(", ", names.build());
+        return MCContainer.toShortString(container, includeAir);
+    }
+
+    private static String toShortString(
+            Container container,
+            boolean includeAir
+    ) {
+        return Util.toShortString(container.getContainerSize(), container::getItem, includeAir);
     }
 
     @Override
