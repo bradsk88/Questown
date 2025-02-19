@@ -846,6 +846,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     return;
                 }
                 this.town = flag;
+                // FIXME: This can fail with "Town has not been initialized on TownVillagerHandle"
+                //  This should either be retried multiple times, or this initialization
+                //  should be handled by the town flag
                 flag.assumeStateFromTown(this, sl);
                 this.initBrain();
             }

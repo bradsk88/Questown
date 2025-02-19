@@ -57,7 +57,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private final List<LivingEntity> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     private static final int TICK_FACTOR = 10;
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();

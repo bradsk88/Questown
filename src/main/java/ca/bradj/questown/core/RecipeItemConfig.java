@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.SmallSoupPotBlock;
 import ca.bradj.questown.blocks.SoupPotBlock;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.InMemoryFormat;
 import com.google.common.collect.ImmutableList;
@@ -106,9 +107,6 @@ public class RecipeItemConfig {
 
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
 
-    // TODO: Scan all recipes on server start and check for missing weights up front
-    //  Currently, they only get scanned when the town flag tries to generate quests
-
     public static final int SMALL_SOUP_POT = RecipeItemScore.canCraftInFourGrid(
             ImmutableList.of(
                     CraftedResources.FLOWER_POT,
@@ -127,6 +125,46 @@ public class RecipeItemConfig {
                     CraftedResources.CLAY_BRICK,
                     CraftedResources.CLAY_BRICK,
                     CraftedResources.CLAY_BRICK
+            ), false
+    );
+    public static final int COMPOSTER = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB,
+                    CraftedResources.WOOD_SLAB
+            ), false
+    );
+    public static final int ORE_PROCESSING_BLOCK = RecipeItemScore.canCraftInFourGrid(
+            ImmutableList.of(
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.STONE_PICKAXE,
+                    CraftedResources.CRAFTING_TABLE
+            ), false
+    );
+    public static final int BREAD_OVEN_BLOCK = RecipeItemScore.canCraftInFourGrid(
+            ImmutableList.of(
+                    MinedResources.COBBLESTONE,
+                    MinedResources.COBBLESTONE,
+                    CraftedResources.CRAFTING_TABLE,
+                    CraftedResources.FURNACE
+            ), false
+    );
+    public static final int FOOD_DISPLAY = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.PLANKS,
+                    CraftedResources.TOWN_WAND
             ), false
     );
 
@@ -151,6 +189,16 @@ public class RecipeItemConfig {
         add(assumePresent(Items.CAULDRON), CAULDRON);
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
         add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
+        add(assumePresent(Items.COMPOSTER), COMPOSTER);
+        // TODO: Bring back hunger/dining and reduce this cost to represent plate recipe
+        add(ItemsInit.PLATE_BLOCK.getId(), Integer.MAX_VALUE);
+        add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);
+        // TODO: Add a crafter job for building bowl racks (should probably upgrade job board so we can make "one time" requests)
+        add(ItemsInit.BOWL_RACK_BLOCK.getId(), Integer.MAX_VALUE);
+        add(ItemsInit.ORE_PROCESSING_BLOCK.getId(), ORE_PROCESSING_BLOCK);
+        add(ItemsInit.BREAD_OVEN_BLOCK.getId(), BREAD_OVEN_BLOCK);
+        add(ItemsInit.FOOD_DISPLAY_BLOCK.getId(), FOOD_DISPLAY);
+        add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
 
@@ -158,12 +206,17 @@ public class RecipeItemConfig {
     private static @NotNull ResourceLocation assumePresent(Item item) {
         return ForgeRegistries.ITEMS.getKey(item);
     }
-
     private static void add(
-            Object itemOrTagKey,
+            ResourceLocation itemOrTagKey,
             int cost
     ) {
         defaultItemWeights.add(itemOrTagKey.toString(), cost);
+    }
+    private static void add(
+            String itemOrTagKey,
+            int cost
+    ) {
+        defaultItemWeights.add(itemOrTagKey, cost);
     }
 
     // TODO: How can mod pack builders add weights to this?

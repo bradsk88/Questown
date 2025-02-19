@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.workstatus.State;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -76,7 +78,9 @@ public class TownStateSerializer {
     }
 
     public MCTownState load(
-            CompoundTag tag, ServerLevel level, GatesGetter gg
+            CompoundTag tag,
+            ServerLevel level,
+            GatesGetter gg
     ) {
         long worldTimeAtSleep = tag.getLong("world_time_at_sleep");
         ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers = loadContainers(tag, level);
@@ -169,23 +173,37 @@ public class TownStateSerializer {
             int z = ccTag.getInt("z");
             BlockPos pos = new BlockPos(x, y, z);
             BlockState bs = level.getBlockState(pos);
+            ImmutableList<MCTownItem> tagItems = cItems.build();
             if (!(bs.getBlock() instanceof ChestBlock)) {
-                QT.FLAG_LOGGER.error(
-                        "There used to be a chest at {}, but now there isn't. " +
-                                "This is a bug and will cause items to be lost.", pos
-                );
+                logLostItems(pos, tagItems);
                 continue;
             }
-            ContainerTarget<MCContainer, MCTownItem> ct = TownContainers.fromChestBlock(
+            @Nullable ContainerTarget<MCContainer, MCTownItem> ct = TownContainers.fromChestBlock(
                     null, pos, (ChestBlock) bs.getBlock(), level
             );
+            if (ct == null) {
+                logLostItems(pos, tagItems);
+                continue;
+            }
             cB.add(ct);
-            ImmutableList<MCTownItem> stateItems = cItems.build();
+            ImmutableList<MCTownItem> stateItems = tagItems;
             checkItems(ct, stateItems);
         }
         return cB.build();
     }
 
+    private static void logLostItems(
+            BlockPos pos,
+            ImmutableList<MCTownItem> tagItems
+    ) {
+        QT.FLAG_LOGGER.error(
+                "There used to be a chest at {}, but now there isn't. " +
+                        "This may be a bug and may cause these items to be lost: {}", pos,
+                Util.toShortString(tagItems.size(), i -> tagItems.get(i).toQTItemStack(), false)
+        );
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void checkItems(
             ContainerTarget ct,
             ImmutableList<MCTownItem> stateItems
@@ -194,7 +212,11 @@ public class TownStateSerializer {
         int cSize = containerItems.size();
         int sSize = stateItems.size();
         if (cSize != sSize) {
-            Questown.LOGGER.error("Container items do not match stored state. This is a bug and may cause items to be lost. [{}, {}]", cSize, sSize);
+            Questown.LOGGER.error(
+                    "Container items do not match stored state. This is a bug and may cause items to be lost. [{}, {}]",
+                    cSize,
+                    sSize
+            );
         }
         for (int i = 0; i < cSize; i++) {
             MCTownItem cItem = containerItems.get(i);

@@ -21,9 +21,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -433,4 +436,25 @@ public class Util {
         return input == null ? fallback : input;
     }
 
+    public static String toShortString(
+            int containerSize,
+            Function<Integer, ItemStack> getItem,
+            boolean includeAir
+    ) {
+        ImmutableList.Builder<String> names = ImmutableList.builder();
+        for (int i = 0; i < containerSize; i++) {
+            net.minecraft.world.item.Item item = getItem.apply(i).getItem();
+            if (Items.AIR.equals(item)) {
+                if (!includeAir) {
+                    continue;
+                }
+            }
+            if (ForgeRegistries.ITEMS.getKey(item) == null) {
+                names.add("<No ID>");
+            } else {
+                names.add(ForgeRegistries.ITEMS.getKey(item).getPath());
+            }
+        }
+        return String.join(", ", names.build());
+    }
 }

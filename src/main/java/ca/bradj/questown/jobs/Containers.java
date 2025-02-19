@@ -68,6 +68,9 @@ public class Containers {
         }
         BlockPos bp = block.getKey();
         ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.fromChestBlock(c.room, bp, cb, sl);
+        if (chest == null) {
+            return false;
+        }
         chests.add(chest);
         return true;
     }

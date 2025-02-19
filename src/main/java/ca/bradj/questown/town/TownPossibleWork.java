@@ -34,7 +34,7 @@ import java.util.stream.Stream;
 
 public class TownPossibleWork {
 
-    private final UnsafeTown town = new UnsafeTown();
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
     private boolean shouldRecompute = true;

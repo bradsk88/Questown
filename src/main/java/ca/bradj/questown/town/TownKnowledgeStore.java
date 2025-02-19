@@ -13,7 +13,7 @@ import java.util.Collection;
 
 public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldItem, MCTownItem> {
     @Nullable
-    private UnsafeTown town = new UnsafeTown();
+    private UnsafeTown town = new UnsafeTown(getClass());
 
     public void initialize(TownFlagBlockEntity t) {
         this.town.initialize(t);
