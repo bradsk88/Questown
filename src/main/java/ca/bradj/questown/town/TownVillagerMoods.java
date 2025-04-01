@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.items.EffectMetaItem;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
@@ -85,11 +86,11 @@ public class TownVillagerMoods {
         moodEffects.put(uuid, b.build());
     }
 
-    public void initialize(Map<UUID, ImmutableList<Effect>> moodEffects) {
+    public void initialize(Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects) {
         if (!this.moodEffects.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already active mood effects");
         }
-        this.moodEffects.putAll(moodEffects);
+        moodEffects.forEach((k, v) -> this.moodEffects.put(k, ImmutableList.copyOf(v)));
     }
 
     public ImmutableMap<UUID, ImmutableList<Effect>> getEffects() {

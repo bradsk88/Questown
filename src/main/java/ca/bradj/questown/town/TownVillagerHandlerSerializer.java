@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
@@ -7,6 +8,8 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,14 +18,20 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_MOOD = "mood";
     private static final String NBT_MOOD_EFFECTS = "mood_effects";
     private static final String NBT_VILLAGER_ID = "villager_uuid";
+    private static final String NBT_UNLOCKED_JOBS = "unlocked_jobs";
     private static final String NBT_VALUE = "value";
     private static final String NBT_DURATION = "duration";
     private static final String NBT_DAMAGE = "damage";
 
-    public void deserialize(CompoundTag compound, TownVillagerHandle villagerHandle, long currentTick) {
+    public void deserialize(
+            CompoundTag compound,
+            TownVillagerHandle villagerHandle,
+            long currentTick
+    ) {
         ImmutableMap.Builder<UUID, Integer> fullness = ImmutableMap.builder();
         ImmutableMap.Builder<UUID, ImmutableList<Effect>> moodEffects = ImmutableMap.builder();
         ImmutableMap.Builder<UUID, Integer> damage = ImmutableMap.builder();
+        ImmutableMap.Builder<UUID, ImmutableList<JobID>> unlockedJobs = ImmutableMap.builder();
 
         ListTag fullnessPairs = compound.getList(NBT_FULLNESS, Tag.TAG_COMPOUND);
 
@@ -56,10 +65,22 @@ public class TownVillagerHandlerSerializer {
             damage.put(uuid, value);
         });
 
-        villagerHandle.initialize(fullness.build(), moodEffects.build(), damage.build());
+        ListTag unlockedJobsPairs = compound.getList(NBT_UNLOCKED_JOBS, Tag.TAG_COMPOUND);
+        for (Tag tag : unlockedJobsPairs) {
+            UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
+            ListTag jobs = ((CompoundTag) tag).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+
+            List<JobID> list = jobs.stream().map(v -> JobID.fromTag((CompoundTag) v)).toList();
+            unlockedJobs.put(uuid, ImmutableList.copyOf(list));
+        }
+
+        villagerHandle.initialize(fullness.build(), moodEffects.build(), damage.build(), unlockedJobs.build());
     }
 
-    public CompoundTag serialize(TownVillagerHandle villagerHandle, long currentTick) {
+    public CompoundTag serialize(
+            TownVillagerHandle villagerHandle,
+            long currentTick
+    ) {
         CompoundTag compound = new CompoundTag();
 
         Map<UUID, Integer> fullnessMap = villagerHandle.fullness;
@@ -107,6 +128,22 @@ public class TownVillagerHandlerSerializer {
         });
 
         compound.put(NBT_DAMAGE, damagePairs);
+
+        Map<UUID, Collection<JobID>> unlockedMap = villagerHandle.unlockedJobs;
+        ListTag unlockedPairs = new ListTag();
+
+        unlockedMap.forEach((uuid, value) -> {
+            CompoundTag tag = new CompoundTag();
+            tag.putUUID(NBT_VILLAGER_ID, uuid);
+            ListTag lt = new ListTag();
+            for (JobID jobID : value) {
+                lt.add(JobID.toTag(jobID));
+            }
+            tag.put(NBT_VALUE, lt);
+            unlockedPairs.add(tag);
+        });
+
+        compound.put(NBT_UNLOCKED_JOBS, unlockedPairs);
 
         return compound;
     }

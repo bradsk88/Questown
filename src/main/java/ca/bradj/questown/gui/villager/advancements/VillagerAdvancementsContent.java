@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -30,6 +31,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
     private final Component title;
     private final VillagerAdvancementsWidget root;
     private final Map<JobID, VillagerAdvancementsWidget> widgets;
+    private final Collection<JobID> unlockedJobs;
     private double scrollX;
     private double scrollY;
     private int minX = Integer.MAX_VALUE;
@@ -45,8 +47,10 @@ public class VillagerAdvancementsContent extends GuiComponent {
             VillagerAdvancementsScreen screen,
             DisplayInfo p_97150_,
             @Nullable JobID currentJob,
-            JobRelationship advancements
+            Collection<JobID> unlockedJobs,
+            JobRelationship allJobs
     ) {
+        this.unlockedJobs = unlockedJobs;
         this.widgets = Maps.newLinkedHashMap();
         this.minX = Integer.MAX_VALUE;
         this.minY = Integer.MAX_VALUE;
@@ -59,32 +63,48 @@ public class VillagerAdvancementsContent extends GuiComponent {
         this.title = p_97150_.getTitle();
         JobID unemployed = new JobID("unemployed", "unemployed");
 
-        Map<JobID, Float> ys = preComputeLayout(advancements);
+        Map<JobID, Float> ys = preComputeLayout(allJobs);
 
         Float minnY = ys.values().stream().min(Float::compare).orElse(0f);
 
         p_97150_.setLocation(p_97150_.getX(), p_97150_.getY() - minnY);
-        this.root = new VillagerAdvancementsWidget(this, minecraft, p_97150_, unemployed, currentJob == null, null);
+        this.root = new VillagerAdvancementsWidget(
+                this,
+                minecraft,
+                p_97150_,
+                unemployed,
+                currentJob == null,
+                true,
+                null
+        );
         this.addWidget(this.root, unemployed);
 
-        advancements.forEach(
-                this.root, (JobRelationship adv, JobRelationship.ContextualPosition p, VillagerAdvancementsWidget parentWidget) -> {
+        allJobs.forEach(
+                this.root,
+                (JobRelationship adv, JobRelationship.ContextualPosition p, VillagerAdvancementsWidget parentWidget) -> {
                     DisplayInfo di = new DisplayInfo(
-                            VillagerAdvancements.getIcon(adv.prerequisite()),
-                            Compat.translatable(adv.prerequisite().jobId()),
+                            VillagerAdvancements.getIcon(adv.id()),
+                            Compat.translatable(adv.id().jobId()),
                             Compat.literal(""),
                             display.getBackground(),
                             display.getFrame(),
                             false, false, false
                     );
-                    di.setLocation(parentWidget.display.getX() + 1, ys.get(adv.prerequisite()) - minnY);
+                    di.setLocation(parentWidget.display.getX() + 1, ys.get(adv.id()) - minnY);
                     VillagerAdvancementsWidget newWidget = new VillagerAdvancementsWidget(
-                            this, minecraft, di, adv.prerequisite(), currentJob != null && currentJob.equals(adv.prerequisite()),parentWidget.id
+                            this, minecraft, di, adv.id(),
+                            currentJob != null && currentJob.equals(adv.id()),
+                            unlockedJobs.contains(adv.id()),
+                            parentWidget.id
                     );
-                    this.addWidget(newWidget, adv.prerequisite());
+                    this.addWidget(newWidget, adv.id());
                     return newWidget;
                 }
         );
+    }
+
+    public boolean isLocked(JobID id) {
+        return !unlockedJobs.contains(id);
     }
 
     private record Precompute(
@@ -98,16 +118,18 @@ public class VillagerAdvancementsContent extends GuiComponent {
     private Map<JobID, Float> preComputeLayout(JobRelationship advancements) {
         HashMap<JobID, Float> map = new HashMap<>();
         advancements.forEach(
-                new Precompute(new AtomicDouble(0.0), 0f), (JobRelationship adv, JobRelationship.ContextualPosition p, Precompute pre) -> {
+                new Precompute(new AtomicDouble(0.0), 0f),
+                (JobRelationship adv, JobRelationship.ContextualPosition p, Precompute pre) -> {
                     int totalHeight = p.relevantLeafNodes();
                     float radius = totalHeight / 2f;
                     float ownSize = adv.countLeafNodes();
                     AtomicDouble spaceUsed = pre.spaceUsedBySiblings();
                     float y = pre.parentY() - radius + spaceUsed.floatValue() + (ownSize / 2f);
                     spaceUsed.set(spaceUsed.floatValue() + ownSize);
-                    map.put(adv.prerequisite(), y);
+                    map.put(adv.id(), y);
                     return new Precompute(new AtomicDouble(0.0), y);
-                });
+                }
+        );
         return map;
     }
 
@@ -166,7 +188,13 @@ public class VillagerAdvancementsContent extends GuiComponent {
         p_97164_.popPose();
     }
 
-    public void drawTooltips(PoseStack p_97184_, int p_97185_, int p_97186_, int p_97187_, int p_97188_) {
+    public void drawTooltips(
+            PoseStack p_97184_,
+            int p_97185_,
+            int p_97186_,
+            int p_97187_,
+            int p_97188_
+    ) {
         p_97184_.pushPose();
         p_97184_.translate(0.0, 0.0, -200.0);
         fill(p_97184_, 0, 0, 234, 113, Mth.floor(this.fade * 255.0F) << 24);
@@ -202,7 +230,10 @@ public class VillagerAdvancementsContent extends GuiComponent {
 
     }
 
-    public void scroll(double p_97152_, double p_97153_) {
+    public void scroll(
+            double p_97152_,
+            double p_97153_
+    ) {
         if (this.maxX - this.minX > 234) {
             this.scrollX = Mth.clamp(this.scrollX + p_97152_, (double) (-(this.maxX - 234)), 0.0);
         }
@@ -212,7 +243,10 @@ public class VillagerAdvancementsContent extends GuiComponent {
         }
     }
 
-    private void addWidget(VillagerAdvancementsWidget p_97176_, JobID advancement) {
+    private void addWidget(
+            VillagerAdvancementsWidget p_97176_,
+            JobID advancement
+    ) {
         this.widgets.put(advancement, p_97176_);
         int i = p_97176_.getX();
         int j = i + 28;
@@ -240,7 +274,10 @@ public class VillagerAdvancementsContent extends GuiComponent {
         return this.screen;
     }
 
-    public @Nullable JobID getClickJob(double mouseX, double mouseY) {
+    public @Nullable JobID getClickJob(
+            double mouseX,
+            double mouseY
+    ) {
         if (this.hoveredWidget == null) {
             return null;
         }

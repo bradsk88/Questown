@@ -41,6 +41,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     private VillagerAdvancementsWidget parent;
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
     private final boolean active;
+    private final boolean unlocked;
     private final int x;
     private final int y;
 
@@ -50,10 +51,12 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             DisplayInfo p_97258_,
             JobID id,
             boolean active,
+            boolean unlocked,
             @Nullable JobID parentId
     ) {
         this.id = id;
         this.active = active;
+        this.unlocked = unlocked;
         this.parentId = parentId;
 
         this.tab = p_97255_;
@@ -148,7 +151,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, WIDGETS_LOCATION);
             this.blit(p_97267_, p_97268_ + this.x + 3, p_97269_ + this.y, this.display.getFrame().getTexture(), 128 + advancementwidgettype * 26, 26, 26);
-            this.minecraft.getItemRenderer().renderAndDecorateFakeItem(this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
+            if (this.unlocked) {
+                this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
+                        this.display.getIcon(),
+                        p_97268_ + this.x + 8,
+                        p_97269_ + this.y + 5
+                );
+            }
         }
 
         Iterator var6 = this.children.iterator();

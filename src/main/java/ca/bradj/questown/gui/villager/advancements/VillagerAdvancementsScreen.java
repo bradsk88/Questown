@@ -3,6 +3,7 @@ package ca.bradj.questown.gui.villager.advancements;
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
@@ -40,6 +41,7 @@ public class VillagerAdvancementsScreen extends Screen {
     public VillagerAdvancementsScreen(
             BlockPos flagPos,
             UUID villagerUUID,
+            Collection<JobID> unlockedJobs,
             JobID currentJob
     ) {
         super(Compat.literal(""));
@@ -49,10 +51,17 @@ public class VillagerAdvancementsScreen extends Screen {
                 Compat.literal("test2"),
                 new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
                 FrameType.TASK,
-                false, false, false
+                false,
+                false,
+                false
         );
         this.content = new VillagerAdvancementsContent(
-                Minecraft.getInstance(), this, displayInfo, currentJob, VillagerAdvancements.all()
+                Minecraft.getInstance(),
+                this,
+                displayInfo,
+                currentJob,
+                unlockedJobs,
+                VillagerAdvancements.all()
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
@@ -210,14 +219,25 @@ public class VillagerAdvancementsScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, p_94697_);
         }
 
+        if (Minecraft.getInstance().player.isCreative() && content.isLocked(id)) {
+            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(
+                    flagPos, villagerUUID, id
+            ));
+        }
+
         changeJobAndClose(id);
         return true;
     }
 
     private void changeJobAndClose(JobID id) {
-        QuestownNetwork.CHANNEL.sendToServer(
-                new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id, true)
-        );
+        QuestownNetwork.CHANNEL.sendToServer(new ChangeVillagerJobMessage(
+                flagPos.getX(),
+                flagPos.getY(),
+                flagPos.getZ(),
+                villagerUUID,
+                id,
+                true
+        ));
 
         this.minecraft.setScreen((Screen) null);
     }

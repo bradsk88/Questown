@@ -94,4 +94,9 @@ public interface VillagerHolder {
     void showItemJobsUI(ServerPlayer sender, Ingredient itemToShowJobsFor);
 
     void register(VisitorMobEntity vEntity);
+
+    void unlockJob(
+            UUID villagerUUID,
+            JobID id
+    );
 }

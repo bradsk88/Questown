@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.*;
@@ -16,6 +17,7 @@ import ca.bradj.questown.town.interfaces.VillagerHolder;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -52,6 +54,7 @@ public class TownVillagerHandle implements VillagerHolder {
     final Map<UUID, Integer> fullness = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
+    final Map<UUID, Collection<JobID>> unlockedJobs = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -64,8 +67,9 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void initialize(
             Map<UUID, Integer> fullness,
-            Map<UUID, ImmutableList<Effect>> moodEffects,
-            Map<UUID, Integer> damage
+            Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
+            Map<UUID, Integer> damage,
+            Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
@@ -73,6 +77,7 @@ public class TownVillagerHandle implements VillagerHolder {
         this.fullness.putAll(fullness);
         this.moods.initialize(moodEffects);
         this.damage.putAll(damage);
+        this.unlockedJobs.putAll(unlockedJobs);
     }
 
     public void tick(
@@ -287,10 +292,18 @@ public class TownVillagerHandle implements VillagerHolder {
                         e,
                         stats
                 ), OpenVillagerMenuMessage.SKILLS, () -> {
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
+                    Collection<JobID> vUnlocked = UtilClean.getOrDefaultCollection(
+                            unlockedJobs,
+                            e.getUUID(),
+                            ImmutableList.of()
                     );
+                    OpenVillagerAdvancementsMenuMessage msg = new OpenVillagerAdvancementsMenuMessage(
+                            e.getFlagPos(),
+                            e.getUUID(),
+                            vUnlocked,
+                            e.getJobId()
+                    );
+                    QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
                 }, OpenVillagerMenuMessage.ECONOMICS, () -> {
                     NoMCEconomics tEcon = flag.getEconomicsHandle();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(villagerId);
@@ -677,5 +690,13 @@ public class TownVillagerHandle implements VillagerHolder {
             t.setChanged();
         });
         t.setChanged();
+    }
+
+    @Override
+    public void unlockJob(
+            UUID villagerUUID,
+            JobID id
+    ) {
+        UtilClean.addOrInitialize(unlockedJobs, villagerUUID, id);
     }
 }

@@ -34,7 +34,7 @@ public class JobRelationship implements Iterable<JobRelationship> {
         }
     }
 
-    public JobID prerequisite() {
+    public JobID id() {
         return prerequisite;
     }
 

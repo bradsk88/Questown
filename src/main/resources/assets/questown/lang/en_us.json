@@ -19,6 +19,7 @@
   "message.baker.villagers_will_add_wheat": "Baker villagers can add wheat and coal to bake bread",
   "message.baker.villagers_will_add_coal": "Baker villagers can add coal to bake bread",
   "messages.jobs.changed": "Job changed to %s for villager %s",
+  "messages.jobs.unlocked_by_mod": "%s unlocked job %s for villager %s",
   "message.debug_mode": "Debug Mode: %s",
   "message.wand.clicked_away": "Right-click on a door to register it with town flag [located at: %s %s %s]",
   "tooltips.villagers": "Villagers",
