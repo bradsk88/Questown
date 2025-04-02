@@ -61,7 +61,7 @@ public class VillagerAdvancementsScreen extends Screen {
                 displayInfo,
                 currentJob,
                 unlockedJobs,
-                VillagerAdvancements.all()
+                currentJob == null ? VillagerAdvancements.all() : VillagerAdvancements.all().branch(currentJob.rootId())
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;

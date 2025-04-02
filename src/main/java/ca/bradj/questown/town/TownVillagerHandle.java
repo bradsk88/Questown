@@ -409,6 +409,9 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void add(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
+        for (JobID jobID : ServerJobsRegistry.getDefaultWork(vEntity.getJobId())) {
+            unlockJob(vEntity.getUUID(), jobID);
+        }
         this.beds.claim(vEntity, town.getUnsafe());
         vEntity.addSleepListener(e -> {
             Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
@@ -407,17 +408,25 @@ public class ServerJobsRegistry {
         ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
 
         HashMap<String, ArrayList<Work>> ps = new HashMap<>();
+        HashMap<String, ArrayList<JobID>> defaults = new HashMap<>();
         js.forEach((id, job) -> {
             ArrayList<Work> rL = Util.getOrDefault(ps, id.rootId(), new ArrayList<>());
             rL.add(job);
             rL.sort(Comparator.comparingInt(w -> w.priority));
             ps.put(id.rootId(), rL);
+            if (isUnlockedInitially(job)) {
+                UtilClean.addOrInitialize(defaults, id.rootId(), job.id);
+            }
         });
 
         ps.forEach((rootId, w) -> {
-            b.put(rootId, new Jerb(w.stream().map(x -> x.id).toList(), ImmutableList.of()));
+            b.put(rootId, new Jerb(w.stream().map(x -> x.id).toList(), ImmutableList.copyOf(defaults.get(rootId))));
         });
         jobs = b.build();
+    }
+
+    private static boolean isUnlockedInitially(Work job) {
+        return job.parentID == null;
     }
 
     private record Jerb(ImmutableList<JobID> preferredWork, ImmutableList<JobID> defaultWork) {

@@ -61,23 +61,13 @@ public class VillagerAdvancementsContent extends GuiComponent {
         this.display = p_97150_;
         this.icon = p_97150_.getIcon();
         this.title = p_97150_.getTitle();
-        JobID unemployed = new JobID("unemployed", "unemployed");
 
         Map<JobID, Float> ys = preComputeLayout(allJobs);
 
         Float minnY = ys.values().stream().min(Float::compare).orElse(0f);
 
         p_97150_.setLocation(p_97150_.getX(), p_97150_.getY() - minnY);
-        this.root = new VillagerAdvancementsWidget(
-                this,
-                minecraft,
-                p_97150_,
-                unemployed,
-                currentJob == null,
-                true,
-                null
-        );
-        this.addWidget(this.root, unemployed);
+        this.root = makeRoot(minecraft, p_97150_, currentJob, allJobs);
 
         allJobs.forEach(
                 this.root,
@@ -88,14 +78,20 @@ public class VillagerAdvancementsContent extends GuiComponent {
                             Compat.literal(""),
                             display.getBackground(),
                             display.getFrame(),
-                            false, false, false
+                            false,
+                            false,
+                            false
                     );
                     di.setLocation(parentWidget.display.getX() + 1, ys.get(adv.id()) - minnY);
                     VillagerAdvancementsWidget newWidget = new VillagerAdvancementsWidget(
-                            this, minecraft, di, adv.id(),
+                            this,
+                            minecraft,
+                            di,
+                            adv.id(),
                             currentJob != null && currentJob.equals(adv.id()),
                             unlockedJobs.contains(adv.id()),
-                            parentWidget.id
+                            parentWidget.id,
+                            unlockedJobs.contains(parentWidget.id)
                     );
                     this.addWidget(newWidget, adv.id());
                     return newWidget;
@@ -103,14 +99,58 @@ public class VillagerAdvancementsContent extends GuiComponent {
         );
     }
 
+    private @NotNull VillagerAdvancementsWidget makeRoot(
+            Minecraft minecraft,
+            DisplayInfo p_97150_,
+            @org.jetbrains.annotations.Nullable JobID currentJob,
+            JobRelationship allJobs
+    ) {
+        if (!allJobs.equals(VillagerAdvancements.all())) {
+            DisplayInfo di = new DisplayInfo(
+                    VillagerAdvancements.getIcon(allJobs.id()),
+                    Compat.translatable(allJobs.id().jobId()),
+                    Compat.literal(""),
+                    display.getBackground(),
+                    display.getFrame(),
+                    false,
+                    false,
+                    false
+            );
+            di.setLocation(p_97150_.getX() + 1, p_97150_.getY());
+            VillagerAdvancementsWidget vaw = new VillagerAdvancementsWidget(
+                    this,
+                    minecraft,
+                    di,
+                    allJobs.id(),
+                    currentJob.equals(allJobs.id()),
+                    true,
+                    null,
+                    true
+            );
+            this.addWidget(vaw, allJobs.id());
+            return vaw;
+        }
+
+        JobID unemployed = new JobID("unemployed", "unemployed");
+        VillagerAdvancementsWidget vaw = new VillagerAdvancementsWidget(
+                this,
+                minecraft,
+                p_97150_,
+                unemployed,
+                currentJob == null,
+                true,
+                null,
+                true
+        );
+        this.addWidget(vaw, unemployed);
+        return vaw;
+    }
+
     public boolean isLocked(JobID id) {
         return !unlockedJobs.contains(id);
     }
 
-    private record Precompute(
-            AtomicDouble spaceUsedBySiblings,
-            float parentY
-    ) {
+    private record Precompute(AtomicDouble spaceUsedBySiblings, float parentY) {
 
     }
 
@@ -207,13 +247,17 @@ public class VillagerAdvancementsContent extends GuiComponent {
             boolean found = false;
             while (var9.hasNext()) {
                 VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var9.next();
-                if (advancementwidget.isMouseOver(i, j, p_97185_, p_97186_)) {
-                    flag = true;
-                    advancementwidget.drawHover(p_97184_, i, j, this.fade, p_97187_, p_97188_);
-                    this.hoveredWidget = advancementwidget;
-                    found = true;
-                    break;
+                if (!advancementwidget.isMouseOver(i, j, p_97185_, p_97186_)) {
+                    continue;
                 }
+                if (!unlockedJobs.contains(advancementwidget.id) && !unlockedJobs.contains(advancementwidget.parentId)) {
+                    continue;
+                }
+                flag = true;
+                advancementwidget.drawHover(p_97184_, i, j, this.fade, p_97187_, p_97188_);
+                this.hoveredWidget = advancementwidget;
+                found = true;
+                break;
             }
             if (!found) {
                 this.hoveredWidget = null;

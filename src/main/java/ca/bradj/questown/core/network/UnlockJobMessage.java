@@ -51,7 +51,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id) {
             String key = "messages.jobs.unlocked_by_mod";
             MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villagerUUID);
             for (Player player : sender.level.players()) {
-                player.sendSystemMessage(msg);
+                Compat.sendMessage((ServerPlayer) player, msg);
             }
         });
         ctx.get().setPacketHandled(true);

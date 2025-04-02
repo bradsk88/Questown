@@ -51,6 +51,15 @@ public class JobRelationship implements Iterable<JobRelationship> {
         return jobs.iterator();
     }
 
+    public JobRelationship branch(String s) {
+        for (JobRelationship job : jobs) {
+            if (job.prerequisite != null && job.prerequisite.rootId().equals(s)) {
+                return job;
+            }
+        }
+        return this;
+    }
+
     public record ContextualPosition(
             int pos,
             int sizeOfLevel,

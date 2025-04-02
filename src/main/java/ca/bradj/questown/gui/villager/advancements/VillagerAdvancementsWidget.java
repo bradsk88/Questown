@@ -25,7 +25,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 public class VillagerAdvancementsWidget extends GuiComponent {
-    private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation("textures/gui/advancements/widgets.png");
+    private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation(
+            "textures/gui/advancements/widgets.png");
     private static final int[] TEST_SPLIT_OFFSETS = new int[]{0, 10, -10, 25, -25};
     private static final int OBTAINED = 0;
     private static final int UNOBTAINED = 1;
@@ -42,6 +43,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
     private final boolean active;
     private final boolean unlocked;
+    private final boolean parentUnlocked;
     private final int x;
     private final int y;
 
@@ -52,11 +54,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             JobID id,
             boolean active,
             boolean unlocked,
-            @Nullable JobID parentId
+            @Nullable JobID parentId,
+            boolean parentUnlocked
     ) {
         this.id = id;
         this.active = active;
         this.unlocked = unlocked;
+        this.parentUnlocked = parentUnlocked;
         this.parentId = parentId;
 
         this.tab = p_97255_;
@@ -66,33 +70,47 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         this.x = Mth.floor(p_97258_.getX() * 28.0F);
         this.y = Mth.floor(p_97258_.getY() * 27.0F);
         int l = 29 + p_97256_.font.width(this.title);
-        this.description = Language.getInstance().getVisualOrder(this.findOptimalLines(ComponentUtils.mergeStyles(p_97258_.getDescription().copy(), Style.EMPTY.withColor(p_97258_.getFrame().getChatColor())), l));
+        this.description = Language.getInstance().getVisualOrder(this.findOptimalLines(
+                ComponentUtils.mergeStyles(
+                        p_97258_.getDescription().copy(),
+                        Style.EMPTY.withColor(p_97258_.getFrame().getChatColor())
+                ), l
+        ));
 
         FormattedCharSequence formattedcharsequence;
-        for(Iterator var9 = this.description.iterator(); var9.hasNext(); l = Math.max(l, p_97256_.font.width(formattedcharsequence))) {
-            formattedcharsequence = (FormattedCharSequence)var9.next();
+        for (Iterator var9 = this.description.iterator(); var9.hasNext(); l = Math.max(
+                l,
+                p_97256_.font.width(formattedcharsequence)
+        )) {
+            formattedcharsequence = (FormattedCharSequence) var9.next();
         }
 
         this.width = l + 3 + 5;
     }
 
-    private static float getMaxWidth(StringSplitter p_97304_, List<FormattedText> p_97305_) {
+    private static float getMaxWidth(
+            StringSplitter p_97304_,
+            List<FormattedText> p_97305_
+    ) {
         Stream<FormattedText> var10000 = p_97305_.stream();
         Objects.requireNonNull(p_97304_);
-        return (float)var10000.mapToDouble(p_97304_::stringWidth).max().orElse(0.0);
+        return (float) var10000.mapToDouble(p_97304_::stringWidth).max().orElse(0.0);
     }
 
-    private List<FormattedText> findOptimalLines(Component p_97309_, int p_97310_) {
+    private List<FormattedText> findOptimalLines(
+            Component p_97309_,
+            int p_97310_
+    ) {
         StringSplitter stringsplitter = this.minecraft.font.getSplitter();
         List<FormattedText> list = null;
         float f = Float.MAX_VALUE;
         int[] var6 = TEST_SPLIT_OFFSETS;
         int var7 = var6.length;
 
-        for(int var8 = 0; var8 < var7; ++var8) {
+        for (int var8 = 0; var8 < var7; ++var8) {
             int i = var6[var8];
             List<FormattedText> list1 = stringsplitter.splitLines(p_97309_, p_97310_ - i, Style.EMPTY);
-            float f1 = Math.abs(getMaxWidth(stringsplitter, list1) - (float)p_97310_);
+            float f1 = Math.abs(getMaxWidth(stringsplitter, list1) - (float) p_97310_);
             if (f1 <= 10.0F) {
                 return list1;
             }
@@ -111,7 +129,15 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         return this.tab.getWidget(p_97312_);
     }
 
-    public void drawConnectivity(PoseStack p_97299_, int p_97300_, int p_97301_, boolean p_97302_) {
+    public void drawConnectivity(
+            PoseStack p_97299_,
+            int p_97300_,
+            int p_97301_,
+            boolean p_97302_
+    ) {
+        if (!this.unlocked && !this.parentUnlocked) {
+            return;
+        }
         if (this.parent != null) {
             int i = p_97300_ + this.parent.x + 13;
             int j = p_97300_ + this.parent.x + 26 + 4;
@@ -137,20 +163,32 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
         Iterator var11 = this.children.iterator();
 
-        while(var11.hasNext()) {
-            VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget)var11.next();
+        while (var11.hasNext()) {
+            VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var11.next();
             advancementwidget.drawConnectivity(p_97299_, p_97300_, p_97301_, p_97302_);
         }
 
     }
 
-    public void draw(PoseStack p_97267_, int p_97268_, int p_97269_) {
+    public void draw(
+            PoseStack p_97267_,
+            int p_97268_,
+            int p_97269_
+    ) {
         if (!this.display.isHidden()) {
             int advancementwidgettype = active ? OBTAINED : UNOBTAINED;
 
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, WIDGETS_LOCATION);
-            this.blit(p_97267_, p_97268_ + this.x + 3, p_97269_ + this.y, this.display.getFrame().getTexture(), 128 + advancementwidgettype * 26, 26, 26);
+            int v1 = 128 + advancementwidgettype * 26;
+            int v2 = 26;
+            int v3 = 26;
+            int frameTex = this.display.getFrame().getTexture();
+            int x = p_97268_ + this.x + 3;
+            int y = p_97269_ + this.y;
+            if (this.unlocked || this.parentUnlocked) {
+                this.blit(p_97267_, x, y, frameTex, v1, v2, v3);
+            }
             if (this.unlocked) {
                 this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
                         this.display.getIcon(),
@@ -162,8 +200,8 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
         Iterator var6 = this.children.iterator();
 
-        while(var6.hasNext()) {
-            VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget)var6.next();
+        while (var6.hasNext()) {
+            VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var6.next();
             advancementwidget.draw(p_97267_, p_97268_, p_97269_);
         }
 
@@ -173,7 +211,14 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         this.children.add(p_97307_);
     }
 
-    public void drawHover(PoseStack p_97271_, int p_97272_, int p_97273_, float p_97274_, int p_97275_, int p_97276_) {
+    public void drawHover(
+            PoseStack p_97271_,
+            int p_97272_,
+            int p_97273_,
+            float p_97274_,
+            int p_97275_,
+            int p_97276_
+    ) {
         boolean flag = p_97275_ + p_97272_ + this.x + this.width + 26 >= this.tab.getScreen().width;
         boolean flag1 = 113 - p_97273_ - this.y - 26 <= 6 + this.description.size() * 9;
         int advancementwidgettype;
@@ -204,45 +249,167 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             }
         }
 
-        this.blit(p_97271_, p_97272_ + this.x + 3, p_97273_ + this.y, this.display.getFrame().getTexture(), 128 + advancementwidgettype2 * 26, 26, 26);
+        this.blit(
+                p_97271_,
+                p_97272_ + this.x + 3,
+                p_97273_ + this.y,
+                this.display.getFrame().getTexture(),
+                128 + advancementwidgettype2 * 26,
+                26,
+                26
+        );
         if (flag) {
-            this.minecraft.font.drawShadow(p_97271_, this.title, (float)(i1 + 5), (float)(p_97273_ + this.y + 9), -1);
+            this.minecraft.font.drawShadow(p_97271_, this.title, (float) (i1 + 5), (float) (p_97273_ + this.y + 9), -1);
         } else {
-            this.minecraft.font.drawShadow(p_97271_, this.title, (float)(p_97272_ + this.x + 32), (float)(p_97273_ + this.y + 9), -1);
+            this.minecraft.font.drawShadow(
+                    p_97271_,
+                    this.title,
+                    (float) (p_97272_ + this.x + 32),
+                    (float) (p_97273_ + this.y + 9),
+                    -1
+            );
         }
 
         int k1;
         if (flag1) {
-            for(k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(p_97271_, (FormattedCharSequence)this.description.get(k1), (float)(i1 + 5), (float)(l + 26 - j1 + 7 + k1 * 9), -5592406);
+            for (k1 = 0; k1 < this.description.size(); ++k1) {
+                this.minecraft.font.draw(
+                        p_97271_,
+                        (FormattedCharSequence) this.description.get(k1),
+                        (float) (i1 + 5),
+                        (float) (l + 26 - j1 + 7 + k1 * 9),
+                        -5592406
+                );
             }
         } else {
-            for(k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(p_97271_, (FormattedCharSequence)this.description.get(k1), (float)(i1 + 5), (float)(p_97273_ + this.y + 9 + 17 + k1 * 9), -5592406);
+            for (k1 = 0; k1 < this.description.size(); ++k1) {
+                this.minecraft.font.draw(
+                        p_97271_,
+                        (FormattedCharSequence) this.description.get(k1),
+                        (float) (i1 + 5),
+                        (float) (p_97273_ + this.y + 9 + 17 + k1 * 9),
+                        -5592406
+                );
             }
         }
 
-        this.minecraft.getItemRenderer().renderAndDecorateFakeItem(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
+        this.minecraft.getItemRenderer()
+                      .renderAndDecorateFakeItem(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
     }
 
-    protected void render9Sprite(PoseStack p_97288_, int p_97289_, int p_97290_, int p_97291_, int p_97292_, int p_97293_, int p_97294_, int p_97295_, int p_97296_, int p_97297_) {
+    protected void render9Sprite(
+            PoseStack p_97288_,
+            int p_97289_,
+            int p_97290_,
+            int p_97291_,
+            int p_97292_,
+            int p_97293_,
+            int p_97294_,
+            int p_97295_,
+            int p_97296_,
+            int p_97297_
+    ) {
         this.blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        this.blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_, p_97296_ + p_97294_ - p_97293_, p_97297_, p_97293_, p_97293_);
-        this.blit(p_97288_, p_97289_, p_97290_ + p_97292_ - p_97293_, p_97296_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97292_ - p_97293_, p_97291_ - p_97293_ - p_97293_, p_97293_, p_97296_ + p_97293_, p_97297_ + p_97295_ - p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_);
-        this.blit(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97292_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97295_ - p_97293_, p_97293_, p_97293_);
-        this.renderRepeating(p_97288_, p_97289_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97293_, p_97290_ + p_97293_, p_97291_ - p_97293_ - p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97293_, p_97297_ + p_97293_, p_97294_ - p_97293_ - p_97293_, p_97295_ - p_97293_ - p_97293_);
-        this.renderRepeating(p_97288_, p_97289_ + p_97291_ - p_97293_, p_97290_ + p_97293_, p_97293_, p_97292_ - p_97293_ - p_97293_, p_97296_ + p_97294_ - p_97293_, p_97297_ + p_97293_, p_97294_, p_97295_ - p_97293_ - p_97293_);
+        this.renderRepeating(
+                p_97288_,
+                p_97289_ + p_97293_,
+                p_97290_,
+                p_97291_ - p_97293_ - p_97293_,
+                p_97293_,
+                p_97296_ + p_97293_,
+                p_97297_,
+                p_97294_ - p_97293_ - p_97293_,
+                p_97295_
+        );
+        this.blit(
+                p_97288_,
+                p_97289_ + p_97291_ - p_97293_,
+                p_97290_,
+                p_97296_ + p_97294_ - p_97293_,
+                p_97297_,
+                p_97293_,
+                p_97293_
+        );
+        this.blit(
+                p_97288_,
+                p_97289_,
+                p_97290_ + p_97292_ - p_97293_,
+                p_97296_,
+                p_97297_ + p_97295_ - p_97293_,
+                p_97293_,
+                p_97293_
+        );
+        this.renderRepeating(
+                p_97288_,
+                p_97289_ + p_97293_,
+                p_97290_ + p_97292_ - p_97293_,
+                p_97291_ - p_97293_ - p_97293_,
+                p_97293_,
+                p_97296_ + p_97293_,
+                p_97297_ + p_97295_ - p_97293_,
+                p_97294_ - p_97293_ - p_97293_,
+                p_97295_
+        );
+        this.blit(
+                p_97288_,
+                p_97289_ + p_97291_ - p_97293_,
+                p_97290_ + p_97292_ - p_97293_,
+                p_97296_ + p_97294_ - p_97293_,
+                p_97297_ + p_97295_ - p_97293_,
+                p_97293_,
+                p_97293_
+        );
+        this.renderRepeating(
+                p_97288_,
+                p_97289_,
+                p_97290_ + p_97293_,
+                p_97293_,
+                p_97292_ - p_97293_ - p_97293_,
+                p_97296_,
+                p_97297_ + p_97293_,
+                p_97294_,
+                p_97295_ - p_97293_ - p_97293_
+        );
+        this.renderRepeating(
+                p_97288_,
+                p_97289_ + p_97293_,
+                p_97290_ + p_97293_,
+                p_97291_ - p_97293_ - p_97293_,
+                p_97292_ - p_97293_ - p_97293_,
+                p_97296_ + p_97293_,
+                p_97297_ + p_97293_,
+                p_97294_ - p_97293_ - p_97293_,
+                p_97295_ - p_97293_ - p_97293_
+        );
+        this.renderRepeating(
+                p_97288_,
+                p_97289_ + p_97291_ - p_97293_,
+                p_97290_ + p_97293_,
+                p_97293_,
+                p_97292_ - p_97293_ - p_97293_,
+                p_97296_ + p_97294_ - p_97293_,
+                p_97297_ + p_97293_,
+                p_97294_,
+                p_97295_ - p_97293_ - p_97293_
+        );
     }
 
-    protected void renderRepeating(PoseStack p_97278_, int p_97279_, int p_97280_, int p_97281_, int p_97282_, int p_97283_, int p_97284_, int p_97285_, int p_97286_) {
-        for(int i = 0; i < p_97281_; i += p_97285_) {
+    protected void renderRepeating(
+            PoseStack p_97278_,
+            int p_97279_,
+            int p_97280_,
+            int p_97281_,
+            int p_97282_,
+            int p_97283_,
+            int p_97284_,
+            int p_97285_,
+            int p_97286_
+    ) {
+        for (int i = 0; i < p_97281_; i += p_97285_) {
             int j = p_97279_ + i;
             int k = Math.min(p_97285_, p_97281_ - i);
 
-            for(int l = 0; l < p_97282_; l += p_97286_) {
+            for (int l = 0; l < p_97282_; l += p_97286_) {
                 int i1 = p_97280_ + l;
                 int j1 = Math.min(p_97286_, p_97282_ - l);
                 this.blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
@@ -251,7 +418,12 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
     }
 
-    public boolean isMouseOver(int p_97260_, int p_97261_, int p_97262_, int p_97263_) {
+    public boolean isMouseOver(
+            int p_97260_,
+            int p_97261_,
+            int p_97262_,
+            int p_97263_
+    ) {
         if (this.display.isHidden()) {
             return false;
         } else {
