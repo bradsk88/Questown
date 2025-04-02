@@ -250,7 +250,8 @@ public class VillagerAdvancementsContent extends GuiComponent {
                 if (!advancementwidget.isMouseOver(i, j, p_97185_, p_97186_)) {
                     continue;
                 }
-                if (!unlockedJobs.contains(advancementwidget.id) && !unlockedJobs.contains(advancementwidget.parentId)) {
+                if (!(minecraft.player.isCreative() || unlockedJobs.contains(advancementwidget.id) || unlockedJobs.contains(
+                        advancementwidget.parentId))) {
                     continue;
                 }
                 flag = true;
