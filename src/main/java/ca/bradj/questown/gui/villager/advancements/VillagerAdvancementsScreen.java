@@ -1,10 +1,9 @@
 package ca.bradj.questown.gui.villager.advancements;
 
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.gui.JobUnlockConfirmScreen;
+import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
@@ -21,7 +20,6 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
 import java.util.Collection;
@@ -222,9 +220,7 @@ public class VillagerAdvancementsScreen extends Screen {
         }
 
         if (content.isLocked(id)) {
-            Pair<JobID, Item> p = new Pair<>(id, VillagerAdvancements.getIcon(id).getItem());
-            JobUnlockConfirmScreen scr = new JobUnlockConfirmScreen(p, flagPos, villagerUUID);
-            Minecraft.getInstance().setScreen(scr);
+            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(flagPos, villagerUUID, id, true));
             return true;
         }
 

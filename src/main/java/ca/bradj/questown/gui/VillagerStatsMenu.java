@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.Stack;
 import java.util.function.Consumer;
 
-public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<VillagerStatsData>, VillagerTabsEmbedding {
+public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>, VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.QUESTS,
@@ -45,7 +45,7 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
             BlockPos flagPos,
             VillagerStatsData initialData
     ) {
-        super(MenuTypesInit.VILLAGER_STATS.get(), windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, entity.getUUID());
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
@@ -80,6 +80,7 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
         return true;
     }
 
+    @Override
     public void onClose() {
         closers.forEach(Runnable::run);
     }

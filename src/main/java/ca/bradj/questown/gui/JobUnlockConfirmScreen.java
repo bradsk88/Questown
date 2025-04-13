@@ -1,108 +1,68 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.UnlockJobMessage;
-import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
+import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.Item;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 
-import java.util.List;
-import java.util.UUID;
+public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockConfirmMenu> {
 
-public class JobUnlockConfirmScreen extends Screen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
-    private static final int PAGE_PADDING = 10;
-
     private final JEI.NineNine background;
-    private final BlockPos flagPos;
-    private final UUID uuid;
-    private final JobID jobRequested;
-    private final Item icon;
-
-    // Page coordinates
-    private int pageTopY;
-    private int mainItemIconY;
-    private int mainItemTextY;
-    private int mainItemTextY2;
-    private int jobIconsY;
-    private int pageLeftX;
-    private int moreInfoButtonY;
-    private int confirmTextY;
-    private int confirmButtonY;
+    private final IDrawableStatic slot;
 
     public JobUnlockConfirmScreen(
-            Pair<JobID, Item> requested,
-            BlockPos flagPos,
-            UUID uuid
+            JobUnlockConfirmMenu menu,
+            Inventory playerInv,
+            Component title
     ) {
-        super(Compat.translatable("menu.job_unlock_confirm.title"));
-
+        super(menu, playerInv, title);
         this.background = JEI.getRecipeGuiBackground();
-        this.jobRequested = requested.a();
-        this.icon = requested.b();
-        this.flagPos = flagPos;
-        this.uuid = uuid;
+        this.slot = JEI.getSlotDrawable();
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        menu.onClose();
     }
 
     @Override
     protected void init() {
-        this.pageTopY = ((this.height - backgroundHeight) / 2) + PAGE_PADDING;
-        this.pageLeftX = ((this.width - backgroundWidth) / 2);
-        this.mainItemIconY = pageTopY + (2 * font.lineHeight);
-        this.mainItemTextY = (int) (mainItemIconY + (0.5 * font.lineHeight));
-        int tallLine = (int) (font.lineHeight * 1.5);
-        this.mainItemTextY2 = mainItemTextY + tallLine;
-        this.jobIconsY = mainItemTextY2 + tallLine;
-        this.moreInfoButtonY = jobIconsY + 24;
-        int buttonHeight = (2 * font.lineHeight) + 2;
-        int buttonWidth = backgroundWidth - (2 * PAGE_PADDING);
+        super.init();
+        int maybeX = (this.width - backgroundWidth) / 2;
+        int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
-        // Bottom buttons are relative to bottom of page
-        this.confirmTextY = pageTopY + backgroundHeight - (2 * PAGE_PADDING) - buttonHeight - tallLine;
-        this.confirmButtonY = confirmTextY + tallLine;
+        int buttonWidth = 48;
         this.addRenderableWidget(new Button(
-                pageLeftX + PAGE_PADDING,
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
-                Compat.translatable("menu.common.unlock"),
-                (p_96776_) -> {
-                    QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(flagPos, uuid, jobRequested));
-                    Minecraft.getInstance().setScreen(null);
-                }
+                maybeX, maybeY, buttonWidth, 20, Compat.translatable("menu.common.unlock"), (p_96776_) -> {
+            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(
+                    menu.flagPos,
+                    menu.villagerUUID,
+                    menu.jobId,
+                    false
+            ));
+            Minecraft.getInstance().setScreen(null);
+        }
         ));
         this.addRenderableWidget(new Button(
-                (int) (pageLeftX + PAGE_PADDING + (buttonWidth / 2f)),
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
-                Compat.translatable("menu.common.close"),
+                maybeX + buttonWidth,
+                maybeY,
+                buttonWidth,
+                20,
+                Compat.translatable("menu.common.cancel"),
                 (p_96776_) -> Minecraft.getInstance().setScreen(null)
         ));
-    }
-
-    @Override
-    public boolean keyReleased(
-            int keyCode,
-            int scanCode,
-            int modifiers
-    ) {
-        if (keyCode == GLFW.GLFW_KEY_Q) { // TODO: Get from user's config
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -112,26 +72,44 @@ public class JobUnlockConfirmScreen extends Screen {
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(stack);
+        super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
-        // TODO: Render
+        this.renderTooltip(stack, mouseX, mouseY);
     }
 
     @Override
-    public void renderBackground(PoseStack poseStack) {
+    protected void renderBg(
+            PoseStack stack,
+            float partialTicks,
+            int mouseX,
+            int mouseY
+    ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        renderInventory(stack);
+    }
+
+    private void renderInventory(PoseStack stack) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
+        int yCoord;
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot s = menu.slots.get(i);
+            int xCoord = x - 1 + s.x;
+            yCoord = y - 1 + s.y;
+            this.slot.draw(stack, xCoord, yCoord);
+        }
     }
 
     @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
-
-    public List<Rect2i> getExtraAreas() {
+    public boolean mouseClicked(
+            double mouseX,
+            double mouseY,
+            int p_97750_
+    ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 }

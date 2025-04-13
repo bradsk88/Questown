@@ -299,7 +299,7 @@
   "menu.common.no": "No",
   "menu.common.learn_more": "Learn More",
   "menu.common.job_name": "%s - %s",
-  "menu.common.close": "Close",
+  "menu.common.cancel": "Cancel",
   "menu.common.unlock": "Unlock",
   "menu.work_add_confirm.title": "Requesting %s",
   "menu.work_add_confirm.there_are_n_known_jobs": "There are %d known jobs",

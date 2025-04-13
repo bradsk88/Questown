@@ -12,9 +12,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
-import java.util.Stack;
 
-public class VillagerEconomicsMenu extends AbstractVillagerMenu implements VillagerTabsEmbedding {
+public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.STATS,
@@ -38,7 +37,7 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
             BlockPos flagPos,
             VillagerEconomicsData initialData
     ) {
-        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, entity.getUUID());
     }
 
     public static VillagerEconomicsData read(FriendlyByteBuf buf) {
@@ -59,6 +58,11 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
             int i
     ) {
         return ItemStack.EMPTY;
+    }
+
+    @Override
+    public void onClose() {
+        // Nothing
     }
 
     public boolean stillValid(Player p_38874_) {

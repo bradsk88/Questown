@@ -70,10 +70,16 @@ public class VillagerMenus {
     }
 
     private InventoryAndStatusMenu initInventory(
-            int windowId, JobID jobId, Player player,
-            UUID uuid, Collection<Boolean> slotLocks, int invSize, BlockPos flagPos
+            int windowId,
+            JobID jobId,
+            Player player,
+            UUID uuid,
+            Collection<Boolean> slotLocks,
+            int invSize,
+            BlockPos flagPos
     ) {
-        invMenu = new InventoryAndStatusMenu(windowId,
+        invMenu = new InventoryAndStatusMenu(
+                windowId,
                 // Minecraft will handle filling this container by syncing from server
                 new SimpleContainer(invSize) {
                     @Override
@@ -86,7 +92,10 @@ public class VillagerMenus {
     }
 
     public VillagerQuestsContainer initQuestsMenu(
-            int windowId, UUID uuid, Collection<UIQuest> quests, BlockPos flagPos
+            int windowId,
+            UUID uuid,
+            Collection<UIQuest> quests,
+            BlockPos flagPos
     ) {
         questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos);
         return questsMenu;
@@ -100,6 +109,7 @@ public class VillagerMenus {
         statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos, data);
         return statsMenu;
     }
+
     public VillagerEconomicsMenu initVillagerEconomicsMenu(
             int windowId,
             BlockPos flagPos,
