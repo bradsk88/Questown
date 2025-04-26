@@ -56,5 +56,4 @@ public record JobID(String rootId, String jobId) {
     public boolean sameRoot(JobID other) {
         return rootId.equals(other.rootId);
     }
-
 }

@@ -52,6 +52,8 @@ public class TownVillagerHandle implements VillagerHolder {
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
 
     final Map<UUID, Integer> fullness = new HashMap<>();
+    final Map<UUID, Integer> experience = new HashMap<>();
+    final Map<UUID, Integer> levels = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
     final Map<UUID, Collection<JobID>> unlockedJobs = new HashMap<>();
@@ -167,9 +169,10 @@ public class TownVillagerHandle implements VillagerHolder {
         Integer bf = Config.BASE_FULLNESS.get();
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
         float damagePercent = getDamagePercent(uuid);
+        Integer experiencePercent = Util.getOrDefault(experience, uuid, 0);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
-                fullnessPercent, moods.getMood(uuid), damagePercent);
+                fullnessPercent, experiencePercent, moods.getMood(uuid), damagePercent);
     }
 
     public float getDamagePercent(UUID uuid) {
@@ -701,5 +704,13 @@ public class TownVillagerHandle implements VillagerHolder {
             JobID id
     ) {
         UtilClean.addOrInitialize(unlockedJobs, villagerUUID, id);
+    }
+
+    @Override
+    public void addExperience(
+            UUID uuid,
+            int exp
+    ) {
+        experience.compute(uuid, (x, cur) -> cur == null ? exp : cur + exp);
     }
 }

@@ -17,7 +17,8 @@ import java.util.Collection;
 import java.util.Stack;
 import java.util.function.Consumer;
 
-public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>, VillagerTabsEmbedding {
+public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>,
+        VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.QUESTS,
@@ -27,6 +28,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private final DataSlot fullnessSlot;
     private final DataSlot damageSlot;
     private final DataSlot moodSlot;
+    private final DataSlot experienceSlot;
     private final Stack<Runnable> closers = new Stack<>();
 
     public static VillagerStatsMenu ForClientSide(
@@ -50,6 +52,9 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
 
+        this.addDataSlot(this.experienceSlot = DataSlot.standalone());
+        this.experienceSlot.set((int) (initialData.experiencePercent() * 100));
+
         this.addDataSlot(this.moodSlot = DataSlot.standalone());
         this.moodSlot.set((int) (initialData.moodPercent() * 100));
 
@@ -61,17 +66,24 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
-        return new VillagerStatsData(buf.readFloat(), buf.readFloat(), buf.readFloat());
+        return new VillagerStatsData(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat());
     }
 
-    public static void write(VillagerStatsData data, FriendlyByteBuf buf) {
+    public static void write(
+            VillagerStatsData data,
+            FriendlyByteBuf buf
+    ) {
         buf.writeFloat(data.fullnessPercent());
+        buf.writeFloat(data.experiencePercent());
         buf.writeFloat(data.moodPercent());
         buf.writeFloat(data.damageLevelPercent());
     }
 
     @Override
-    public ItemStack quickMoveStack(Player player, int i) {
+    public ItemStack quickMoveStack(
+            Player player,
+            int i
+    ) {
         return ItemStack.EMPTY;
     }
 
@@ -105,6 +117,10 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
     public int getMoodPercent() {
         return moodSlot.get();
+    }
+
+    public int getExperiencePercent() {
+        return experienceSlot.get();
     }
 
     @Override

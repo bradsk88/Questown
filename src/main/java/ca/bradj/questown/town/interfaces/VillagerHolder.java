@@ -99,4 +99,9 @@ public interface VillagerHolder {
             UUID villagerUUID,
             JobID id
     );
+
+    void addExperience(
+            UUID uuid,
+            int exp
+    );
 }

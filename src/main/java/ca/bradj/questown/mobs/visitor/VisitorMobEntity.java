@@ -375,10 +375,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 (bp, item) -> this.workToUndo = new WorkToUndo(initializedJob.getId(), bp, item)
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                () -> this.workToUndo = null
+                id -> this.workToUndo = null
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                () -> this.town.getPossibleWork().invalidate()
+                id -> this.town.getPossibleWork().invalidate()
+        ));
+        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
+                id -> {
+                    int exp = Works.get(id).get().jobFunc.apply(uuid).getExperienceEarned();
+                    this.town.getVillagerHandle().addExperience(uuid, exp);
+                }
         ));
     }
 

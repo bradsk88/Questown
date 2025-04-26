@@ -79,6 +79,7 @@ public class DeclarativeJob extends
     private final RecipeProvider recipe;
     public final ImmutableMap<Integer, Ingredient> initialIngredients;
     public final ImmutableMap<Integer, Ingredient> initialTools;
+    private final ImmutableMap<Integer, Integer> initialWork;
     private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;
@@ -122,6 +123,7 @@ public class DeclarativeJob extends
         );
         this.initialIngredients = ingredientsRequiredAtStates;
         this.initialTools = toolsRequiredAtStates;
+        this.initialWork = workRequiredAtStates;
         this.jobId = jobId;
         this.checks = new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(ingredientsRequiredAtStates),
@@ -985,7 +987,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+    public Function<Void, Void> addJobCompletionListener(Consumer<JobID> listener) {
         this.world.addJobCompletionListener(listener);
         return (nul) -> {
             this.world.removeJobCompletionListener(listener);
@@ -1001,6 +1003,11 @@ public class DeclarativeJob extends
     @Override
     public Collection<String> getGlobalSpecialRules() {
         return specialGlobalRules;
+    }
+
+    @Override
+    public int getExperienceEarned() {
+        return initialWork.values().stream().reduce(0, Integer::sum);
     }
 
     public int getMaxState() {
