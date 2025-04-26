@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
@@ -68,6 +69,7 @@ public class JobUnlockConfirmMenu extends AbstractVillagerMenu {
             BlockPos flagPos
     ) {
         super(MenuTypesInit.CONFIRM_JOB_UPGRADE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
+        gathererInventoryYOffset = 8 + boxHeight + 4;
         this.jobId = jobId;
 
         layoutSlots(gathererInv);
@@ -96,5 +98,12 @@ public class JobUnlockConfirmMenu extends AbstractVillagerMenu {
             ItemEntity ie = new ItemEntity(sp.level, sp.getX(), sp.getY(), sp.getZ(), villagerSlot.getItem());
             sp.level.addFreshEntity(ie);
         }
+    }
+
+    public boolean hasBlockOfProgress() {
+        // First slot index after four rows of 9.
+        int slotIndex = 9 * 4;
+        // 35 is the last index of these rows, so 36 is BOP slot.
+        return getSlot(slotIndex).getItem().is(ItemsInit.BLOCK_OF_PROGRESS.get());
     }
 }

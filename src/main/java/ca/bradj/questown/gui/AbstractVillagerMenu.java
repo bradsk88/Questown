@@ -26,6 +26,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     private final InvWrapper playerInventory;
     private static final int inventoryLeftX = 8;
     private static final int boxHeight = 18;
+    protected int gathererInventoryYOffset = boxHeight;
     private static final int boxWidth = 18;
     private static final int margin = 4;
 
@@ -62,7 +63,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
         // It's important to call these functions in the right order.
         // Otherwise, syncing item movements to the server will not work.
         layoutPlayerInventorySlots(86);
-        layoutGathererInventorySlots(boxHeight, gathererInv.getContainerSize());
+        layoutGathererInventorySlots(gathererInventoryYOffset, gathererInv.getContainerSize());
     }
 
     protected void layoutGathererInventorySlots(

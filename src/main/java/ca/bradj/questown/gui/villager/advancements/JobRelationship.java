@@ -7,42 +7,48 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.function.Predicate;
 
 public class JobRelationship implements Iterable<JobRelationship> {
 
-    private final JobID prerequisite;
+    public final @Nullable JobID parentId;
+    private final JobID id;
     private final HashSet<JobRelationship> jobs;
 
     JobRelationship(
-            @Nullable JobID prerequisite,
+            @Nullable JobID parentId,
+            @Nullable JobID id,
             Collection<JobRelationship> jobs
     ) {
-        this.prerequisite = prerequisite;
+        this.parentId = parentId;
+        this.id = id;
         this.jobs = new HashSet<>(jobs);
     }
 
     public <X> void forEach(
             X parentWidget,
-            TriFunction<JobRelationship, ContextualPosition, X, X> fn
+            TriFunction<JobRelationship, ContextualPosition, X, X> fn,
+            Predicate<JobRelationship> include
     ) {
         int i = 0;
-        int leafs = countLeafNodes(); // TODO:: This is probably quite inefficient
-        for (JobRelationship j : jobs) {
-            X newWidget = fn.apply(j, new ContextualPosition(i, jobs.size(), leafs), parentWidget);
-            j.forEach(newWidget, fn);
+        int leafs = countLeafNodes(include); // TODO:: This is probably quite inefficient
+        List<JobRelationship> jobz = jobs.stream().filter(include).toList();
+        for (JobRelationship j : jobz) {
+            X newWidget = fn.apply(j, new ContextualPosition(i, jobz.size(), leafs), parentWidget);
+            j.forEach(newWidget, fn, include);
             i++;
         }
     }
 
     public JobID id() {
-        return prerequisite;
+        return id;
     }
 
-    public void addChildLeaf(JobID id) {
-        if (jobs.stream().anyMatch(v -> id.equals(v.prerequisite))) {
+    public void addChildLeaf(JobID _id) {
+        if (jobs.stream().anyMatch(v -> _id.equals(v.id))) {
             return;
         }
-        jobs.add(new JobRelationship(id, ImmutableList.of()));
+        jobs.add(new JobRelationship(this.id, _id, ImmutableList.of()));
     }
 
     @NotNull
@@ -53,25 +59,22 @@ public class JobRelationship implements Iterable<JobRelationship> {
 
     public JobRelationship branch(String s) {
         for (JobRelationship job : jobs) {
-            if (job.prerequisite != null && job.prerequisite.rootId().equals(s)) {
+            if (job.id != null && job.id.rootId().equals(s)) {
                 return job;
             }
         }
         return this;
     }
 
-    public record ContextualPosition(
-            int pos,
-            int sizeOfLevel,
-            int relevantLeafNodes
-    ) {
+    public record ContextualPosition(int pos, int sizeOfLevel, int relevantLeafNodes) {
     }
 
-    public int countLeafNodes() {
-        if (jobs.isEmpty()) {
+    public int countLeafNodes(Predicate<JobRelationship> include) {
+        List<JobRelationship> jobz = jobs.stream().filter(include).toList();
+        if (jobz.isEmpty()) {
             return 1;
         }
-        return jobs.stream().map(JobRelationship::countLeafNodes).reduce(Integer::sum).orElse(0);
+        return jobz.stream().map(z -> z.countLeafNodes(include)).reduce(Integer::sum).orElse(0);
     }
 
     @Override
@@ -79,11 +82,11 @@ public class JobRelationship implements Iterable<JobRelationship> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         JobRelationship that = (JobRelationship) o;
-        return Objects.equals(prerequisite, that.prerequisite) && Objects.equals(jobs, that.jobs);
+        return Objects.equals(id, that.id) && Objects.equals(jobs, that.jobs);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(prerequisite, jobs);
+        return Objects.hash(id, jobs);
     }
 }

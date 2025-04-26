@@ -17,7 +17,7 @@ public class VillagerAdvancements {
     private static final Map<JobID, ResourceLocation> icons = new HashMap<>();
     // This gets populated via register
     private static final JobRelationship all = new JobRelationship(
-            null,
+            null, null,
             ImmutableList.of()
     );
     private static List<Supplier<JobID>> unregistered = new ArrayList<>();

@@ -321,6 +321,7 @@
   "menu.item_jobs.tools_used": "Tools Used:",
   "menu.item_jobs.produces": "Produces:",
   "menu.item_jobs.add_to_work_requests": "Add To Work Requests",
+  "menu.unlock_job.insert_bop": "Insert a Block of Progress to unlock job",
   "questown.menu.needs_in_period_1": "%s was needed %d",
   "questown.menu.needs_in_period_2": "times in the past %d days",
   "#questown:villager_food": "Food",

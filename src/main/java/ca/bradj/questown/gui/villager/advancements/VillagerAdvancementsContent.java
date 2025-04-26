@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class VillagerAdvancementsContent extends GuiComponent {
     private final Minecraft minecraft;
@@ -95,7 +96,8 @@ public class VillagerAdvancementsContent extends GuiComponent {
                     );
                     this.addWidget(newWidget, adv.id());
                     return newWidget;
-                }
+                },
+                v -> unlockedJobs.contains(v.id()) || unlockedJobs.contains(v.parentId)
         );
     }
 
@@ -157,18 +159,21 @@ public class VillagerAdvancementsContent extends GuiComponent {
     @NotNull
     private Map<JobID, Float> preComputeLayout(JobRelationship advancements) {
         HashMap<JobID, Float> map = new HashMap<>();
+        Predicate<JobRelationship> jp = v -> unlockedJobs.contains(v.id()) || unlockedJobs.contains(
+                v.parentId);
         advancements.forEach(
                 new Precompute(new AtomicDouble(0.0), 0f),
                 (JobRelationship adv, JobRelationship.ContextualPosition p, Precompute pre) -> {
                     int totalHeight = p.relevantLeafNodes();
                     float radius = totalHeight / 2f;
-                    float ownSize = adv.countLeafNodes();
+                    float ownSize = adv.countLeafNodes(jp);
                     AtomicDouble spaceUsed = pre.spaceUsedBySiblings();
                     float y = pre.parentY() - radius + spaceUsed.floatValue() + (ownSize / 2f);
                     spaceUsed.set(spaceUsed.floatValue() + ownSize);
                     map.put(adv.id(), y);
                     return new Precompute(new AtomicDouble(0.0), y);
-                }
+                },
+                jp
         );
         return map;
     }
