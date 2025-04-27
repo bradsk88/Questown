@@ -721,6 +721,12 @@ public class TownVillagerHandle implements VillagerHolder {
             UUID uuid,
             int exp
     ) {
-        experience.compute(uuid, (x, cur) -> cur == null ? exp : cur + exp);
+        int newExp = experience.compute(uuid, (x, cur) -> cur == null ? exp : cur + exp);
+        int target = (int) getExpForCurrentLevel(uuid);
+        if (newExp > target) {
+            Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
+            experience.put(uuid, newExp % target);
+            town.getUnsafe().messages.broadcastMessage("message.villager.leveled_up", uuid, newLvl);
+        }
     }
 }
