@@ -4,26 +4,51 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Collection;
 
 public class AddDamageCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_137808_) {
-        p_137808_.register(Commands.literal("qt_damage_add")
-                                   .requires((p_137812_) -> p_137812_.hasPermission(2))
-                                   .then(Commands.argument("entities", EntityArgument.entities())
-                                                 .then(Commands.argument("ticks", IntegerArgumentType.integer())
-                                                               .executes(css -> addDamage(
-                                                                       EntityArgument.getEntities(css, "entities"),
-                                                                       IntegerArgumentType.getInteger(css, "ticks")
-                                                               )))));
+    public static void register(CommandDispatcher<CommandSourceStack> src) {
+        RequiredArgumentBuilder<CommandSourceStack, EntitySelector> entitiesArg = Commands.argument(
+                "entities",
+                EntityArgument.entities()
+        );
+        RequiredArgumentBuilder<CommandSourceStack, Integer> amtArg = Commands.argument(
+                "amount",
+                IntegerArgumentType.integer()
+        );
+
+        LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("villagers");
+        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("damage");
+        LiteralArgumentBuilder<CommandSourceStack> subSubSubCmd = Commands.literal("add");
+
+        // @formatter:off
+        src.register(
+            Commands.literal("qt").then(
+                subCmd.then(
+                    subSubCmd.then(
+                        subSubSubCmd
+                            .requires(AddExperienceCommand::isCreative)
+                            .then(entitiesArg
+                            .then(amtArg
+                                .executes(css -> run(
+                                        EntityArgument.getEntities(css, "entities"),
+                                        IntegerArgumentType.getInteger(css, "amount")
+                                ))))
+                )
+            )
+        ));
+        // @formatter:on
     }
 
-    private static int addDamage(
+    private static int run(
             Collection<? extends Entity> targets,
             int amount
     ) {

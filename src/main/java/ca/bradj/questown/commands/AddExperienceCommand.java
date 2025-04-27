@@ -25,32 +25,34 @@ public class AddExperienceCommand {
                 IntegerArgumentType.integer()
         );
 
-        LiteralArgumentBuilder<CommandSourceStack> experienceSubCmd = Commands.literal("experience");
-        LiteralArgumentBuilder<CommandSourceStack> experienceAddSubCmd = Commands.literal("add");
+        LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("villagers");
+        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("experience");
+        LiteralArgumentBuilder<CommandSourceStack> subSubSubCmd = Commands.literal("add");
 
         // @formatter:off
         src.register(
-                Commands.literal("qt").then(
-                        experienceSubCmd.then(
-                                experienceAddSubCmd
-                                        .requires(AddExperienceCommand::isCreative)
-                                        .then(entitiesArg
-                                        .then(amtArg
-                                        .executes(css -> addExperience(
-                                                EntityArgument.getEntities(css, "entities"),
-                                                IntegerArgumentType.getInteger(css, "amount")
-                                        ))))
-                        )
+            Commands.literal("qt").then(
+                subCmd.then(
+                    subSubCmd.then(
+                        subSubSubCmd
+                            .requires(AddExperienceCommand::isCreative)
+                            .then(entitiesArg
+                            .then(amtArg
+                                .executes(css -> run(
+                                        EntityArgument.getEntities(css, "entities"),
+                                        IntegerArgumentType.getInteger(css, "amount")
+                                ))))
                 )
-        );
+            )
+        ));
         // @formatter:on
     }
 
-    private static boolean isCreative(CommandSourceStack p_137812_) {
+    static boolean isCreative(CommandSourceStack p_137812_) {
         return p_137812_.hasPermission(2);
     }
 
-    private static int addExperience(
+    private static int run(
             Collection<? extends Entity> targets,
             int amount
     ) {

@@ -25,6 +25,5 @@ public class CommandInit {
         DrainTimersCommand.register(event.getDispatcher());
         PrepareWorkCommand.register(event.getDispatcher());
         LogDataCommand.register(event.getDispatcher());
-        OpenVillagersMenuCommand.register(event.getDispatcher());
     }
 }

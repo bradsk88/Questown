@@ -457,4 +457,8 @@ public class Util {
         }
         return String.join(", ", names.build());
     }
+
+    public static String getShortString(BlockPos target) {
+        return String.format("[%d, %d ,%d]", target.getX(), target.getY(), target.getZ());
+    }
 }

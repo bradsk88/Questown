@@ -23,6 +23,7 @@
   "message.debug_mode": "Debug Mode: %s",
   "message.wand.clicked_away": "Right-click on a door to register it with town flag [located at: %s %s %s]",
   "message.villager.leveled_up": "%s reached level %s",
+  "messages.command.failed_not_flag": "No flag found. Command failed for position %s",
   "tooltips.villagers": "Villagers",
   "tooltips.quests": "Quests",
   "tooltips.stats": "Stats",
