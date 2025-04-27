@@ -56,7 +56,7 @@ public class TownVillagerHandle implements VillagerHolder {
     final Map<UUID, Integer> levels = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
-    final Map<UUID, Collection<JobID>> unlockedJobs = new HashMap<>();
+    final Map<UUID, HashSet<JobID>> unlockedJobs = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -79,7 +79,9 @@ public class TownVillagerHandle implements VillagerHolder {
         this.fullness.putAll(fullness);
         this.moods.initialize(moodEffects);
         this.damage.putAll(damage);
-        this.unlockedJobs.putAll(unlockedJobs);
+        for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
+            UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()));
+        }
     }
 
     public void tick(
@@ -169,10 +171,18 @@ public class TownVillagerHandle implements VillagerHolder {
         Integer bf = Config.BASE_FULLNESS.get();
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
         float damagePercent = getDamagePercent(uuid);
-        Integer experiencePercent = Util.getOrDefault(experience, uuid, 0);
+        int experienceNum = Util.getOrDefault(experience, uuid, 0);
+        int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
-                fullnessPercent, experiencePercent, moods.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, moods.getMood(uuid), damagePercent);
+    }
+
+    private float getExpForCurrentLevel(UUID uuid) {
+        Integer level = UtilClean.getOrDefault(levels, uuid, 1);
+        Integer baseExp = Config.EXPERIENCE_REQUIRED_AT_LEVEL_1.get();
+        Double rampFactor = Config.EXPERIENCE_RAMP_FACTOR.get();
+        return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
     public float getDamagePercent(UUID uuid) {

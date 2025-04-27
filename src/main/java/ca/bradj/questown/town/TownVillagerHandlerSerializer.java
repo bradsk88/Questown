@@ -125,11 +125,11 @@ public class TownVillagerHandlerSerializer {
             tag.putUUID(NBT_VILLAGER_ID, uuid);
             tag.putInt(NBT_VALUE, value);
             damagePairs.add(tag);
-        });
+        });// TODO: Add Experience
 
         compound.put(NBT_DAMAGE, damagePairs);
 
-        Map<UUID, Collection<JobID>> unlockedMap = villagerHandle.unlockedJobs;
+        Map<UUID, ? extends Collection<JobID>> unlockedMap = villagerHandle.unlockedJobs;
         ListTag unlockedPairs = new ListTag();
 
         unlockedMap.forEach((uuid, value) -> {

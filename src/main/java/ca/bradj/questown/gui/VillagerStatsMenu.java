@@ -29,6 +29,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private final DataSlot damageSlot;
     private final DataSlot moodSlot;
     private final DataSlot experienceSlot;
+    private final DataSlot experienceTargetSlot;
     private final Stack<Runnable> closers = new Stack<>();
 
     public static VillagerStatsMenu ForClientSide(
@@ -53,7 +54,9 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
 
         this.addDataSlot(this.experienceSlot = DataSlot.standalone());
-        this.experienceSlot.set((int) (initialData.experiencePercent() * 100));
+        this.experienceSlot.set(initialData.experienceValue());
+        this.addDataSlot(this.experienceTargetSlot = DataSlot.standalone());
+        this.experienceTargetSlot.set(initialData.experienceTarget());
 
         this.addDataSlot(this.moodSlot = DataSlot.standalone());
         this.moodSlot.set((int) (initialData.moodPercent() * 100));
@@ -66,7 +69,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
-        return new VillagerStatsData(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat());
+        return new VillagerStatsData(buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat());
     }
 
     public static void write(
@@ -74,7 +77,8 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
             FriendlyByteBuf buf
     ) {
         buf.writeFloat(data.fullnessPercent());
-        buf.writeFloat(data.experiencePercent());
+        buf.writeInt(data.experienceValue());
+        buf.writeInt(data.experienceTarget());
         buf.writeFloat(data.moodPercent());
         buf.writeFloat(data.damageLevelPercent());
     }
@@ -119,12 +123,16 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         return moodSlot.get();
     }
 
-    public int getExperiencePercent() {
-        return experienceSlot.get();
-    }
-
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    public int getExperienceValue() {
+        return experienceSlot.get();
+    }
+
+    public int getExperienceTarget() {
+        return experienceTargetSlot.get();
     }
 }
