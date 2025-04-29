@@ -50,7 +50,7 @@ public class TimeWarpCommand {
     ) {
         BlockEntity e = source.getLevel().getBlockEntity(target);
         if (!(e instanceof TownFlagBlockEntity tfbe)) {
-            // TODO: Better error handling?
+            // TODO: Better error handling?h
             return -1;
         }
 

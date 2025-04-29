@@ -632,6 +632,9 @@ public class TownVillagerHandle implements VillagerHolder {
                     }
 
                     private void triggerAdvancement() {
+                        if (town.getUnsafe().getVillagerHandle().entities().isEmpty()) {
+                            return;
+                        }
                         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                                 player.getLevel(),
                                 RoomTrigger.Triggers.FirstOpenFlagMenu,

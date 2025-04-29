@@ -100,9 +100,14 @@ public class TownQuestsHandle implements QuestsHolder {
                             ServerPlayer player,
                             @NotNull TownFlagBlockEntity t
                     ) {
-                        ServerLevel l = player.getLevel();
-                        RoomTrigger.Triggers trigger = RoomTrigger.Triggers.FirstOpenFlagMenu;
-                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, trigger, t.getBlockPos());
+                        if (t.getVillagerHandle().entities().isEmpty()) {
+                            return;
+                        }
+                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                                player.getLevel(),
+                                RoomTrigger.Triggers.FirstOpenFlagMenu,
+                                t.getBlockPos()
+                        );
                     }
                 }, data ->
                         FlagMenus.writeAndLink(data, quests, t.getBlockPos(), player, entities)

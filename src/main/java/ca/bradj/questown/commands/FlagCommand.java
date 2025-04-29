@@ -1,5 +1,7 @@
 package ca.bradj.questown.commands;
 
+import ca.bradj.questown.core.advancements.ApproachTownTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
@@ -49,6 +51,10 @@ public class FlagCommand {
         }
 
         source.getLevel().setBlockAndUpdate(target.above(), BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
+
+        AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
+                source.getPlayer(), ApproachTownTrigger.Triggers.FirstVisit
+        );
         return 0;
     }
 }
