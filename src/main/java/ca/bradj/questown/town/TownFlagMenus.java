@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
@@ -9,6 +10,9 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.roomrecipes.recipes.RecipesInit;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -47,11 +51,14 @@ public class TownFlagMenus {
 
         @SuppressWarnings("unchecked") ImmutableMap<String, Runnable> showers = ImmutableMap.of(
                 OpenFlagMenuMessage.QUESTS,
-                () -> openMenu(
-                        sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                windowId, quests, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), quests, flagPos, entities
-                ),
+                () -> {
+                    triggerFarmAdvancement(sender, quests);
+                    openMenu(
+                            sender, (windowId, inv, p) -> new TownQuestsContainer(
+                                    windowId, quests, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
+                            ), quests, flagPos, entities
+                    );
+                },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
@@ -79,6 +86,21 @@ public class TownFlagMenus {
         runnable.run();
     }
 
+
+    private void triggerFarmAdvancement(
+            ServerPlayer p,
+            List<UIQuest> q
+    ) {
+        List<RoomRecipe> farmRecipes = p.level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
+                                        .filter(RoomRecipe::isFarmRecipe).toList();
+        for (UIQuest mcQuest : q) {
+            if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getRecipeId()))) {
+                continue;
+            }
+            AdvancementsInit.VISITOR_TRIGGER.trigger(p, VisitorTrigger.Triggers.FirstFarmQuest);
+            break;
+        }
+    }
     private void triggerAdvancement(
             BlockPos pos,
             ServerLevel level

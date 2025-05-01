@@ -44,6 +44,7 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
         FirstJobQuest,
         FirstNightFall,
         FirstJobRequest,
+        FirstFarmQuest,
         FirstLeaveToGather;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
@@ -51,7 +52,8 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
                 Triggers.FirstJobQuest, "first_job_quest",
                 Triggers.FirstJobRequest, "first_job_request",
                 Triggers.FirstNightFall, "first_nightfall",
-                Triggers.FirstLeaveToGather, "first_leave_to_gather"
+                Triggers.FirstLeaveToGather, "first_leave_to_gather",
+                Triggers.FirstFarmQuest, "first_farm_quest"
         );
 
         public static Triggers fromJSON(JsonElement trick_id) {

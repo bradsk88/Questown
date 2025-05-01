@@ -21,10 +21,10 @@
       "quantity": 1
     },
     {
-      "work": 40
+      "work": 20
     }
   ],
-  "cooldown_ticks": 25,
+  "cooldown_ticks": 50,
   "sound": {
     "id": "minecraft:block.wood.hit",
     "chance": "100",
