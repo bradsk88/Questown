@@ -204,7 +204,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         Player nearestPlayer = level.getNearestPlayer(
                 blockEntityPos.getX(), blockEntityPos.getY(), blockEntityPos.getZ(), -1, null);
         if (nearestPlayer == null) {
-            QT.FLAG_LOGGER.error("No players detected in world");
             return;
         }
         double distToPlayer = nearestPlayer.blockPosition().distSqr(e.worldPosition);
