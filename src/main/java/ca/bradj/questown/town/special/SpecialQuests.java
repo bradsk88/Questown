@@ -29,7 +29,7 @@ public class SpecialQuests {
             TOWN_FLAG,
             new RoomRecipe(TOWN_FLAG, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get())), Integer.MAX_VALUE),
             FARM,
-            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FENCE_GATE.get())), Integer.MAX_VALUE)
+            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(Items.DIRT)), Integer.MAX_VALUE)
     );
     public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
     public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
