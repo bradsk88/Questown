@@ -1071,6 +1071,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     @Override
+    public void aiStep() {
+        this.updateSwingTime();
+        super.aiStep();
+    }
+
+    @Override
     protected void customServerAiStep() {
         this.level.getProfiler()
                   .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));

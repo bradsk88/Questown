@@ -250,7 +250,7 @@ public class RealtimeWorldInteraction extends
         @Nullable WorkOutput<@Nullable Boolean, WorkPosition<BlockPos>> o = super.tryWorking(mcExtra, workSpot);
         if (o != null && o.town() != null && o.town()) {
             playSound(mcExtra, o.spot().jobBlock());
-            mcExtra.entity().swing(InteractionHand.MAIN_HAND, true);
+            mcExtra.entity().swing(InteractionHand.MAIN_HAND);
         }
         return o;
     }
