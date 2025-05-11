@@ -16,17 +16,20 @@ public final class OpenVillagerAdvancementsMenuMessage {
     private final UUID villagerUUID;
     private final Collection<JobID> unlockedJobs;
     private final JobID currentJob;
+    private final boolean showBlockOfProgressTab;
 
     public OpenVillagerAdvancementsMenuMessage(
             BlockPos flagPos,
             UUID villagerUUID,
             Collection<JobID> unlockedJobs,
-            JobID currentJob
+            JobID currentJob,
+            boolean showBlockOfProgressTab
     ) {
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
         this.unlockedJobs = unlockedJobs;
         this.currentJob = currentJob;
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
     public static void encode(
@@ -39,6 +42,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         buffer.writeUUID(msg.villagerUUID);
         buffer.writeCollection(msg.unlockedJobs, NetworkCompat::toNetwork);
         NetworkCompat.toNetwork(buffer, msg.currentJob());
+        buffer.writeBoolean(msg.showBlockOfProgressTab);
     }
 
     public static OpenVillagerAdvancementsMenuMessage decode(FriendlyByteBuf buffer) {
@@ -46,7 +50,8 @@ public final class OpenVillagerAdvancementsMenuMessage {
                 new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt()),
                 buffer.readUUID(),
                 buffer.readList(NetworkCompat::fromNetworkJobID),
-                NetworkCompat.fromNetworkJobID(buffer)
+                NetworkCompat.fromNetworkJobID(buffer),
+                buffer.readBoolean()
         );
     }
 
@@ -55,7 +60,13 @@ public final class OpenVillagerAdvancementsMenuMessage {
     ) {
         ToClientMessage.handle(
                 ctx,
-                () -> ClientAccess.openVillagerAdvancements(flagPos, villagerUUID, unlockedJobs, currentJob)
+                () -> ClientAccess.openVillagerAdvancements(
+                        flagPos,
+                        villagerUUID,
+                        unlockedJobs,
+                        currentJob,
+                        showBlockOfProgressTab
+                )
         );
     }
 
@@ -79,7 +90,10 @@ public final class OpenVillagerAdvancementsMenuMessage {
         return Objects.equals(this.flagPos, that.flagPos) && Objects.equals(
                 this.villagerUUID,
                 that.villagerUUID
-        ) && Objects.equals(this.unlockedJobs, that.unlockedJobs) && Objects.equals(this.currentJob, that.currentJob);
+        ) && Objects.equals(
+                this.unlockedJobs,
+                that.unlockedJobs
+        ) && Objects.equals(this.currentJob, that.currentJob);
     }
 
     @Override

@@ -21,6 +21,7 @@ public record OpenVillagerMenuMessage(
     public static final String STATS = "stats";
     public static final String SKILLS = "skills";
     public static final String ECONOMICS = "economics";
+    public static final String BOP = "bop";
 
     public static void encode(OpenVillagerMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());

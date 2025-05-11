@@ -28,17 +28,13 @@ import java.util.function.Function;
 
 public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implements StatusListener {
 
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.ECONOMICS
-    );
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.INVENTORY);
     private static final int boxHeight = 18;
     private final DataSlot statusSlot;
     final JobID jobId;
 
     private final Stack<Runnable> closers = new Stack<>();
+    private final boolean showBlockOfProgressTab;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -57,13 +53,15 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             Collection<Boolean> slotLocks,
             UUID villagerUUID,
             JobID jobId,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean showBlockOfProgressTab
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         this.jobId = jobId;
 
         layoutSlots(gathererInv);
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -92,6 +90,11 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
     }
 
     public void connectToServer(

@@ -42,7 +42,8 @@ public class VillagerAdvancementsScreen extends Screen {
             BlockPos flagPos,
             UUID villagerUUID,
             Collection<JobID> unlockedJobs,
-            JobID currentJob
+            JobID currentJob,
+            boolean showBlockOfProgressTab
     ) {
         super(Compat.literal(""));
         DisplayInfo displayInfo = new DisplayInfo(
@@ -68,12 +69,7 @@ public class VillagerAdvancementsScreen extends Screen {
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
-                return ImmutableList.of(
-                        OpenVillagerMenuMessage.INVENTORY,
-                        OpenVillagerMenuMessage.QUESTS,
-                        OpenVillagerMenuMessage.STATS,
-                        OpenVillagerMenuMessage.ECONOMICS
-                );
+                return VillagerTabs.all();
             }
 
             @Override
@@ -84,6 +80,11 @@ public class VillagerAdvancementsScreen extends Screen {
             @Override
             public UUID getVillagerUUID() {
                 return villagerUUID;
+            }
+
+            @Override
+            public boolean showBlockOfProgressTab() {
+                return showBlockOfProgressTab;
             }
         });
     }

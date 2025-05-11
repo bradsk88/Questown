@@ -18,8 +18,10 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.STATS,
             OpenVillagerMenuMessage.QUESTS,
+            OpenVillagerMenuMessage.SKILLS,
             OpenVillagerMenuMessage.SKILLS
     );
+    private final boolean showBlockOfProgressTab;
 
     public static VillagerEconomicsMenu ForClientSide(
             int windowId,
@@ -35,15 +37,15 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
             int windowId,
             VisitorMobEntity entity,
             BlockPos flagPos,
-            VillagerEconomicsData initialData
+            VillagerEconomicsData initialData,
+            boolean showBlockOfProgressTab
     ) {
         super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, entity.getUUID());
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
     public static VillagerEconomicsData read(FriendlyByteBuf buf) {
-        return new VillagerEconomicsData(
-                ImmutableList.of()
-        );
+        return new VillagerEconomicsData(ImmutableList.of());
     }
 
     public static void write(
@@ -73,5 +75,10 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
     }
 }

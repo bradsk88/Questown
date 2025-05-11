@@ -30,6 +30,7 @@
   "tooltips.inventory": "Inventory",
   "tooltips.skills": "Skills",
   "tooltips.economics": "Economics",
+  "tooltips.blocks_of_progress": "Blocks of Progress",
   "tooltips.villagers.job.inventory.locked": "This item was given by a player. Gatherer will not drop it.",
   "tooltips.villagers.job.needs": "%s needs %s to do their job",
   "tooltips.villagers.job.gatherer.status_1.IDLE": "%s is deciding what to do.",

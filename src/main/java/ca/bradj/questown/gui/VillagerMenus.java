@@ -38,16 +38,26 @@ public class VillagerMenus {
         BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
         VillagerEconomicsData econ = VillagerEconomicsMenu.read(buf);
+        boolean showBlockOfProgressTab = buf.readBoolean();
 
         // TODO[Performance]: Rather than getting the entity, get the uuid and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);
         // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
         // It tends to cause client-side-only bugs that don't show up in the dev environment.
-        menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos);
-        menus.initVillagerStatsMenu(windowId, flagPos, stats);
-        menus.initInventory(windowId, jobId, player, e.getUUID(), e.getSlotLocks(), invSize, flagPos);
-        menus.initVillagerEconomicsMenu(windowId, flagPos, econ);
+        menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos, showBlockOfProgressTab);
+        menus.initVillagerStatsMenu(windowId, flagPos, stats, showBlockOfProgressTab);
+        menus.initInventory(
+                windowId,
+                jobId,
+                player,
+                e.getUUID(),
+                e.getSlotLocks(),
+                invSize,
+                flagPos,
+                showBlockOfProgressTab
+        );
+        menus.initVillagerEconomicsMenu(windowId, flagPos, econ, showBlockOfProgressTab);
         return menus;
     }
 
@@ -58,7 +68,8 @@ public class VillagerMenus {
             int capacity,
             JobID jobId,
             VillagerStatsData stats,
-            VillagerEconomicsData econ
+            VillagerEconomicsData econ,
+            boolean showBlockOfProgressTab
     ) {
         data.writeInt(e.getId());
         data.writeUtf(jobId.rootId());
@@ -67,6 +78,7 @@ public class VillagerMenus {
         VillagerQuestsContainer.write(data, quests, e.getFlagPos());
         VillagerStatsMenu.write(stats, data);
         VillagerEconomicsMenu.write(econ, data);
+        data.writeBoolean(showBlockOfProgressTab);
     }
 
     private InventoryAndStatusMenu initInventory(
@@ -76,7 +88,8 @@ public class VillagerMenus {
             UUID uuid,
             Collection<Boolean> slotLocks,
             int invSize,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean showBlockOfProgressTab
     ) {
         invMenu = new InventoryAndStatusMenu(
                 windowId,
@@ -86,7 +99,7 @@ public class VillagerMenus {
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, player.getInventory(), slotLocks, uuid, jobId, flagPos
+                }, player.getInventory(), slotLocks, uuid, jobId, flagPos, showBlockOfProgressTab
         );
         return invMenu;
     }
@@ -95,27 +108,30 @@ public class VillagerMenus {
             int windowId,
             UUID uuid,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean showBlockOfProgressTab
     ) {
-        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos);
+        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos, showBlockOfProgressTab);
         return questsMenu;
     }
 
     public VillagerStatsMenu initVillagerStatsMenu(
             int windowId,
             BlockPos flagPos,
-            VillagerStatsData data
+            VillagerStatsData data,
+            boolean showBlockOfProgressTab
     ) {
-        statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos, data);
+        statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos, data, showBlockOfProgressTab);
         return statsMenu;
     }
 
     public VillagerEconomicsMenu initVillagerEconomicsMenu(
             int windowId,
             BlockPos flagPos,
-            VillagerEconomicsData data
+            VillagerEconomicsData data,
+            boolean showBlockOfProgressTab
     ) {
-        econMenu = new VillagerEconomicsMenu(windowId, this.entity, flagPos, data);
+        econMenu = new VillagerEconomicsMenu(windowId, this.entity, flagPos, data, showBlockOfProgressTab);
         return econMenu;
     }
 }

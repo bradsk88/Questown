@@ -36,14 +36,14 @@ public class SpinningCubeLayer<T extends LivingEntity, M extends EntityModel<T>>
         poseStack.scale(scale, scale, scale);
 
         // Apply rotation based on time
-        float rotationSpeed = 2.0f; // Adjust for faster/slower rotation
+        float rotationSpeed = 3.0f; // Adjust for faster/slower rotation
         float angle = ageInTicks * rotationSpeed;
         float radians = (float) Math.toRadians(angle);
 
         // Rotate around the Y-axis
         poseStack.mulPose(new Quaternion(new Vector3f(0.0f, 1.0f, 0.0f), radians, false));
 
-        VertexConsumer builder = bufferSource.getBuffer(RenderType.entitySolid(CUBE_TEXTURE));
+        VertexConsumer builder = bufferSource.getBuffer(RenderType.beaconBeam(CUBE_TEXTURE, true));
         Matrix4f matrix = poseStack.last().pose();
 
         float minU = 0.0f;

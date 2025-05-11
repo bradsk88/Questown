@@ -334,6 +334,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.workToUndo = null;
     }
 
+    public boolean hasBlockOfProgress() {
+        // FIXME: Implement this
+        return false;
+    }
+
     public record WorkToUndo(
             JobID jobID,
             BlockPos pos,

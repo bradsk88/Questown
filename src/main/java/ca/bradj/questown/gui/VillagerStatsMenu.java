@@ -5,7 +5,6 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,18 +18,14 @@ import java.util.function.Consumer;
 
 public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>,
         VillagerTabsEmbedding {
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.INVENTORY,
-            OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.ECONOMICS
-    );
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.STATS);
     private final DataSlot fullnessSlot;
     private final DataSlot damageSlot;
     private final DataSlot moodSlot;
     private final DataSlot experienceSlot;
     private final DataSlot experienceTargetSlot;
     private final Stack<Runnable> closers = new Stack<>();
+    private final boolean showBlockOfProgressTab;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -46,9 +41,11 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
             int windowId,
             VisitorMobEntity entity,
             BlockPos flagPos,
-            VillagerStatsData initialData
+            VillagerStatsData initialData,
+            boolean showBlockOfProgressTab
     ) {
         super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, entity.getUUID());
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
@@ -126,6 +123,11 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
     }
 
     public int getExperienceValue() {
