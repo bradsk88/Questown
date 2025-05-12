@@ -6,9 +6,16 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
@@ -86,15 +93,13 @@ public class VillagerTabs extends Tabs implements SubUI {
         ));
         if (showBopTab) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(
-                                            ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
-                                            x + 10,
-                                            y + 7
-                                    ),
-                    setScreen(bopScreenFn),
-                    "tooltips.blocks_of_progress",
-                    bopScreenFn == null
+                    (rc, x, y) -> RenderUtil.renderItemScaled(
+                            rc.itemRenderer(),
+                            2,
+                            ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
+                            x + 10,
+                            y + 7
+                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null
             ));
         }
         return b.build();

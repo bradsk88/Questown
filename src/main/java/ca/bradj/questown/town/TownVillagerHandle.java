@@ -60,8 +60,10 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     public static void staticInit() {
-        menuShow = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, (ShowerData d) -> openMenu(
+        ImmutableMap.Builder<String, Consumer<ShowerData>> b = ImmutableMap.builder();
+        b.put(
+                OpenVillagerMenuMessage.INVENTORY,
+                (ShowerData d) -> openMenu(
                         d.sender(), (windowId, inv, p) -> {
                             VisitorMobEntity e = d.entity();
                             InventoryAndStatusMenu x = new InventoryAndStatusMenu(
@@ -77,69 +79,90 @@ public class TownVillagerHandle implements VillagerHolder {
                             x.connectToServer(e, d.sender());
                             return x;
                         }, d.quests(), d.entity(), d.stats()
-                ), OpenVillagerMenuMessage.QUESTS, (ShowerData d) -> {
-                    VisitorMobEntity e = d.entity();
-                    openMenu(
-                            d.sender(),
-                            (windowId, inv, p) -> new VillagerQuestsContainer(
-                                    windowId,
-                                    e.getUUID(),
-                                    d.quests(),
-                                    e.getFlagPos(),
-                                    e.hasBlockOfProgress()
-                            ),
-                            d.quests(),
-                            e,
-                            d.stats()
-                    );
-                }, OpenVillagerMenuMessage.STATS, (ShowerData d) -> {
-                    VisitorMobEntity e = d.entity();
-                    openMenu(
-                            d.sender(),
-                            (windowId, inv, p) -> new VillagerStatsMenu(
-                                    windowId,
-                                    e,
-                                    e.getFlagPos(),
-                                    d.stats(),
-                                    e.hasBlockOfProgress()
-                            ),
-                            d.quests(),
-                            e,
-                            d.stats()
-                    );
-                }, OpenVillagerMenuMessage.SKILLS, (ShowerData d) -> {
-                    Collection<JobID> vUnlocked = UtilClean.getOrDefaultCollection(
-                            d.unlockedJobs(),
-                            d.entity().getUUID(),
-                            ImmutableList.of()
-                    );
-                    OpenVillagerAdvancementsMenuMessage msg = new OpenVillagerAdvancementsMenuMessage(
-                            d.entity()
-                             .getFlagPos(),
-                            d.entity().getUUID(),
-                            vUnlocked,
-                            d.entity().getJobId(),
-                            d.entity().hasBlockOfProgress()
-                    );
-                    QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(d::sender), msg);
-                }, OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
-                    NoMCEconomics tEcon = d.econHandle.get();
-                    ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
-                    openMenu(
-                            d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
-                                    windowId,
-                                    d.entity(),
-                                    d.entity().getFlagPos(),
-                                    d.econ(),
-                                    d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats()
-                    );
-                }
+                )
         );
+        b.put(OpenVillagerMenuMessage.QUESTS, (ShowerData d) -> {
+            VisitorMobEntity e = d.entity();
+            openMenu(
+                    d.sender(),
+                    (windowId, inv, p) -> new VillagerQuestsContainer(
+                            windowId,
+                            e.getUUID(),
+                            d.quests(),
+                            e.getFlagPos(),
+                            e.hasBlockOfProgress()
+                    ),
+                    d.quests(),
+                    e,
+                    d.stats()
+            );
+        });
+        b.put(OpenVillagerMenuMessage.STATS, (ShowerData d) -> {
+            VisitorMobEntity e = d.entity();
+            openMenu(
+                    d.sender(),
+                    (windowId, inv, p) -> new VillagerStatsMenu(
+                            windowId,
+                            e,
+                            e.getFlagPos(),
+                            d.stats(),
+                            e.hasBlockOfProgress()
+                    ),
+                    d.quests(),
+                    e,
+                    d.stats()
+            );
+        });
+        b.put(OpenVillagerMenuMessage.SKILLS, (ShowerData d) -> {
+            Collection<JobID> vUnlocked = UtilClean.getOrDefaultCollection(
+                    d.unlockedJobs(),
+                    d.entity().getUUID(),
+                    ImmutableList.of()
+            );
+            OpenVillagerAdvancementsMenuMessage msg = new OpenVillagerAdvancementsMenuMessage(
+                    d.entity()
+                     .getFlagPos(),
+                    d.entity().getUUID(),
+                    vUnlocked,
+                    d.entity().getJobId(),
+                    d.entity().hasBlockOfProgress()
+            );
+            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(d::sender), msg);
+        });
+        b.put(OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
+            NoMCEconomics tEcon = d.econHandle.get();
+            ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(d::sender),
+                    new EconomicsUpdate(aggregated)
+            );
+            openMenu(
+                    d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
+                            windowId,
+                            d.entity(),
+                            d.entity().getFlagPos(),
+                            d.econ(),
+                            d.entity().hasBlockOfProgress()
+                    ), d.quests(), d.entity(), d.stats()
+            );
+        });
+        b.put(OpenVillagerMenuMessage.BOP, (ShowerData d) -> {
+            NoMCEconomics tEcon = d.econHandle.get();
+            ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(d::sender),
+                    new EconomicsUpdate(aggregated)
+            );
+            openMenu(
+                    d.sender(), (windowId, inv, p) -> new VillagerBlockofProgressMenu(
+                            windowId,
+                            d.entity().getUUID(),
+                            d.entity().getFlagPos()
+                    ), d.quests(), d.entity(), d.stats()
+            );
+        });
+
+        menuShow = b.build();
         ArrayList<String> a = new ArrayList<>(VillagerTabs.all());
         a.removeAll(menuShow.keySet());
         if (a.isEmpty()) {

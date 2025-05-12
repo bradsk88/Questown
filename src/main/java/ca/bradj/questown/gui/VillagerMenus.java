@@ -19,6 +19,7 @@ public class VillagerMenus {
     VillagerStatsMenu statsMenu;
     VillagerQuestsContainer questsMenu;
     VillagerEconomicsMenu econMenu;
+    VillagerBlockofProgressMenu bopMenu;
 
     public VillagerMenus(VisitorMobEntity e) {
         this.entity = e;
@@ -58,6 +59,7 @@ public class VillagerMenus {
                 showBlockOfProgressTab
         );
         menus.initVillagerEconomicsMenu(windowId, flagPos, econ, showBlockOfProgressTab);
+        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, e.getUUID(), flagPos);
         return menus;
     }
 

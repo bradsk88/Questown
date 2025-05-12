@@ -4,9 +4,18 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import org.apache.logging.log4j.util.BiConsumer;
 
 import java.util.List;
@@ -88,11 +97,44 @@ public class RenderUtil {
         GuiComponent.fill(stack, topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
     }
 
-    public record EllipsesData(
-            Coordinate mouse,
-            Coordinate topLeft,
-            int maxItemsBeforeEllipses,
-            int totalItemCount
+    public static void renderItemScaled(
+            ItemRenderer itemRenderer,
+            int scale,
+            ItemStack defaultInstance,
+            int x,
+            int y
     ) {
+        RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        PoseStack posestack = RenderSystem.getModelViewStack();
+        posestack.pushPose();
+        posestack.translate(x, y, 100.0F + itemRenderer.blitOffset);
+        posestack.translate(8.0D, 8.0D, 0.0D);
+        posestack.scale(1.0F, -1.0F, 1.0F);
+        float size = 16.0F * scale;
+        posestack.scale(size, size, size);
+        RenderSystem.applyModelViewMatrix();
+        PoseStack posestack1 = new PoseStack();
+        MultiBufferSource.BufferSource multibuffersource$buffersource = Minecraft.getInstance().renderBuffers()
+                                                                                 .bufferSource();
+        itemRenderer.render(
+                defaultInstance,
+                ItemTransforms.TransformType.GUI,
+                false,
+                posestack1,
+                multibuffersource$buffersource,
+                15728880,
+                OverlayTexture.NO_OVERLAY,
+                itemRenderer.getModel(defaultInstance, null, null, 0)
+        );
+        multibuffersource$buffersource.endBatch();
+        RenderSystem.enableDepthTest();
+        posestack.popPose();
+        RenderSystem.applyModelViewMatrix();
+    }
+
+    public record EllipsesData(Coordinate mouse, Coordinate topLeft, int maxItemsBeforeEllipses, int totalItemCount) {
     }
 }

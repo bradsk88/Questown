@@ -336,7 +336,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public boolean hasBlockOfProgress() {
         // FIXME: Implement this
-        return false;
+        return true;
     }
 
     public record WorkToUndo(
