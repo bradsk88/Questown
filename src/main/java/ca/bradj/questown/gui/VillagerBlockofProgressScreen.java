@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Coordinate;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.mc.Compat;
@@ -67,14 +69,35 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
     ) {
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
-        int iconX = (width - 16) /2;
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        bgY += 32;
-        RenderUtil.renderItemScaled(itemRenderer, 8, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), iconX, bgY);
-        bgY += 64;
-        Compat.drawDarkText(font, poseStack, Compat.translatable("menu.block_of_progress.v_has_earned", menu.villagerUUID), bgX, bgY);
-        Compat.drawDarkText(font, poseStack, Compat.translatable("menu.block_of_progress.will_deposit"), bgX, bgY);
+        bgY += 16;
+        RenderUtil.renderItemScaled(itemRenderer, 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
+        renderText(poseStack, bgX, bgY);
+    }
+
+    private void renderText(
+            PoseStack poseStack,
+            int bgX,
+            int bgY
+    ) {
+        Coordinate topLeft = new Coordinate(bgX + 12, bgY);
+        int tWidth = backgroundWidth - 16;
+        int iconWidth = 32;
+        bgY += Compat.drawDarkTextWrap(
+                font, poseStack, topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
+                Compat.translatable("menu.block_of_progress.v_has_earned", UtilClean.truncateMiddle(menu.villagerUUID))
+        );
+        bgY += 8;
+        bgY += Compat.drawDarkTextWrap(
+                font, poseStack, topLeft.withY(bgY), tWidth,
+                Compat.translatable("menu.block_of_progress.many_uses")
+        );
+        bgY += 8;
+        Compat.drawDarkTextWrap(
+                font, poseStack, topLeft.withY(bgY), tWidth,
+                Compat.translatable("menu.block_of_progress.will_deposit", UtilClean.truncateMiddle(menu.villagerUUID))
+        );
     }
 
     @Override

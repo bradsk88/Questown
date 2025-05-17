@@ -60,7 +60,8 @@ public class UtilClean {
         );
     }
 
-    public static @NotNull String truncateMiddle(String vID) {
+    public static @NotNull String truncateMiddle(Object vIDIn) {
+        String vID = vIDIn.toString();
         if (vID.length() <= 8) {
             return vID;
         }

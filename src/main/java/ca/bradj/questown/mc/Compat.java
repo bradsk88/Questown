@@ -1,6 +1,7 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.init.CommandsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
@@ -267,5 +268,23 @@ public class Compat {
 
     public static void initCommands(IEventBus bus) {
         CommandsInit.register(bus);
+    }
+
+    /**
+     * @return The number of vertical pixels used up when drawing the text
+     */
+    public static int drawDarkTextWrap(
+            Font font,
+            PoseStack poseStack,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable
+    ) {
+        int out = 0;
+        for (FormattedCharSequence line : font.split(translatable, textWidth)) {
+            drawDarkText(font, poseStack, line, topLeft.x(), topLeft.y() + out);
+            out += (int) (font.lineHeight * 1.5);
+        }
+        return out;
     }
 }
