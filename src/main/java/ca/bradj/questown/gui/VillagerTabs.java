@@ -151,11 +151,11 @@ public class VillagerTabs extends Tabs implements SubUI {
     public static Collection<String> except(String except) {
         ImmutableList<String> all = ImmutableList.of(
                 OpenVillagerMenuMessage.INVENTORY,
+                OpenVillagerMenuMessage.BOP,
                 OpenVillagerMenuMessage.QUESTS,
                 OpenVillagerMenuMessage.STATS,
                 OpenVillagerMenuMessage.SKILLS,
-                OpenVillagerMenuMessage.ECONOMICS,
-                OpenVillagerMenuMessage.BOP
+                OpenVillagerMenuMessage.ECONOMICS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }

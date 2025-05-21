@@ -100,6 +100,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         QT.FLAG_LOGGER.info("NBT: {}", prettyJsonString);
     }
 
+    public static TownFlagBlockEntity getFromPos(
+            Level level,
+            BlockPos flagPos
+    ) {
+        BlockEntity blockEntity = level.getBlockEntity(flagPos);
+        if (blockEntity instanceof TownFlagBlockEntity tfbe) {
+            return tfbe;
+        }
+        return null;
+    }
+
     public TownHealingHandle getHealingHandle() {
         return healing;
     }

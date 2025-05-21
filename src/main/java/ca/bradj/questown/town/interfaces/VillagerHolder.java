@@ -104,4 +104,6 @@ public interface VillagerHolder {
             UUID uuid,
             int exp
     );
+
+    boolean hasBlockOfProgress(UUID uuid);
 }

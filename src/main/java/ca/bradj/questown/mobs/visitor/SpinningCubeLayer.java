@@ -16,20 +16,40 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 
 public class SpinningCubeLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
-    private static final ResourceLocation CUBE_TEXTURE = Questown.ResourceLocation("textures/blocks/block_of_progress.png");
+    private static final ResourceLocation CUBE_TEXTURE = Questown.ResourceLocation(
+            "textures/blocks/block_of_progress.png");
 
     public SpinningCubeLayer(LivingEntityRenderer<T, M> renderer) {
         super(renderer);
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, T entity, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void render(
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            int packedLight,
+            T entity,
+            float limbSwing,
+            float limbSwingAmount,
+            float partialTicks,
+            float ageInTicks,
+            float netHeadYaw,
+            float headPitch
+    ) {
+        if (!(entity instanceof VisitorMobEntity vme)) {
+            return;
+        }
+
+        if (!vme.hasBlockOfProgress()) {
+            return;
+        }
+
         packedLight = 0xF000F0;
 
         poseStack.pushPose();
 
         // Translate to the position above the entity's head
-        poseStack.translate(0.0D, - (entity.getBbHeight()/2), 0.0D);
+        poseStack.translate(0.0D, -(entity.getBbHeight() / 2), 0.0D);
 
         // Make the cube smaller
         float scale = 0.3f;
@@ -53,40 +73,64 @@ public class SpinningCubeLayer<T extends LivingEntity, M extends EntityModel<T>>
 
         // Define the vertices of the cube using the top-left texture square
         // Front face
-        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
 
         // Back face
-        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
 
         // Top face
-        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
 
         // Bottom face
-        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
 
         // Right face
-        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        builder.vertex(matrix, 0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        builder.vertex(matrix, 0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
 
         // Left face
-        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, 0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, minV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        builder.vertex(matrix, -0.5f, 0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(maxU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        builder.vertex(matrix, -0.5f, -0.5f, -0.5f).color(1.0f, 1.0f, 1.0f, 1.0f).uv(minU, maxV)
+               .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
 
         poseStack.popPose();
     }

@@ -124,6 +124,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
+    private static final EntityDataAccessor<Boolean> hasBOP = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
+    );
     private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
@@ -335,8 +338,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean hasBlockOfProgress() {
-        // FIXME: Implement this
-        return true;
+        Boolean hasBOP = this.entityData.get(VisitorMobEntity.hasBOP);
+        return hasBOP;
     }
 
     public record WorkToUndo(
@@ -413,6 +416,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(visible, true);
+        this.entityData.define(hasBOP, true);
         this.entityData.define(status, ProductionStatus.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
@@ -456,6 +460,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (!town.isInitialized()) {
             return;
         }
+
+        entityData.set(hasBOP, town.getVillagerHandle().hasBlockOfProgress(getUUID()));
 
         if (freezeTicks > 0) {
             freezeTicks--;
