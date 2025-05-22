@@ -63,14 +63,9 @@ public class RealtimeWorldInteraction extends
             @Nullable SoundInfo sound
     ) {
         super(
-                journal.getJobId(),
-                -1,
+                journal.getJobId(), -1,
                 // Not used by this implementation
-                interval,
-                maxState,
-                checks,
-                claimSpots,
-                specialRules
+                interval, maxState, checks, claimSpots, specialRules
         );
         this.getUnmetNeed = getUnmetNeed;
         this.jobRoom = jobRoom;
@@ -325,11 +320,8 @@ public class RealtimeWorldInteraction extends
         if (apply == null) {
             return;
         }
-        mcExtra.town().getEconomicsHandle().registerUnmetNeed(
-                Util.getTick(serverLevel),
-                mcExtra.entity().getUUID(),
-                apply
-        );
+        mcExtra.town().getEconomicsHandle()
+               .registerUnmetNeed(Util.getTick(serverLevel), mcExtra.entity().getUUID(), apply);
     }
 
     @Override
@@ -340,11 +332,8 @@ public class RealtimeWorldInteraction extends
         if (serverLevel == null) {
             throw new UnsupportedOperationException("Cannot run without server level");
         }
-        mcExtra.town().getEconomicsHandle().registerUnmetRoom(
-                Util.getTick(serverLevel),
-                mcExtra.entity().getUUID(),
-                jobRoom.get()
-        );
+        mcExtra.town().getEconomicsHandle()
+               .registerUnmetRoom(Util.getTick(serverLevel), mcExtra.entity().getUUID(), jobRoom.get());
 
     }
 
@@ -361,7 +350,10 @@ public class RealtimeWorldInteraction extends
     ) {
         VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
         return PreExtractHook.run(
-                didAnything, rules, inputs.town().getServerLevel(), (in, i, s) -> {
+                didAnything,
+                rules,
+                inputs.town().getServerLevel(),
+                (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
                     return in;
                 },
@@ -369,7 +361,8 @@ public class RealtimeWorldInteraction extends
                     inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
                     return in;
                 },
-                position, Util.orNull(workToUndo, v -> v.item().get().get()),
+                position,
+                Util.orNull(workToUndo, v -> v.item().get().get()),
                 () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
         );
     }
@@ -383,11 +376,10 @@ public class RealtimeWorldInteraction extends
             MCHeldItem item
     ) {
         return PostInsertHook.run(
-                aBoolean,
-                rules,
-                inputs.town().getServerLevel(),
-                position,
-                item.get().toMCItemStack()
+                aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toMCItemStack(), (t) -> {
+                    inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
+                    return true;
+                }
         );
     }
 
@@ -401,10 +393,8 @@ public class RealtimeWorldInteraction extends
         PreStateChangeHook.run(
                 rules,
                 pose -> inputs.town().getVillagerHandle().requestPose(
-                        inputs.entity().getUUID(), new PoseInPlace(
-                                pose,
-                                decideSpot(rules, position)
-                        )
+                        inputs.entity().getUUID(),
+                        new PoseInPlace(pose, decideSpot(rules, position))
                 ),
                 jobId -> inputs.town().getVillagerHandle().changeJobForVillager(inputs.entity().getUUID(), jobId, false)
         );

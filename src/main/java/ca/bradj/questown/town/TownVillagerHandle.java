@@ -538,4 +538,9 @@ public class TownVillagerHandle implements VillagerHolder {
     public boolean hasBlockOfProgress(UUID uuid) {
         return Util.getOrDefault(hasBlockOfProgress, uuid, false);
     }
+
+    @Override
+    public void clearBlockOfProgress(UUID uuid) {
+        hasBlockOfProgress.put(uuid, false);
+    }
 }

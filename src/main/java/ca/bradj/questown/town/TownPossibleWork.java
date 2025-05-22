@@ -109,6 +109,7 @@ public class TownPossibleWork {
             ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
             TownFlagBlockEntity t
     ) {
+        // FIXME: Only include jobs that are known by the villagers
         Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
         e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w)));

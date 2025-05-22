@@ -314,19 +314,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getLook();
     }
 
-    public void tryGiveItem(
+    public boolean tryGiveItem(
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
         if (job.get().addToEmptySlot(v)) {
-            return;
+            return true;
         }
         // TODO: Remember the location of the drop and come back to pick them up
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
-            return;
+            return false;
         }
         ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
         level.addFreshEntity(item);
+        return false;
     }
 
     public void addSleepListener(Consumer<VillagerSleptEvent> l) {

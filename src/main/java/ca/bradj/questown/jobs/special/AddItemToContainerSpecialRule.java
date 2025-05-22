@@ -23,7 +23,7 @@ public class AddItemToContainerSpecialRule extends
     @Override
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
-            AfterInsertItemEvent event
+            AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT ctxOut = super.afterInsertItem(ctxInput, event);
         BlockPos ws = event.workSpot().workPosition();

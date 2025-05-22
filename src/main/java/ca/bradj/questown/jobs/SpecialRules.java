@@ -77,4 +77,7 @@ public class SpecialRules {
     // ingredient needs, they will choose one of those stacks randomly. When this rule
     // is not enabled, the default behaviour is to take the first match.
     public static final String GLOBAL_TAKE_RANDOM_INGREDIENT = "take_random_ingredient";
+    // Stage rule. After the villager inserts their item, their status as "holding
+    // a block of progress" will be cleared.
+    public static final String CLEAR_BOP_FOR_VILLAGER = "clear_bop_for_villager";
 }

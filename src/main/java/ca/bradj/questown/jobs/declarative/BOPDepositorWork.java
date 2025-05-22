@@ -1,7 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.HospitalBedBlock;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -15,53 +16,51 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BedPart;
 
 import java.util.Collection;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
-public class ResterWork {
-    public static final String ID = "resting";
+public class BOPDepositorWork {
+    public static final String ID = "bop_depositing";
 
-    public static final int BLOCK_STATE_NEED_BED = 0;
-    public static final int BLOCK_STATE_NEED_REST = 1;
+    public static final int BLOCK_STATE_NEED_FLAG = 0;
+    public static final int BLOCK_STATE_NEED_DEPOSIT = 1;
     public static final int BLOCK_STATE_DONE = 2;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_DEPOSIT, Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get())
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_DEPOSIT, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
+            BLOCK_STATE_NEED_FLAG, Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get())
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_BED, 1
+            BLOCK_STATE_NEED_FLAG, 5
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_REST, 2000
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
             Items.AIR.getDefaultInstance()
     );
-    public static final int PAUSE_FOR_ACTION = 10;
+    public static final int PAUSE_FOR_ACTION = 1;
 
     public static Work asWork(
             String rootId
     ) {
         return productionWork(
                 null,
-                Blocks.BLACK_BED.asItem().getDefaultInstance(),
+                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        (bs, bp) -> WorkLocation.isBlock(HospitalBedBlock.class).test(bs, bp) && bs.apply(bp).getValue(
-                                BedBlock.PART).equals(BedPart.HEAD),
-                        SpecialQuests.CLINIC
+                        WorkLocation.isBlock(TownFlagBlock.class),
+                        SpecialQuests.TOWN_FLAG
                 ),
                 new WorkStates(
                         MAX_STATE,
@@ -90,15 +89,12 @@ public class ResterWork {
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(
-                                ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_BED),
-                                ImmutableList.of(SpecialRules.LIE_ON_WORKSPOT),
-                                ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.CLEAR_POSE)
-                        ),
+                                ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_DEPOSIT),
+                                ImmutableList.of(SpecialRules.CLEAR_BOP_FOR_VILLAGER)
+                        ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.CLAIM_SPOT,
-                                SpecialRules.WORK_IN_EVENING,
-                                SpecialRules.PREFER_INTERACTION_STAND_ON_TOP
+                                SpecialRules.WORK_IN_EVENING
                         )
                 ),
                 null,
@@ -116,7 +112,7 @@ public class ResterWork {
         return new JobID(rootId, ID);
     }
 
-    public static boolean isResting(JobID jobName) {
+    public static boolean matches(JobID jobName) {
         return ID.equals(jobName.jobId());
     }
 }

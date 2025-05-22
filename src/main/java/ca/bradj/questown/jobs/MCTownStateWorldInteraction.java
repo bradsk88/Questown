@@ -43,7 +43,7 @@ import java.util.function.Supplier;
 public class MCTownStateWorldInteraction extends
         AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
-    public record Inputs(MCTownState town, ServerLevel level, UUID uuid) {
+    public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
 
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
@@ -162,7 +162,8 @@ public class MCTownStateWorldInteraction extends
             MCTownState stateSource,
             BlockPos workSpot
     ) {
-        return new WorkedSpot<>(workSpot, stateSource.getJobBlockState(workSpot).processingState());
+        int stateAfterWork = stateSource.getJobBlockState(workSpot).processingState();
+        return new WorkedSpot<>(workSpot, stateAfterWork);
     }
 
     @Override
@@ -196,7 +197,7 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack());
+        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack(), ts -> ts.withBOPCleared(inputs.vUUID));
     }
 
     @Override
@@ -209,9 +210,9 @@ public class MCTownStateWorldInteraction extends
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(
                 town, rules, inputs.level(), (ctx, i, s) -> {
-                    Inputs in = new Inputs(ctx, inputs.level(), inputs.uuid());
+                    Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
-                }, (ctx, up) -> ctx.withHungerFilledBy(inputs.uuid, up), position, insertedItem, () -> {
+                }, (ctx, up) -> ctx.withHungerFilledBy(inputs.vUUID, up), position, insertedItem, () -> {
                 }
         );
     }

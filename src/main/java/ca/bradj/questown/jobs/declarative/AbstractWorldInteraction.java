@@ -409,10 +409,11 @@ public abstract class AbstractWorldInteraction<
         TOWN initTown = getTown(extra);
         PredicateCollection<HELD_ITEM, HELD_ITEM> ingredientsForStep = this.checks.getIngredientsForStep(action);
         if (ingredientsForStep != null && !ingredientsForStep.isEmpty()) {
+            WorkedSpot<POS> wsBefore = getCurWorkedSpot(extra, initTown, workSpot.jobBlock());
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
                     ingredientsForStep,
-                    getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
+                    wsBefore
             );
             if (o == null) {
                 @SuppressWarnings("DataFlowIssue") int quantityWanted = checks.getQuantityForStep(action, 0);
@@ -425,7 +426,7 @@ public abstract class AbstractWorldInteraction<
                 @Nullable TOWN out = postInsertHook(
                         ctx,
                         extra,
-                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
+                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()).withBefore(wsBefore.state()),
                         item,
                         maxState
                 );
@@ -493,6 +494,8 @@ public abstract class AbstractWorldInteraction<
             if (town != null) {
                 Function<TOWN, TOWN> resetFunc = getResetFunc(inputs, position);
                 town = resetFunc.apply(town);
+            } else {
+                getResetFunc(inputs, position).apply(getTown(inputs));
             }
             if (town == null) {
                 Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
@@ -538,7 +541,7 @@ public abstract class AbstractWorldInteraction<
             HELD_ITEM item,
             int maxState
     ) {
-        ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.stateAfterWork(), maxState);
+        ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.previousState(), maxState);
         Collection<String> rules = specialRules.get(o);
         if (rules == null || rules.isEmpty()) {
             return ctx;
