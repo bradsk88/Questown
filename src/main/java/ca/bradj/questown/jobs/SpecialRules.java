@@ -62,22 +62,30 @@ public class SpecialRules {
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up by 50% from its current value.
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
+
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.
     public static final String ADD_ITEM_TO_CONTAINER = "add_item_to_container";
+
     // Global rule. By default, Questown will only allow villagers to start
     // a job if there is an abundance of supplies available. This rule causes
     // the job to ignore that so villagers can always start the associated job.
     public static final String ALWAYS_CONSIDER = "always_consider";
+
     // Global rule. When enabled, the LAST item in the villager's inventory will
     // be rendered in their off-hand.
     public static final String RENDER_LAST_ITEM_IN_OFF_HAND = "render_last_item_in_off_hand";
+
     // Global rule. If there is more than one item stack which matches the villagers
     // ingredient needs, they will choose one of those stacks randomly. When this rule
     // is not enabled, the default behaviour is to take the first match.
     public static final String GLOBAL_TAKE_RANDOM_INGREDIENT = "take_random_ingredient";
+
     // Stage rule. After the villager inserts their item, their status as "holding
     // a block of progress" will be cleared.
     public static final String CLEAR_BOP_FOR_VILLAGER = "clear_bop_for_villager";
+
+    // Global rule. Disabled experience gaining from this job.
+    public static final String NO_EXPERIENCE_GAINED = "no_experience_gained";
 }

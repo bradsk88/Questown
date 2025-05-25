@@ -90,12 +90,13 @@ public class BOPDepositorWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_DEPOSIT),
-                                ImmutableList.of(SpecialRules.CLEAR_BOP_FOR_VILLAGER)
+                                ImmutableList.of(SpecialRules.CLEAR_BOP_FOR_VILLAGER, SpecialRules.ADD_ITEM_TO_CONTAINER)
                         ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.CLAIM_SPOT,
                                 SpecialRules.WORK_IN_EVENING,
-                                SpecialRules.PRIORITIZE_EXTRACTION
+                                SpecialRules.PRIORITIZE_EXTRACTION,
+                                SpecialRules.NO_EXPERIENCE_GAINED
                         )
                 ),
                 null,
