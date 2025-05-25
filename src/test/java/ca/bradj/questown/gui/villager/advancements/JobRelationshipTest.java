@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class JobRelationshipTest {
                                 ImmutableList.of()
                         )
                 )
-        ).countLeafNodes();
+        ).countLeafNodes(Predicates.alwaysTrue());
         Assertions.assertEquals(4, nodes);
     }
     @Test
@@ -68,7 +69,7 @@ class JobRelationshipTest {
                                 )
                         )
                 )
-        ).countLeafNodes();
+        ).countLeafNodes(Predicates.alwaysTrue());
         Assertions.assertEquals(4, nodes);
     }
     @Test
@@ -109,7 +110,7 @@ class JobRelationshipTest {
                                 ImmutableList.of()
                         )
                 )
-        ).countLeafNodes();
+        ).countLeafNodes(Predicates.alwaysTrue());
         Assertions.assertEquals(5, nodes);
     }
 

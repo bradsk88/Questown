@@ -91,10 +91,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private boolean isMorning = false;
     private final NoMCEconomics economics = new NoMCEconomics();
     private int ticksWithoutQuests;
-    private LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new IItemHandler() {
 
-        // TODO[ASAP]: Serialize and de-ser.
-        private int bopCount = 0;
+    int bopCount = 0;
+
+    private LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new IItemHandler() {
 
         @Override
         public int getSlots() {
@@ -116,7 +116,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             itemStack.shrink(1);
             if (!simulate) {
-                this.bopCount++;
+                bopCount++;
                 QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", bopCount);
             }
             return itemStack;
@@ -479,6 +479,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // Don't use this. Data gets stored on the tick. This function
         // NEVER works the way it claims to (the data saved here is NOT
         // present on the tag that gets passed to load())
+        // Use writeTownData
     }
 
     @Override
@@ -492,6 +493,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // "this" is not the server entity - I don't know what it is.
         // Use the initializers stack to ensure you have a reliable
         // reference to the flag entity.
+        // Use loadNextTick.
 
         loadNextTick(initializers);
     }

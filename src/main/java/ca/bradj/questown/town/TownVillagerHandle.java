@@ -3,49 +3,29 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
-import ca.bradj.questown.core.network.*;
-import ca.bradj.questown.gui.*;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
-import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
-import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TownVillagerHandle implements VillagerHolder {
@@ -77,7 +57,9 @@ public class TownVillagerHandle implements VillagerHolder {
             Map<UUID, Integer> fullness,
             Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
             Map<UUID, Integer> damage,
-            Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs
+            Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
@@ -88,6 +70,8 @@ public class TownVillagerHandle implements VillagerHolder {
         for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
             UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()));
         }
+        this.experience.putAll(experience);
+        this.levels.putAll(level);
     }
 
     public void tick(
@@ -360,14 +344,14 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isDining(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
-                       .orElse(false);
+                .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
+                .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(v.getUUID()))
-                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
+                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
     }
 
     @Override
