@@ -62,6 +62,10 @@ public class Works {
         return b.build();
     }
 
+    /**
+     * @deprecated Doesn't handle special jobs well. Try using ServerJobsRegistry instead.
+     */
+    @Deprecated
     public static Supplier<Work> get(JobID jobID) {
         if (!initialized) {
             throw new IllegalStateException("Works not initialized");

@@ -522,7 +522,7 @@ public class ServerJobsRegistry {
             String status,
             ImmutableList<MCHeldItem> heldItems
     ) {
-        if (isSeekingWork(job)) {
+        if (specialJobs.stream().anyMatch(j -> j.idTest().test(job))) {
             return new SimpleSnapshot<>(job, ProductionStatus.from(status), heldItems);
         }
 

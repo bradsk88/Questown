@@ -357,6 +357,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
+        if (!(level instanceof ServerLevel sl)) {
+            QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
+            return;
+        }
+
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
         String curJobName = "null";
         if (curJob != null) {
@@ -391,8 +396,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> {
-                    int exp = Works.get(id).get().jobFunc.apply(uuid).getExperienceEarned();
-                    this.town.getVillagerHandle().addExperience(uuid, exp);
+                    Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
+                    this.town.getVillagerHandle().addExperience(uuid, job.getExperienceEarned());
                 }
         ));
     }

@@ -94,7 +94,8 @@ public class BOPDepositorWork {
                         ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.CLAIM_SPOT,
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.PRIORITIZE_EXTRACTION
                         )
                 ),
                 null,
