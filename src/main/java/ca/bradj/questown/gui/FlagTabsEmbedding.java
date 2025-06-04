@@ -8,4 +8,6 @@ public interface FlagTabsEmbedding {
     Collection<String> getEnabledTabs();
 
     BlockPos getFlagPos();
+
+    boolean showBlockOfProgressTab();
 }

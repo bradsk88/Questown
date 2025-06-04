@@ -56,14 +56,14 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
                                     windowId, quests, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), quests, flagPos, entities
+                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
                                 windowId, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), quests, flagPos, entities
+                        ), quests, flagPos, entities, flag.getBlocksOfProgress()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -74,7 +74,15 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, flagPos
-                            ), quests, flagPos, entities
+                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
+                    );
+                },
+                OpenFlagMenuMessage.BOP,
+                () -> {
+                    openMenu(
+                            sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
+                                    windowId, flagPos
+                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
                     );
                 }
         );
@@ -92,7 +100,7 @@ public class TownFlagMenus {
             List<UIQuest> q
     ) {
         List<RoomRecipe> farmRecipes = p.level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                        .filter(RoomRecipe::isFarmRecipe).toList();
+                                              .filter(RoomRecipe::isFarmRecipe).toList();
         for (UIQuest mcQuest : q) {
             if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getRecipeId()))) {
                 continue;
@@ -101,6 +109,7 @@ public class TownFlagMenus {
             break;
         }
     }
+
     private void triggerAdvancement(
             BlockPos pos,
             ServerLevel level
@@ -113,7 +122,8 @@ public class TownFlagMenus {
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
             BlockPos flagPos,
-            Iterable<? extends VisitorMobEntity> entities
+            Iterable<? extends VisitorMobEntity> entities,
+            int bopCount
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -130,7 +140,7 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities)
+                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount)
         );
     }
 

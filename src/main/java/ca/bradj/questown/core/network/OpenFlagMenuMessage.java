@@ -19,6 +19,7 @@ public record OpenFlagMenuMessage(
     public static final String QUESTS = "quests";
     public static final String VILLAGERS = "villagers";
     public static final String ECONOMICS = "economics";
+    public static final String BOP = "blocks_of_progress";
 
     public static void encode(OpenFlagMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());

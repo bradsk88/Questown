@@ -19,7 +19,7 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
             OpenVillagerMenuMessage.STATS,
             OpenVillagerMenuMessage.QUESTS,
             OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.SKILLS
+            OpenVillagerMenuMessage.BOP
     );
     private final boolean showBlockOfProgressTab;
 
