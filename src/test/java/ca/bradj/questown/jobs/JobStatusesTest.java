@@ -688,4 +688,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.FACTORY.goingToJobSite(), val);
     }
 
+    // TODO: Should not be dropping loot if can extract product and still have room
+    //  THIS IS BLOCKING BOP Depositor
+
 }
