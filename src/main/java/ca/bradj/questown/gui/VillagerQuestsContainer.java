@@ -24,7 +24,12 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
             BlockPos flagPos,
             boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_QUESTS.get(), windowId, quests, flagPos);
+        super(
+                MenuTypesInit.VILLAGER_QUESTS.get(),
+                windowId,
+                quests,
+                new FlagTabsEmbedding.FlagInfo(flagPos, showBlockOfProgressTab)
+        );
         this.villagerUUID = villagerUUID;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
@@ -59,7 +64,7 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
 
     @Override
     public BlockPos getFlagPos() {
-        return flagPos;
+        return flagInfo.flagPos();
     }
 
     @Override

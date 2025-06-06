@@ -3,34 +3,51 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
-import java.util.UUID;
 
-public class TownBlockofProgressMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
+public class TownBlockofProgressMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.BOP);
+    final int blocksOfProgressCount;
+    private FlagInfo flagInfo;
 
     public static TownBlockofProgressMenu ForClientSide(
             int windowId,
             Inventory inv,
             FriendlyByteBuf buf
     ) {
-        VillagerMenus menus = VillagerMenus.fromNetwork(windowId, inv.player, buf);
+        FlagMenus menus = FlagMenus.fromNetwork(windowId, inv.player, buf);
         return menus.bopMenu;
     }
 
 
     public <S extends IStatus<S>> TownBlockofProgressMenu(
             int windowId,
-            UUID entity,
-            BlockPos flagPos
+            FlagInfo flagInfo,
+            int blocksOfProgress
     ) {
-        super(MenuTypesInit.BLOCKS_OF_PROGRESS.get(), null, null, windowId, flagPos, entity);
+        super(MenuTypesInit.BLOCKS_OF_PROGRESS.get(), windowId);
+        this.blocksOfProgressCount = blocksOfProgress;
+        this.flagInfo = flagInfo;
+    }
+
+    public static void write(
+            FriendlyByteBuf data,
+            FlagInfo fi,
+            int blocksOfProgressCount
+    ) {
+        fi.write(data);
+        data.writeInt(blocksOfProgressCount);
+    }
+
+    public static int read(FriendlyByteBuf buf) {
+        FlagInfo.read(buf);
+        return buf.readInt();
     }
 
     @Override
@@ -39,11 +56,6 @@ public class TownBlockofProgressMenu extends AbstractTabbedVillagerMenu implemen
             int i
     ) {
         return ItemStack.EMPTY;
-    }
-
-    @Override
-    public void onClose() {
-        // Nothing
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -57,7 +69,7 @@ public class TownBlockofProgressMenu extends AbstractTabbedVillagerMenu implemen
     }
 
     @Override
-    public boolean showBlockOfProgressTab() {
-        return true;
+    public FlagInfo getFlagInfo() {
+        return flagInfo;
     }
 }

@@ -84,13 +84,10 @@ public class FlagTabs extends Tabs implements SubUI {
     }
 
     public static Runnable makeOpenFn(
-            BlockPos fp,
+            FlagTabsEmbedding.FlagInfo fp,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenFlagMenuMessage(
-                fp.getX(), fp.getY(), fp.getZ(),
-                type
-        ));
+        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenFlagMenuMessage(fp, type));
         return fn;
     }
 
@@ -99,7 +96,7 @@ public class FlagTabs extends Tabs implements SubUI {
 
         Function<String, Runnable> factory = typ -> {
             if (enabledTabs.contains(typ)) {
-                return makeOpenFn(menu.getFlagPos(), typ);
+                return makeOpenFn(menu.getFlagInfo(), typ);
             }
             return null;
         };
@@ -108,7 +105,7 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.VILLAGERS),
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
-                menu.showBlockOfProgressTab()
+                menu.getFlagInfo().showBlockOfProgressTab()
         );
     }
 }

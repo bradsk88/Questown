@@ -19,7 +19,7 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
             OpenFlagMenuMessage.QUESTS,
             OpenFlagMenuMessage.ECONOMICS
     );
-    private final BlockPos flagPos;
+    private final FlagInfo flagInfo;
 
     public static MultiStatusMenu ForClientSide(
             int windowId,
@@ -32,11 +32,11 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
 
     public MultiStatusMenu(
             int windowId,
-            BlockPos flagPos,
+            FlagInfo flagPos,
             Runnable triggerAdvancement
     ) {
         super(MenuTypesInit.MULTI_VILLAGER.get(), windowId);
-        this.flagPos = flagPos;
+        this.flagInfo = flagPos;
         triggerAdvancement.run();
     }
 
@@ -59,7 +59,7 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
     }
 
     @Override
-    public BlockPos getFlagPos() {
-        return flagPos;
+    public FlagInfo getFlagInfo() {
+        return flagInfo;
     }
 }

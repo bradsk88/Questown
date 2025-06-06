@@ -19,7 +19,7 @@ public class TownEconomicsMenu extends AbstractContainerMenu implements FlagTabs
             OpenFlagMenuMessage.VILLAGERS,
             OpenFlagMenuMessage.QUESTS
     );
-    private BlockPos flagPos;
+    private FlagInfo flagInfo;
 
     public static TownEconomicsMenu ForClientSide(
             int windowId,
@@ -33,10 +33,10 @@ public class TownEconomicsMenu extends AbstractContainerMenu implements FlagTabs
 
     public <S extends IStatus<S>> TownEconomicsMenu(
             int windowId,
-            BlockPos flagPos
+            FlagInfo flag
     ) {
         super(MenuTypesInit.TOWN_ECONOMICS.get(), windowId);
-        this.flagPos = flagPos;
+        this.flagInfo = flag;
     }
 
     public static VillagerEconomicsData read(FriendlyByteBuf buf) {
@@ -70,7 +70,7 @@ public class TownEconomicsMenu extends AbstractContainerMenu implements FlagTabs
     }
 
     @Override
-    public BlockPos getFlagPos() {
-        return flagPos;
+    public FlagInfo getFlagInfo() {
+        return flagInfo;
     }
 }

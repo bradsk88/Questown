@@ -4,7 +4,9 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
@@ -344,14 +346,14 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isDining(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
-                .orElse(false);
+                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
+                       .orElse(false);
     }
 
     @Override
     public boolean canDine(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(v.getUUID()))
-                .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
+                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
     }
 
     @Override
@@ -466,9 +468,10 @@ public class TownVillagerHandle implements VillagerHolder {
     public void showMultiStatusUI(ServerPlayer player) {
         TownVillagerUIs.showMultiStatusUI(
                 player,
-                town.getUnsafe().getTownFlagBasePos(),
+                town.getUnsafe().getInfo(),
                 entities,
-                () -> town.getUnsafe().getAllQuestsWithRewards()
+                () -> town.getUnsafe().getAllQuestsWithRewards(),
+                town.getUnsafe().getBlocksOfProgress()
         );
     }
 

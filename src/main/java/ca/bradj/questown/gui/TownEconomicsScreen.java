@@ -194,7 +194,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             if (UtilClean.isCoordInBox(mouseX, mouseY, getIconX(c), getIconY(c), 16, 16)) {
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
-                AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagPos(), inquired);
+                AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagInfo().flagPos(), inquired);
                 QuestownNetwork.CHANNEL.sendToServer(msg);
                 return true;
             }

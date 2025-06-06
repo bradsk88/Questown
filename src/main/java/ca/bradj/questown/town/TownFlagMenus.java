@@ -10,7 +10,6 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableMap;
@@ -35,11 +34,13 @@ public class TownFlagMenus {
     public void showUI(
             ServerPlayer sender,
             String type,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flagInfo,
+            int blocksOfProgress
     ) {
         // TODO: Make it possible to change villager jobs from the flag?
 //        syncWorkToClient(sender);
 
+        BlockPos flagPos = flagInfo.flagPos();
         TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
 
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
@@ -55,15 +56,15 @@ public class TownFlagMenus {
                     triggerFarmAdvancement(sender, quests);
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                    windowId, quests, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
+                                    windowId, quests, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), quests, flagPos, entities, flag.getBlocksOfProgress()
+                                windowId, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                        ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -73,16 +74,16 @@ public class TownFlagMenus {
                     );
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
-                                    windowId, flagPos
-                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
+                                    windowId, flagInfo
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                     );
                 },
                 OpenFlagMenuMessage.BOP,
                 () -> {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
-                                    windowId, flagPos
-                            ), quests, flagPos, entities, flag.getBlocksOfProgress()
+                                    windowId, flagInfo, blocksOfProgress
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                     );
                 }
         );
@@ -121,7 +122,7 @@ public class TownFlagMenus {
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
-            BlockPos flagPos,
+            FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
             int bopCount
     ) {

@@ -12,6 +12,7 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -186,6 +187,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public NoMCEconomics getEconomicsHandle() {
         return economics;
+    }
+
+    @Override
+    public int getBlocksOfProgress() {
+        return bopCount;
     }
 
     private static Map<String, InitPair> initPairs;
@@ -1055,5 +1061,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     TownFlagInitialization initializer() {
         return initializer;
+    }
+
+    public FlagTabsEmbedding.FlagInfo getInfo() {
+        return new FlagTabsEmbedding.FlagInfo(getBlockPos(), bopCount > 0);
     }
 }

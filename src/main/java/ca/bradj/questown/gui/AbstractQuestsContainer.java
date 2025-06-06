@@ -19,17 +19,17 @@ import java.util.UUID;
 
 public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     protected final Collection<UIQuest> quests;
-    protected final BlockPos flagPos;
+    protected final FlagTabsEmbedding.FlagInfo flagInfo;
 
     public AbstractQuestsContainer(
             MenuType<?> townQuestsContainerMenuType,
             int windowId,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flagInfo
     ) {
         super(townQuestsContainerMenuType, windowId);
         this.quests = quests;
-        this.flagPos = flagPos;
+        this.flagInfo = flagInfo;
     }
 
     protected static void writeQuests(
@@ -38,25 +38,36 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     ) {
         UIQuest.Serializer ser = new UIQuest.Serializer();
         data.writeInt(quests.size());
-        data.writeCollection(quests, (buf, q) -> {
-            ResourceLocation id;
-            if (q == null) {
-                id = SpecialQuests.BROKEN;
-                q = new UIQuest(null, SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
-            } else {
-                id = q.getRecipeId();
-            }
-            buf.writeResourceLocation(id);
-            ser.toNetwork(buf, q);
-        });
+        data.writeCollection(
+                quests, (buf, q) -> {
+                    ResourceLocation id;
+                    if (q == null) {
+                        id = SpecialQuests.BROKEN;
+                        q = new UIQuest(
+                                null,
+                                SpecialQuests.SPECIAL_QUESTS.get(id),
+                                Quest.QuestStatus.ACTIVE,
+                                null,
+                                null,
+                                null
+                        );
+                    } else {
+                        id = q.getRecipeId();
+                    }
+                    buf.writeResourceLocation(id);
+                    ser.toNetwork(buf, q);
+                }
+        );
     }
 
     public static Collection<UIQuest> readQuests(FriendlyByteBuf data) {
         int size = data.readInt();
-        ArrayList<UIQuest> r = data.readCollection(c -> new ArrayList<>(size), buf -> {
-            ResourceLocation recipeID = buf.readResourceLocation();
-            return new UIQuest.Serializer().fromNetwork(recipeID, buf);
-        });
+        ArrayList<UIQuest> r = data.readCollection(
+                c -> new ArrayList<>(size), buf -> {
+                    ResourceLocation recipeID = buf.readResourceLocation();
+                    return new UIQuest.Serializer().fromNetwork(recipeID, buf);
+                }
+        );
         r.sort(UIQuest::compareTo);
         return r;
     }
@@ -84,8 +95,9 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     }
 
     public void sendRemoveRequest(UUID batchUUID) {
+        BlockPos f = flagInfo.flagPos();
         QuestownNetwork.CHANNEL.sendToServer(
-                new RemoveQuestFromUIMessage(batchUUID, flagPos.getX(), flagPos.getY(), flagPos.getZ(), true)
+                new RemoveQuestFromUIMessage(batchUUID, f.getX(), f.getY(), f.getZ(), true)
         );
     }
 

@@ -44,9 +44,10 @@ public class TownVillagerUIs {
 
     public static void showMultiStatusUI(
             ServerPlayer player,
-            BlockPos townFlagBasePos,
+            FlagTabsEmbedding.FlagInfo townFlagBasePos,
             Collection<LivingEntity> entities,
-            Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc
+            Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
+            int bopCount
     ) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
@@ -78,7 +79,7 @@ public class TownVillagerUIs {
                         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                                 player.getLevel(),
                                 RoomTrigger.Triggers.FirstOpenFlagMenu,
-                                townFlagBasePos
+                                townFlagBasePos.flagPos()
                         );
                     }
                 }, data -> {
@@ -86,7 +87,7 @@ public class TownVillagerUIs {
                             player.getLevel(),
                             questsSrc.get()
                     );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
+                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount);
                 }
         );
     }
