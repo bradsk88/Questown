@@ -15,10 +15,7 @@ import java.util.Collection;
 
 public class TownEconomicsMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
 
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.VILLAGERS,
-            OpenFlagMenuMessage.QUESTS
-    );
+    private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.ECONOMICS);
     private FlagInfo flagInfo;
 
     public static TownEconomicsMenu ForClientSide(

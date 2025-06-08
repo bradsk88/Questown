@@ -328,6 +328,7 @@
   "menu.item_jobs.produces": "Produces:",
   "menu.item_jobs.add_to_work_requests": "Add To Work Requests",
   "menu.unlock_job.insert_bop": "Insert a Block of Progress to unlock job",
+  "menu.block_of_progress.town_has": "This village has %d Blocks of Progress!",
   "menu.block_of_progress.v_has_earned": "%s has earned a Block of Progress!",
   "menu.block_of_progress.many_uses": "Blocks of Progress can be used for unlocking many things in your village.",
   "menu.block_of_progress.will_deposit": "When villagers earn Blocks of Progress, they will go and store them on the town flag's \"base\" block.",

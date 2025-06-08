@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import net.minecraft.network.FriendlyByteBuf;
@@ -12,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Collection;
 
 public class TownBlockofProgressMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
-    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.BOP);
+    private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.BOP);
     final int blocksOfProgressCount;
     private FlagInfo flagInfo;
 
@@ -31,7 +32,7 @@ public class TownBlockofProgressMenu extends AbstractContainerMenu implements Fl
             FlagInfo flagInfo,
             int blocksOfProgress
     ) {
-        super(MenuTypesInit.BLOCKS_OF_PROGRESS.get(), windowId);
+        super(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), windowId);
         this.blocksOfProgressCount = blocksOfProgress;
         this.flagInfo = flagInfo;
     }

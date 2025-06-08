@@ -13,10 +13,7 @@ import java.util.List;
 public class TownQuestsContainer extends AbstractQuestsContainer implements FlagTabsEmbedding {
 
 
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.VILLAGERS,
-            OpenFlagMenuMessage.ECONOMICS
-    );
+    private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.QUESTS);
 
     public TownQuestsContainer(
             int windowId,

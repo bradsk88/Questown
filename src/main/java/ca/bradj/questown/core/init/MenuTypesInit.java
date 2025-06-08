@@ -41,7 +41,7 @@ public class MenuTypesInit {
     public static RegistryObject<MenuType<VillagerEconomicsMenu>> VILLAGER_ECONOMICS = MENUS.register(
             "villager_economics", () -> IForgeMenuType.create(VillagerEconomicsMenu::ForClientSide)
     );
-    public static RegistryObject<MenuType<VillagerBlockofProgressMenu>> BLOCKS_OF_PROGRESS = MENUS.register(
+    public static RegistryObject<MenuType<VillagerBlockofProgressMenu>> VILLAGER_BLOCKS_OF_PROGRESS = MENUS.register(
             "blocks_of_progress", () -> IForgeMenuType.create(VillagerBlockofProgressMenu::ForClientSide)
     );
     public static RegistryObject<MenuType<TownEconomicsMenu>> TOWN_ECONOMICS = MENUS.register(
@@ -52,6 +52,9 @@ public class MenuTypesInit {
     );
     public static RegistryObject<MenuType<JobUnlockConfirmMenu>> CONFIRM_JOB_UPGRADE = MENUS.register(
             "confirm_job_upgrade", () -> IForgeMenuType.create(JobUnlockConfirmMenu::ForClientSide)
+    );
+    public static RegistryObject<MenuType<TownBlockofProgressMenu>> TOWN_BLOCKS_OF_PROGRESS = MENUS.register(
+            "town_blocks_of_progress", () -> IForgeMenuType.create(TownBlockofProgressMenu::ForClientSide)
     );
 
     public static void register(IEventBus eventBus) {

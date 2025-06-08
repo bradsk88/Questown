@@ -12,14 +12,15 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
-public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerBlockofProgressMenu> {
+public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlockofProgressMenu> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
-    private final VillagerTabs tabs;
+    private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
     private final JEI.NineNine background;
@@ -27,7 +28,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerB
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
     public TownBlockofProgressScreen(
-            VillagerBlockofProgressMenu menu,
+            TownBlockofProgressMenu menu,
             Inventory playerInv,
             Component title
     ) {
@@ -36,7 +37,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerB
         super.imageHeight = 220;
 
         this.background = JEI.getRecipeBackground();
-        this.tabs = VillagerTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu);
     }
 
     @Override
@@ -71,9 +72,15 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerB
         super.render(poseStack, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        bgY += 16;
+        bgY += 8;
+        int ct = Math.min(menu.blocksOfProgressCount, 7);
+        int iconsX = (width / 2) - (8 * ct);
+        for (int i = 0; i < ct; i++) {
+            ItemStack defaultInstance = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
+            RenderUtil.renderItemScaled(itemRenderer, 3, defaultInstance, iconsX + (16 * i), bgY + 2);
+        }
+        bgY += 24;
         renderText(poseStack, bgX, bgY);
-        RenderUtil.renderItemScaled(itemRenderer, 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
     }
 
     private void renderText(
@@ -83,10 +90,9 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerB
     ) {
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
-        int iconWidth = 32;
         bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
-                Compat.translatable("menu.block_of_progress.town_has", UtilClean.truncateMiddle(menu.villagerUUID))
+                font, poseStack, topLeft.withY(bgY), tWidth,
+                Compat.translatable("menu.block_of_progress.town_has", menu.blocksOfProgressCount)
         );
         bgY += 8;
         bgY += Compat.drawDarkTextWrap(
@@ -96,7 +102,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<VillagerB
         bgY += 8;
         Compat.drawDarkTextWrap(
                 font, poseStack, topLeft.withY(bgY), tWidth,
-                Compat.translatable("menu.block_of_progress.will_deposit", UtilClean.truncateMiddle(menu.villagerUUID))
+                Compat.translatable("menu.block_of_progress.will_deposit")
         );
     }
 

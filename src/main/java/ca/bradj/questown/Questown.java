@@ -3,7 +3,6 @@ package ca.bradj.questown;
 import ca.bradj.questown.blocks.entity.renderer.FoodDisplayEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
-import ca.bradj.questown.commands.JobArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.*;
@@ -101,7 +100,8 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.VILLAGER_ECONOMICS.get(), VillagerEconomicsScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_ECONOMICS.get(), TownEconomicsScreen::new);
         MenuScreens.register(MenuTypesInit.CONFIRM_JOB_UPGRADE.get(), JobUnlockConfirmScreen::new);
-        MenuScreens.register(MenuTypesInit.BLOCKS_OF_PROGRESS.get(), VillagerBlockofProgressScreen::new);
+        MenuScreens.register(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), VillagerBlockofProgressScreen::new);
+        MenuScreens.register(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), TownBlockofProgressScreen::new);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new

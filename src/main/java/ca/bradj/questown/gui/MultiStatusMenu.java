@@ -15,10 +15,7 @@ import java.util.Collection;
 public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
 
 
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenFlagMenuMessage.QUESTS,
-            OpenFlagMenuMessage.ECONOMICS
-    );
+    private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.VILLAGERS);
     private final FlagInfo flagInfo;
 
     public static MultiStatusMenu ForClientSide(

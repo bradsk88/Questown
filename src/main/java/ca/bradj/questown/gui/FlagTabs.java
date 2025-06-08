@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
@@ -107,5 +108,15 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.BOP),
                 menu.getFlagInfo().showBlockOfProgressTab()
         );
+    }
+
+    public static Collection<String> allExcept(String except) {
+        ImmutableList<String> all = ImmutableList.of(
+                OpenFlagMenuMessage.VILLAGERS,
+                OpenFlagMenuMessage.QUESTS,
+                OpenFlagMenuMessage.ECONOMICS,
+                OpenFlagMenuMessage.BOP
+        );
+        return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
 }
