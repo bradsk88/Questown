@@ -15,6 +15,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
     private final BlockPos flagPos;
     private final UUID villagerUUID;
     private final Collection<JobID> unlockedJobs;
+    private final Collection<JobID> unlockableJobs;
     private final JobID currentJob;
     private final boolean showBlockOfProgressTab;
 
@@ -22,12 +23,14 @@ public final class OpenVillagerAdvancementsMenuMessage {
             BlockPos flagPos,
             UUID villagerUUID,
             Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
             JobID currentJob,
             boolean showBlockOfProgressTab
     ) {
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
         this.unlockedJobs = unlockedJobs;
+        this.unlockableJobs = unlockableJobs;
         this.currentJob = currentJob;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
@@ -41,6 +44,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         buffer.writeInt(msg.flagPos.getZ());
         buffer.writeUUID(msg.villagerUUID);
         buffer.writeCollection(msg.unlockedJobs, NetworkCompat::toNetwork);
+        buffer.writeCollection(msg.unlockableJobs, NetworkCompat::toNetwork);
         NetworkCompat.toNetwork(buffer, msg.currentJob());
         buffer.writeBoolean(msg.showBlockOfProgressTab);
     }
@@ -49,6 +53,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         return new OpenVillagerAdvancementsMenuMessage(
                 new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt()),
                 buffer.readUUID(),
+                buffer.readList(NetworkCompat::fromNetworkJobID),
                 buffer.readList(NetworkCompat::fromNetworkJobID),
                 NetworkCompat.fromNetworkJobID(buffer),
                 buffer.readBoolean()
@@ -64,6 +69,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
                         flagPos,
                         villagerUUID,
                         unlockedJobs,
+                        unlockableJobs,
                         currentJob,
                         showBlockOfProgressTab
                 )

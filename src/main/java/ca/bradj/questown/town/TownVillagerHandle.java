@@ -2,17 +2,20 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceLocation;
@@ -43,7 +46,6 @@ public class TownVillagerHandle implements VillagerHolder {
     final Map<UUID, Integer> levels = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
-    final Map<UUID, HashSet<JobID>> unlockedJobs = new HashMap<>();
     final Map<UUID, Boolean> hasBlockOfProgress = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
@@ -54,12 +56,14 @@ public class TownVillagerHandle implements VillagerHolder {
 
     private static final int TICK_FACTOR = 10;
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
+    private final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     public void initialize(
             Map<UUID, Integer> fullness,
             Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
             Map<UUID, Integer> damage,
             Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
+            Map<UUID, Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level
     ) {
@@ -69,9 +73,7 @@ public class TownVillagerHandle implements VillagerHolder {
         this.fullness.putAll(fullness);
         this.moods.initialize(moodEffects);
         this.damage.putAll(damage);
-        for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
-            UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()));
-        }
+        this.learning.initialize(unlockedJobs, jobsKnownToExist);
         this.experience.putAll(experience);
         this.levels.putAll(level);
     }
@@ -87,6 +89,7 @@ public class TownVillagerHandle implements VillagerHolder {
         moods.tick(currentTick);
         TownFlagBlockEntity t = town.getUnsafe();
         beds.tick(t, ImmutableList.copyOf(entities));
+        learning.tick(ImmutableList.copyOf(entities), currentTick);
         entities.forEach(e -> {
             Optional<GlobalPos> bestBed = beds.getBestBed(t, e);
             e.getBrain().setMemory(MemoryModuleType.HOME, bestBed);
@@ -245,7 +248,7 @@ public class TownVillagerHandle implements VillagerHolder {
             String type,
             UUID villagerId
     ) {
-        TownVillagerUIs.showUI(sender, entities, type, villagerId, ImmutableMap.copyOf(unlockedJobs));
+        TownVillagerUIs.showUI(sender, entities, type, villagerId, learning.getUnlockedJobs(), learning.getChildJobsKnownToExist(getEntity(villagerId).getJobId()));
     }
 
     @Override
@@ -281,9 +284,14 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void add(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
-        for (JobID jobID : ServerJobsRegistry.getDefaultWork(vEntity.getJobId())) {
+
+        ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(vEntity.getJobId());
+        for (JobID jobID : defaultWork) {
             unlockJob(vEntity.getUUID(), jobID);
         }
+
+        learning.requestKnowledge(vEntity.getUUID(), defaultWork);
+
         this.beds.claim(vEntity, town.getUnsafe());
         vEntity.addSleepListener(e -> {
             Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());
@@ -388,11 +396,9 @@ public class TownVillagerHandle implements VillagerHolder {
         return (int) (moods.getMood(uuid) * 10);
     }
 
-    /**
-     * @deprecated Eventually this handle should not require a reference to the flag entity
-     */
     public void associate(TownFlagBlockEntity t) {
         this.town.initialize(t);
+        this.learning.associate(t);
     }
 
     @Override
@@ -487,7 +493,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public void register(VisitorMobEntity vEntity) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", t.getUUID(), vEntity);
-        add(vEntity);
+        this.add(vEntity);
         vEntity.addChangeListener(() -> {
             QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
             t.setChanged();
@@ -500,7 +506,7 @@ public class TownVillagerHandle implements VillagerHolder {
             UUID villagerUUID,
             JobID id
     ) {
-        UtilClean.addOrInitialize(unlockedJobs, villagerUUID, id);
+        learning.unlockJob(villagerUUID, id);
     }
 
     @Override
@@ -529,5 +535,13 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void clearBlockOfProgress(UUID uuid) {
         hasBlockOfProgress.put(uuid, false);
+    }
+
+    public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
+        return learning.getUnlockedJobs();
+    }
+
+    public ImmutableMap<UUID, ImmutableMap<JobID, ImmutableSet<JobID>>> getChildJobsKnownToExist() {
+        return learning.getChildJobsKnownToExist();
     }
 }

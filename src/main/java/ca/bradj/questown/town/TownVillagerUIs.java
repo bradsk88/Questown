@@ -145,7 +145,8 @@ public class TownVillagerUIs {
             Collection<LivingEntity> entities,
             String type,
             UUID villagerId,
-            Map<UUID, HashSet<JobID>> unlockedJobs
+            Map<UUID, ? extends Set<JobID>> unlockedJobs,
+            Set<JobID> unlockableJobs
     ) {
         Optional<LivingEntity> f = entities.stream().filter(VisitorMobEntity.class::isInstance)
                                            .filter(v -> villagerId.equals(v.getUUID())).findFirst();
@@ -178,6 +179,7 @@ public class TownVillagerUIs {
                 econ,
                 flag::getEconomicsHandle,
                 unlockedJobs,
+                unlockableJobs,
                 villagerId
         );
         runnable.accept(d);
@@ -195,9 +197,12 @@ public class TownVillagerUIs {
         QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
     }
 
-    record ShowerData(ServerPlayer sender, List<UIQuest> quests, VisitorMobEntity entity,
-                      VillagerStatsData stats, VillagerEconomicsData econ, Supplier<NoMCEconomics> econHandle,
-                      Map<UUID, HashSet<JobID>> unlockedJobs, UUID villagerId) {
+    record ShowerData(
+            ServerPlayer sender, List<UIQuest> quests, VisitorMobEntity entity,
+            VillagerStatsData stats, VillagerEconomicsData econ, Supplier<NoMCEconomics> econHandle,
+            Map<UUID, ? extends Set<JobID>> unlockedJobs,
+            Set<JobID> unlockableJobs,
+            UUID villagerId) {
     }
 
     private static ImmutableMap<String, Consumer<ShowerData>> menuShow;
@@ -272,6 +277,7 @@ public class TownVillagerUIs {
                              .getFlagPos(),
                             d.entity().getUUID(),
                             vUnlocked,
+                            d.unlockableJobs,
                             d.entity().getJobId(),
                             d.entity().hasBlockOfProgress()
                     );

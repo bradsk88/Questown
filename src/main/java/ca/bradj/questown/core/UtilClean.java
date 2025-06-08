@@ -1,12 +1,13 @@
 package ca.bradj.questown.core;
 
-import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class UtilClean {
@@ -156,15 +157,18 @@ public class UtilClean {
         return b.build();
     }
 
-    public static <X, Y> void addOrInitialize(
+    public static <X, Y> boolean addOrInitialize(
             Map<X, ? extends Collection<Y>> map,
             X key,
             Y value
     ) {
         Map unsafe = map;
         Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        cur.add(value);
-        unsafe.put(key, cur);
+        if (cur.add(value)) {
+            unsafe.put(key, cur);
+            return true;
+        }
+        return false;
     }
 
     public static <X, Y> void addAllOrInitialize(
@@ -176,5 +180,32 @@ public class UtilClean {
         Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
         cur.addAll(values);
         unsafe.put(key, cur);
+    }
+
+    public static <JOB_ID> ImmutableList<JOB_ID> getOrDefaultCollectionByKeyPredicate(
+            ImmutableMap<JOB_ID, ImmutableList<JOB_ID>> map,
+            Predicate<JOB_ID> pred,
+            ImmutableList<JOB_ID> defaultVal
+    ) {
+        for (Map.Entry<JOB_ID, ImmutableList<JOB_ID>> entry : map.entrySet()) {
+            if (pred.test(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return defaultVal;
+    }
+
+    public static <X, I, Y extends Collection<I>> ImmutableMap<X, ImmutableSet<I>> copyMapOfSets(
+            Map<X, Y> toCopy
+    ) {
+        ImmutableMap.Builder<X, ImmutableSet<I>> b = ImmutableMap.builder();
+        for (Map.Entry<X, Y> xEntry : toCopy.entrySet()) {
+            ImmutableSet.Builder<I> b2 = ImmutableSet.builder();
+            for (I i : xEntry.getValue()) {
+                b2.add(i);
+            }
+            b.put(xEntry.getKey(), b2.build());
+        }
+        return b.build();
     }
 }

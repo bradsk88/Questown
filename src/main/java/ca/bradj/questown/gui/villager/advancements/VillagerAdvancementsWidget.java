@@ -44,7 +44,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
     private final boolean active;
     private final boolean unlocked;
-    private final boolean parentUnlocked;
+    private final boolean canUnlock;
     private final int x;
     private final int y;
 
@@ -56,12 +56,12 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             boolean active,
             boolean unlocked,
             @Nullable JobID parentId,
-            boolean parentUnlocked
+            boolean canUnlock
     ) {
         this.id = id;
         this.active = active;
         this.unlocked = unlocked;
-        this.parentUnlocked = parentUnlocked;
+        this.canUnlock = canUnlock;
         this.parentId = parentId;
 
         this.tab = p_97255_;
@@ -136,7 +136,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int p_97301_,
             boolean p_97302_
     ) {
-        if (!(minecraft.player.isCreative() || this.unlocked || this.parentUnlocked)) {
+        if (!(minecraft.player.isCreative() || this.unlocked || this.canUnlock)) {
             return;
         }
         if (this.parent != null) {
@@ -184,14 +184,16 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int v1 = 128 + advancementwidgettype * 26;
             int v2 = 26;
             int v3 = 26;
-            int frameTex = this.display.getFrame().getTexture();
             int x = p_97268_ + this.x + 3;
             int y = p_97269_ + this.y;
-            if (this.unlocked || this.parentUnlocked) {
-                this.blit(p_97267_, x, y, frameTex, v1, v2, v3);
-            } else if (minecraft.player.isCreative()) {
-                this.blit(p_97267_, x, y, FrameType.CHALLENGE.getTexture(), v1, v2, v3);
+            int ft = FrameType.TASK.getTexture();
+            if (!unlocked && canUnlock) {
+                ft = FrameType.GOAL.getTexture();
             }
+            if (!unlocked && !canUnlock && minecraft.player.isCreative()) {
+                ft = FrameType.CHALLENGE.getTexture();
+            }
+            this.blit(p_97267_, x, y, ft, v1, v2, v3);
             if (this.unlocked || minecraft.player.isCreative()) {
                 this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
                         this.display.getIcon(),
@@ -253,7 +255,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         }
 
         int texture = this.display.getFrame().getTexture();
-        if (!this.unlocked && !this.parentUnlocked && minecraft.player.isCreative()) {
+        if (!this.unlocked && !this.canUnlock && minecraft.player.isCreative()) {
             texture = FrameType.CHALLENGE.getTexture();
         }
         this.blit(

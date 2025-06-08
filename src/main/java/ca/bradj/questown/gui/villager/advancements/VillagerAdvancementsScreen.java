@@ -42,6 +42,7 @@ public class VillagerAdvancementsScreen extends Screen {
             BlockPos flagPos,
             UUID villagerUUID,
             Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
             JobID currentJob,
             boolean showBlockOfProgressTab
     ) {
@@ -62,6 +63,7 @@ public class VillagerAdvancementsScreen extends Screen {
                 displayInfo,
                 currentJob,
                 unlockedJobs,
+                unlockableJobs,
                 currentJob == null ? VillagerAdvancements.all() : VillagerAdvancements.all().branch(currentJob.rootId())
         );
         this.flagPos = flagPos;

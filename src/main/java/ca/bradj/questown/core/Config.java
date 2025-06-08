@@ -85,6 +85,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
+    public static final ForgeConfigSpec.ConfigValue<Integer> JOB_TREE_GROWTH;
 
     static {
         // Scanning Config
@@ -148,6 +149,15 @@ public class Config {
 
         // Jobs Config
         BUILDER.push("Jobs");
+        JOB_TREE_GROWTH = BUILDER.comment(
+                "The maximum number of sub-jobs that become available for unlocking when a job is unlocked"
+        ).comment(
+                "For example, if \"baker\" is a pre-requisite for \"bread\", \"cake\", and \"cookies\", "
+        ).comment(
+                "and \"baker\" is unlocked when this is set to 2, only 2 jobs from \"bread\", \"cakes\" and \"cookies\" "
+        ).comment(
+                "will become available for unlocking."
+        ).defineInRange("JobTreeGrowth", 2, 1, 10);
         MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
         ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);

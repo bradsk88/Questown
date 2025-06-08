@@ -153,7 +153,7 @@ public class MCTownStateWorldInteraction extends
             Inputs inputs,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
-        return Compat.shuffle(workSpots, inputs.level);
+        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), inputs.level));
     }
 
     @Override

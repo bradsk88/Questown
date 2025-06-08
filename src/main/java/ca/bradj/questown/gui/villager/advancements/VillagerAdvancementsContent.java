@@ -49,6 +49,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
             DisplayInfo p_97150_,
             @Nullable JobID currentJob,
             Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
             JobRelationship allJobs
     ) {
         this.unlockedJobs = unlockedJobs;
@@ -92,7 +93,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
                             currentJob != null && currentJob.equals(adv.id()),
                             unlockedJobs.contains(adv.id()),
                             parentWidget.id,
-                            unlockedJobs.contains(parentWidget.id)
+                            unlockableJobs.contains(adv.id())
                     );
                     this.addWidget(newWidget, adv.id());
                     return newWidget;

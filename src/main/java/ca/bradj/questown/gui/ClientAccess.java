@@ -21,6 +21,7 @@ public class ClientAccess {
             BlockPos flagPos,
             UUID villagerUUID,
             Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
             JobID currentJob,
             boolean showBlockOfProgressTab
     ) {
@@ -28,6 +29,7 @@ public class ClientAccess {
                 flagPos,
                 villagerUUID,
                 unlockedJobs,
+                unlockableJobs,
                 currentJob,
                 showBlockOfProgressTab
         ));

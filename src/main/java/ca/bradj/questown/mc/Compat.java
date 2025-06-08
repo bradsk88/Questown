@@ -5,6 +5,8 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.init.CommandsInit;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
@@ -107,8 +109,8 @@ public class Compat {
         return Component.literal(x);
     }
 
-    public static <X> ArrayList<X> shuffle(
-            Collection<X> c,
+    public static <X> ImmutableList<X> shuffle(
+            ImmutableCollection<X> c,
             ServerLevel serverLevel
     ) {
         ArrayList<X> list = new ArrayList<>(c);
@@ -116,7 +118,7 @@ public class Compat {
         for (int i = size; i > 1; --i) {
             Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
         }
-        return list;
+        return ImmutableList.copyOf(list);
     }
 
     public static int nextInt(

@@ -157,7 +157,7 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
-        return Compat.shuffle(workSpots, mcExtra.town().getServerLevel());
+        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), mcExtra.town().getServerLevel()));
     }
 
     @Override

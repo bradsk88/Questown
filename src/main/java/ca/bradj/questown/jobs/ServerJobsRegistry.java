@@ -137,6 +137,25 @@ public class ServerJobsRegistry {
         return b.build();
     }
 
+    public static Collection<JobID> getRandomNodesUnder(
+            JobID parentID,
+            Supplier<Integer> randomInt
+    ) {
+        return null;
+    }
+
+    /**
+     * @throws NullPointerException if job does not exist
+     */
+    public static boolean isParentOf(
+            JobID parent,
+            JobID child
+    ) {
+        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child).parentID;
+        if (parentID == null) return false;
+        return parentID.equals(parent);
+    }
+
     private record SpecialJob(Predicate<JobID> idTest,
                               BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
                               TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
@@ -220,8 +239,8 @@ public class ServerJobsRegistry {
         return isWorkMatch;
     }
 
-    public static Set<JobID> getAllJobs() {
-        return Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet());
+    public static ImmutableSet<JobID> getAllJobs() {
+        return ImmutableSet.copyOf(Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet()));
     }
 
     public static ResourceLocation getRoomForJobRootId(

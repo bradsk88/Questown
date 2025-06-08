@@ -505,7 +505,7 @@ public class DeclarativeJob extends DeclarativeProductionJob<ProductionStatus, S
         Function<List<MCTownItem>, List<Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;
         if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
             adjustOrder = list -> {
-                ArrayList<Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
+                ImmutableList<Pair<Integer, MCTownItem>> shuffled = ImmutableList.copyOf(UtilClean.enumerate(list));
                 shuffled = Compat.shuffle(shuffled, town.getServerLevel());
                 return shuffled;
             };
