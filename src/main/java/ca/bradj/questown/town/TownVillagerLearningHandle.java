@@ -87,7 +87,9 @@ public class TownVillagerLearningHandle {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (Map.Entry<UUID, Map<JobID, Set<JobID>>> kjs : jobsKnownToExist.entrySet()) {
             Map<JobID, Set<JobID>> villagerKnown = kjs.getValue();
-            ImmutableList<JobID> known = UtilClean.getOrDefaultCollection(villagerKnown, parent, ImmutableList.of());
+            ImmutableList<JobID> known = UtilClean.getOrDefaultCollectionByKeyPredicate(
+                    villagerKnown, parent::sameRoot, ImmutableList.of()
+            );
             b.addAll(known);
         }
         return b.build();

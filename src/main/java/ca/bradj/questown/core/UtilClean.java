@@ -183,13 +183,13 @@ public class UtilClean {
     }
 
     public static <JOB_ID> ImmutableList<JOB_ID> getOrDefaultCollectionByKeyPredicate(
-            ImmutableMap<JOB_ID, ImmutableList<JOB_ID>> map,
+            Map<JOB_ID, ? extends Collection<JOB_ID>> map,
             Predicate<JOB_ID> pred,
             ImmutableList<JOB_ID> defaultVal
     ) {
-        for (Map.Entry<JOB_ID, ImmutableList<JOB_ID>> entry : map.entrySet()) {
+        for (Map.Entry<JOB_ID, ? extends Collection<JOB_ID>> entry : map.entrySet()) {
             if (pred.test(entry.getKey())) {
-                return entry.getValue();
+                return ImmutableList.copyOf(entry.getValue());
             }
         }
         return defaultVal;

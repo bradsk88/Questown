@@ -186,15 +186,9 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int v3 = 26;
             int x = p_97268_ + this.x + 3;
             int y = p_97269_ + this.y;
-            int ft = FrameType.TASK.getTexture();
-            if (!unlocked && canUnlock) {
-                ft = FrameType.GOAL.getTexture();
-            }
-            if (!unlocked && !canUnlock && minecraft.player.isCreative()) {
-                ft = FrameType.CHALLENGE.getTexture();
-            }
-            this.blit(p_97267_, x, y, ft, v1, v2, v3);
-            if (this.unlocked || minecraft.player.isCreative()) {
+            int ft = getFrameType();
+            if (ft >= 0) {
+                this.blit(p_97267_, x, y, ft, v1, v2, v3);
                 this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
                         this.display.getIcon(),
                         p_97268_ + this.x + 8,
@@ -212,6 +206,18 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
     }
 
+    private int getFrameType() {
+        int ft = -1;
+        if (unlocked) {
+            ft = FrameType.TASK.getTexture();
+        } else if (canUnlock) {
+            ft = FrameType.GOAL.getTexture();
+        } else if (minecraft.player.isCreative()) {
+            ft = FrameType.CHALLENGE.getTexture();
+        }
+        return ft;
+    }
+
     public void addChild(VillagerAdvancementsWidget p_97307_) {
         this.children.add(p_97307_);
     }
@@ -224,6 +230,10 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int p_97275_,
             int p_97276_
     ) {
+        if (!unlocked && !canUnlock && !minecraft.player.isCreative()) {
+            return;
+        }
+
         boolean flag = p_97275_ + p_97272_ + this.x + this.width + 26 >= this.tab.getScreen().width;
         boolean flag1 = 113 - p_97273_ - this.y - 26 <= 6 + this.description.size() * 9;
         int advancementwidgettype;
@@ -254,9 +264,9 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             }
         }
 
-        int texture = this.display.getFrame().getTexture();
-        if (!this.unlocked && !this.canUnlock && minecraft.player.isCreative()) {
-            texture = FrameType.CHALLENGE.getTexture();
+        int texture = getFrameType();
+        if (getFrameType() < 0) {
+            return;
         }
         this.blit(
                 p_97271_,
