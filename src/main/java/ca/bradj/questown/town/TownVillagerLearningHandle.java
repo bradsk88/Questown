@@ -59,18 +59,18 @@ public class TownVillagerLearningHandle {
         if (!changed)
             return;
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
-            QT.FLAG_LOGGER.debug("Computed next awareness for {}: {}", pc.getKey(), Jobs.getNiceString(pc.getValue()));
+            QT.FLAG_LOGGER.debug("Computed next awareness for {}: {}", pc.getKey().toNiceString(), Jobs.getNiceString(pc.getValue()));
         }
     }
 
     public void initialize(
             Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
-            Map<UUID, Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist
+            Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist
     ) {
         for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
             UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()));
         }
-        for (Map.Entry<UUID, Map<JobID, ? extends ImmutableCollection<JobID>>> ujs : jobsKnownToExist.entrySet()) {
+        for (Map.Entry<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> ujs : jobsKnownToExist.entrySet()) {
             HashMap<JobID, Set<JobID>> m = new HashMap<>();
             for (Map.Entry<JobID, ? extends ImmutableCollection<JobID>> uj : ujs.getValue().entrySet()) {
                 m.put(uj.getKey(), new HashSet<>(uj.getValue()));

@@ -56,14 +56,14 @@ public class TownVillagerHandle implements VillagerHolder {
 
     private static final int TICK_FACTOR = 10;
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
-    private final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+    final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     public void initialize(
             Map<UUID, Integer> fullness,
             Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
             Map<UUID, Integer> damage,
             Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
-            Map<UUID, Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
+            Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level
     ) {

@@ -1,10 +1,13 @@
 package ca.bradj.questown.jobs;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.Objects;
+import java.util.Set;
 
 public record JobID(String rootId, String jobId) {
     public static @Nullable JobID fromJSON(@Nullable String val) {
@@ -28,6 +31,14 @@ public record JobID(String rootId, String jobId) {
         ct.putString("root", jobID.rootId);
         ct.putString("jobId", jobID.jobId);
         return ct;
+    }
+
+    public static Tag toTag(Collection<JobID> jobIDS) {
+        ListTag lt = new ListTag();
+        for (JobID jobID : jobIDS) {
+            lt.add(JobID.toTag(jobID));
+        }
+        return lt;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.jobs.Job;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -8,10 +9,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -59,18 +57,26 @@ public class TownVillagerHandlerSerializer {
                     return ImmutableList.copyOf(list);
                 }
         );
-        // FIXME: Deserialize Jobs known to exist
-//        ImmutableMap<UUID, ImmutableList<JobID>> knownJobs = deserializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, t -> {
-//            ListTag jobs = ((CompoundTag) t).getList(NBT_VALUE, Tag.TAG_COMPOUND);
-//
-//            List<JobID> list = jobs.stream().map(v -> JobID.fromTag((CompoundTag) v)).toList();
-//            return ImmutableList.copyOf(list);
-//        });
+        ImmutableMap<UUID, ImmutableMap<JobID, ImmutableList<JobID>>> knownJobs = deserializeMap(
+                compound, NBT_VALUE,
+                ttt -> {
+                    ImmutableMap.Builder<JobID, ImmutableList<JobID>> bbb = ImmutableMap.builder();
+                    ListTag l = ((CompoundTag) ttt).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+                    l.forEach(tttt -> {
+                        CompoundTag jobId = ((CompoundTag) tttt).getCompound(NBT_JOB_ID);
+                        ListTag jobz = ((CompoundTag) tttt).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+                        ImmutableList.Builder<JobID> jb = ImmutableList.builder();
+                        jobz.forEach(j -> jb.add(JobID.fromTag((CompoundTag) j)));
+                        bbb.put(JobID.fromTag(jobId), jb.build());
+                    });
+                    return bbb.build();
+                }
+        );
 
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
 
-        villagerHandle.initialize(fullness, moodEffects, damage, unlockedJobs, ImmutableMap.of(), experience, level);
+        villagerHandle.initialize(fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level);
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
@@ -83,6 +89,22 @@ public class TownVillagerHandlerSerializer {
 
         fullnessPairs.forEach(tag -> {
             UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
+            mb.put(uuid, fn.apply(tag));
+        });
+        return mb.build();
+    }
+
+    private <K, X> ImmutableMap<K, X> deserializeMap(
+            CompoundTag compound,
+            String tagId,
+            Function<Tag, X> fn,
+            Function<Tag, K> keyFn
+    ) {
+        ImmutableMap.Builder<K, X> mb = ImmutableMap.builder();
+        ListTag fullnessPairs = compound.getList(tagId, Tag.TAG_COMPOUND);
+
+        fullnessPairs.forEach(tag -> {
+            K uuid = keyFn.apply(tag);
             mb.put(uuid, fn.apply(tag));
         });
         return mb.build();
@@ -115,18 +137,24 @@ public class TownVillagerHandlerSerializer {
         serializeMap(compound, NBT_EXP, villagerHandle.experience, simpleInt);
         serializeMap(compound, NBT_LEVELS, villagerHandle.levels, simpleInt);
         serializeMap(
-                compound, NBT_UNLOCKED_JOBS, villagerHandle.getUnlockedJobs(), (CompoundTag t, Collection<JobID> j) -> {
-                    ListTag lt = new ListTag();
-                    for (JobID jobID : j) {
-                        lt.add(JobID.toTag(jobID));
-                    }
-                    t.put(NBT_VALUE, lt);
-                }
+                compound, NBT_UNLOCKED_JOBS, villagerHandle.getUnlockedJobs(),
+                (CompoundTag t, Collection<JobID> j) -> t.put(NBT_VALUE, JobID.toTag(j))
         );
-
-        // FIXME: Serialize Jobs known to exist
+        BiConsumer<CompoundTag, Map<JobID, ? extends Collection<JobID>>> bc = (compoundTag, jobIDSetMap) -> {
+            CompoundTag compound1 = new CompoundTag();
+            serializeMap(compound1, NBT_VALUE, jobIDSetMap,
+                    this::serializeJobIdsValue,
+                    (t, k) -> t.put(NBT_JOB_ID, JobID.toTag(k))
+            );
+            compoundTag.put(NBT_VALUE, compound1);
+        };
+        serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.learning.jobsKnownToExist, bc);
 
         return compound;
+    }
+
+    private void serializeJobIdsValue(CompoundTag compoundTag, Collection<JobID> jobIDS) {
+        compoundTag.put(NBT_VALUE, JobID.toTag(jobIDS));
     }
 
     private <X> void serializeMap(
@@ -135,12 +163,22 @@ public class TownVillagerHandlerSerializer {
             Map<UUID, X> fullnessMap,
             BiConsumer<CompoundTag, ? super X> writer
     ) {
+        serializeMap(compound, id, fullnessMap, writer, (t, uuid) -> t.putUUID(NBT_VILLAGER_ID, uuid));
+    }
+
+    private <K, X> void serializeMap(
+            CompoundTag compound,
+            String id,
+            Map<K, X> fullnessMap,
+            BiConsumer<CompoundTag, ? super X> writer,
+            BiConsumer<CompoundTag, K> writeKey
+    ) {
         ListTag pairs = new ListTag();
 
         fullnessMap.forEach((uuid, value) -> {
             CompoundTag tag = new CompoundTag();
             writer.accept(tag, value);
-            tag.putUUID(NBT_VILLAGER_ID, uuid);
+            writeKey.accept(tag, uuid);
             pairs.add(tag);
         });
 
