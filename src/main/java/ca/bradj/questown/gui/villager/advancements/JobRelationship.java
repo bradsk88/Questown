@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class JobRelationship implements Iterable<JobRelationship> {
 
@@ -64,6 +65,13 @@ public class JobRelationship implements Iterable<JobRelationship> {
             }
         }
         return this;
+    }
+
+    public JobRelationship filtered(Predicate<JobID> check) {
+        List<JobRelationship> jobz = jobs.stream().filter(v -> check.test(v.id))
+                                         .map(v -> v.filtered(check))
+                                         .toList();
+        return new JobRelationship(parentId, id, jobz);
     }
 
     public record ContextualPosition(int pos, int sizeOfLevel, int relevantLeafNodes) {
