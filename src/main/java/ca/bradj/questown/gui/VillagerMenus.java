@@ -20,6 +20,7 @@ public class VillagerMenus {
     VillagerQuestsContainer questsMenu;
     VillagerEconomicsMenu econMenu;
     VillagerBlockofProgressMenu bopMenu;
+    JobChangeConfirmMenu changeMenu;
 
     public VillagerMenus(VisitorMobEntity e) {
         this.entity = e;
@@ -60,6 +61,7 @@ public class VillagerMenus {
         );
         menus.initVillagerEconomicsMenu(windowId, flagPos, econ, showBlockOfProgressTab);
         menus.bopMenu = new VillagerBlockofProgressMenu(windowId, e.getUUID(), flagPos);
+        menus.changeMenu = new JobChangeConfirmMenu(windowId, e.getInventory(), player.getInventory(), e.getUUID(), e.getJobId(), e.getFlagPos());
         return menus;
     }
 

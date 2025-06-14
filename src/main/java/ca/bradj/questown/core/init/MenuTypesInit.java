@@ -53,6 +53,9 @@ public class MenuTypesInit {
     public static RegistryObject<MenuType<JobUnlockConfirmMenu>> CONFIRM_JOB_UPGRADE = MENUS.register(
             "confirm_job_upgrade", () -> IForgeMenuType.create(JobUnlockConfirmMenu::ForClientSide)
     );
+    public static RegistryObject<MenuType<JobChangeConfirmMenu>> CONFIRM_JOB_CHANGE = MENUS.register(
+            "confirm_job_change", () -> IForgeMenuType.create(JobChangeConfirmMenu::ForClientSide)
+    );
     public static RegistryObject<MenuType<TownBlockofProgressMenu>> TOWN_BLOCKS_OF_PROGRESS = MENUS.register(
             "town_blocks_of_progress", () -> IForgeMenuType.create(TownBlockofProgressMenu::ForClientSide)
     );

@@ -20,6 +20,7 @@ public record OpenVillagerMenuMessage(
     public static final String QUESTS = "quests";
     public static final String STATS = "stats";
     public static final String SKILLS = "skills";
+    public static final String CHANGE_ROOT = "change_root";
     public static final String ECONOMICS = "economics";
     public static final String BOP = "bop";
 

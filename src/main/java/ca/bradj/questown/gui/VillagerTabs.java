@@ -32,11 +32,12 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable qScreenFn,
             @Nullable Runnable sScreenFn,
             @Nullable Runnable skillScreenFn,
+            @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, econScreenFn, bopScreenFn, showBopTab));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab));
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -44,6 +45,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable qScreenFn,
             @Nullable Runnable sScreenFn,
             @Nullable Runnable skillScreenFn,
+            @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab
@@ -69,6 +71,13 @@ public class VillagerTabs extends Tabs implements SubUI {
 
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
+                    Util.blitTab(rc.stack(), x, y, 1);
+                    RenderSystem.setShaderTexture(0, txBefore);
+                }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null
         ));
         b.add(new Tab(
                 (rc, x, y) -> rc.itemRenderer().renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
@@ -142,6 +151,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                 factory.apply(OpenVillagerMenuMessage.QUESTS),
                 factory.apply(OpenVillagerMenuMessage.STATS),
                 factory.apply(OpenVillagerMenuMessage.SKILLS),
+                factory.apply(OpenVillagerMenuMessage.CHANGE_ROOT),
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
                 factory.apply(OpenVillagerMenuMessage.BOP),
                 menu.showBlockOfProgressTab()
@@ -155,6 +165,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                 OpenVillagerMenuMessage.QUESTS,
                 OpenVillagerMenuMessage.STATS,
                 OpenVillagerMenuMessage.SKILLS,
+                OpenVillagerMenuMessage.CHANGE_ROOT,
                 OpenVillagerMenuMessage.ECONOMICS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());

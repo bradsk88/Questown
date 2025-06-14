@@ -285,6 +285,20 @@ public class TownVillagerUIs {
                 }
         );
         b.put(
+                OpenVillagerMenuMessage.CHANGE_ROOT, (ShowerData d) -> {
+                    openMenu(
+                            d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
+                                    windowId,
+                                    d.entity().getInventory(),
+                                    d.sender.getInventory(),
+                                    d.entity.getUUID(),
+                                    d.entity.getJobId(),
+                                    d.entity().getFlagPos()
+                            ), d.quests(), d.entity(), d.stats()
+                    );
+                }
+        );
+        b.put(
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
