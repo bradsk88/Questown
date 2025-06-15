@@ -61,4 +61,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> SEED_BIN = BLOCKS.register(
             SeedBinBlock.ITEM_ID, SeedBinBlock::new
     );
+    public static final RegistryObject<Block> BLOCK_OF_PROGRESS = BLOCKS.register(
+            BlockOfProgress.ITEM_ID, BlockOfProgress::new
+    );
 }

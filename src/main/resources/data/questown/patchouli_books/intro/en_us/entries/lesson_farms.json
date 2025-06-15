@@ -1,0 +1,45 @@
+{
+  "name": "Farms",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:first_farm_quest",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Looks like one of your villagers has asked you to build a farm.$(br2)But you might ask: \"how do I do that?\"$(br2)Surround a patch of dirt with fence blocks and a gate."
+    }, {
+      "type": "patchouli:multiblock",
+      "multiblock": {
+        "mapping": {
+          "T": "minecraft:oak_fence[north=true,south=true]",
+          "B": "minecraft:oak_fence[north=true,south=true]",
+          "G": "minecraft:oak_fence_gate[facing=east]",
+          "L": "minecraft:oak_fence[west=true,east=true]",
+          "R": "minecraft:oak_fence[west=true,east=true]",
+          "E": "minecraft:oak_fence[west=true,north=true]",
+          "S": "minecraft:oak_fence[west=true,south=true]",
+          "W": "minecraft:oak_fence[east=true,south=true]",
+          "N": "minecraft:oak_fence[east=true,north=true]",
+          "D": "minecraft:grass_block"
+        },
+        "pattern": [
+          [
+            "WTTTN",
+            "L   R",
+            "L 0 R",
+            "L   R",
+            "SBGBE"
+          ],
+          [
+            "DDDDD",
+            "DDDDD",
+            "DDDDD",
+            "DDDDD",
+            "DDDDD"
+          ]
+        ]
+      },
+      "text": "Hint: Use your TOWN WAND to register the farm with your town."
+    }
+  ]
+}

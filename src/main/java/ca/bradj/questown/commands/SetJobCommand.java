@@ -4,27 +4,50 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Collection;
 
 public class SetJobCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_137808_) {
-        p_137808_.register(Commands.literal("qtsetjob")
-                .requires((p_137812_) -> {
-                    return p_137812_.hasPermission(2);
-                })
-                .then(Commands.argument("targets", EntityArgument.entities())
-                        .then(Commands.argument("job_id", JobArgument.job()).executes(css -> {
-                            return setJob(css.getSource(), EntityArgument.getEntities(css, "targets"), JobArgument.getJob(css, "job_id"));
-                        }))));
+    public static void register(
+            CommandDispatcher<CommandSourceStack> src
+    ) {
+        RequiredArgumentBuilder<CommandSourceStack, EntitySelector> entitiesArg = Commands.argument(
+                "entities",
+                EntityArgument.entities()
+        );
+        RequiredArgumentBuilder<CommandSourceStack, JobID> amtArg = Commands.argument("amount", JobArgument.job());
+
+        LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("villagers");
+        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("jobs");
+        LiteralArgumentBuilder<CommandSourceStack> subSubSubCmd = Commands.literal("set");
+
+        // @formatter:off
+        src.register(
+            Commands.literal("qt").then(
+                subCmd.then(
+                subSubCmd.then(
+                subSubSubCmd
+                    .requires(AddExperienceCommand::isCreative)
+                    .then(entitiesArg
+                    .then(amtArg
+                    .executes(css -> setJob(
+                        EntityArgument.getEntities(css, "entities"),
+                        JobArgument.getJob(css, "amount")
+                    ))))
+                )
+            )
+        ));
+        // @formatter:on
     }
 
     private static int setJob(
-            CommandSourceStack source,
             Collection<? extends Entity> targets,
             JobID job
     ) {

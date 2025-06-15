@@ -8,7 +8,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-public class ToClientMessage {
+public final class ToClientMessage {
     public static void handle(
             Supplier<NetworkEvent.Context> ctx,
             ClientRunnable o

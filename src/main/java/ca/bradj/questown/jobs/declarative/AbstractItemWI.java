@@ -46,7 +46,7 @@ public abstract class AbstractItemWI<
             return null;
         }
         POS bp = ws.workPosition();
-        int curState = ws.stateAfterWork();
+        int curState = ws.state();
         State state = getWorkStatuses(extra).getJobBlockState(bp);
         if (state == null || state.isFresh()) {
             Integer initWork = checks.getWorkForStep(curState, 0);

@@ -32,7 +32,7 @@ public class TillWorkspotSpecialRule extends
     @Override
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
-            AfterInsertItemEvent event
+            AfterInsertItemEvent<CONTEXT> event
     ) {
         return null;
     }

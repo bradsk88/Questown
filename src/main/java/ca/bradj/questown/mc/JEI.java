@@ -1,9 +1,11 @@
 package ca.bradj.questown.mc;
 
+import ca.bradj.questown.core.UtilClean;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.Internal;
+import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.gui.elements.DrawableNineSliceTexture;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import mezz.jei.input.MouseUtil;
@@ -55,6 +57,21 @@ public class JEI {
 
     public static IDrawableStatic getSlotDrawable() {
         return Internal.getTextures().getSlotDrawable();
+    }
+
+    public static boolean isCoordInBox(
+            int mouseX,
+            int mouseY,
+            ImmutableRect2i expBar
+    ) {
+        return UtilClean.isCoordInBox(
+                mouseX,
+                mouseY,
+                expBar.getX(),
+                expBar.getY(),
+                expBar.getWidth(),
+                expBar.getHeight()
+        );
     }
 
     public static class NineNine {

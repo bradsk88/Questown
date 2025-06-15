@@ -6,8 +6,10 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -69,6 +71,10 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
 
     public static MCHeldItem fromTown(ItemStack itemstack) {
         return fromTown(MCTownItem.fromMCItemStack(itemstack));
+    }
+
+    public static MCHeldItem fromTown(@NotNull Item item) {
+        return fromTown(item.getDefaultInstance());
     }
 
     @Override

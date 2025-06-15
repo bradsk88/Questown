@@ -12,15 +12,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
-import java.util.Stack;
 
-public class VillagerEconomicsMenu extends AbstractVillagerMenu implements VillagerTabsEmbedding {
+public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
             OpenVillagerMenuMessage.INVENTORY,
             OpenVillagerMenuMessage.STATS,
             OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS
+            OpenVillagerMenuMessage.SKILLS,
+            OpenVillagerMenuMessage.BOP
     );
+    private final boolean showBlockOfProgressTab;
 
     public static VillagerEconomicsMenu ForClientSide(
             int windowId,
@@ -36,15 +37,15 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
             int windowId,
             VisitorMobEntity entity,
             BlockPos flagPos,
-            VillagerEconomicsData initialData
+            VillagerEconomicsData initialData,
+            boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, entity.getUUID());
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
     public static VillagerEconomicsData read(FriendlyByteBuf buf) {
-        return new VillagerEconomicsData(
-                ImmutableList.of()
-        );
+        return new VillagerEconomicsData(ImmutableList.of());
     }
 
     public static void write(
@@ -61,6 +62,11 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
         return ItemStack.EMPTY;
     }
 
+    @Override
+    public void onClose() {
+        // Nothing
+    }
+
     public boolean stillValid(Player p_38874_) {
         // TODO: Consider checking distance
         return true;
@@ -69,5 +75,10 @@ public class VillagerEconomicsMenu extends AbstractVillagerMenu implements Villa
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
     }
 }

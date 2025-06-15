@@ -222,14 +222,6 @@ public class Util {
         level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(prop, limited));
     }
 
-    public static <X, Y> void addOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
-            X key,
-            Y value
-    ) {
-        UtilClean.addOrInitialize(map, key, value);
-    }
-
     public static <K, V> void putIfAbsent(
             Map<K, V> qty,
             K k,
@@ -456,5 +448,12 @@ public class Util {
             }
         }
         return String.join(", ", names.build());
+    }
+
+    public static String getShortString(BlockPos target) {
+        return String.format("[%d, %d ,%d]", target.getX(), target.getY(), target.getZ());
+    }
+    public static String getTinyString(BlockPos target) {
+        return String.format("[%d, %d]", target.getX(), target.getZ());
     }
 }

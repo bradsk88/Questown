@@ -15,6 +15,7 @@ import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.interfaces.VillagerHolder;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -78,13 +79,14 @@ public class TownPossibleWork {
     private void registerUnmetNeeds(String root) {
         ServerLevel sl = town.getServerLevelUnsafe();
         long tick = Util.getTick(sl);
-        Work work = ServerJobsRegistry.getRandomWork(sl, root);
+        VillagerHolder vh = town.getUnsafe().getVillagerHandle();
+        Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
         NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
-        town.getUnsafe().getVillagerHandle().entities()
-            .stream()
-            .map(v -> (VisitorMobEntity) v)
-            .filter(v -> root.equals(v.getJobId().rootId()))
-            .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
+        vh.entities()
+          .stream()
+          .map(v -> (VisitorMobEntity) v)
+          .filter(v -> root.equals(v.getJobId().rootId()))
+          .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
     }
 
     private void registerUnmetNed(
@@ -109,6 +111,7 @@ public class TownPossibleWork {
             ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
             TownFlagBlockEntity t
     ) {
+        // FIXME: Only include jobs that are known by the villagers
         Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
         e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w)));

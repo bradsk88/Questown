@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<MCHeldItem, ?>, IStatus<?>> {
@@ -151,7 +152,7 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     }
 
     @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+    public Function<Void, Void> addJobCompletionListener(Consumer<JobID> listener) {
         return null;
     }
 
@@ -178,5 +179,10 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     @Override
     public Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob) {
         throw new UnsupportedOperationException("Should only be called on server side");
+    }
+
+    @Override
+    public int getExperienceEarned() {
+        return 0;
     }
 }

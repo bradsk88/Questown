@@ -1,8 +1,11 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -17,14 +20,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.ParallelDispatchEvent;
+import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
@@ -104,8 +110,8 @@ public class Compat {
         return new TextComponent(x);
     }
 
-    public static <X> ArrayList<X> shuffle(
-            Collection<X> c,
+    public static <X> ImmutableList<X> shuffle(
+            ImmutableCollection<X> c,
             ServerLevel serverLevel
     ) {
         ArrayList<X> list = new ArrayList<>(c);
@@ -113,7 +119,7 @@ public class Compat {
         for (int i = size; i > 1; --i) {
             Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
         }
-        return list;
+        return ImmutableList.copyOf(list);
     }
 
     public static int nextInt(
@@ -213,6 +219,16 @@ public class Compat {
         font.draw(stack, translatable, x, y, 0x00000000);
     }
 
+    public static void drawDarkText(
+            Font font,
+            PoseStack stack,
+            FormattedCharSequence translatable,
+            int x,
+            int y
+    ) {
+        font.draw(stack, translatable, x, y, 0x00000000);
+    }
+
     public static void drawLightText(
             Font font,
             PoseStack stack,
@@ -255,5 +271,26 @@ public class Compat {
 
     public static void initCommands(IEventBus bus) {
         // Only required on 1.19+
+    }
+
+    /**
+     * @return The number of vertical pixels used up when drawing the text
+     */
+    public static int drawDarkTextWrap(
+            Font font,
+            PoseStack poseStack,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable
+    ) {
+        int out = 0;
+        for (FormattedCharSequence line : font.split(translatable, textWidth)) {
+            drawDarkText(font, poseStack, line, topLeft.x(), topLeft.y() + out);
+            out += (int) (font.lineHeight * 1.5);
+        }
+        return out;
+    }
+    public static Capability<IItemHandler> getItemHandlerCapability() {
+        return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY;
     }
 }

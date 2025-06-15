@@ -69,6 +69,7 @@ public class TownFlagState {
                 ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
                 ImmutableList.of(), // TODO: Should we pass in current knowledge?
+                ImmutableMap.copyOf(parent.villagerHandle.hasBlockOfProgress),
                 dayTime
         );
     }
@@ -101,6 +102,7 @@ public class TownFlagState {
                     ImmutableMap.of(),
                     ImmutableList.of(),
                     ImmutableList.of(),
+                    ImmutableMap.of(),
                     0
             );
             QT.FLAG_LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
@@ -170,6 +172,7 @@ public class TownFlagState {
                 liveState.workTimers,
                 liveState.gates,
                 liveState.knowledge(),
+                liveState.blocksOfProgress,
                 dayTime
         );
     }

@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
@@ -37,7 +38,10 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     SNAPSHOT getJournalSnapshot();
 
-    void initialize(ServerLevel lvl, Snapshot<H> journal);
+    void initialize(
+            ServerLevel lvl,
+            Snapshot<H> journal
+    );
 
     List<Boolean> getSlotLockStatuses();
 
@@ -81,7 +85,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     Function<Void, Void> addItemInsertionListener(BiConsumer<BlockPos, MCHeldItem> listener);
 
-    Function<Void, Void> addJobCompletionListener(Runnable listener);
+    Function<Void, Void> addJobCompletionListener(Consumer<JobID> listener);
 
     long getTotalDuration();
 
@@ -92,4 +96,6 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     Collection<String> getGlobalSpecialRules();
 
     Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
+
+    int getExperienceEarned();
 }

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
@@ -11,10 +12,7 @@ import ca.bradj.questown.gui.StatusArt;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
-import ca.bradj.questown.jobs.declarative.DinerWork;
-import ca.bradj.questown.jobs.declarative.ResterWork;
-import ca.bradj.questown.jobs.declarative.WorkSeekerJob;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -139,6 +137,35 @@ public class ServerJobsRegistry {
         return b.build();
     }
 
+    public static Collection<JobID> getRandomNodesUnder(
+            JobID parentID,
+            Supplier<Integer> randomInt
+    ) {
+        return null;
+    }
+
+    /**
+     * @throws NullPointerException if job does not exist
+     */
+    public static boolean isParentOf(
+            JobID parent,
+            JobID child
+    ) {
+        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child).parentID;
+        if (parentID == null) return false;
+        return parentID.equals(parent);
+    }
+
+    public static ImmutableSet<JobID> getAllRootJobs() {
+        ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
+        for (JobID j : getAllJobs()) {
+            if (getWork(j).parentID == null) {
+                b.add(j);
+            }
+        }
+        return b.build();
+    }
+
     private record SpecialJob(Predicate<JobID> idTest,
                               BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
                               TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
@@ -189,6 +216,7 @@ public class ServerJobsRegistry {
         b.add(SpecialJob.fromWork(DinerNoTableWork::isDining, id -> DinerNoTableWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(DinerRawFoodWork::isDining, id -> DinerRawFoodWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(ResterWork::isResting, id -> ResterWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(BOPDepositorWork::matches, id -> BOPDepositorWork.asWork(id.rootId())));
 
         specialJobs = b.build();
     }
@@ -221,24 +249,28 @@ public class ServerJobsRegistry {
         return isWorkMatch;
     }
 
-    public static Set<JobID> getAllJobs() {
-        return Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet());
+    public static ImmutableSet<JobID> getAllJobs() {
+        return ImmutableSet.copyOf(Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet()));
     }
 
     public static ResourceLocation getRoomForJobRootId(
             ServerLevel rand,
             String rootId
     ) {
-        Work work = getRandomWork(rand, rootId);
+        Work work = getRandomWork(rand, rootId, v -> true);
         return work.baseRoom;
     }
 
     public static Work getRandomWork(
             ServerLevel rand,
-            String rootId
+            String rootId,
+            Predicate<JobID> include
     ) {
-        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId).stream()
-                                                        .filter(v -> v.getKey().rootId().equals(rootId)).toList();
+        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
+                                                        .stream()
+                                                        .filter(v -> v.getKey().rootId().equals(rootId))
+                                                        .filter(v -> include.test(v.getKey()))
+                                                        .toList();
         Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
         return work;
     }
@@ -407,17 +439,25 @@ public class ServerJobsRegistry {
         ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
 
         HashMap<String, ArrayList<Work>> ps = new HashMap<>();
+        HashMap<String, List<JobID>> defaults = new HashMap<>();
         js.forEach((id, job) -> {
             ArrayList<Work> rL = Util.getOrDefault(ps, id.rootId(), new ArrayList<>());
             rL.add(job);
             rL.sort(Comparator.comparingInt(w -> w.priority));
             ps.put(id.rootId(), rL);
+            if (isUnlockedInitially(job)) {
+                UtilClean.addOrInitializeList(defaults, id.rootId(), job.id);
+            }
         });
 
         ps.forEach((rootId, w) -> {
-            b.put(rootId, new Jerb(w.stream().map(x -> x.id).toList(), ImmutableList.of()));
+            b.put(rootId, new Jerb(w.stream().map(x -> x.id).toList(), ImmutableList.copyOf(defaults.get(rootId))));
         });
         jobs = b.build();
+    }
+
+    private static boolean isUnlockedInitially(Work job) {
+        return job.parentID == null;
     }
 
     private record Jerb(ImmutableList<JobID> preferredWork, ImmutableList<JobID> defaultWork) {
@@ -515,7 +555,7 @@ public class ServerJobsRegistry {
             String status,
             ImmutableList<MCHeldItem> heldItems
     ) {
-        if (isSeekingWork(job)) {
+        if (specialJobs.stream().anyMatch(j -> j.idTest().test(job))) {
             return new SimpleSnapshot<>(job, ProductionStatus.from(status), heldItems);
         }
 

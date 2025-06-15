@@ -7,4 +7,8 @@ public record Coordinate(Integer x, Integer y) {
     ) {
         return new Coordinate(x + i, y + i1);
     }
+
+    public Coordinate withY(int inY) {
+        return new Coordinate(x, inY);
+    }
 }

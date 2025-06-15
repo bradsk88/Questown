@@ -20,9 +20,19 @@ public class ClientAccess {
     public static boolean openVillagerAdvancements(
             BlockPos flagPos,
             UUID villagerUUID,
-            JobID currentJob
+            Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
+            JobID currentJob,
+            boolean showBlockOfProgressTab
     ) {
-        return openScreen(() -> new VillagerAdvancementsScreen(flagPos, villagerUUID, currentJob));
+        return openScreen(() -> new VillagerAdvancementsScreen(
+                flagPos,
+                villagerUUID,
+                unlockedJobs,
+                unlockableJobs,
+                currentJob,
+                showBlockOfProgressTab
+        ));
     }
 
     public static void openWorkRequestConfirm(

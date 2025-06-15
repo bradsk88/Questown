@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.UtilClean;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -63,7 +64,8 @@ public class ValidateBed extends Behavior<VisitorMobEntity> {
         if (occupied.isPresent()) {
             if (occupied.get()) {
                 entity.getBrain().eraseMemory(MemoryModuleType.HOME);
-                Questown.LOGGER.debug("{} has abandoned home at {} because it's occupied", entity.getUUID(), bp);
+                Questown.LOGGER.debug("{} has abandoned home at {} because it's occupied",
+                        UtilClean.truncateMiddle(entity.getUUID()), bp);
             }
         }
     }

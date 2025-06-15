@@ -27,19 +27,20 @@ import java.util.function.Supplier;
 
 public class WorkSeekerJob extends DeclarativeJob {
 
-    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
-    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
-    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
+    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of();
+    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of();
+    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of();
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS, 0,
-            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE, 1
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS,
+            0,
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE,
+            1
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS, 0,
-            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE, 0
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_NO_JOBS,
+            0,
+            ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.BLOCK_STATE_JOBS_AVAIlABLE,
+            0
     );
     private static final String WORK_ID = ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.WORK_ID;
 
@@ -83,27 +84,22 @@ public class WorkSeekerJob extends DeclarativeJob {
             @Nullable SoundInfo sound
     ) {
         return new RealtimeWorldInteraction(
-                journal,
-                maxState,
-                checks,
-                specialRules,
-                resultGenerator,
-                claimSpots,
-                (x, need) -> {
-                    Work w = ServerJobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
-                    Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
-                    if (job instanceof DeclarativeJob dj) {
-                        String ingredient = dj.getIngredient(0);
-                        if (ingredient == null) {
-                            return dj.getTool(0);
-                        }
-                        return ingredient;
-                    }
-                    return null;
-                },
-                location,
-                interval,
-                sound
+                journal, maxState, checks, specialRules, resultGenerator, claimSpots, (x, need) -> {
+            Work w = ServerJobsRegistry.getRandomWork(
+                    x.town().getServerLevel(),
+                    getId().rootId(),
+                    x.town().getVillagerHandle()::isUnlocked
+            );
+            Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
+            if (job instanceof DeclarativeJob dj) {
+                String ingredient = dj.getIngredient(0);
+                if (ingredient == null) {
+                    return dj.getTool(0);
+                }
+                return ingredient;
+            }
+            return null;
+        }, location, interval, sound
         ) {
 
             private long getWorkCooldown = 0;
@@ -133,15 +129,20 @@ public class WorkSeekerJob extends DeclarativeJob {
             EntityLocStateProvider<MCRoom> elp
     ) {
         return () -> {
-
-            if (town.getPossibleWork().getFor(getId()).isEmpty()) {
-                if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
-                    journal.changeStatus(statusFactory.noWorkPossible());
-                    registeredUnmet = true;
+            Supplier<ProductionStatus> sc = super.getStateComputer(town, statusFactory, jtp, elp);
+            return switch (super.getSignal()) {
+                case MORNING, NOON, UNDEFINED -> {
+                    if (town.getPossibleWork().getFor(getId()).isEmpty()) {
+                        if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
+                            journal.changeStatus(statusFactory.noWorkPossible());
+                            registeredUnmet = true;
+                        }
+                        yield statusFactory.noWorkPossible();
+                    }
+                    yield sc.get();
                 }
-                return statusFactory.noWorkPossible();
-            }
-            return super.getStateComputer(town, statusFactory, jtp, elp).get();
+                case EVENING, NIGHT -> sc.get();
+            };
         };
     }
 }

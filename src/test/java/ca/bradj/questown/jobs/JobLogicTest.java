@@ -695,4 +695,76 @@ class JobLogicTest {
         Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
         Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
     }
+    @Test
+    void tick_shouldResetJobSiteState_AfterInsertingIngredient_OnLastStep() {
+        // This scenario matches BOPDepositorWork
+        JobDefinition definition = new JobDefinition(
+                new JobID("tester", "test"),
+                2,
+                ImmutableMap.of(
+                        1, "bop"
+                ),
+                ImmutableMap.of(
+                        1, 1
+                ),
+                ImmutableMap.of(
+                        0, "bop"
+                ),
+                ImmutableMap.of(
+                        0, 1 // 1 work required
+                ),
+                ImmutableMap.of(
+                        // No timers
+                ),
+                "air"
+        );
+
+        TestLogicWorld world = new TestLogicWorld(definition);
+        JobLogic<Void, Boolean, Position> logic = new JobLogic<>();
+
+        if (world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS) != null) {
+            throw new IllegalStateException("Should have no state until ticked");
+        }
+
+        world.allWorkSpots = ImmutableMap.of(
+                0, ImmutableList.of(ARBITRARY_WORKSPOT)
+        );
+
+        Runnable ticker = () -> logic.tick(
+                null,
+                () -> ProductionStatus.fromJobBlockStatus(0),
+                definition.jobId(),
+                true,
+                false,
+                false,
+                true,
+                getNever(),
+                new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                world,
+                (a, b) -> world.states.getJobBlockState(b).processingState(),
+                Integer.MAX_VALUE
+        );
+
+
+        Assertions.assertNull(world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS));
+
+        world.inventory.set(0, new GathererJournalTest.TestItem("bop")); // Give them the needed tool
+        world.inventory.set(1, new GathererJournalTest.TestItem("stick")); // Holding an extra item
+        ticker.run(); // Setup
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        ticker.run(); // Finish work with tool
+        Assertions.assertEquals(1, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).workLeft());
+
+        ticker.run(); // Insert second, bumps up to state 2
+        Assertions.assertEquals(2, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).processingState());
+        Assertions.assertEquals(0, world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS).ingredientCount());
+
+        ticker.run(); // Finally, extract
+        Assertions.assertEquals(State.fresh(), world.states.getJobBlockState(ARBITRARY_WORKSPOT_POS));
+    }
 }

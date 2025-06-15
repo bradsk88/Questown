@@ -48,7 +48,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.background = JEI.getRecipeGuiBackground();
         this.slot = JEI.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
-        // TODO: Extract a standard "VillagerTabs" that extends "Tabs" so this is easier to copy to the other screens
         this.tabs = VillagerTabs.forMenu(menu);
     }
 
@@ -116,12 +115,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.slot.draw(stack, xCoord, yCoord);
-            // TODO: Bring back slot locks (or remove them)
-//            if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
-//                // TODO: Compute or provide this value (6)
-//                int statusI = i - TE_INVENTORY_FIRST_SLOT_INDEX;
-//                renderSlotStatus(stack, menu.lockedSlots.get(statusI), xCoord + 1, yCoord + 16 + 2);
-//            }
         }
         int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {

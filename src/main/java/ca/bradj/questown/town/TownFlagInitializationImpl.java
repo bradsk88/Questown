@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import net.minecraft.nbt.CompoundTag;
 
 public class TownFlagInitializationImpl implements TownFlagInitialization {
     private final TownFlagBlockEntity flag;
@@ -63,5 +64,17 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     @Override
     public TownWorkHandle getWorkHandle() {
         return flag.workHandle;
+    }
+
+    @Override
+    public CompoundTag serializeBOP() {
+        CompoundTag t = new CompoundTag();
+        t.putInt("count", flag.bopCount);
+        return t;
+    }
+
+    @Override
+    public void initializeBOP(CompoundTag tag) {
+        flag.bopCount = tag.getInt("count");
     }
 }

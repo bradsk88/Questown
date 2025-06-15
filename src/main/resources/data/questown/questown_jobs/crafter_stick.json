@@ -18,10 +18,10 @@
       "quantity": 1
     },
     {
-      "work": 15
+      "work": 5
     }
   ],
-  "cooldown_ticks": 10,
+  "cooldown_ticks": 50,
   "sound": {
     "id": "minecraft:item.axe.scrape",
     "chance": "100",

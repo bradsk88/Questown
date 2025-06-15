@@ -24,6 +24,7 @@ public class StatusArt {
         b.put(ProductionStatus.NO_SUPPLIES, "menu/gatherer/no_supplies.png");
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
         b.put(ProductionStatus.NO_WORK_POSSIBLE, "menu/gatherer/no_work_possible.png");
+        b.put(ProductionStatus.DROPPING_LOOT, "menu/gatherer/dropping_loot.png");
         pArt = b.build();
     }
 

@@ -1,10 +1,10 @@
 package ca.bradj.questown.integration.jobs;
 
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class JobPhaseModifier {
 
+    @SuppressWarnings("RedundantMethodOverride")
     public static JobPhaseModifier NO_OP = new JobPhaseModifier() {
         @Override
         public <X> @Nullable X beforeExtract(
@@ -17,7 +17,7 @@ public abstract class JobPhaseModifier {
         @Override
         public <CONTEXT> @Nullable CONTEXT afterInsertItem(
                 CONTEXT ctxInput,
-                AfterInsertItemEvent event
+                AfterInsertItemEvent<CONTEXT> event
         ) {
             return null;
         }
@@ -55,7 +55,7 @@ public abstract class JobPhaseModifier {
 
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
-            AfterInsertItemEvent event
+            AfterInsertItemEvent<CONTEXT> event
     ) {
         return null;
     }

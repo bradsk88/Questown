@@ -57,7 +57,7 @@ public class RoomsStatusLogic {
                     stateQty,
                     getContainedBlocks
             );
-            UtilClean.addAllOrInitialize(b, state, rwwcbd.stream().map(v -> new NVIRoom<>(v, false)).toList());
+            UtilClean.addAllOrInitializeList(b, state, rwwcbd.stream().map(v -> new NVIRoom<>(v, false)).toList());
         }
         HashMap<Integer, IPredicateCollection<?>> stateTools = new HashMap<>();
         boolean requiresTools = false;
@@ -80,7 +80,7 @@ public class RoomsStatusLogic {
                 Collection<MATCH> list = roomsWithState(
                         jobRooms, getJobBlockState, i, isJobBlock, s -> true
                 );
-                UtilClean.addAllOrInitialize(b, state, list.stream().map(v -> new NVIRoom<>(v, false)).toList());
+                UtilClean.addAllOrInitializeList(b, state, list.stream().map(v -> new NVIRoom<>(v, false)).toList());
             }
         }
         if (!requiresTools) {
@@ -88,7 +88,7 @@ public class RoomsStatusLogic {
                 Collection<MATCH> workable = roomsWithState(
                         jobRooms, getJobBlockState, i, isJobBlock, State::hasWorkLeft
                 );
-                UtilClean.addAllOrInitialize(b, i, workable.stream().map(v -> new NVIRoom<>(v, true)).toList());
+                UtilClean.addAllOrInitializeList(b, i, workable.stream().map(v -> new NVIRoom<>(v, true)).toList());
             }
         }
         return new RoomsNeedingVillagerInput<>(ImmutableMap.copyOf(b));

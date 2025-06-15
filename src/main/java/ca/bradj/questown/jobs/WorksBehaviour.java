@@ -199,7 +199,7 @@ public class WorksBehaviour {
                             if (!special.containsGlobal(SpecialRules.CLAIM_SPOT)) {
                                 return null;
                             }
-                            return new Claim(inputs.uuid(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+                            return new Claim(inputs.vUUID(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
                         },
                         world.actionDuration(),
                         states,

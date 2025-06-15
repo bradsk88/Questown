@@ -21,7 +21,7 @@
       "work": 10
     }
   ],
-  "cooldown_ticks": 25,
+  "cooldown_ticks": 50,
   "sound": {
     "id": "minecraft:item.axe.scrape",
     "chance": "100",

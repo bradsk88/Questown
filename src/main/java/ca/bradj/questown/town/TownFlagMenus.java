@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
@@ -9,6 +10,8 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.roomrecipes.recipes.RecipesInit;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -31,11 +34,13 @@ public class TownFlagMenus {
     public void showUI(
             ServerPlayer sender,
             String type,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flagInfo,
+            int blocksOfProgress
     ) {
         // TODO: Make it possible to change villager jobs from the flag?
 //        syncWorkToClient(sender);
 
+        BlockPos flagPos = flagInfo.flagPos();
         TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
 
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
@@ -47,16 +52,19 @@ public class TownFlagMenus {
 
         @SuppressWarnings("unchecked") ImmutableMap<String, Runnable> showers = ImmutableMap.of(
                 OpenFlagMenuMessage.QUESTS,
-                () -> openMenu(
-                        sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                windowId, quests, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), quests, flagPos, entities
-                ),
+                () -> {
+                    triggerFarmAdvancement(sender, quests);
+                    openMenu(
+                            sender, (windowId, inv, p) -> new TownQuestsContainer(
+                                    windowId, quests, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
+                    );
+                },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, flagPos, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), quests, flagPos, entities
+                                windowId, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                        ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -66,8 +74,16 @@ public class TownFlagMenus {
                     );
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
-                                    windowId, flagPos
-                            ), quests, flagPos, entities
+                                    windowId, flagInfo
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
+                    );
+                },
+                OpenFlagMenuMessage.BOP,
+                () -> {
+                    openMenu(
+                            sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
+                                    windowId, flagInfo, blocksOfProgress
+                            ), quests, flagInfo, entities, flag.getBlocksOfProgress()
                     );
                 }
         );
@@ -77,6 +93,22 @@ public class TownFlagMenus {
             throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
         }
         runnable.run();
+    }
+
+
+    private void triggerFarmAdvancement(
+            ServerPlayer p,
+            List<UIQuest> q
+    ) {
+        List<RoomRecipe> farmRecipes = p.level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
+                                              .filter(RoomRecipe::isFarmRecipe).toList();
+        for (UIQuest mcQuest : q) {
+            if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getRecipeId()))) {
+                continue;
+            }
+            AdvancementsInit.VISITOR_TRIGGER.trigger(p, VisitorTrigger.Triggers.FirstFarmQuest);
+            break;
+        }
     }
 
     private void triggerAdvancement(
@@ -90,8 +122,9 @@ public class TownFlagMenus {
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
-            BlockPos flagPos,
-            Iterable<? extends VisitorMobEntity> entities
+            FlagTabsEmbedding.FlagInfo flagPos,
+            Iterable<? extends VisitorMobEntity> entities,
+            int bopCount
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -108,7 +141,7 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities)
+                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount)
         );
     }
 

@@ -17,7 +17,7 @@ public class VillagerAdvancements {
     private static final Map<JobID, ResourceLocation> icons = new HashMap<>();
     // This gets populated via register
     private static final JobRelationship all = new JobRelationship(
-            null,
+            null, null,
             ImmutableList.of()
     );
     private static List<Supplier<JobID>> unregistered = new ArrayList<>();
@@ -49,11 +49,11 @@ public class VillagerAdvancements {
     }
 
     private static JobID addToParentOrReturn(JobID id, JobID parentID, JobRelationship rels) {
-        if (rels.prerequisite() == null && parentID == null) {
+        if (rels.id() == null && parentID == null) {
             rels.addChildLeaf(id);
             return null;
         }
-        if (rels.prerequisite() != null && rels.prerequisite().equals(parentID)) {
+        if (rels.id() != null && rels.id().equals(parentID)) {
             rels.addChildLeaf(id);
             return null;
         }

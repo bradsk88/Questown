@@ -3,6 +3,9 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
@@ -26,6 +29,7 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -96,9 +100,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID)
-                                              .stream()
-                                              .filter(Quest::isComplete)
+        Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID).stream().filter(Quest::isComplete)
                                               .toList();
         Collection<MCQuest> villagerQuests = completed.stream()
                                                       // TODO: Filter out recipes that have already been slated for upgrade?
@@ -142,8 +144,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         int jobIdx = Compat.getRandomInt(town.getServerLevel(), jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
-                town,
-                new ChangeJobReward(town, visitorUUID, job),
+                town, new ChangeJobReward(town, visitorUUID, job),
                 // TODO: Randomize? Maybe do EITHER new villager or more quests
                 new AddBatchOfRandomQuestsForVisitorReward(town, town.getRandomVillager())
         );
@@ -194,13 +195,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     @NotNull
     private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                  .map(v -> Arrays.stream(v.getItems())
-                                  .map(ItemStack::getItem)
-                                  .map(ForgeRegistries.ITEMS::getKey)
-                                  .filter(Objects::nonNull)
-                                  .map(ResourceLocation::toString)
-                                  .toList())
-                  .toList();
+                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(ForgeRegistries.ITEMS::getKey)
+                                  .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
     }
 
     public static void addRandomBatchForVisitor(
@@ -213,12 +209,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
-        return ImmutableSet.copyOf(quests.questBatches.getAllBatches()
-                                                      .stream()
-                                                      .map(MCQuestBatch::getOwner)
-                                                      .filter(Objects::nonNull)
-                                                      .collect(Collectors.toSet())
-        );
+        return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
+                                                      .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
     public void tick(TownInterface town) {
@@ -228,32 +220,23 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         //  with a bigger target size than it should have. Because there are now more
         //  villagers in town than there were when the original batch was generated.
         ServerLevel level = town.getServerLevel();
-        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (
-                Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(this).size() + 2)
-        ) / 2;
+        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(
+                this).size() + 2)) / 2;
         if (pendingQuests == null) {
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
-            pendingQuests = new QuestBatchSeed(
-                    level,
-                    UUID.randomUUID(),
-                    targetItemWeight
-            );
+            pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight);
         }
 
         QuestBatchSeed pop = pendingQuests;
         pendingQuests = null;
 
         boolean canGrowMore = pop.grow(
-                town::hasEnoughBeds, () -> getNeededRooms(town.getEconomicsHandle())
-                        .stream()
-                        .filter(v -> TownQuests.isNotSpecial(v.id()))
-                        .toList(), () -> {
-                    List<RoomRecipe> recipes = level
-                            .getRecipeManager()
-                            .getAllRecipesFor(RecipesInit.ROOM)
-                            .stream()
-                            .filter(v -> TownQuests.isNotSpecial(v.getId()))
-                            .toList();
+                town::hasEnoughBeds,
+                () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
+                                                               .toList(),
+                () -> {
+                    List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
+                                                    .filter(v -> TownQuests.isNotSpecial(v.getId())).toList();
                     List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }
@@ -265,13 +248,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     pop.getCostSoFar(),
                     targetItemWeight,
                     Strings.join(
-                            pop.get()
-                               .getAll()
-                               .stream()
-                               .map(Quest::getWantedId)
-                               .map(ResourceLocation::toString)
-                               .toList(),
-                            ", "
+                            pop.get().getAll().stream().map(Quest::getWantedId).map(ResourceLocation::toString)
+                               .toList(), ", "
                     )
             );
         }
@@ -347,10 +325,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 t.getBlockPos().getX(),
                 t.getBlockPos().getY() + 10,
                 t.getBlockPos().getZ(),
-                new ItemStack(
-                        Items.FIREWORK_ROCKET.getDefaultInstance()
-                                             .getItem(), 3
-                )
+                new ItemStack(Items.FIREWORK_ROCKET.getDefaultInstance().getItem(), 3)
         );
         town.getServerLevelUnsafe().addFreshEntity(firework);
     }
@@ -364,14 +339,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        // TODO: Handle this by informing the user, etc.
+        town.getUnsafe().messages.broadcastMessage("dialog.visitors.instruction.sleep_visitors");
         town.getUnsafe().setChanged();
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
-        return ImmutableList.copyOf(questBatches.getAll()
-                                                .stream()
-                                                .map(v -> (Quest<ResourceLocation, MCRoom>) v)
+        return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation, MCRoom>) v)
                                                 .toList());
     }
 
@@ -382,11 +355,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public Collection<MCQuest> getAllForVillager(UUID uuid) {
-        return this.questBatches.getAllBatches()
-                                .stream()
-                                .filter(b -> uuid.equals(b.getOwner()))
-                                .flatMap(v -> v.getAll().stream())
-                                .toList();
+        return this.questBatches.getAllBatches().stream().filter(b -> uuid.equals(b.getOwner()))
+                                .flatMap(v -> v.getAll().stream()).toList();
     }
 
     public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getAllForVillagerWithRewards(UUID uuid) {
@@ -406,8 +376,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             ResourceLocation toRecipeID
     ) {
         ImmutableList<Quest<ResourceLocation, MCRoom>> all = this.getAll();
-        return all.stream()
-                  .filter(Predicates.not(Quest::isComplete))
+        return all.stream().filter(Predicates.not(Quest::isComplete))
                   .anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
     }
 

@@ -86,6 +86,24 @@ public class QuestownNetwork {
                         decoder(OpenItemJobsMessage::decode),
                 OpenItemJobsMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(UnlockJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(UnlockJobMessage::encode).
+                        decoder(UnlockJobMessage::decode),
+                UnlockJobMessage::handle
+        ).add();
+        Compat.withConsumer(
+                registerMessage(JobRootChangeMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(JobRootChangeMessage::encode).
+                        decoder(JobRootChangeMessage::decode),
+                JobRootChangeMessage::handle
+        ).add();
+        Compat.withConsumer(
+                registerMessage(GiveBOPMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(GiveBOPMessage::encode).
+                        decoder(GiveBOPMessage::decode),
+                GiveBOPMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {

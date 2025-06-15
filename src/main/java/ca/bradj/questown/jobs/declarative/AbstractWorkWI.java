@@ -27,7 +27,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             boolean degradeTool
     ) {
         POS bp = ws.workPosition();
-        Integer curState = ws.stateAfterWork();
+        Integer curState = ws.state();
         int nextStepWork = checks.getWorkForStep(curState + 1, 0);
         Integer nextStepTime = checks.getTimeForStep(extra, curState + 1);
         if (nextStepTime == null) {

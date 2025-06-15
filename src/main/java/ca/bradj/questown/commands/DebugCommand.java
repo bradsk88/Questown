@@ -2,31 +2,50 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import javax.annotation.Nullable;
+
 public class DebugCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_137808_) {
-        p_137808_.register(Commands.literal("qtdebug")
-                .requires((p_137812_) -> {
-                    return p_137812_.hasPermission(2);
-                })
-                .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                        .executes(css -> {
-                            return startDebug(css.getSource(), BlockPosArgument.getLoadedBlockPos(css, "pos"));
-                        })));
+    public static void register(CommandDispatcher<CommandSourceStack> src) {
+        RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
+                "pos",
+                BlockPosArgument.blockPos()
+        );
+
+        LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("debug");
+        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("mode_toggle");
+
+        // @formatter:off
+        src.register(
+            Commands.literal("qt").then(
+                subCmd.then(
+                    subSubCmd
+                        .requires(AddExperienceCommand::isCreative)
+                        .then(posArg
+                        .executes(css -> startDebug(
+                            css.getSource(),
+                            BlockPosArgument.getLoadedBlockPos(css, "pos")
+                        )))
+                )
+            )
+        );
+        // @formatter:on
     }
 
     private static int startDebug(
             CommandSourceStack source,
             BlockPos target
     ) {
-        BlockEntity e = source.getLevel().getBlockEntity(target);
-        if (!(e instanceof TownFlagBlockEntity tfbe)) {
-            // TODO: Better error handling?
+        @Nullable TownFlagBlockEntity tfbe = QTCommands.getFlagOrBroadcast(source, target);
+        if (tfbe == null) {
             return -1;
         }
 

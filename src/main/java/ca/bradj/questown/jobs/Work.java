@@ -108,4 +108,5 @@ public class Work {
     public boolean hasNoOutput() {
         return hasNoOutput;
     }
+
 }

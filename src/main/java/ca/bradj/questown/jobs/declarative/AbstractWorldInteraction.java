@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class AbstractWorldInteraction<
@@ -31,11 +32,12 @@ public abstract class AbstractWorldInteraction<
     protected final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     protected final DeclarativeJobChecks<EXTRA, HELD_ITEM, INNER_ITEM, ?, POS> checks;
+    private final JobID jobId;
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
 
-    private final List<Runnable> jobCompletedListeners = new ArrayList<>();
+    private final List<Consumer<JobID>> jobCompletedListeners = new ArrayList<>();
 
     private WithReason<@Nullable WorkPosition<POS>> workspot = new WithReason<>(null, "Never set");
 
@@ -52,6 +54,7 @@ public abstract class AbstractWorldInteraction<
             Function<EXTRA, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
+        this.jobId = jobId;
         if (checks.isInsufficient()) {
             QT.JOB_LOGGER.error(
                     "{} requires no tools, work, time, or ingredients. This will lead to strange game behaviour.",
@@ -406,10 +409,11 @@ public abstract class AbstractWorldInteraction<
         TOWN initTown = getTown(extra);
         PredicateCollection<HELD_ITEM, HELD_ITEM> ingredientsForStep = this.checks.getIngredientsForStep(action);
         if (ingredientsForStep != null && !ingredientsForStep.isEmpty()) {
+            WorkedSpot<POS> wsBefore = getCurWorkedSpot(extra, initTown, workSpot.jobBlock());
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
                     ingredientsForStep,
-                    getCurWorkedSpot(extra, initTown, workSpot.jobBlock())
+                    wsBefore
             );
             if (o == null) {
                 @SuppressWarnings("DataFlowIssue") int quantityWanted = checks.getQuantityForStep(action, 0);
@@ -422,7 +426,7 @@ public abstract class AbstractWorldInteraction<
                 @Nullable TOWN out = postInsertHook(
                         ctx,
                         extra,
-                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()),
+                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()).withBefore(wsBefore.state()),
                         item,
                         maxState
                 );
@@ -490,6 +494,8 @@ public abstract class AbstractWorldInteraction<
             if (town != null) {
                 Function<TOWN, TOWN> resetFunc = getResetFunc(inputs, position);
                 town = resetFunc.apply(town);
+            } else {
+                getResetFunc(inputs, position).apply(getTown(inputs));
             }
             if (town == null) {
                 Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
@@ -502,7 +508,7 @@ public abstract class AbstractWorldInteraction<
                 }
             }
             if (town != null) {
-                jobCompletedListeners.forEach(Runnable::run);
+                jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
             return town;
             // TODO: If SpecialRules.NULLIFY_EXCESS_RESULTS does not apply, should we spawn items in town?
@@ -535,7 +541,7 @@ public abstract class AbstractWorldInteraction<
             HELD_ITEM item,
             int maxState
     ) {
-        ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.stateAfterWork(), maxState);
+        ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.previousState(), maxState);
         Collection<String> rules = specialRules.get(o);
         if (rules == null || rules.isEmpty()) {
             return ctx;
@@ -629,11 +635,11 @@ public abstract class AbstractWorldInteraction<
         this.itemWI.removeItemInsertionListener(listener);
     }
 
-    public void addJobCompletionListener(Runnable listener) {
+    public void addJobCompletionListener(Consumer<JobID> listener) {
         this.jobCompletedListeners.add(listener);
     }
 
-    public void removeJobCompletionListener(Runnable listener) {
+    public void removeJobCompletionListener(Consumer<JobID> listener) {
         this.jobCompletedListeners.remove(listener);
     }
 

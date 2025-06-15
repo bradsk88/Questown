@@ -212,7 +212,7 @@ class TestQuest extends Quest<Integer, Room> {
     @Override
     public String toString() {
         return "TestQuest{" +
-                "uuid=" + ownerUUID +
+                "vUUID=" + ownerUUID +
                 ", recipeId=" + recipeId +
                 ", status=" + status +
                 ", completedOn=" + completedOn +

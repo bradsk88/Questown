@@ -11,4 +11,6 @@ public interface VillagerTabsEmbedding {
     BlockPos getFlagPos();
 
     UUID getVillagerUUID();
+
+    boolean showBlockOfProgressTab();
 }
