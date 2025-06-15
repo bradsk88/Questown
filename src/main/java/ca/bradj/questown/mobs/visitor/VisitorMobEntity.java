@@ -57,10 +57,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -87,6 +84,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
@@ -783,7 +781,30 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
-        super.pushEntities();
+        List<Entity> list = this.level.getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
+        list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
+        // Copied from superclass
+        if (!list.isEmpty()) {
+            int i = this.level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
+                int j = 0;
+
+                for(int k = 0; k < list.size(); ++k) {
+                    if (!list.get(k).isPassenger()) {
+                        ++j;
+                    }
+                }
+
+                if (j > i - 1) {
+                    this.hurt(DamageSource.CRAMMING, 6.0F);
+                }
+            }
+
+            for(int l = 0; l < list.size(); ++l) {
+                Entity entity = list.get(l);
+                this.doPush(entity);
+            }
+        }
     }
 
     @Override

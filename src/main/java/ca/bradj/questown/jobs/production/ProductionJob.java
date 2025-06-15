@@ -339,7 +339,7 @@ public abstract class ProductionJob<
             return jobSite1;
         }
 
-        if (status.isWorkingOnProduction()) {
+        if (status.isWorkingOnProduction() || status.isWaitingForTimers()) {
             WorkPosition<BlockPos> productionSpot = findProductionSpot(sl);
             if (productionSpot != null) {
                 this.setLookTarget(productionSpot.jobBlock());

@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -8,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -32,6 +34,19 @@ public class VillagerMenus {
             FriendlyByteBuf buf
     ) {
         // Buffer reads - order must match write()
+        try {
+            return doFromNetwork(windowId, player, buf);
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to load menus from network", e);
+            throw e;
+        }
+    }
+
+    private static @NotNull VillagerMenus doFromNetwork(
+            int windowId,
+            Player player,
+            FriendlyByteBuf buf
+    ) {
         int i = buf.readInt();
         JobID jobId = Jobs.getIdFromNetwork(buf);
 
@@ -61,7 +76,15 @@ public class VillagerMenus {
         );
         menus.initVillagerEconomicsMenu(windowId, flagPos, econ, showBlockOfProgressTab);
         menus.bopMenu = new VillagerBlockofProgressMenu(windowId, e.getUUID(), flagPos);
-        menus.changeMenu = new JobChangeConfirmMenu(windowId, e.getInventory(), player.getInventory(), e.getUUID(), e.getJobId(), e.getFlagPos());
+
+        SimpleContainer bopSlot = new SimpleContainer(1) {
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        };
+
+        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), e.getJobId(), flagPos);
         return menus;
     }
 

@@ -25,6 +25,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -289,7 +290,12 @@ public class TownVillagerUIs {
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
                                     windowId,
-                                    d.entity().getInventory(),
+                                    new SimpleContainer(1) {
+                                        @Override
+                                        public int getMaxStackSize() {
+                                            return 1;
+                                        }
+                                    },
                                     d.sender.getInventory(),
                                     d.entity.getUUID(),
                                     d.entity.getJobId(),

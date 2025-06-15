@@ -5,20 +5,13 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Jobs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.Slot;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 
 public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
@@ -45,7 +38,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             BlockPos flagPos
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
-        gathererInventoryYOffset = 8 + boxHeight + 4;
+        gathererInventoryYOffset = 8;
         this.jobId = jobId;
 
         layoutSlots(gathererInv);
@@ -60,20 +53,6 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     public void removed(Player p_38940_) {
         super.removed(p_38940_);
         super.clearContainer(p_38940_);
-    }
-
-    private void sendItemsBackToPlayerOrLevel(ServerPlayer sp) {
-        for (Slot villagerSlot : super.getVillagerSlots()) {
-            if (!villagerSlot.hasItem()) {
-                continue;
-            }
-            quickMoveStack(sp, villagerSlot.index);
-            if (!villagerSlot.hasItem()) {
-                continue;
-            }
-            ItemEntity ie = new ItemEntity(sp.level, sp.getX(), sp.getY(), sp.getZ(), villagerSlot.getItem());
-            sp.level.addFreshEntity(ie);
-        }
     }
 
     public boolean hasBlockOfProgress() {

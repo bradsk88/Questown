@@ -92,35 +92,19 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         super.render(stack, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        int jobIconY = bgY + 6;
-        itemRenderer.renderAndDecorateItem(VillagerAdvancements.getIcon(menu.jobId), bgX + 8, jobIconY);
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        renderText(stack, jobIconX, jobIconY + 5, bgY + menu.gathererInventoryYOffset);
+        renderText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
         this.renderTooltip(stack, mouseX, mouseY);
     }
 
     private void renderText(
             PoseStack stack,
             int x,
-            int y1,
-            int y2
+            int y1
     ) {
         int bgY = y1;
-        ImmutableList<Component> jc = Jobs.getComponentsForTooltip(menu.jobId);
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
-        List<FormattedCharSequence> parts = font.split(
-                Compat.translatable(
-                        "menu.common.job_name",
-                        jc.get(0),
-                        jc.get(1)
-                ), textWidth
-        );
-        for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
-            bgY += 8;
-        }
-        bgY = y2;
-        parts = font.split(Compat.translatable("menu.unlock_root.insert_bop"), textWidth);
+        List<FormattedCharSequence> parts = font.split(Compat.translatable("menu.unlock_root.insert_bop"), textWidth);
         for (FormattedCharSequence part : parts) {
             Compat.drawDarkText(font, stack, part, x, bgY);
             bgY += 8;
