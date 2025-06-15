@@ -92,6 +92,12 @@ public class QuestownNetwork {
                         decoder(UnlockJobMessage::decode),
                 UnlockJobMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(JobRootChangeMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(JobRootChangeMessage::encode).
+                        decoder(JobRootChangeMessage::decode),
+                JobRootChangeMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {

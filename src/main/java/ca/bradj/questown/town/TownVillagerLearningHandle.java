@@ -23,16 +23,12 @@ public class TownVillagerLearningHandle {
     private final UnsafeTown town = new UnsafeTown(TownVillagerLearningHandle.class);
 
     private final VillagerLearningHandle<JobID> delegate = new VillagerLearningHandle<>(
-            ServerJobsRegistry::getAllJobs,
-            v -> Compat.shuffle(v, town.getServerLevelUnsafe()),
-            (p, c) -> {
-                if (ServerJobsRegistry.isParentOf(p, c)) {
-                    return true;
-                }
-                return false;
-            },
-            j -> true,
-            Config.JOB_TREE_GROWTH.get()
+            ServerJobsRegistry::getAllJobs, v -> Compat.shuffle(v, town.getServerLevelUnsafe()), (p, c) -> {
+        if (ServerJobsRegistry.isParentOf(p, c)) {
+            return true;
+        }
+        return false;
+    }, j -> true, Config.JOB_TREE_GROWTH.get()
     );
     private long lastTicked;
     private long lastComputed;
@@ -56,10 +52,13 @@ public class TownVillagerLearningHandle {
         this.lastComputed = currentTick;
         ImmutableSet<JobID> representativeJobs = ServerJobsRegistry.getAllJobs();
         boolean changed = delegate.tick(representativeJobs);
-        if (!changed)
-            return;
+        if (!changed) return;
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
-            QT.FLAG_LOGGER.debug("Computed next awareness for {}: {}", pc.getKey().toNiceString(), Jobs.getNiceString(pc.getValue()));
+            QT.FLAG_LOGGER.debug(
+                    "Computed next awareness for {}: {}",
+                    pc.getKey().toNiceString(),
+                    Jobs.getNiceString(pc.getValue())
+            );
         }
     }
 
@@ -68,7 +67,7 @@ public class TownVillagerLearningHandle {
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist
     ) {
         for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
-            UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()));
+            UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()), HashSet::new);
         }
         for (Map.Entry<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> ujs : jobsKnownToExist.entrySet()) {
             HashMap<JobID, Set<JobID>> m = new HashMap<>();
@@ -88,7 +87,9 @@ public class TownVillagerLearningHandle {
         for (Map.Entry<UUID, Map<JobID, Set<JobID>>> kjs : jobsKnownToExist.entrySet()) {
             Map<JobID, Set<JobID>> villagerKnown = kjs.getValue();
             ImmutableList<JobID> known = UtilClean.getOrDefaultCollectionByKeyPredicate(
-                    villagerKnown, parent::sameRoot, ImmutableList.of()
+                    villagerKnown,
+                    parent::sameRoot,
+                    ImmutableList.of()
             );
             b.addAll(known);
         }
@@ -118,7 +119,7 @@ public class TownVillagerLearningHandle {
             UUID villagerUUID,
             JobID id
     ) {
-        UtilClean.addOrInitialize(unlockedJobs, villagerUUID, id);
+        UtilClean.addOrInitialize(unlockedJobs, villagerUUID, id, HashSet::new);
     }
 
     public void registerAsKnown(
@@ -141,7 +142,7 @@ public class TownVillagerLearningHandle {
                 contributingVillager,
                 ImmutableMap.of()
         ));
-        UtilClean.addOrInitialize(villagerKnown, parentJob, jobsKnownToExist);
+        UtilClean.addOrInitialize(villagerKnown, parentJob, jobsKnownToExist, HashSet::new);
         this.jobsKnownToExist.put(contributingVillager, villagerKnown);
         QT.FLAG_LOGGER.debug(
                 "Registering as known: {}->{} via {}",
@@ -170,5 +171,16 @@ public class TownVillagerLearningHandle {
                     }
                 }
         );
+    }
+
+    public boolean isUnlocked(JobID jobID) {
+        for (HashSet<JobID> value : unlockedJobs.values()) {
+            for (JobID id : value) {
+                if (jobID.equals(id)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

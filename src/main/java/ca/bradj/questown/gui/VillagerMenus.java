@@ -56,6 +56,7 @@ public class VillagerMenus {
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
         VillagerEconomicsData econ = VillagerEconomicsMenu.read(buf);
         boolean showBlockOfProgressTab = buf.readBoolean();
+        boolean alreadyPending = buf.readBoolean();
 
         // TODO[Performance]: Rather than getting the entity, get the vUUID and slot locks
         VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
@@ -84,7 +85,7 @@ public class VillagerMenus {
             }
         };
 
-        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), e.getJobId(), flagPos);
+        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), e.getJobId(), flagPos, alreadyPending);
         return menus;
     }
 
@@ -96,7 +97,8 @@ public class VillagerMenus {
             JobID jobId,
             VillagerStatsData stats,
             VillagerEconomicsData econ,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean jobChangeAlreadyPending
     ) {
         data.writeInt(e.getId());
         data.writeUtf(jobId.rootId());
@@ -106,6 +108,8 @@ public class VillagerMenus {
         VillagerStatsMenu.write(stats, data);
         VillagerEconomicsMenu.write(econ, data);
         data.writeBoolean(showBlockOfProgressTab);
+        data.writeBoolean(
+                jobChangeAlreadyPending);
     }
 
     private InventoryAndStatusMenu initInventory(

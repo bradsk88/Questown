@@ -19,6 +19,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     private static final int boxHeight = 18;
     final JobID jobId;
+    public boolean changeAlreadyPending;
 
     public static JobChangeConfirmMenu ForClientSide(
             int windowId,
@@ -35,11 +36,13 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             Inventory inv,
             UUID villagerUUID,
             JobID jobId,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean alreadyPending
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
+        this.changeAlreadyPending = alreadyPending;
 
         layoutSlots(gathererInv);
     }

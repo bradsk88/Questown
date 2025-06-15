@@ -6,10 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.*;
 
@@ -56,7 +53,7 @@ public class VillagerLearningHandle<JOB_ID> {
 
         ImmutableList<JOB_ID> shuffled = this.allShuffled.get();
         ArrayList<JOB_ID> uniqueRoots = new ArrayList<>(villagerJobs);
-        Map<JOB_ID, ArrayList<JOB_ID>> precalculated = new HashMap<>();
+        Map<JOB_ID, List<JOB_ID>> precalculated = new HashMap<>();
 
         boolean changed = false;
 
@@ -87,20 +84,20 @@ public class VillagerLearningHandle<JOB_ID> {
                 if (townKnownJobs.contains(jobId)) {
                     continue;
                 }
-                ArrayList<JOB_ID> cur = UtilClean.getOrDefault(precalculated, uniqueRoot, new ArrayList<>());
+                List<JOB_ID> cur = UtilClean.getOrDefault(precalculated, uniqueRoot, new ArrayList<>());
                 if (cur.size() >= maxAttemptsToLearn) {
                     break;
                 }
                 if (cur.contains(jobId)) {
                     continue;
                 }
-                UtilClean.addOrInitialize(precalculated, uniqueRoot, jobId);
+                UtilClean.addAllOrInitializeList(precalculated, uniqueRoot, ImmutableList.of(jobId));
                 changed = true;
             }
         }
 
         ImmutableMap.Builder<JOB_ID, ImmutableList<JOB_ID>> b = ImmutableMap.builder();
-        for (Map.Entry<JOB_ID, ArrayList<JOB_ID>> e : precalculated.entrySet()) {
+        for (Map.Entry<JOB_ID, List<JOB_ID>> e : precalculated.entrySet()) {
             b.put(e.getKey(), ImmutableList.copyOf(e.getValue()));
         }
         this.precalculated = b.build();

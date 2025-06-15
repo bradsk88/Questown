@@ -1,12 +1,9 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.core.network.UnlockJobMessage;
-import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
-import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
@@ -58,11 +55,10 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int buttonWidth = (backgroundWidth / 2) - 8;
         this.unlockButton = this.addRenderableWidget(new Button(
                 maybeX, maybeY, buttonWidth, 20, Compat.translatable("menu.common.unlock"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(
+            QuestownNetwork.CHANNEL.sendToServer(new JobRootChangeMessage(
                     menu.flagPos,
                     menu.villagerUUID,
-                    menu.jobId,
-                    false
+                    menu.jobId
             ));
             Minecraft.getInstance().setScreen(null);
         }
@@ -85,19 +81,23 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             int mouseY,
             float partialTicks
     ) {
+        int bgX = (this.width - backgroundWidth) / 2;
+        int bgY = (this.height - backgroundHeight) / 2;
+        int jobIconX = bgX + 8 + slot.getWidth() + 4;
+        if (menu.changeAlreadyPending) {
+            renderStatusText(stack, bgX, bgY + menu.gathererInventoryYOffset);
+        }
+
         if (unlockButton != null) {
             unlockButton.active = menu.hasBlockOfProgress();
         }
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
-        int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
-        int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        renderText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
+        renderChangeText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
         this.renderTooltip(stack, mouseX, mouseY);
     }
 
-    private void renderText(
+    private void renderChangeText(
             PoseStack stack,
             int x,
             int y1
@@ -105,6 +105,19 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int bgY = y1;
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
         List<FormattedCharSequence> parts = font.split(Compat.translatable("menu.unlock_root.insert_bop"), textWidth);
+        for (FormattedCharSequence part : parts) {
+            Compat.drawDarkText(font, stack, part, x, bgY);
+            bgY += 8;
+        }
+    }
+    private void renderStatusText(
+            PoseStack stack,
+            int x,
+            int y1
+    ) {
+        int bgY = y1;
+        int textWidth = backgroundWidth;
+        List<FormattedCharSequence> parts = font.split(Compat.translatable("menu.unlock_root.already_pending"), textWidth);
         for (FormattedCharSequence part : parts) {
             Compat.drawDarkText(font, stack, part, x, bgY);
             bgY += 8;

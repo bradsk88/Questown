@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -146,9 +147,9 @@ public class DeclarativeJobs {
             WorkStatusHandle<BlockPos, MCHeldItem> work
     ) {
         ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
-        Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> e = () -> {
+        Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> e = () -> {
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
-            Map<MCRoom, Collection<Integer>> roomStatuses = new HashMap<>();
+            Map<MCRoom, List<Integer>> roomStatuses = new HashMap<>();
             Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
 
             //TODO: Validate that this is actually needed
@@ -159,8 +160,9 @@ public class DeclarativeJobs {
                 if (jobBlockState == null) {
                     return;
                 }
-                spotStatuses.put(bp, jobBlockState.processingState());
-                Util.addOrInitialize(roomStatuses, match.room().getRoom(), jobBlockState.processingState());
+                int v = jobBlockState.processingState();
+                spotStatuses.put(bp, v);
+                UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
             }));
             return new Pair<>(spotStatuses.build(), roomStatuses);
         };
@@ -480,14 +482,14 @@ public class DeclarativeJobs {
 
         private static final String NAME = "rooms contain workstate";
 
-        private final Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs;
+        private final Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> inputs;
         private final String name;
         private final int state;
         private LZCD.Populated<WithReason<Boolean>> value;
 
         public RoomStates(
                 int state,
-                Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>>> inputs
+                Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> inputs
         ) {
             this.inputs = inputs;
             this.name = NAME + " " + state;
@@ -500,7 +502,7 @@ public class DeclarativeJobs {
 //            if (value != null) {
 //                return value;
 //            }
-            Pair<Map<BlockPos, Integer>, Map<MCRoom, Collection<Integer>>> v = this.inputs.get();
+            Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>> v = this.inputs.get();
             Map<BlockPos, Integer> spotStates = v.a();
             Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()
                                                                          .filter(z -> Integer.compare(

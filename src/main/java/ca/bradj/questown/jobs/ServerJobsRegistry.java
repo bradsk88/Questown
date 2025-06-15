@@ -156,6 +156,16 @@ public class ServerJobsRegistry {
         return parentID.equals(parent);
     }
 
+    public static ImmutableSet<JobID> getAllRootJobs() {
+        ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
+        for (JobID j : getAllJobs()) {
+            if (getWork(j).parentID == null) {
+                b.add(j);
+            }
+        }
+        return b.build();
+    }
+
     private record SpecialJob(Predicate<JobID> idTest,
                               BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
                               TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
@@ -247,16 +257,20 @@ public class ServerJobsRegistry {
             ServerLevel rand,
             String rootId
     ) {
-        Work work = getRandomWork(rand, rootId);
+        Work work = getRandomWork(rand, rootId, v -> true);
         return work.baseRoom;
     }
 
     public static Work getRandomWork(
             ServerLevel rand,
-            String rootId
+            String rootId,
+            Predicate<JobID> include
     ) {
-        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId).stream()
-                                                        .filter(v -> v.getKey().rootId().equals(rootId)).toList();
+        List<Map.Entry<JobID, Supplier<Work>>> x = Works.entrySet(rootId)
+                                                        .stream()
+                                                        .filter(v -> v.getKey().rootId().equals(rootId))
+                                                        .filter(v -> include.test(v.getKey()))
+                                                        .toList();
         Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
         return work;
     }
@@ -425,14 +439,14 @@ public class ServerJobsRegistry {
         ImmutableMap.Builder<String, Jerb> b = ImmutableMap.builder();
 
         HashMap<String, ArrayList<Work>> ps = new HashMap<>();
-        HashMap<String, ArrayList<JobID>> defaults = new HashMap<>();
+        HashMap<String, List<JobID>> defaults = new HashMap<>();
         js.forEach((id, job) -> {
             ArrayList<Work> rL = Util.getOrDefault(ps, id.rootId(), new ArrayList<>());
             rL.add(job);
             rL.sort(Comparator.comparingInt(w -> w.priority));
             ps.put(id.rootId(), rL);
             if (isUnlockedInitially(job)) {
-                UtilClean.addOrInitialize(defaults, id.rootId(), job.id);
+                UtilClean.addOrInitializeList(defaults, id.rootId(), job.id);
             }
         });
 

@@ -157,29 +157,45 @@ public class UtilClean {
         return b.build();
     }
 
-    public static <X, Y> boolean addOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
+    public static <X, Y, Z extends Collection<Y>> boolean addOrInitialize(
+            Map<X, Z> map,
             X key,
-            Y value
+            Y value,
+            Function<Collection<Y>, Z> typer
     ) {
-        Map unsafe = map;
-        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        if (cur.add(value)) {
-            unsafe.put(key, cur);
-            return true;
-        }
-        return false;
+        ArrayList<Y> input = new ArrayList<>();
+        input.add(value);
+        return addAllOrInitialize(map, key, typer.apply(input), typer);
+
     }
 
-    public static <X, Y> void addAllOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <X, Y> void addAllOrInitializeList(
+            Map<X, List<Y>> map,
             X key,
             Collection<Y> values
     ) {
-        Map unsafe = map;
-        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        cur.addAll(values);
+        addAllOrInitialize(map, key, values, ArrayList::new);
+    }
+    public static <X, Y> void addOrInitializeList(
+            Map<X, List<Y>> map,
+            X key,
+            Y value
+    ) {
+        addAllOrInitialize(map, key, ImmutableList.of(value), ArrayList::new);
+    }
+
+    public static <X, Y, Z extends Collection<Y>> boolean addAllOrInitialize(
+            Map<X, Z> map,
+            X key,
+            Collection<Y> values,
+            Function<Collection<Y>, Z> typer
+    ) {
+        Map<X, Z> unsafe = map;
+        Z cur = typer.apply(getOrDefaultCollection(map, key, typer.apply(new ArrayList<>()), true));
+        boolean result = cur.addAll(values);
         unsafe.put(key, cur);
+        return result;
     }
 
     public static <JOB_ID> ImmutableList<JOB_ID> getOrDefaultCollectionByKeyPredicate(

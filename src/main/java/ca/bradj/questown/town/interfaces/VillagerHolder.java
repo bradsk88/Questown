@@ -13,7 +13,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public interface VillagerHolder {
     void addStatsListener(Consumer<VillagerStatsData> l);
@@ -109,4 +108,8 @@ public interface VillagerHolder {
     boolean hasBlockOfProgress(UUID uuid);
 
     void clearBlockOfProgress(UUID uuid);
+
+    void scheduleJobRootChange(UUID villagerUUID);
+
+    boolean isUnlocked(JobID jobID);
 }

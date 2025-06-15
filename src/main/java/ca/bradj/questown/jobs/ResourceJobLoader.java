@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
@@ -262,7 +263,7 @@ public class ResourceJobLoader {
                 return new WorkSpecialRules(ImmutableMap.of(), globals.build());
             }
 
-            Map<ProductionStatus, Collection<String>> stages = new HashMap<>();
+            Map<ProductionStatus, List<String>> stages = new HashMap<>();
             object.get("special").getAsJsonArray().forEach(row -> {
                 JsonObject rowObj = row.getAsJsonObject();
                 JsonArray rules = rowObj.get("rules").getAsJsonArray();
@@ -284,7 +285,7 @@ public class ResourceJobLoader {
                 return new WorkSpecialRules(ImmutableMap.of(), globals.build());
             }
 
-            Map<ProductionStatus, Collection<String>> stages = new HashMap<>();
+            Map<ProductionStatus, List<String>> stages = new HashMap<>();
             object.get("special").getAsJsonArray().forEach(row -> {
                 JsonObject rowObj = row.getAsJsonObject();
                 JsonArray rules = rowObj.get("rules").getAsJsonArray();
@@ -370,7 +371,7 @@ public class ResourceJobLoader {
             JsonElement rule,
             JsonObject rowObj,
             ImmutableList.Builder<String> globals,
-            Map<ProductionStatus, Collection<String>> writeableStages
+            Map<ProductionStatus, List<String>> writeableStages
     ) throws NotValidCoreStatus {
         String type = rowObj.get("type").getAsString();
         switch (type) {
@@ -380,12 +381,12 @@ public class ResourceJobLoader {
             }
             case "processing_state": {
                 int state = requiredInt(rowObj, "state");
-                Util.addOrInitialize(writeableStages, ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
+                UtilClean.addOrInitializeList(writeableStages, ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
                 break;
             }
             case "core_state": {
                 ProductionStatus productionStatus = getCore(rowObj);
-                Util.addOrInitialize(writeableStages, productionStatus, rule.getAsString());
+                UtilClean.addOrInitializeList(writeableStages, productionStatus, rule.getAsString());
                 break;
             }
             default:

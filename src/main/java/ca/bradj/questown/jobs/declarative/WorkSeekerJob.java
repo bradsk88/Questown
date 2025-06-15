@@ -85,7 +85,11 @@ public class WorkSeekerJob extends DeclarativeJob {
     ) {
         return new RealtimeWorldInteraction(
                 journal, maxState, checks, specialRules, resultGenerator, claimSpots, (x, need) -> {
-            Work w = ServerJobsRegistry.getRandomWork(x.town().getServerLevel(), getId().rootId());
+            Work w = ServerJobsRegistry.getRandomWork(
+                    x.town().getServerLevel(),
+                    getId().rootId(),
+                    x.town().getVillagerHandle()::isUnlocked
+            );
             Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
             if (job instanceof DeclarativeJob dj) {
                 String ingredient = dj.getIngredient(0);

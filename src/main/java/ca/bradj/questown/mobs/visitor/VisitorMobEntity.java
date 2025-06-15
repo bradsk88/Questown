@@ -150,6 +150,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
+    private boolean jobChangePending;
     boolean sitting = true;
     TownInterface town;
     Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
@@ -339,6 +340,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public boolean hasBlockOfProgress() {
         Boolean hasBOP = this.entityData.get(VisitorMobEntity.hasBOP);
         return hasBOP;
+    }
+
+    public boolean isJobChangePending() {
+        return jobChangePending;
+    }
+
+    public void setJobChangePending(boolean value) {
+        jobChangePending = value;
     }
 
     public record WorkToUndo(

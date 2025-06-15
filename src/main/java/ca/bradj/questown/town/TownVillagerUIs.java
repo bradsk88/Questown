@@ -8,9 +8,7 @@ import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -20,7 +18,6 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import joptsimple.internal.Strings;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -104,7 +101,7 @@ public class TownVillagerUIs {
             if (!(entity instanceof VisitorMobEntity vme)) {
                 continue;
             }
-            Util.addOrInitialize(vb, vme.getJobId(), vme.getUUID());
+            UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
         }
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
@@ -299,7 +296,8 @@ public class TownVillagerUIs {
                                     d.sender.getInventory(),
                                     d.entity.getUUID(),
                                     d.entity.getJobId(),
-                                    d.entity().getFlagPos()
+                                    d.entity().getFlagPos(),
+                                    d.entity.isJobChangePending()
                             ), d.quests(), d.entity(), d.stats()
                     );
                 }
@@ -381,7 +379,8 @@ public class TownVillagerUIs {
                         e.getJobId(),
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
-                        e.hasBlockOfProgress()
+                        e.hasBlockOfProgress(),
+                        e.isJobChangePending()
                 )
         );
     }

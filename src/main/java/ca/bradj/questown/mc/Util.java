@@ -222,14 +222,6 @@ public class Util {
         level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(prop, limited));
     }
 
-    public static <X, Y> void addOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
-            X key,
-            Y value
-    ) {
-        UtilClean.addOrInitialize(map, key, value);
-    }
-
     public static <K, V> void putIfAbsent(
             Map<K, V> qty,
             K k,

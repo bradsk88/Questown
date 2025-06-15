@@ -339,7 +339,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        // TODO: Handle this by informing the user, etc.
+        town.getUnsafe().messages.broadcastMessage("dialog.visitors.instruction.sleep_visitors");
         town.getUnsafe().setChanged();
     }
 

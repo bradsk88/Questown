@@ -409,27 +409,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             this.asapRewards.push(r);
         }
         this.setChanged();
-        villagerHandle.forEach(LivingEntity::stopSleeping);
-        villagerHandle.makeAllTotallyHungry();
+        villagerHandle.handleMorning();
+        roomsHandle.handleMorning();
         Compat.getBlockStoredTagData(this)
                 .putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
-        resetDiningRooms();
-    }
-
-    private void resetDiningRooms() {
-        Collection<RoomRecipeMatch<MCRoom>> diningRooms = roomsHandle.getMatches(
-                m -> m.anyMatch(Questown.ResourceLocation("dining_room"))
-        );
-        for (RoomRecipeMatch<MCRoom> diningRoom : diningRooms) {
-            for (Map.Entry<BlockPos, Block> e : diningRoom.getContainedBlocks().entrySet()) {
-                if (!(e.getValue() instanceof PlateBlock)) {
-                    continue;
-                }
-                QT.FLAG_LOGGER.debug("Resetting plate claim and state at {}", e.getKey());
-                jobHandle.clearClaim(e.getKey());
-                jobHandle.clearState(e.getKey());
-            }
-        }
     }
 
     private static void profileTick(

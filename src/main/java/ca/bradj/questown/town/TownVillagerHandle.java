@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
@@ -200,15 +199,17 @@ public class TownVillagerHandle implements VillagerHolder {
         VisitorMobEntity f = getEntity(visitorUUID);
         if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
-        } else {
-            doSetJob(visitorUUID, jobID, f);
-            t.setChanged();
-            if (announce) {
-                t.messages.jobChanged(jobID, visitorUUID);
-            }
+            return;
+        }
+
+        doSetJob(visitorUUID, jobID, f);
+        t.setChanged();
+        if (announce) {
+            t.messages.jobChanged(jobID, visitorUUID);
         }
 
         t.possibleWork.invalidate();
+        f.setJobChangePending(false);
     }
 
     @SuppressWarnings("deprecation")
@@ -248,7 +249,14 @@ public class TownVillagerHandle implements VillagerHolder {
             String type,
             UUID villagerId
     ) {
-        TownVillagerUIs.showUI(sender, entities, type, villagerId, learning.getUnlockedJobs(), learning.getChildJobsKnownToExist(getEntity(villagerId).getJobId()));
+        TownVillagerUIs.showUI(
+                sender,
+                entities,
+                type,
+                villagerId,
+                learning.getUnlockedJobs(),
+                learning.getChildJobsKnownToExist(getEntity(villagerId).getJobId())
+        );
     }
 
     @Override
@@ -270,8 +278,14 @@ public class TownVillagerHandle implements VillagerHolder {
         // TODO: Implement happiness (happy = 100% work speed angry = 50% work speed)
     }
 
-    void forEach(Consumer<? super LivingEntity> c) {
-        this.entities.forEach(c);
+    void forEach(Consumer<VisitorMobEntity> c) {
+        List<VisitorMobEntity> villagers = this.entities.stream()
+                                                        .filter(v -> v instanceof VisitorMobEntity)
+                                                        .map(v -> (VisitorMobEntity) v)
+                                                        .toList();
+        for (VisitorMobEntity villager : villagers) {
+            c.accept(villager);
+        }
     }
 
     public boolean isEmpty() {
@@ -537,11 +551,54 @@ public class TownVillagerHandle implements VillagerHolder {
         hasBlockOfProgress.put(uuid, false);
     }
 
+    @Override
+    public void scheduleJobRootChange(UUID villagerUUID) {
+        VisitorMobEntity e = getEntity(villagerUUID);
+        if (e == null) {
+            QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
+            return;
+        }
+        e.setJobChangePending(true);
+        QT.FLAG_LOGGER.debug(
+                "Villager {} will change to a new job root in the morning.",
+                UtilClean.truncateMiddle(villagerUUID)
+        );
+    }
+
+    @Override
+    public boolean isUnlocked(JobID jobID) {
+        return learning.isUnlocked(jobID);
+    }
+
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
         return learning.getUnlockedJobs();
     }
 
     public ImmutableMap<UUID, ImmutableMap<JobID, ImmutableSet<JobID>>> getChildJobsKnownToExist() {
         return learning.getChildJobsKnownToExist();
+    }
+
+    public void handleMorning() {
+        forEach(LivingEntity::stopSleeping);
+        makeAllTotallyHungry();
+        forEach(v -> {
+            if (!v.isJobChangePending()) {
+                return;
+            }
+            ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
+            List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().equals(z)).toList();
+            if (allOtherJobs.isEmpty()) {
+                QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
+                v.setJobChangePending(false);
+                return;
+            }
+            ImmutableList<JobID> shuffled = Compat.shuffle(
+                    ImmutableSet.copyOf(allOtherJobs),
+                    town.getServerLevelUnsafe()
+            );
+            JobID newJob = shuffled.get(0);
+            town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
+            town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
+        });
     }
 }
