@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -14,22 +13,25 @@ import java.util.UUID;
 
 public class VillagerQuestsContainer extends AbstractQuestsContainer implements VillagerTabsEmbedding {
 
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.INVENTORY,
-            OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.ECONOMICS
-    );
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.QUESTS);
     private final UUID villagerUUID;
+    private final boolean showBlockOfProgressTab;
 
     public VillagerQuestsContainer(
             int windowId,
             UUID villagerUUID,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_QUESTS.get(), windowId, quests, flagPos);
+        super(
+                MenuTypesInit.VILLAGER_QUESTS.get(),
+                windowId,
+                quests,
+                new FlagTabsEmbedding.FlagInfo(flagPos, showBlockOfProgressTab)
+        );
         this.villagerUUID = villagerUUID;
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
     public static VillagerQuestsContainer ForClient(
@@ -62,11 +64,16 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
 
     @Override
     public BlockPos getFlagPos() {
-        return flagPos;
+        return flagInfo.flagPos();
     }
 
     @Override
     public UUID getVillagerUUID() {
         return villagerUUID;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
     }
 }

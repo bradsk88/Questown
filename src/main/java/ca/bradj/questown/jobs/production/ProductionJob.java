@@ -88,7 +88,9 @@ public abstract class ProductionJob<
     public @Nullable BlockPos getJobSite(
             TownInterface town
     ) {
-        if (this.jobSite == null) {
+        // Don't recompute jobsite if we already have a target.
+        // But DO retry every once in a while to account for "stuck villager" bugs
+        if (this.jobSite == null || Compat.nextInt(town.getServerLevel(), 200) == 0) {
             ServerLevel sl = town.getServerLevel();
             if (sl == null) {
                 return null;
@@ -337,7 +339,7 @@ public abstract class ProductionJob<
             return jobSite1;
         }
 
-        if (status.isWorkingOnProduction()) {
+        if (status.isWorkingOnProduction() || status.isWaitingForTimers()) {
             WorkPosition<BlockPos> productionSpot = findProductionSpot(sl);
             if (productionSpot != null) {
                 this.setLookTarget(productionSpot.jobBlock());

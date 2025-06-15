@@ -2,56 +2,50 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
-import ca.bradj.questown.core.network.*;
-import ca.bradj.questown.gui.*;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
-import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.recipes.RecipesInit;
-import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
-import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TownVillagerHandle implements VillagerHolder {
 
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
 
+    public static void staticInit() {
+        TownVillagerUIs.staticInit();
+    }
+
     final Map<UUID, Integer> fullness = new HashMap<>();
+    final Map<UUID, Integer> experience = new HashMap<>();
+    final Map<UUID, Integer> levels = new HashMap<>();
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
+    final Map<UUID, Boolean> hasBlockOfProgress = new HashMap<>();
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -61,11 +55,16 @@ public class TownVillagerHandle implements VillagerHolder {
 
     private static final int TICK_FACTOR = 10;
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
+    final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     public void initialize(
             Map<UUID, Integer> fullness,
-            Map<UUID, ImmutableList<Effect>> moodEffects,
-            Map<UUID, Integer> damage
+            Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
+            Map<UUID, Integer> damage,
+            Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
+            Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
@@ -73,6 +72,9 @@ public class TownVillagerHandle implements VillagerHolder {
         this.fullness.putAll(fullness);
         this.moods.initialize(moodEffects);
         this.damage.putAll(damage);
+        this.learning.initialize(unlockedJobs, jobsKnownToExist);
+        this.experience.putAll(experience);
+        this.levels.putAll(level);
     }
 
     public void tick(
@@ -86,6 +88,7 @@ public class TownVillagerHandle implements VillagerHolder {
         moods.tick(currentTick);
         TownFlagBlockEntity t = town.getUnsafe();
         beds.tick(t, ImmutableList.copyOf(entities));
+        learning.tick(ImmutableList.copyOf(entities), currentTick);
         entities.forEach(e -> {
             Optional<GlobalPos> bestBed = beds.getBestBed(t, e);
             e.getBrain().setMemory(MemoryModuleType.HOME, bestBed);
@@ -162,9 +165,18 @@ public class TownVillagerHandle implements VillagerHolder {
         Integer bf = Config.BASE_FULLNESS.get();
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
         float damagePercent = getDamagePercent(uuid);
+        int experienceNum = Util.getOrDefault(experience, uuid, 0);
+        int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO: Track max fullness per villager based on their traits
-                fullnessPercent, moods.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, moods.getMood(uuid), damagePercent);
+    }
+
+    private float getExpForCurrentLevel(UUID uuid) {
+        Integer level = UtilClean.getOrDefault(levels, uuid, 1);
+        Integer baseExp = Config.EXPERIENCE_REQUIRED_AT_LEVEL_1.get();
+        Double rampFactor = Config.EXPERIENCE_RAMP_FACTOR.get();
+        return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
     public float getDamagePercent(UUID uuid) {
@@ -187,15 +199,17 @@ public class TownVillagerHandle implements VillagerHolder {
         VisitorMobEntity f = getEntity(visitorUUID);
         if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
-        } else {
-            doSetJob(visitorUUID, jobID, f);
-            t.setChanged();
-            if (announce) {
-                t.messages.jobChanged(jobID, visitorUUID);
-            }
+            return;
+        }
+
+        doSetJob(visitorUUID, jobID, f);
+        t.setChanged();
+        if (announce) {
+            t.messages.jobChanged(jobID, visitorUUID);
         }
 
         t.possibleWork.invalidate();
+        f.setJobChangePending(false);
     }
 
     @SuppressWarnings("deprecation")
@@ -235,131 +249,13 @@ public class TownVillagerHandle implements VillagerHolder {
             String type,
             UUID villagerId
     ) {
-        Optional<LivingEntity> f = stream().filter(VisitorMobEntity.class::isInstance)
-                                           .filter(v -> villagerId.equals(v.getUUID())).findFirst();
-        if (f.isEmpty()) {
-            QT.FLAG_LOGGER.error("No villagers with ID {} while opening UI", villagerId);
-            return;
-        }
-
-        syncWorkToClient(sender);
-
-        VisitorMobEntity e = (VisitorMobEntity) f.get();
-
-        TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(e.getFlagPos());
-
-        List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
-                                   .map(v -> UIQuest.fromLevel(sender.getLevel(), v)).flatMap(List::stream).toList();
-
-        VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
-        VillagerEconomicsData econ = new VillagerEconomicsData(ImmutableList.of());
-
-        ImmutableMap<String, Runnable> showers = ImmutableMap.of(
-                OpenVillagerMenuMessage.INVENTORY, () -> openMenu(
-                        sender, (windowId, inv, p) -> {
-                            InventoryAndStatusMenu x = new InventoryAndStatusMenu(
-                                    windowId,
-                                    e.getInventory(),
-                                    p.getInventory(),
-                                    e.getSlotLocks(),
-                                    e.getUUID(),
-                                    e.getJobId(),
-                                    e.getFlagPos()
-                            );
-                            x.connectToServer(e, sender);
-                            return x;
-                        }, quests, e, stats
-                ), OpenVillagerMenuMessage.QUESTS, () -> openMenu(
-                        sender,
-                        (windowId, inv, p) -> new VillagerQuestsContainer(
-                                windowId,
-                                e.getUUID(),
-                                quests,
-                                e.getFlagPos()
-                        ),
-                        quests,
-                        e,
-                        stats
-                ), OpenVillagerMenuMessage.STATS, () -> openMenu(
-                        sender,
-                        (windowId, inv, p) -> new VillagerStatsMenu(windowId, e, e.getFlagPos(), stats),
-                        quests,
-                        e,
-                        stats
-                ), OpenVillagerMenuMessage.SKILLS, () -> {
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new OpenVillagerAdvancementsMenuMessage(e.getFlagPos(), e.getUUID(), e.getJobId())
-                    );
-                }, OpenVillagerMenuMessage.ECONOMICS, () -> {
-                    NoMCEconomics tEcon = flag.getEconomicsHandle();
-                    ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(villagerId);
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new EconomicsUpdate(aggregated)
-                    );
-                    openMenu(
-                            sender,
-                            (windowId, inv, p) -> new VillagerEconomicsMenu(windowId, e, e.getFlagPos(), econ),
-                            quests,
-                            e,
-                            stats
-                    );
-                }
-        );
-
-        Runnable runnable = showers.get(type);
-        if (runnable == null) {
-            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
-        }
-        runnable.run();
-    }
-
-    private static void syncWorkToClient(ServerPlayer sender) {
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
-        Map<JobID, @Nullable JobID> b = new HashMap<>();
-        Map<JobID, ResourceLocation> b2 = new HashMap<>();
-        Works.values().forEach(w -> {
-            Work work = w.get();
-            b.put(work.id, work.parentID);
-            b2.put(work.id, Compat.getItemId(work.icon.getItem()));
-        });
-        QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
-    }
-
-    private static void openMenu(
-            ServerPlayer sender,
-            TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
-            List<UIQuest> quests,
-            VisitorMobEntity e,
-            VillagerStatsData stats
-    ) {
-        Compat.openScreen(
-                sender, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return Compat.literal("");
-                    }
-
-                    @Override
-                    public @NotNull AbstractContainerMenu createMenu(
-                            int windowId,
-                            @NotNull Inventory inv,
-                            @NotNull Player p
-                    ) {
-                        return shower.apply(windowId, inv, p);
-                    }
-                }, data -> VillagerMenus.write(
-                        data,
-                        quests,
-                        e,
-                        e.getInventory().getContainerSize(),
-                        e.getJobId(),
-                        stats,
-                        new VillagerEconomicsData(ImmutableList.of())
-                        // TODO: Actually send econ data
-                        // TODO: Finish testing this UI
-                )
+        TownVillagerUIs.showUI(
+                sender,
+                entities,
+                type,
+                villagerId,
+                learning.getUnlockedJobs(),
+                learning.getChildJobsKnownToExist(getEntity(villagerId).getJobId())
         );
     }
 
@@ -382,8 +278,14 @@ public class TownVillagerHandle implements VillagerHolder {
         // TODO: Implement happiness (happy = 100% work speed angry = 50% work speed)
     }
 
-    void forEach(Consumer<? super LivingEntity> c) {
-        this.entities.forEach(c);
+    void forEach(Consumer<VisitorMobEntity> c) {
+        List<VisitorMobEntity> villagers = this.entities.stream()
+                                                        .filter(v -> v instanceof VisitorMobEntity)
+                                                        .map(v -> (VisitorMobEntity) v)
+                                                        .toList();
+        for (VisitorMobEntity villager : villagers) {
+            c.accept(villager);
+        }
     }
 
     public boolean isEmpty() {
@@ -396,6 +298,14 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void add(VisitorMobEntity vEntity) {
         this.entities.add(vEntity);
+
+        ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(vEntity.getJobId());
+        for (JobID jobID : defaultWork) {
+            unlockJob(vEntity.getUUID(), jobID);
+        }
+
+        learning.requestKnowledge(vEntity.getUUID(), defaultWork);
+
         this.beds.claim(vEntity, town.getUnsafe());
         vEntity.addSleepListener(e -> {
             Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());
@@ -500,11 +410,9 @@ public class TownVillagerHandle implements VillagerHolder {
         return (int) (moods.getMood(uuid) * 10);
     }
 
-    /**
-     * @deprecated Eventually this handle should not require a reference to the flag entity
-     */
     public void associate(TownFlagBlockEntity t) {
         this.town.initialize(t);
+        this.learning.associate(t);
     }
 
     @Override
@@ -578,44 +486,12 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public void showMultiStatusUI(ServerPlayer player) {
-        List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
-
-        BlockPos townFlagBasePos = town.getUnsafe().getTownFlagBasePos();
-        Compat.openScreen(
-                player, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return Compat.literal("");
-                    }
-
-                    @Override
-                    public @NotNull AbstractContainerMenu createMenu(
-                            int windowId,
-                            @NotNull Inventory inv,
-                            @NotNull Player p
-                    ) {
-                        MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
-                                windowId,
-                                townFlagBasePos,
-                                this::triggerAdvancement
-                        );
-                        return multiStatusMenu;
-                    }
-
-                    private void triggerAdvancement() {
-                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                                player.getLevel(),
-                                RoomTrigger.Triggers.FirstOpenFlagMenu,
-                                townFlagBasePos
-                        );
-                    }
-                }, data -> {
-                    List<UIQuest> quests = UIQuest.fromLevel(
-                            player.getLevel(),
-                            town.getUnsafe().getAllQuestsWithRewards()
-                    );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es);
-                }
+        TownVillagerUIs.showMultiStatusUI(
+                player,
+                town.getUnsafe().getInfo(),
+                entities,
+                () -> town.getUnsafe().getAllQuestsWithRewards(),
+                town.getUnsafe().getBlocksOfProgress()
         );
     }
 
@@ -624,58 +500,105 @@ public class TownVillagerHandle implements VillagerHolder {
             ServerPlayer sender,
             Ingredient itemToShowJobsFor
     ) {
-        Map<JobID, List<UUID>> vb = new HashMap<>();
-        for (LivingEntity entity : entities) {
-            if (!(entity instanceof VisitorMobEntity vme)) {
-                continue;
-            }
-            Util.addOrInitialize(vb, vme.getJobId(), vme.getUUID());
-        }
-
-        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
-        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
-
-        ImmutableList.Builder<UIJob> b = ImmutableList.builder();
-        TownFlagBlockEntity unsafeTown = town.getUnsafe();
-        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getAllJobsThatProduce(
-                town.town.getTownData(),
-                itemToShowJobsFor
-        );
-        for (JobID job : jubz.keySet()) {
-            Supplier<Work> w = Works.get(job);
-            Work gotWork = w.get();
-            Job<?, ?, ?> j = gotWork.jobFunc.apply(UUID.randomUUID());
-            if (!(j instanceof DeclarativeJob dj)) {
-                continue;
-            }
-
-            RoomRecipe r = rMap.get(dj.location().baseRoom());
-            b.add(new UIJob(
-                    j.getId(),
-                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
-                    ImmutableList.copyOf(dj.initialIngredients.values()),
-                    ImmutableList.copyOf(dj.initialTools.values()),
-                    dj.location().baseRoom(),
-                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
-                    ImmutableList.copyOf(gotWork.results.apply(unsafeTown.getTownData()).stream()
-                                                        .map(v -> v.get().getDefaultInstance()).toList())
-            ));
-        }
-        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        TownVillagerUIs.showItemJobsUI(sender, town.getUnsafe(), entities, itemToShowJobsFor);
     }
 
     @Override
     public void register(VisitorMobEntity vEntity) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", t.getUUID(), vEntity);
-        add(vEntity);
+        this.add(vEntity);
         vEntity.addChangeListener(() -> {
             QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
             t.setChanged();
         });
         t.setChanged();
+    }
+
+    @Override
+    public void unlockJob(
+            UUID villagerUUID,
+            JobID id
+    ) {
+        learning.unlockJob(villagerUUID, id);
+    }
+
+    @Override
+    public void addExperience(
+            UUID uuid,
+            int exp
+    ) {
+        if (hasBlockOfProgress(uuid)) {
+            return;
+        }
+        int newExp = experience.compute(uuid, (x, cur) -> cur == null ? exp : cur + exp);
+        int target = (int) getExpForCurrentLevel(uuid);
+        if (newExp > target) {
+            Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
+            experience.put(uuid, newExp % target);
+            town.getUnsafe().messages.broadcastMessage("message.villager.leveled_up", uuid, newLvl);
+            hasBlockOfProgress.put(uuid, true);
+        }
+    }
+
+    @Override
+    public boolean hasBlockOfProgress(UUID uuid) {
+        return Util.getOrDefault(hasBlockOfProgress, uuid, false);
+    }
+
+    @Override
+    public void clearBlockOfProgress(UUID uuid) {
+        hasBlockOfProgress.put(uuid, false);
+    }
+
+    @Override
+    public void scheduleJobRootChange(UUID villagerUUID) {
+        VisitorMobEntity e = getEntity(villagerUUID);
+        if (e == null) {
+            QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
+            return;
+        }
+        e.setJobChangePending(true);
+        QT.FLAG_LOGGER.debug(
+                "Villager {} will change to a new job root in the morning.",
+                UtilClean.truncateMiddle(villagerUUID)
+        );
+    }
+
+    @Override
+    public boolean isUnlocked(JobID jobID) {
+        return learning.isUnlocked(jobID);
+    }
+
+    public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
+        return learning.getUnlockedJobs();
+    }
+
+    public ImmutableMap<UUID, ImmutableMap<JobID, ImmutableSet<JobID>>> getChildJobsKnownToExist() {
+        return learning.getChildJobsKnownToExist();
+    }
+
+    public void handleMorning() {
+        forEach(LivingEntity::stopSleeping);
+        makeAllTotallyHungry();
+        forEach(v -> {
+            if (!v.isJobChangePending()) {
+                return;
+            }
+            ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
+            List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().equals(z)).toList();
+            if (allOtherJobs.isEmpty()) {
+                QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
+                v.setJobChangePending(false);
+                return;
+            }
+            ImmutableList<JobID> shuffled = Compat.shuffle(
+                    ImmutableSet.copyOf(allOtherJobs),
+                    town.getServerLevelUnsafe()
+            );
+            JobID newJob = shuffled.get(0);
+            town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
+            town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
+        });
     }
 }

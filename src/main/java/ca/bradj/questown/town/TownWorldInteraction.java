@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -18,6 +19,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.StandingSignBlock;
+import net.minecraft.world.level.block.WallSignBlock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -27,7 +29,8 @@ public class TownWorldInteraction {
 
     private final UnsafeTown town = new UnsafeTown(getClass());
 
-    TownWorldInteraction() {}
+    TownWorldInteraction() {
+    }
 
     void init(TownFlagBlockEntity t) {
         town.initialize(t);
@@ -37,8 +40,8 @@ public class TownWorldInteraction {
             ServerLevel level,
             RoomRecipeMatch<MCRoom> match
     ) {
-        ImmutableMap<ResourceLocation, BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void>> swaps = ImmutableMap.of(
-                Questown.ResourceLocation("job_board"), this::swapJobBoardSign
+        ImmutableMap<ResourceLocation, BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void>> swaps = ImmutableMap.of(Questown.ResourceLocation("job_board"),
+                this::swapJobBoardSign
         );
         for (ResourceLocation recipeID : match.getRecipeIDs()) {
             BiFunction<ServerLevel, RoomRecipeMatch<MCRoom>, Void> swap = swaps.get(recipeID);
@@ -52,23 +55,25 @@ public class TownWorldInteraction {
             ServerLevel level,
             RoomWithBlocks<MCRoom, BlockPos, Block> room
     ) {
-        BlockPredicate predicate = BlockPredicate.Builder.block()
-                                                         .of(BlockTags.SIGNS)
-                                                         .build();
-        for (Map.Entry<BlockPos, Block> e : room.containedBlocks
-                .entrySet()) {
+        BlockPredicate predicate = BlockPredicate.Builder.block().of(BlockTags.SIGNS).build();
+        for (Map.Entry<BlockPos, Block> e : room.containedBlocks.entrySet()) {
             if (!predicate.matches(level, e.getKey())) {
                 continue;
             }
-            Direction value = Util.rotationToDirection(
-                    level.getBlockState(e.getKey()).getValue(StandingSignBlock.ROTATION)
-            );
+            Direction value = Direction.EAST;
+            try {
+                value = Util.rotationToDirection(level.getBlockState(e.getKey()).getValue(StandingSignBlock.ROTATION));
+            } catch (IllegalArgumentException x) {
+                try {
+                    value = level.getBlockState(e.getKey()).getValue(WallSignBlock.FACING).getCounterClockWise();
+                } catch (IllegalArgumentException x2) {
+                    QT.FLAG_LOGGER.error("Could not find valid direction for sign");
+                }
+            }
             level.setBlockAndUpdate(
                     e.getKey(),
-                    BlocksInit.JOB_BOARD_BLOCK
-                            .get()
-                            .defaultBlockState()
-                            .setValue(HorizontalDirectionalBlock.FACING, value)
+                    BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState()
+                                              .setValue(HorizontalDirectionalBlock.FACING, value)
             );
             @NotNull TownFlagBlockEntity t = town.getUnsafe();
             t.registerJobsBoard(e.getKey());

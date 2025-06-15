@@ -24,14 +24,14 @@ public abstract class TownState<
         > implements
         ProductionTimeWarper.Town<I, H>,
         ImmutableWorkStateContainer<P, SELF>,
-        VillagerDataCollectionHolder<H>
-{
+        VillagerDataCollectionHolder<H> {
     public final @NotNull ImmutableList<VillagerData<H>> villagers;
     public final @NotNull ImmutableList<ContainerTarget<C, I>> containers;
     public final @NotNull ImmutableList<P> gates;
     public final long worldTimeAtSleep;
     public final ImmutableMap<P, State> workStates;
     public final ImmutableMap<P, Integer> workTimers;
+    public final ImmutableMap<UUID, Boolean> blocksOfProgress;
 
     public TownState(
             @NotNull List<VillagerData<H>> villagers,
@@ -39,6 +39,7 @@ public abstract class TownState<
             @NotNull ImmutableMap<P, State> workStates,
             @NotNull ImmutableMap<P, Integer> workTimers,
             @NotNull List<P> gates,
+            @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
         this.villagers = ImmutableList.copyOf(villagers);
@@ -47,6 +48,7 @@ public abstract class TownState<
         this.worldTimeAtSleep = worldTimeAtSleep;
         this.workStates = workStates;
         this.workTimers = workTimers;
+        this.blocksOfProgress = ImmutableMap.copyOf(blocksOfProgress);
     }
 
     @Override
@@ -122,11 +124,14 @@ public abstract class TownState<
     }
 
     @Override
-    public SELF setJobBlockState(P bp, State bs) {
+    public SELF setJobBlockState(
+            P bp,
+            State bs
+    ) {
         HashMap<P, State> m = new HashMap<>(workStates);
         m.put(bp, bs);
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
+                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, blocksOfProgress, worldTimeAtSleep
         );
     }
 
@@ -136,17 +141,28 @@ public abstract class TownState<
             ImmutableMap<P, State> workStates,
             ImmutableMap<P, Integer> workTimers,
             ImmutableList<P> gates,
+            ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     );
 
     @Override
-    public SELF setJobBlockStateWithTimer(P bp, State bs, int ticksToNextState) {
+    public SELF setJobBlockStateWithTimer(
+            P bp,
+            State bs,
+            int ticksToNextState
+    ) {
         HashMap<P, State> m = new HashMap<>(workStates);
         m.put(bp, bs);
         HashMap<P, Integer> m2 = new HashMap<>(workTimers);
         m2.put(bp, ticksToNextState);
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), ImmutableMap.copyOf(m2), gates, worldTimeAtSleep
+                villagers,
+                containers,
+                ImmutableMap.copyOf(m),
+                ImmutableMap.copyOf(m2),
+                gates,
+                blocksOfProgress,
+                worldTimeAtSleep
         );
     }
 
@@ -155,13 +171,14 @@ public abstract class TownState<
         HashMap<P, State> m = new HashMap<>(workStates);
         m.remove(bp);
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, worldTimeAtSleep
+                villagers, containers, ImmutableMap.copyOf(m), workTimers, gates, blocksOfProgress, worldTimeAtSleep
         );
     }
 
 
     public SELF withVillagerData(
-            int index, VillagerData<H> data
+            int index,
+            VillagerData<H> data
     ) {
         ArrayList<VillagerData<H>> vilz = new ArrayList<>(villagers);
         vilz.set(index, data);
@@ -171,6 +188,7 @@ public abstract class TownState<
                 workStates,
                 workTimers,
                 gates,
+                blocksOfProgress,
                 worldTimeAtSleep
         );
     }
@@ -187,12 +205,17 @@ public abstract class TownState<
                 b.add(container);
             }
         }
-        return new AbstractMap.SimpleEntry<>(newTownState(
-                villagers, b.build(), workStates, workTimers, gates, worldTimeAtSleep
-        ), removed);
+        return new AbstractMap.SimpleEntry<>(
+                newTownState(
+                        villagers, b.build(), workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep
+                ), removed
+        );
     }
 
-    public SELF withTimerReducedBy(P bp, int stepInterval) {
+    public SELF withTimerReducedBy(
+            P bp,
+            int stepInterval
+    ) {
         // TODO: Take "next step work" and "next step time" as inputs
         if (workTimers.get(bp) == null || workTimers.get(bp) == 0) {
             return unchanged();
@@ -204,12 +227,32 @@ public abstract class TownState<
             m.compute(bp, (k, v) -> (v == null ? State.fresh() : v).incrProcessing());
         }
         return newTownState(
-                villagers, containers, ImmutableMap.copyOf(m), ImmutableMap.copyOf(m2), gates, worldTimeAtSleep
+                villagers,
+                containers,
+                ImmutableMap.copyOf(m),
+                ImmutableMap.copyOf(m2),
+                gates,
+                blocksOfProgress,
+                worldTimeAtSleep
         );
     }
 
     protected final SELF unchanged() {
-        return newTownState(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
+        return newTownState(villagers, containers, workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep);
+    }
+
+    public SELF withBOPCleared(UUID vUUID) {
+        Map<UUID, Boolean> b = new HashMap<>(blocksOfProgress);
+        b.put(vUUID, false);
+        return newTownState(
+                villagers,
+                containers,
+                workStates,
+                workTimers,
+                gates,
+                ImmutableMap.copyOf(b),
+                worldTimeAtSleep
+        );
     }
 
     public static final class VillagerData<I extends HeldItem<I, ? extends Item<?>>> {
@@ -235,7 +278,7 @@ public abstract class TownState<
         @Override
         public String toString() {
             return "VillagerData{" +
-                    "\n\tuuid=" + uuid +
+                    "\n\tvUUID=" + uuid +
                     ",\n\txPosition=" + xPosition +
                     ",\n\tyPosition=" + yPosition +
                     ",\n\tzPosition=" + zPosition +
@@ -247,7 +290,10 @@ public abstract class TownState<
             return 6; // TODO: Be smarter about this?
         }
 
-        public VillagerData<I> withSetItem(int itemIndex, I item) {
+        public VillagerData<I> withSetItem(
+                int itemIndex,
+                I item
+        ) {
 
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
@@ -297,7 +343,10 @@ public abstract class TownState<
 
     // Claiming is not implemented for time warp. It's mostly a visual thing, anyway.
     @Override
-    public boolean claimSpot(P bp, Claim claim) {
+    public boolean claimSpot(
+            P bp,
+            Claim claim
+    ) {
         return true;
     }
 
@@ -306,7 +355,10 @@ public abstract class TownState<
     }
 
     @Override
-    public boolean canClaim(P position, Supplier<Claim> makeClaim) {
+    public boolean canClaim(
+            P position,
+            Supplier<Claim> makeClaim
+    ) {
         return true;
     }
 }

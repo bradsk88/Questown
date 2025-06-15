@@ -5,7 +5,6 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -17,17 +16,16 @@ import java.util.Collection;
 import java.util.Stack;
 import java.util.function.Consumer;
 
-public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<VillagerStatsData>, VillagerTabsEmbedding {
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.INVENTORY,
-            OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.ECONOMICS
-    );
+public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>,
+        VillagerTabsEmbedding {
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.STATS);
     private final DataSlot fullnessSlot;
     private final DataSlot damageSlot;
     private final DataSlot moodSlot;
+    private final DataSlot experienceSlot;
+    private final DataSlot experienceTargetSlot;
     private final Stack<Runnable> closers = new Stack<>();
+    private final boolean showBlockOfProgressTab;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -43,12 +41,19 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
             int windowId,
             VisitorMobEntity entity,
             BlockPos flagPos,
-            VillagerStatsData initialData
+            VillagerStatsData initialData,
+            boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_STATS.get(), windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, entity.getUUID());
+        this.showBlockOfProgressTab = showBlockOfProgressTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
+
+        this.addDataSlot(this.experienceSlot = DataSlot.standalone());
+        this.experienceSlot.set(initialData.experienceValue());
+        this.addDataSlot(this.experienceTargetSlot = DataSlot.standalone());
+        this.experienceTargetSlot.set(initialData.experienceTarget());
 
         this.addDataSlot(this.moodSlot = DataSlot.standalone());
         this.moodSlot.set((int) (initialData.moodPercent() * 100));
@@ -61,17 +66,25 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
-        return new VillagerStatsData(buf.readFloat(), buf.readFloat(), buf.readFloat());
+        return new VillagerStatsData(buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat());
     }
 
-    public static void write(VillagerStatsData data, FriendlyByteBuf buf) {
+    public static void write(
+            VillagerStatsData data,
+            FriendlyByteBuf buf
+    ) {
         buf.writeFloat(data.fullnessPercent());
+        buf.writeInt(data.experienceValue());
+        buf.writeInt(data.experienceTarget());
         buf.writeFloat(data.moodPercent());
         buf.writeFloat(data.damageLevelPercent());
     }
 
     @Override
-    public ItemStack quickMoveStack(Player player, int i) {
+    public ItemStack quickMoveStack(
+            Player player,
+            int i
+    ) {
         return ItemStack.EMPTY;
     }
 
@@ -80,6 +93,7 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
         return true;
     }
 
+    @Override
     public void onClose() {
         closers.forEach(Runnable::run);
     }
@@ -109,5 +123,18 @@ public class VillagerStatsMenu extends AbstractVillagerMenu implements Consumer<
     @Override
     public Collection<String> getEnabledTabs() {
         return ENABLED_TABS;
+    }
+
+    @Override
+    public boolean showBlockOfProgressTab() {
+        return showBlockOfProgressTab;
+    }
+
+    public int getExperienceValue() {
+        return experienceSlot.get();
+    }
+
+    public int getExperienceTarget() {
+        return experienceTargetSlot.get();
     }
 }

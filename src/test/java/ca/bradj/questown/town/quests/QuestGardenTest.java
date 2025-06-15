@@ -355,6 +355,6 @@ class QuestGardenTest {
         );
     }
 
-    // TODO[ASAP]: Test: Reject duplicates until after ideal
+    // TODO: Test: Reject duplicates recipes until after reaching ideal threshold
 
 }

@@ -56,7 +56,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
-import java.util.stream.Stream;
 
 import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
 
@@ -79,6 +78,7 @@ public class DeclarativeJob extends
     private final RecipeProvider recipe;
     public final ImmutableMap<Integer, Ingredient> initialIngredients;
     public final ImmutableMap<Integer, Ingredient> initialTools;
+    private final ImmutableMap<Integer, Integer> initialWork;
     private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;
@@ -122,6 +122,7 @@ public class DeclarativeJob extends
         );
         this.initialIngredients = ingredientsRequiredAtStates;
         this.initialTools = toolsRequiredAtStates;
+        this.initialWork = workRequiredAtStates;
         this.jobId = jobId;
         this.checks = new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(ingredientsRequiredAtStates),
@@ -437,8 +438,9 @@ public class DeclarativeJob extends
                                    .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet()
                                                                                      .stream()
                                                                                      .filter(z -> isJobBlock(z))
-                                                                                     .toList())
-                                   .toList(), getJobBlockState, (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
+                                                                                     .toList()).toList(),
+                        getJobBlockState,
+                        (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
@@ -453,9 +455,7 @@ public class DeclarativeJob extends
 
             @Override
             public Collection<MCRoom> roomsAtState(Integer state) {
-                return roomsNeedingIngredientsOrTools.get()
-                                                     .get(state)
-                                                     .stream()
+                return roomsNeedingIngredientsOrTools.get().get(state).stream()
                                                      .map(RoomsNeedingVillagerInput.NVIRoom::room)
                                                      .map(IRoomRecipeMatch::getRoom).toList();
             }
@@ -732,7 +732,7 @@ public class DeclarativeJob extends
         Function<List<MCTownItem>, List<Pair<Integer, MCTownItem>>> adjustOrder = UtilClean::enumerate;
         if (specialGlobalRules.contains(SpecialRules.GLOBAL_TAKE_RANDOM_INGREDIENT)) {
             adjustOrder = list -> {
-                ArrayList<Pair<Integer, MCTownItem>> shuffled = new ArrayList<>(UtilClean.enumerate(list));
+                ImmutableList<Pair<Integer, MCTownItem>> shuffled = ImmutableList.copyOf(UtilClean.enumerate(list));
                 shuffled = Compat.shuffle(shuffled, town.getServerLevel());
                 return shuffled;
             };
@@ -803,7 +803,8 @@ public class DeclarativeJob extends
         @Nullable Integer blockAction = JobBlock.getState(town, bp);
         if (blockAction != null) {
             if (isJobBlock.test(bp)) {
-                Util.addOrInitialize(b, blockAction, new WorkPosition<>(bp, i9nSpot.apply(bp)));
+                WorkPosition<BlockPos> v = new WorkPosition<>(bp, i9nSpot.apply(bp));
+                UtilClean.addAllOrInitializeList(b, blockAction, ImmutableList.of(v));
             }
         }
     }
@@ -964,8 +965,8 @@ public class DeclarativeJob extends
             Predicate<BlockPos> canClaim
     ) {
         Collection<RoomRecipeMatch<MCRoom>> x = town.getRoomHandle().getRoomsMatching(location.baseRoom());
-        Function<RoomRecipeMatch<MCRoom>, Collection<BlockPos>> gcb =
-                m -> m.getContainedBlocks().keySet().stream().toList();
+        Function<RoomRecipeMatch<MCRoom>, Collection<BlockPos>> gcb = m -> m.getContainedBlocks().keySet().stream()
+                                                                            .toList();
         return RoomsStatusLogic.compute(x, work, canClaim, this::isJobBlock, checks, gcb, maxState);
     }
 
@@ -985,7 +986,7 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public Function<Void, Void> addJobCompletionListener(Runnable listener) {
+    public Function<Void, Void> addJobCompletionListener(Consumer<JobID> listener) {
         this.world.addJobCompletionListener(listener);
         return (nul) -> {
             this.world.removeJobCompletionListener(listener);
@@ -1001,6 +1002,22 @@ public class DeclarativeJob extends
     @Override
     public Collection<String> getGlobalSpecialRules() {
         return specialGlobalRules;
+    }
+
+    @Override
+    public int getExperienceEarned() {
+        if (specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED)) {
+            return 0;
+        }
+        int workPart = initialWork.values().stream().reduce(0, Integer::sum) * workInterval;
+        long timePart = workPart + Math.max((totalDuration / 10), 1);
+        QT.JOB_LOGGER.debug(
+                "{} gained experience: {} from work, {} from time",
+                UtilClean.truncateMiddle(ownerUUID),
+                workPart,
+                timePart
+        );
+        return (int) timePart;
     }
 
     public int getMaxState() {
@@ -1057,5 +1074,4 @@ public class DeclarativeJob extends
     public String getTool(@Nullable Integer integer) {
         return Util.orNull(initialTools.get(integer), Ingredients::toString);
     }
-
 }

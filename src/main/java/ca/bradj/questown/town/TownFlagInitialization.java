@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import net.minecraft.nbt.CompoundTag;
 
 public interface TownFlagInitialization {
     TownRoomsHandle getRoomsHandle();
@@ -25,4 +26,8 @@ public interface TownFlagInitialization {
     MCQuestBatches getQuestBatches();
 
     TownWorkHandle getWorkHandle();
+
+    CompoundTag serializeBOP();
+
+    void initializeBOP(CompoundTag tag);
 }

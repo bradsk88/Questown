@@ -1,6 +1,8 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
@@ -25,10 +27,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,32 +47,21 @@ public class TownRoomsHandle implements RoomsHolder,
         Supplier<TownFlagBlockEntity> {
 
     private final TownRoomsMap roomsMap = new TownRoomsMap();
-    @Nullable
-    private TownFlagBlockEntity town;
+    private UnsafeTown town = new UnsafeTown(TownRoomsHandle.class);
     @Nullable
     private MCRoom flagMetaRoom;
 
     public void initializeNew(TownFlagBlockEntity t) {
-        this.town = t;
+        this.town.initialize(t);
         this.flagMetaRoom = Spaces.metaRoomAround(t.getBlockPos(), 2);
         roomsMap.initializeNew(t);
         roomsMap.addRecipeListener(t.quests);
         roomsMap.addRecipeListener(t);
     }
 
-    /**
-     * Only safe to call after initialize
-     */
-    private @NotNull TownFlagBlockEntity unsafeGetTown() {
-        if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on rooms handle yet");
-        }
-        return town;
-    }
-
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
             return getWelcomeMatMetaRooms(t);
         }
@@ -76,7 +70,7 @@ public class TownRoomsHandle implements RoomsHolder,
         }
         if (SpecialQuests.FARM.equals(recipeId)) {
             return roomsMap.getFarms().stream().map(v -> {
-                Function<BlockPos, BlockState> getBs = bp -> unsafeGetTown().getServerLevel().getBlockState(bp);
+                Function<BlockPos, BlockState> getBs = bp -> town.getUnsafe().getServerLevel().getBlockState(bp);
                 ImmutableMap<BlockPos, Block> b = RecipeDetection.getBlocksInRoomV2(
                         bp -> getBs.apply(bp).getBlock(),
                         new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord),
@@ -116,7 +110,7 @@ public class TownRoomsHandle implements RoomsHolder,
 
     @Override
     public TownFlagBlockEntity get() {
-        return unsafeGetTown();
+        return town.getUnsafe();
     }
 
     public TownRoomsMap getRegisteredRooms() {
@@ -136,7 +130,7 @@ public class TownRoomsHandle implements RoomsHolder,
         b.addAll(roomsMap.getFarms());
         assert flagMetaRoom != null;
         b.add(flagMetaRoom);
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         getWelcomeMatMetaRooms(t).forEach(v -> b.add(v.room));
         return b.build();
     }
@@ -178,14 +172,14 @@ public class TownRoomsHandle implements RoomsHolder,
     }
 
     public void registerDoor(BlockPos clickedPos) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
         t.setChanged();
     }
 
     @Override
     public void deregisterDoor(BlockPos doorPos) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.deRegisterDoor(Positions.FromBlockPos(doorPos), doorPos.getY() - t.getY());
         t.setChanged();
     }
@@ -193,7 +187,7 @@ public class TownRoomsHandle implements RoomsHolder,
     @Override
     public Supplier<Boolean> getDebugTaskForAllDoors() {
         // TODO: Finish implementing this
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         ImmutableSet<TownPosition> registeredDoors = t.getRoomHandle()
                                                       .getAllRegisteredDoors();
 
@@ -293,6 +287,49 @@ public class TownRoomsHandle implements RoomsHolder,
         };
     }
 
+    public void handleMorning() {
+        resetDiningRooms();
+        resetBedrooms();
+    }
+
+
+    private void resetDiningRooms() {
+        Collection<RoomRecipeMatch<MCRoom>> diningRooms = getMatches(
+                m -> m.anyMatch(Questown.ResourceLocation("dining_room"))
+        );
+        for (RoomRecipeMatch<MCRoom> diningRoom : diningRooms) {
+            for (Map.Entry<BlockPos, Block> e : diningRoom.getContainedBlocks().entrySet()) {
+                if (!(e.getValue() instanceof PlateBlock)) {
+                    continue;
+                }
+                QT.FLAG_LOGGER.debug("Resetting plate claim and state at {}", e.getKey());
+                town.getUnsafe().jobHandle.clearClaim(e.getKey());
+                town.getUnsafe().jobHandle.clearState(e.getKey());
+            }
+        }
+    }
+
+    private void resetBedrooms() {
+        Collection<RoomRecipeMatch<MCRoom>> rooms = getMatches(
+                m -> m.anyMatch(Questown.ResourceLocation("bedroom"))
+        );
+        for (RoomRecipeMatch<MCRoom> room : rooms) {
+            for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
+                if (!(e.getValue() instanceof BedBlock bb)) {
+                    continue;
+                }
+                ServerLevel sl = town.getServerLevelUnsafe();
+                BlockState oldBs = sl.getBlockState(e.getKey());
+                @SuppressWarnings("AccessStaticViaInstance") BlockState newBs = oldBs.setValue(bb.OCCUPIED, false);
+                List<LivingEntity> list = sl.getEntitiesOfClass(LivingEntity.class, new AABB(e.getKey()), LivingEntity::isSleeping);
+                sl.setBlockAndUpdate(e.getKey(), newBs);
+                for (LivingEntity villager : list) {
+                    villager.stopSleeping();
+                }
+            }
+        }
+    }
+
     private record Result(
             String debugArt,
             String room,
@@ -323,7 +360,7 @@ public class TownRoomsHandle implements RoomsHolder,
 
     @Override
     public Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         LinkedBlockingQueue<String> flightRecorder = new LinkedBlockingQueue<>();
         Position clickedRRPos = Positions.FromBlockPos(clickedPos);
         final LevelRoomDetector d = new LevelRoomDetector(
@@ -364,14 +401,14 @@ public class TownRoomsHandle implements RoomsHolder,
 
     @Override
     public boolean isDoorRegistered(BlockPos clickedPos) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         return roomsMap.isDoorRegistered(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
     }
 
     public Optional<RoomRecipeMatch<MCRoom>> computeRecipe(
             MCRoom r
     ) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         return roomsMap.computeRecipe(t.getServerLevel(), r, r.yCoord - t.getY());
     }
 
@@ -381,7 +418,7 @@ public class TownRoomsHandle implements RoomsHolder,
     }
 
     public void registerFenceGate(BlockPos clickedPos) {
-        @NotNull TownFlagBlockEntity t = unsafeGetTown();
+        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.registerFenceGate(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
         t.setChanged();
     }

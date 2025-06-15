@@ -58,7 +58,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     public static class Serializer {
 
-        private static final String NBT_UUID = "uuid";
+        private static final String NBT_UUID = "UUID";
         private static final String NBT_BATCH_UUID = "batch_uuid";
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";

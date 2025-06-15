@@ -24,9 +24,10 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableMap<BlockPos, Integer> workTimers,
             @NotNull List<BlockPos> gates,
             @NotNull ImmutableList<MCHeldItem> knowledge,
+            @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
-        super(villagers, containers, workStates, workTimers, gates, worldTimeAtSleep);
+        super(villagers, containers, workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep);
         this.knowledge.addAll(knowledge);
     }
 
@@ -37,10 +38,18 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             ImmutableMap<BlockPos, State> workStates,
             ImmutableMap<BlockPos, Integer> workTimers,
             ImmutableList<BlockPos> gates,
+            ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
         MCTownState mcTownState = new MCTownState(
-                villagers, containers, workStates, workTimers, gates, ImmutableList.copyOf(knowledge), worldTimeAtSleep
+                villagers,
+                containers,
+                workStates,
+                workTimers,
+                gates,
+                ImmutableList.copyOf(knowledge),
+                blocksOfProgress,
+                worldTimeAtSleep
         );
         return mcTownState;
     }

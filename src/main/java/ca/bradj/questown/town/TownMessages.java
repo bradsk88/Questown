@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
@@ -91,7 +92,7 @@ public class TownMessages {
             JobID jobID,
             UUID visitorUUID
     ) {
-        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), visitorUUID);
+        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), UtilClean.truncateMiddle(visitorUUID));
     }
 
     public void startDebugFailed() {

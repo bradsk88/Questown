@@ -1,12 +1,13 @@
 package ca.bradj.questown.core;
 
-import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class UtilClean {
@@ -60,7 +61,8 @@ public class UtilClean {
         );
     }
 
-    public static @NotNull String truncateMiddle(String vID) {
+    public static @NotNull String truncateMiddle(Object vIDIn) {
+        String vID = vIDIn.toString();
         if (vID.length() <= 8) {
             return vID;
         }
@@ -155,25 +157,71 @@ public class UtilClean {
         return b.build();
     }
 
-    public static <X, Y> void addOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
+    public static <X, Y, Z extends Collection<Y>> boolean addOrInitialize(
+            Map<X, Z> map,
             X key,
-            Y value
+            Y value,
+            Function<Collection<Y>, Z> typer
     ) {
-        Map unsafe = map;
-        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        cur.add(value);
-        unsafe.put(key, cur);
+        ArrayList<Y> input = new ArrayList<>();
+        input.add(value);
+        return addAllOrInitialize(map, key, typer.apply(input), typer);
+
     }
 
-    public static <X, Y> void addAllOrInitialize(
-            Map<X, ? extends Collection<Y>> map,
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <X, Y> void addAllOrInitializeList(
+            Map<X, List<Y>> map,
             X key,
             Collection<Y> values
     ) {
-        Map unsafe = map;
-        Collection cur = getOrDefaultCollection(map, key, new ArrayList<>(), true);
-        cur.addAll(values);
+        addAllOrInitialize(map, key, values, ArrayList::new);
+    }
+    public static <X, Y> void addOrInitializeList(
+            Map<X, List<Y>> map,
+            X key,
+            Y value
+    ) {
+        addAllOrInitialize(map, key, ImmutableList.of(value), ArrayList::new);
+    }
+
+    public static <X, Y, Z extends Collection<Y>> boolean addAllOrInitialize(
+            Map<X, Z> map,
+            X key,
+            Collection<Y> values,
+            Function<Collection<Y>, Z> typer
+    ) {
+        Map<X, Z> unsafe = map;
+        Z cur = typer.apply(getOrDefaultCollection(map, key, typer.apply(new ArrayList<>()), true));
+        boolean result = cur.addAll(values);
         unsafe.put(key, cur);
+        return result;
+    }
+
+    public static <JOB_ID> ImmutableList<JOB_ID> getOrDefaultCollectionByKeyPredicate(
+            Map<JOB_ID, ? extends Collection<JOB_ID>> map,
+            Predicate<JOB_ID> pred,
+            ImmutableList<JOB_ID> defaultVal
+    ) {
+        for (Map.Entry<JOB_ID, ? extends Collection<JOB_ID>> entry : map.entrySet()) {
+            if (pred.test(entry.getKey())) {
+                return ImmutableList.copyOf(entry.getValue());
+            }
+        }
+        return defaultVal;
+    }
+
+    public static <X, I, Y extends Collection<I>> ImmutableMap<X, ImmutableSet<I>> copyMapOfSets(
+            Map<X, Y> toCopy
+    ) {
+        ImmutableMap.Builder<X, ImmutableSet<I>> b = ImmutableMap.builder();
+        for (Map.Entry<X, Y> xEntry : toCopy.entrySet()) {
+            ImmutableSet.Builder<I> b2 = ImmutableSet.builder();
+            for (I i : xEntry.getValue()) {
+                b2.add(i);
+            }
+            b.put(xEntry.getKey(), b2.build());
+        }
+        return b.build();
     }
 }

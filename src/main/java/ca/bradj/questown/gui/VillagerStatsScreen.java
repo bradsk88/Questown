@@ -6,6 +6,7 @@ import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import mezz.jei.common.util.ImmutableRect2i;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -16,10 +17,15 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMenu> {
+    public static final int HALF_WIDTH = 82;
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private final JEI.NineNine background;
     private final VillagerTabs tabs;
+    private ImmutableRect2i expBar = new ImmutableRect2i(0, 0, 0, 0);
+    private ImmutableRect2i hngBar = new ImmutableRect2i(0, 0, 0, 0);
+    private ImmutableRect2i moodBar = new ImmutableRect2i(0, 0, 0, 0);
+    private ImmutableRect2i dmgBar = new ImmutableRect2i(0, 0, 0, 0);
 
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
@@ -54,19 +60,78 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     @Override
-    protected void renderLabels(PoseStack p_97808_, int p_97809_, int p_97810_) {
+    protected void renderLabels(
+            PoseStack p_97808_,
+            int p_97809_,
+            int p_97810_
+    ) {
     }
 
     @Override
-    protected void renderTooltip(PoseStack stack, int mouseX, int mouseY) {
+    protected void renderTooltip(
+            PoseStack stack,
+            int mouseX,
+            int mouseY
+    ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         if (this.tabs.renderTooltip(
-                bgX, bgY, mouseX, mouseY,
+                bgX,
+                bgY,
+                mouseX,
+                mouseY,
                 key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
         }
+
+        if (JEI.isCoordInBox(mouseX, mouseY, expBar)) {
+            super.renderTooltip(
+                    stack, Compat.translatable(
+                            "menu.common.stat_tooltip",
+                            Compat.translatable("menu.villager_stats.experience"),
+                            menu.getExperienceValue(),
+                            menu.getExperienceTarget()
+                    ), mouseX, mouseY
+            );
+            return;
+        }
+
+        if (JEI.isCoordInBox(mouseX, mouseY, hngBar)) {
+            super.renderTooltip(
+                    stack, Compat.translatable(
+                            "menu.common.stat_tooltip",
+                            Compat.translatable("menu.villager_stats.hunger"),
+                            menu.getFullnessPercent() * 100,
+                            100
+                    ), mouseX, mouseY
+            );
+            return;
+        }
+
+        if (JEI.isCoordInBox(mouseX, mouseY, moodBar)) {
+            super.renderTooltip(
+                    stack, Compat.translatable(
+                            "menu.common.stat_tooltip",
+                            Compat.translatable("menu.villager_stats.mood"),
+                            menu.getMoodPercent() * 100,
+                            100
+                    ), mouseX, mouseY
+            );
+            return;
+        }
+        if (JEI.isCoordInBox(mouseX, mouseY, dmgBar)) {
+            super.renderTooltip(
+                    stack, Compat.translatable(
+                            "menu.common.stat_tooltip",
+                            Compat.translatable("menu.villager_stats.damage"),
+                            menu.getDamageLevel() * 100,
+                            100
+                    ), mouseX, mouseY
+            );
+            return;
+        }
+
         super.renderTooltip(stack, mouseX, mouseY);
     }
 
@@ -81,34 +146,63 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
         int position = 0;
-        renderMood(poseStack, position);
+        this.expBar = renderExperience(poseStack, position);
+        position++;
+//        renderMood(poseStack, position);
         position++;
         if (Config.HUNGER_ENABLED.get()) {
-            renderHunger(poseStack, position);
+            this.hngBar = renderHunger(poseStack, position);
             position++;
         }
-        renderDamage(poseStack, position);
+//        renderDamage(poseStack, position);
         renderTooltip(poseStack, mouseX, mouseY);
     }
 
-    private void renderMood(PoseStack stack, int position) {
-        Component title = Compat.translatable("menu.mood");
+    private ImmutableRect2i renderExperience(
+            PoseStack stack,
+            int position
+    ) {
+        Component title = Compat.translatable("menu.villager_stats.experience");
+        return renderBar(
+                stack,
+                position,
+                title,
+                (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
+        );
+    }
+
+    private void renderMood(
+            PoseStack stack,
+            int position
+    ) {
+        Component title = Compat.translatable("menu.villager_stats.mood");
         renderBar(stack, position, title, menu.getMoodPercent());
     }
 
-    private void renderHunger(PoseStack stack, int position) {
+    private ImmutableRect2i renderHunger(
+            PoseStack stack,
+            int position
+    ) {
         int fullnessPercent = menu.getFullnessPercent();
-        Component title = Compat.translatable("menu.hunger");
-        renderBar(stack, position, title, fullnessPercent);
+        Component title = Compat.translatable("menu.villager_stats.hunger");
+        return renderBar(stack, position, title, fullnessPercent);
     }
 
-    private void renderDamage(PoseStack stack, int position) {
+    private ImmutableRect2i renderDamage(
+            PoseStack stack,
+            int position
+    ) {
         int damageLevel = menu.getDamageLevel();
-        Component title = Compat.translatable("menu.damage");
-        renderBar(stack, position, title, damageLevel);
+        Component title = Compat.translatable("menu.villager_stats.damage");
+        return renderBar(stack, position, title, damageLevel);
     }
 
-    private void renderBar(PoseStack stack, int index, Component title, int fullnessPercent) {
+    private ImmutableRect2i renderBar(
+            PoseStack stack,
+            int index,
+            Component title,
+            int fullnessPercent
+    ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bxY = (this.height - backgroundHeight) / 2;
         bxY = bxY + (25 * index);
@@ -116,16 +210,17 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
         int x = 8 + bgX;
         int y = 28 + bxY;
-        int halfWidth = 82;
         int height = 5;
-        blit(stack, x - 1, y, 0, 0, 64, halfWidth, height, 256, 256);
-        blit(stack, x + 78, y, 0, 100, 64, halfWidth, height, 256, 256);
+        int barLeftX = x - 1;
+        blit(stack, barLeftX, y, 0, 0, 64, HALF_WIDTH, height, 256, 256);
+        blit(stack, x + 78, y, 0, 100, 64, HALF_WIDTH, height, 256, 256);
         float fP = fullnessPercent / 100f;
         int greenY = 69;
-        int leftWidth = (int) (halfWidth * (2 * (Math.min(0.5, fP))));
-        int rightWidth = (int) ((halfWidth) * (2 * (Math.min(0.5, (fP) - 0.5))));
-        blit(stack, x - 1, y, 0, 0, greenY, leftWidth, height, 256, 256);
+        int leftWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, fP))));
+        int rightWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, (fP) - 0.5))));
+        blit(stack, barLeftX, y, 0, 0, greenY, leftWidth, height, 256, 256);
         blit(stack, x + 78, y, 0, 100, greenY, rightWidth, height, 256, 256);
+        return new ImmutableRect2i(barLeftX, y, HALF_WIDTH * 2, height);
     }
 
     @Override
@@ -149,9 +244,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(
-                new Rect2i(x, y, backgroundWidth, backgroundHeight)
-        );
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
     }
 
     @Override
@@ -163,7 +256,11 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int p_97750_) {
+    public boolean mouseClicked(
+            double mouseX,
+            double mouseY,
+            int p_97750_
+    ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.tabs.mouseClicked(x, y, mouseX, mouseY);

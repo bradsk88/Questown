@@ -3,6 +3,7 @@ package ca.bradj.questown.gui.villager.advancements;
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
@@ -40,7 +41,10 @@ public class VillagerAdvancementsScreen extends Screen {
     public VillagerAdvancementsScreen(
             BlockPos flagPos,
             UUID villagerUUID,
-            JobID currentJob
+            Collection<JobID> unlockedJobs,
+            Collection<JobID> unlockableJobs,
+            JobID currentJob,
+            boolean showBlockOfProgressTab
     ) {
         super(Compat.literal(""));
         DisplayInfo displayInfo = new DisplayInfo(
@@ -49,22 +53,25 @@ public class VillagerAdvancementsScreen extends Screen {
                 Compat.literal("test2"),
                 new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
                 FrameType.TASK,
-                false, false, false
+                false,
+                false,
+                false
         );
         this.content = new VillagerAdvancementsContent(
-                Minecraft.getInstance(), this, displayInfo, currentJob, VillagerAdvancements.all()
+                Minecraft.getInstance(),
+                this,
+                displayInfo,
+                currentJob,
+                unlockedJobs,
+                unlockableJobs,
+                currentJob == null ? VillagerAdvancements.all() : VillagerAdvancements.all().branch(currentJob.rootId())
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
-                return ImmutableList.of(
-                        OpenVillagerMenuMessage.INVENTORY,
-                        OpenVillagerMenuMessage.QUESTS,
-                        OpenVillagerMenuMessage.STATS,
-                        OpenVillagerMenuMessage.ECONOMICS
-                );
+                return VillagerTabs.all();
             }
 
             @Override
@@ -75,6 +82,11 @@ public class VillagerAdvancementsScreen extends Screen {
             @Override
             public UUID getVillagerUUID() {
                 return villagerUUID;
+            }
+
+            @Override
+            public boolean showBlockOfProgressTab() {
+                return showBlockOfProgressTab;
             }
         });
     }
@@ -210,14 +222,25 @@ public class VillagerAdvancementsScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, p_94697_);
         }
 
+        if (content.isLocked(id)) {
+            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(flagPos, villagerUUID, id, true));
+            return true;
+        }
+
         changeJobAndClose(id);
         return true;
     }
 
     private void changeJobAndClose(JobID id) {
-        QuestownNetwork.CHANNEL.sendToServer(
-                new ChangeVillagerJobMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ(), villagerUUID, id, true)
-        );
+
+        QuestownNetwork.CHANNEL.sendToServer(new ChangeVillagerJobMessage(
+                flagPos.getX(),
+                flagPos.getY(),
+                flagPos.getZ(),
+                villagerUUID,
+                id,
+                true
+        ));
 
         this.minecraft.setScreen((Screen) null);
     }

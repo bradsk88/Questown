@@ -30,6 +30,7 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     ) {
         super(ctx, new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER_SLIM), true), 0.5F);
         this.addLayer(new VisitorArrowLayer(ctx, this));
+        this.addLayer(new SpinningCubeLayer<>(this));
     }
 
     @Override

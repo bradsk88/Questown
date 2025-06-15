@@ -17,7 +17,6 @@ import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -91,7 +90,7 @@ public class TownQuestsHandle implements QuestsHolder {
                         return new TownQuestsContainer(
                                 windowId,
                                 quests,
-                                t.getBlockPos(),
+                                t.getInfo(),
                                 () -> triggerAdvancement(player, t)
                         );
                     }
@@ -100,12 +99,17 @@ public class TownQuestsHandle implements QuestsHolder {
                             ServerPlayer player,
                             @NotNull TownFlagBlockEntity t
                     ) {
-                        ServerLevel l = player.getLevel();
-                        RoomTrigger.Triggers trigger = RoomTrigger.Triggers.FirstOpenFlagMenu;
-                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, trigger, t.getBlockPos());
+                        if (t.getVillagerHandle().entities().isEmpty()) {
+                            return;
+                        }
+                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                                player.getLevel(),
+                                RoomTrigger.Triggers.FirstOpenFlagMenu,
+                                t.getBlockPos()
+                        );
                     }
                 }, data ->
-                        FlagMenus.writeAndLink(data, quests, t.getBlockPos(), player, entities)
+                        FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.bopCount)
         );
     }
 

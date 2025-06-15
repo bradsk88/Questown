@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,7 +28,7 @@ class TownStateTest {
                 @NotNull List<Position> gates,
                 long worldTimeAtSleep
         ) {
-            super(villagers, containers, workStates, ImmutableMap.of(), gates, worldTimeAtSleep);
+            super(villagers, containers, workStates, ImmutableMap.of(), gates, ImmutableMap.of(), worldTimeAtSleep);
         }
 
         @Override
@@ -37,6 +38,7 @@ class TownStateTest {
                 ImmutableMap<Position, State> workStates,
                 ImmutableMap<Position, Integer> workTimers,
                 ImmutableList<Position> gates,
+                ImmutableMap<UUID, Boolean> bops,
                 long worldTimeAtSleep
         ) {
             return new TestTownState(villagers, containers, workStates, gates, worldTimeAtSleep);

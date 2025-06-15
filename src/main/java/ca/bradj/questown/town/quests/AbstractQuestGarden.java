@@ -90,7 +90,11 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
 
     private void addAndRecord(ROOM_ID randomRoom) {
         addQuest(batch, randomRoom);
-        costSoFar += getCost(randomRoom);
+        int cost = getCost(randomRoom);
+        if (notValid(cost)) {
+            return;
+        }
+        costSoFar += cost;
     }
 
     protected abstract boolean hasBedAlready(BATCH batch);
@@ -99,6 +103,9 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             ROOM_ID id
     ) {
         int newCost = getCost(id);
+        if (notValid(newCost)) {
+            return true;
+        }
         if (questAlreadyRequested(batch, id)) {
             newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
         }
@@ -114,6 +121,10 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return true;
         }
         return false;
+    }
+
+    private static boolean notValid(int newCost) {
+        return Integer.MAX_VALUE == newCost || newCost < 0;
     }
 
     protected abstract boolean questAlreadyRequested(

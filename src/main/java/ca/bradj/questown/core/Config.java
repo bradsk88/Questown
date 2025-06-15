@@ -80,9 +80,12 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
+    public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
+    public static final ForgeConfigSpec.ConfigValue<Integer> JOB_TREE_GROWTH;
 
     static {
         // Scanning Config
@@ -146,6 +149,15 @@ public class Config {
 
         // Jobs Config
         BUILDER.push("Jobs");
+        JOB_TREE_GROWTH = BUILDER.comment(
+                "The maximum number of sub-jobs that become available for unlocking when a job is unlocked"
+        ).comment(
+                "For example, if \"baker\" is a pre-requisite for \"bread\", \"cake\", and \"cookies\", "
+        ).comment(
+                "and \"baker\" is unlocked when this is set to 2, only 2 jobs from \"bread\", \"cakes\" and \"cookies\" "
+        ).comment(
+                "will become available for unlocking."
+        ).defineInRange("JobTreeGrowth", 2, 1, 10);
         MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
         ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);
@@ -223,6 +235,20 @@ public class Config {
                 "The number of ticks that it will take for one point of damage to heal when no effects are present"
         ).defineInRange("DamageTicks", 1000L, 1L, 24000L);
 
+        // Villager Leveling Config
+        BUILDER.push("Leveling");
+        EXPERIENCE_REQUIRED_AT_LEVEL_1 = BUILDER.comment(
+                "The amount of work which must be done to progress from level 1 to level 2"
+        ).defineInRange("Level1ExperienceRequired", 1000, 1, Integer.MAX_VALUE);
+        EXPERIENCE_RAMP_FACTOR = BUILDER.comment(
+                "The degree to which more experience is required as the villagers level up"
+        ).comment(
+                "When set to 1.2: Level 2 will require 1200 (1000 * 1.2), Level 3 will require 1440 (1200 * 1.2), and so on..."
+        ).defineInRange(
+                "ExperienceRampFactor", 1.2, 0.1, Double.MAX_VALUE
+        );
+        BUILDER.pop();
+
         // Villager Moods Config
         BUILDER.push("Moods");
         MOOD_TICK_INTERVAL = BUILDER.comment(
@@ -283,7 +309,7 @@ public class Config {
         ).defineInRange("FlagSubBlockDetectionTicks", 100, 1, 1000);
         META_ROOM_DIAMETER = BUILDER.comment(
                 "The radius of \"Meta-Rooms\" that exist around points of interest in the town. E.g." +
-                "There is a meta room around the town flag itself, and one around each welcome mat"
+                        "There is a meta room around the town flag itself, and one around each welcome mat"
         ).defineInRange("MetaRoomDiameter", 2, 1, 100);
         BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
                 "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"

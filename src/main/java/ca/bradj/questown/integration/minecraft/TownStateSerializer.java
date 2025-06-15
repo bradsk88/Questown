@@ -64,7 +64,7 @@ public class TownStateSerializer {
                 journalItems.add(item.serializeNBT());
             }
             vTag.put("journal_items", journalItems);
-            vTag.putUUID("uuid", e.uuid);
+            vTag.putUUID("UUID", e.uuid);
             vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
             villagers.add(vTag);
         }
@@ -89,8 +89,9 @@ public class TownStateSerializer {
         @NotNull ImmutableMap<BlockPos, State> workStates = ImmutableMap.of();
         @NotNull ImmutableMap<BlockPos, Integer> workTimers = ImmutableMap.of();
         @NotNull ImmutableList<MCHeldItem> knowledge = ImmutableList.of();
+        @NotNull ImmutableMap<UUID, Boolean> bops = ImmutableMap.of();
         List<BlockPos> gates = loadGates(tag, gg);
-        return new MCTownState(villagers, containers, workStates, workTimers, gates, knowledge, worldTimeAtSleep);
+        return new MCTownState(villagers, containers, workStates, workTimers, gates, knowledge, bops, worldTimeAtSleep);
     }
 
     private ImmutableList<BlockPos> loadGates(
@@ -131,7 +132,7 @@ public class TownStateSerializer {
             }
             ImmutableList<MCHeldItem> heldItems = iB.build();
             String job = vcTag.getString("job");
-            UUID uuid = vcTag.getUUID("uuid");
+            UUID uuid = vcTag.getUUID("UUID");
             if (job.isEmpty()) {
                 QT.JOB_LOGGER.error("Empty job. Falling back to gatherer for {}", uuid);
                 job = "gatherer";

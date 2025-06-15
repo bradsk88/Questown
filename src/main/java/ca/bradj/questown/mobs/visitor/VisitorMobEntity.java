@@ -57,10 +57,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -87,6 +84,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
@@ -124,6 +122,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
+    private static final EntityDataAccessor<Boolean> hasBOP = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
+    );
     private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
@@ -149,6 +150,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
+    private boolean jobChangePending;
     boolean sitting = true;
     TownInterface town;
     Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
@@ -311,19 +313,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getLook();
     }
 
-    public void tryGiveItem(
+    public boolean tryGiveItem(
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
         if (job.get().addToEmptySlot(v)) {
-            return;
+            return true;
         }
         // TODO: Remember the location of the drop and come back to pick them up
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
-            return;
+            return false;
         }
         ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
         level.addFreshEntity(item);
+        return false;
     }
 
     public void addSleepListener(Consumer<VillagerSleptEvent> l) {
@@ -332,6 +335,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public void clearWorkToUndo() {
         this.workToUndo = null;
+    }
+
+    public boolean hasBlockOfProgress() {
+        Boolean hasBOP = this.entityData.get(VisitorMobEntity.hasBOP);
+        return hasBOP;
+    }
+
+    public boolean isJobChangePending() {
+        return jobChangePending;
+    }
+
+    public void setJobChangePending(boolean value) {
+        jobChangePending = value;
     }
 
     public record WorkToUndo(
@@ -348,6 +364,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
+        if (!(level instanceof ServerLevel sl)) {
+            QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
+            return;
+        }
+
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
         String curJobName = "null";
         if (curJob != null) {
@@ -375,10 +396,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 (bp, item) -> this.workToUndo = new WorkToUndo(initializedJob.getId(), bp, item)
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                () -> this.workToUndo = null
+                id -> this.workToUndo = null
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                () -> this.town.getPossibleWork().invalidate()
+                id -> this.town.getPossibleWork().invalidate()
+        ));
+        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
+                id -> {
+                    Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
+                    this.town.getVillagerHandle().addExperience(uuid, job.getExperienceEarned());
+                }
         ));
     }
 
@@ -402,6 +429,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(visible, true);
+        this.entityData.define(hasBOP, true);
         this.entityData.define(status, ProductionStatus.IDLE.name());
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
@@ -445,6 +473,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (!town.isInitialized()) {
             return;
         }
+
+        entityData.set(hasBOP, town.getVillagerHandle().hasBlockOfProgress(getUUID()));
 
         if (freezeTicks > 0) {
             freezeTicks--;
@@ -760,7 +790,30 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
-        super.pushEntities();
+        List<Entity> list = this.level.getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
+        list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
+        // Copied from superclass
+        if (!list.isEmpty()) {
+            int i = this.level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
+                int j = 0;
+
+                for(int k = 0; k < list.size(); ++k) {
+                    if (!list.get(k).isPassenger()) {
+                        ++j;
+                    }
+                }
+
+                if (j > i - 1) {
+                    this.hurt(DamageSource.CRAMMING, 6.0F);
+                }
+            }
+
+            for(int l = 0; l < list.size(); ++l) {
+                Entity entity = list.get(l);
+                this.doPush(entity);
+            }
+        }
     }
 
     @Override
@@ -1062,6 +1115,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.setPos(vec3.x, vec3.y, vec3.z);
         this.clearSleepingPos();
         return sleepingPos;
+    }
+
+    @Override
+    public void aiStep() {
+        this.updateSwingTime();
+        super.aiStep();
     }
 
     @Override

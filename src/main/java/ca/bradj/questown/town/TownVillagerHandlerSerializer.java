@@ -1,5 +1,7 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.jobs.Job;
+import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
@@ -7,107 +9,179 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 public class TownVillagerHandlerSerializer {
     private static final String NBT_FULLNESS = "fullness";
+    private static final String NBT_EXP = "experience";
+    private static final String NBT_LEVELS = "level";
     private static final String NBT_MOOD = "mood";
     private static final String NBT_MOOD_EFFECTS = "mood_effects";
     private static final String NBT_VILLAGER_ID = "villager_uuid";
+    private static final String NBT_UNLOCKED_JOBS = "unlocked_jobs";
+    private static final String NBT_JOBS_KNOWN_TO_EXIST = "jobs_known_to_exist";
+    private static final String NBT_JOB_ID = "job_id";
     private static final String NBT_VALUE = "value";
     private static final String NBT_DURATION = "duration";
     private static final String NBT_DAMAGE = "damage";
 
-    public void deserialize(CompoundTag compound, TownVillagerHandle villagerHandle, long currentTick) {
-        ImmutableMap.Builder<UUID, Integer> fullness = ImmutableMap.builder();
-        ImmutableMap.Builder<UUID, ImmutableList<Effect>> moodEffects = ImmutableMap.builder();
-        ImmutableMap.Builder<UUID, Integer> damage = ImmutableMap.builder();
+    public void deserialize(
+            CompoundTag compound,
+            TownVillagerHandle villagerHandle,
+            long currentTick
+    ) {
+        Function<Tag, Integer> simpleInt = t -> ((CompoundTag) t).getInt(NBT_VALUE);
+        ImmutableMap<UUID, Integer> fullness = deserializeMap(compound, NBT_FULLNESS, simpleInt);
+        ImmutableMap<UUID, ImmutableList<Effect>> moodEffects = deserializeMap(
+                compound, NBT_MOOD_EFFECTS, t -> {
+                    ListTag effects = ((CompoundTag) t).getList(NBT_MOOD_EFFECTS, Tag.TAG_COMPOUND);
+                    ImmutableList.Builder<Effect> b2 = ImmutableList.builder();
 
-        ListTag fullnessPairs = compound.getList(NBT_FULLNESS, Tag.TAG_COMPOUND);
+                    effects.forEach(meTag -> b2.add(new Effect(
+                            new ResourceLocation(((CompoundTag) meTag).getString(NBT_VALUE)),
+                            currentTick + ((CompoundTag) meTag).getLong(NBT_DURATION)
+                    )));
+                    return b2.build();
+                }
+        );
+
+        ImmutableMap<UUID, Integer> damage = deserializeMap(compound, NBT_DAMAGE, simpleInt);
+
+        ImmutableMap<UUID, ImmutableList<JobID>> unlockedJobs = deserializeMap(
+                compound, NBT_UNLOCKED_JOBS, t -> {
+                    ListTag jobs = ((CompoundTag) t).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+
+                    List<JobID> list = jobs.stream().map(v -> JobID.fromTag((CompoundTag) v)).toList();
+                    return ImmutableList.copyOf(list);
+                }
+        );
+        ImmutableMap<UUID, ImmutableMap<JobID, ImmutableList<JobID>>> knownJobs = deserializeMap(
+                compound, NBT_VALUE,
+                ttt -> {
+                    ImmutableMap.Builder<JobID, ImmutableList<JobID>> bbb = ImmutableMap.builder();
+                    ListTag l = ((CompoundTag) ttt).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+                    l.forEach(tttt -> {
+                        CompoundTag jobId = ((CompoundTag) tttt).getCompound(NBT_JOB_ID);
+                        ListTag jobz = ((CompoundTag) tttt).getList(NBT_VALUE, Tag.TAG_COMPOUND);
+                        ImmutableList.Builder<JobID> jb = ImmutableList.builder();
+                        jobz.forEach(j -> jb.add(JobID.fromTag((CompoundTag) j)));
+                        bbb.put(JobID.fromTag(jobId), jb.build());
+                    });
+                    return bbb.build();
+                }
+        );
+
+        ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
+        ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
+
+        villagerHandle.initialize(fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level);
+    }
+
+    private <X> ImmutableMap<UUID, X> deserializeMap(
+            CompoundTag compound,
+            String tagId,
+            Function<Tag, X> fn
+    ) {
+        ImmutableMap.Builder<UUID, X> mb = ImmutableMap.builder();
+        ListTag fullnessPairs = compound.getList(tagId, Tag.TAG_COMPOUND);
 
         fullnessPairs.forEach(tag -> {
             UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
-            int value = ((CompoundTag) tag).getInt(NBT_VALUE);
-            fullness.put(uuid, value);
+            mb.put(uuid, fn.apply(tag));
         });
-
-        ListTag moodPairs = compound.getList(NBT_MOOD, Tag.TAG_COMPOUND);
-
-        moodPairs.forEach(tag -> {
-            UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
-            ListTag effects = ((CompoundTag) tag).getList(NBT_MOOD_EFFECTS, Tag.TAG_COMPOUND);
-            ImmutableList.Builder<Effect> b2 = ImmutableList.builder();
-
-            effects.forEach(meTag -> b2.add(new Effect(
-                    new ResourceLocation(((CompoundTag) meTag).getString(NBT_VALUE)),
-                    currentTick + ((CompoundTag) meTag).getLong(NBT_DURATION)
-            )));
-
-            moodEffects.put(uuid, b2.build());
-        });
-
-
-        ListTag damagePairs = compound.getList(NBT_DAMAGE, Tag.TAG_COMPOUND);
-
-        damagePairs.forEach(tag -> {
-            UUID uuid = ((CompoundTag) tag).getUUID(NBT_VILLAGER_ID);
-            int value = ((CompoundTag) tag).getInt(NBT_VALUE);
-            damage.put(uuid, value);
-        });
-
-        villagerHandle.initialize(fullness.build(), moodEffects.build(), damage.build());
+        return mb.build();
     }
 
-    public CompoundTag serialize(TownVillagerHandle villagerHandle, long currentTick) {
+    private <K, X> ImmutableMap<K, X> deserializeMap(
+            CompoundTag compound,
+            String tagId,
+            Function<Tag, X> fn,
+            Function<Tag, K> keyFn
+    ) {
+        ImmutableMap.Builder<K, X> mb = ImmutableMap.builder();
+        ListTag fullnessPairs = compound.getList(tagId, Tag.TAG_COMPOUND);
+
+        fullnessPairs.forEach(tag -> {
+            K uuid = keyFn.apply(tag);
+            mb.put(uuid, fn.apply(tag));
+        });
+        return mb.build();
+    }
+
+    public CompoundTag serialize(
+            TownVillagerHandle villagerHandle,
+            long currentTick
+    ) {
+        BiConsumer<CompoundTag, Integer> simpleInt = (t, v) -> {
+            t.putInt(NBT_VALUE, v);
+        };
+
         CompoundTag compound = new CompoundTag();
 
-        Map<UUID, Integer> fullnessMap = villagerHandle.fullness;
-        ListTag fullnessPairs = new ListTag();
+        serializeMap(compound, NBT_FULLNESS, villagerHandle.fullness, simpleInt);
+        serializeMap(
+                compound, NBT_MOOD_EFFECTS, villagerHandle.moods.getEffects(), (t, v) -> {
+                    ListTag effectsList = new ListTag();
+                    v.forEach(effect -> {
+                        CompoundTag effectTag = new CompoundTag();
+                        effectTag.putString(NBT_VALUE, effect.effect().toString());
+                        effectTag.putLong(NBT_DURATION, Math.max(effect.untilTick() - currentTick, 0));
+                        effectsList.add(effectTag);
+                    });
+                    t.put(NBT_MOOD_EFFECTS, effectsList);
+                }
+        );
+        serializeMap(compound, NBT_DAMAGE, villagerHandle.damage, simpleInt);
+        serializeMap(compound, NBT_EXP, villagerHandle.experience, simpleInt);
+        serializeMap(compound, NBT_LEVELS, villagerHandle.levels, simpleInt);
+        serializeMap(
+                compound, NBT_UNLOCKED_JOBS, villagerHandle.getUnlockedJobs(),
+                (CompoundTag t, Collection<JobID> j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
+        BiConsumer<CompoundTag, Map<JobID, ? extends Collection<JobID>>> bc = (compoundTag, jobIDSetMap) -> {
+            CompoundTag compound1 = new CompoundTag();
+            serializeMap(compound1, NBT_VALUE, jobIDSetMap,
+                    this::serializeJobIdsValue,
+                    (t, k) -> t.put(NBT_JOB_ID, JobID.toTag(k))
+            );
+            compoundTag.put(NBT_VALUE, compound1);
+        };
+        serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.learning.jobsKnownToExist, bc);
+
+        return compound;
+    }
+
+    private void serializeJobIdsValue(CompoundTag compoundTag, Collection<JobID> jobIDS) {
+        compoundTag.put(NBT_VALUE, JobID.toTag(jobIDS));
+    }
+
+    private <X> void serializeMap(
+            CompoundTag compound,
+            String id,
+            Map<UUID, X> fullnessMap,
+            BiConsumer<CompoundTag, ? super X> writer
+    ) {
+        serializeMap(compound, id, fullnessMap, writer, (t, uuid) -> t.putUUID(NBT_VILLAGER_ID, uuid));
+    }
+
+    private <K, X> void serializeMap(
+            CompoundTag compound,
+            String id,
+            Map<K, X> fullnessMap,
+            BiConsumer<CompoundTag, ? super X> writer,
+            BiConsumer<CompoundTag, K> writeKey
+    ) {
+        ListTag pairs = new ListTag();
 
         fullnessMap.forEach((uuid, value) -> {
             CompoundTag tag = new CompoundTag();
-            tag.putUUID(NBT_VILLAGER_ID, uuid);
-            tag.putInt(NBT_VALUE, value);
-            fullnessPairs.add(tag);
+            writer.accept(tag, value);
+            writeKey.accept(tag, uuid);
+            pairs.add(tag);
         });
 
-        compound.put(NBT_FULLNESS, fullnessPairs);
-
-        ImmutableMap<UUID, ImmutableList<Effect>> moodEffectsMap = villagerHandle.moods.getEffects();
-
-        ListTag moodPairs = new ListTag();
-        moodEffectsMap.forEach((uuid, effects) -> {
-            CompoundTag tag = new CompoundTag();
-            tag.putUUID(NBT_VILLAGER_ID, uuid);
-
-            ListTag effectsList = new ListTag();
-            effects.forEach(effect -> {
-                CompoundTag effectTag = new CompoundTag();
-                effectTag.putString(NBT_VALUE, effect.effect().toString());
-                effectTag.putLong(NBT_DURATION, Math.max(effect.untilTick() - currentTick, 0));
-                effectsList.add(effectTag);
-            });
-
-            tag.put(NBT_MOOD_EFFECTS, effectsList);
-            moodPairs.add(tag);
-        });
-
-        compound.put(NBT_MOOD, moodPairs);
-
-
-        Map<UUID, Integer> damageMap = villagerHandle.damage;
-        ListTag damagePairs = new ListTag();
-
-        damageMap.forEach((uuid, value) -> {
-            CompoundTag tag = new CompoundTag();
-            tag.putUUID(NBT_VILLAGER_ID, uuid);
-            tag.putInt(NBT_VALUE, value);
-            damagePairs.add(tag);
-        });
-
-        compound.put(NBT_DAMAGE, damagePairs);
-
-        return compound;
+        compound.put(id, pairs);
     }
 }

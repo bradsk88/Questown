@@ -71,6 +71,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     NoMCEconomics getEconomicsHandle();
 
+    int getBlocksOfProgress();
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

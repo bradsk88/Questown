@@ -94,7 +94,7 @@ public class ResterWork {
                                 ImmutableList.of(SpecialRules.LIE_ON_WORKSPOT),
                                 ProductionStatus.EXTRACTING_PRODUCT,
                                 ImmutableList.of(SpecialRules.CLEAR_POSE)
-                        ), // No stage rules
+                        ),
                         ImmutableList.of(
                                 SpecialRules.CLAIM_SPOT,
                                 SpecialRules.WORK_IN_EVENING,

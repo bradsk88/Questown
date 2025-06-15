@@ -6,8 +6,8 @@ import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,13 +23,12 @@ public class AddItemToContainerSpecialRule extends
     @Override
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
-            AfterInsertItemEvent event
+            AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT ctxOut = super.afterInsertItem(ctxInput, event);
         BlockPos ws = event.workSpot().workPosition();
         BlockEntity be = event.level().getBlockEntity(ws);
-        LazyOptional<IItemHandler> cap = be.getCapability(
-                CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
+        LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
         if (cap == null || !cap.isPresent()) {
             QT.JOB_LOGGER.error("Work spot cannot accept items. " + getClass().getName() + " will not succeed.");
             return ctxOut;

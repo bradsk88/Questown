@@ -47,6 +47,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("UnnecessaryLocalVariable")
 public class Jobs {
@@ -335,6 +336,10 @@ public class Jobs {
 
     public static @NotNull Component getRootNameComponent(JobID job) {
         return Compat.translatable("jobs." + job.rootId());
+    }
+
+    public static String getNiceString(ImmutableList<JobID> value) {
+        return value.stream().map(JobID::toNiceString).collect(Collectors.joining(","));
     }
 
     public interface LootDropper<I> {

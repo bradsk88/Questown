@@ -5,9 +5,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
-public record AfterInsertItemEvent(
+import java.util.function.Function;
+
+public record AfterInsertItemEvent<TOWN>(
         ServerLevel level,
         ItemStack inserted,
-        WorkedSpot<BlockPos> workSpot
+        WorkedSpot<BlockPos> workSpot,
+        Function<TOWN, TOWN> bopClearer
 ) {
 }

@@ -169,6 +169,7 @@ public class RecipeItemConfig {
     );
 
     static {
+        add(assumePresent(Items.DIRT), DIRT);
         add(String.format("#%s", ItemTags.BEDS.location()), BED);
         add(String.format("#%s", ItemTags.DIRT.location()), DIRT);
         // TODO: Tags that allow for you to choose from a range of easy-to-hard blocks should use the weight of the easiest block

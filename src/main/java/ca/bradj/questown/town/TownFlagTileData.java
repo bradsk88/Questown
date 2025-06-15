@@ -31,6 +31,7 @@ public class TownFlagTileData {
     private static final String NBT_KNOWLEDGE = String.format("%s_knowledge", Questown.MODID);
     private static final String NBT_VILLAGERS = String.format("%s_villagers", Questown.MODID);
     private static final String NBT_HEALSPOTS = String.format("%s_heal_spots", Questown.MODID);
+    private static final String NBT_BLOCKS_OF_PROGRESS_STORED = String.format("%s_bops_stored", Questown.MODID);
 
     public static Map<String, InitPair> initialize() {
 
@@ -43,6 +44,7 @@ public class TownFlagTileData {
         b.put(NBT_KNOWLEDGE, initKnowledge());
         b.put(NBT_VILLAGERS, initVillagers());
         b.put(NBT_HEALSPOTS, initHealSpots());
+        b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
         return b.build();
     }
 
@@ -172,6 +174,14 @@ public class TownFlagTileData {
         }
         );
     }
+    private static InitPair initBlocksOfProgress() {
+        return new InitPair(
+                (tag, town) -> {
+                    town.initializer().initializeBOP(tag);
+                    return true;
+                }, (town) -> {}
+        );
+    }
 
     public static void write(
             Long currentTick,
@@ -186,6 +196,7 @@ public class TownFlagTileData {
         write(t, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
         write(t, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
         write(t, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         // FIXME: Serialize economics
     }
 

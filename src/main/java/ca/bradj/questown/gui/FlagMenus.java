@@ -27,6 +27,7 @@ public class FlagMenus {
     TownQuestsContainer questsMenu;
     MultiStatusMenu villagersMenu;
     TownEconomicsMenu econMenu;
+    TownBlockofProgressMenu bopMenu;
 
     public FlagMenus() {
     }
@@ -40,13 +41,19 @@ public class FlagMenus {
             // Buffer reads - order must match write()
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
+            int blocksOfProgress = TownBlockofProgressMenu.read(buf);
+            FlagTabsEmbedding.FlagInfo flagInfo = new FlagTabsEmbedding.FlagInfo(
+                    flagPos,
+                    blocksOfProgress > 0
+            ); // TODO: Or maybe always show?
 
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenuClientSide(windowId, quests, flagPos);
-            menus.initMultiVillagerStatusMenuClientSide(windowId, flagPos);
-            menus.initEconClientSide(windowId, flagPos);
+            menus.initQuestsMenuClientSide(windowId, quests, flagInfo);
+            menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
+            menus.initEconClientSide(windowId, flagInfo);
+            menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -57,11 +64,12 @@ public class FlagMenus {
     public static void writeAndLink(
             FriendlyByteBuf data,
             List<UIQuest> quests,
-            BlockPos flagPos,
+            FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
-            Iterable<? extends VisitorMobEntity> es
+            Iterable<? extends VisitorMobEntity> es,
+            int bopCount
     ) {
-        VillagerQuestsContainer.write(data, quests, flagPos);
+        VillagerQuestsContainer.write(data, quests, flagInfo.flagPos());
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
@@ -81,6 +89,7 @@ public class FlagMenus {
                 }
             });
         }
+        TownBlockofProgressMenu.write(data, flagInfo, bopCount);
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
@@ -105,28 +114,36 @@ public class FlagMenus {
     public void initQuestsMenuClientSide(
             int windowId,
             Collection<UIQuest> quests,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flag
     ) {
         questsMenu = new TownQuestsContainer(
-                windowId, quests, flagPos, () -> {
+                windowId, quests, flag, () -> {
         }
         );
     }
 
     public void initMultiVillagerStatusMenuClientSide(
             int windowId,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flag
     ) {
         villagersMenu = new MultiStatusMenu(
-                windowId, flagPos, () -> {
+                windowId, flag, () -> {
         }
         );
     }
 
     private void initEconClientSide(
             int windowId,
-            BlockPos flagPos
+            FlagTabsEmbedding.FlagInfo flag
     ) {
-        econMenu = new TownEconomicsMenu(windowId, flagPos);
+        econMenu = new TownEconomicsMenu(windowId, flag);
+    }
+
+    private void initBlocksOfProgress(
+            int windowId,
+            FlagTabsEmbedding.FlagInfo flagPos,
+            int blocksOfProgress
+    ) {
+        bopMenu = new TownBlockofProgressMenu(windowId, flagPos, blocksOfProgress);
     }
 }
