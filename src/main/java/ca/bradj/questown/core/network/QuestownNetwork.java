@@ -98,6 +98,12 @@ public class QuestownNetwork {
                         decoder(JobRootChangeMessage::decode),
                 JobRootChangeMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(GiveBOPMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(GiveBOPMessage::encode).
+                        decoder(GiveBOPMessage::decode),
+                GiveBOPMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {

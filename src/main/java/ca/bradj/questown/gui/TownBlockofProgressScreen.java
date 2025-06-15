@@ -1,13 +1,16 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
+import ca.bradj.questown.core.network.GiveBOPMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -24,8 +27,11 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
     private final JEI.NineNine background;
+    private Button unlockButton;
 
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
+    private int buttonY;
+    private int buttonX;
 
     public TownBlockofProgressScreen(
             TownBlockofProgressMenu menu,
@@ -38,6 +44,16 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
 
         this.background = JEI.getRecipeBackground();
         this.tabs = FlagTabs.forMenu(menu);
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        this.unlockButton = this.addRenderableWidget(new Button(
+                0, 0, backgroundWidth - 8, 20, Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
+            QuestownNetwork.CHANNEL.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
+            Minecraft.getInstance().setScreen(null);
+        }));
     }
 
     @Override
@@ -68,6 +84,8 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
             int mouseY,
             float partialTicks
     ) {
+        unlockButton.x = buttonX + 4;
+        unlockButton.y = buttonY;
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
@@ -91,19 +109,22 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
         bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
+                font,
+                poseStack,
+                topLeft.withY(bgY),
+                tWidth,
                 Compat.translatable("menu.block_of_progress.town_has", menu.blocksOfProgressCount)
         );
         bgY += 8;
         bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
+                font,
+                poseStack,
+                topLeft.withY(bgY),
+                tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
-        bgY += 8;
-        Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
-                Compat.translatable("menu.block_of_progress.will_deposit")
-        );
+        this.buttonY = bgY;
+        this.buttonX = bgX;
     }
 
     @Override

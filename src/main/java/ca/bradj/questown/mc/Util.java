@@ -453,4 +453,7 @@ public class Util {
     public static String getShortString(BlockPos target) {
         return String.format("[%d, %d ,%d]", target.getX(), target.getY(), target.getZ());
     }
+    public static String getTinyString(BlockPos target) {
+        return String.format("[%d, %d]", target.getX(), target.getZ());
+    }
 }
