@@ -64,4 +64,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> BLOCK_OF_PROGRESS = BLOCKS.register(
             BlockOfProgress.ITEM_ID, BlockOfProgress::new
     );
+    public static final RegistryObject<Block> FISHING_ROD_BLOCK = BLOCKS.register(
+            FishingRodBlock.ITEM_ID, FishingRodBlock::new
+    );
 }

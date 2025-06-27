@@ -11,6 +11,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
+import ca.bradj.questown.render.FishingHookRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -60,6 +61,8 @@ public class Questown {
         ScheduleInit.register(bus);
         AdvancementsInit.register();
         Compat.initCommands(bus);
+
+        ca.bradj.questown._vanilla.entities.EntitiesInit.register(bus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
@@ -118,6 +121,10 @@ public class Questown {
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.HOSPITAL_BED.get(),
                 HospitalBedEntityRenderer::new
+        ));
+        event.enqueueWork(() -> EntityRenderers.register(
+                ca.bradj.questown._vanilla.entities.EntitiesInit.FISHIN_HOOK.get(),
+                FishingHookRenderer::new
         ));
     }
 }
