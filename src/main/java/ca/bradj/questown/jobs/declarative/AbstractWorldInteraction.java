@@ -258,6 +258,7 @@ public abstract class AbstractWorldInteraction<
                 ts = withEffectApplied(inputs, ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
+                ts = postExtractHook(inputs, unit);
                 ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
                 QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
             }
@@ -567,12 +568,32 @@ public abstract class AbstractWorldInteraction<
         }
         return preExtractHook(getTown(inputs), rules, inputs, position);
     }
+    private @Nullable TOWN postExtractHook(
+            EXTRA inputs,
+            HELD_ITEM item
+    ) {
+        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        if (rules == null || rules.isEmpty()) {
+            return null;
+        }
+        return postExtractHook(getTown(inputs), rules, inputs, getTownPos(inputs), item);
+    }
+
+    protected abstract POS getTownPos(EXTRA inputs);
 
     protected abstract @Nullable TOWN preExtractHook(
             TOWN town,
             Collection<String> rules,
             EXTRA inputs,
             POS position
+    );
+
+    protected abstract TOWN postExtractHook(
+            TOWN town,
+            Collection<String> rules,
+            EXTRA inputs,
+            POS position,
+            HELD_ITEM extractedItem
     );
 
     protected abstract TOWN setJobBlockState(

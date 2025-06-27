@@ -64,7 +64,7 @@ public class VillagerAdvancementsScreen extends Screen {
                 currentJob,
                 unlockedJobs,
                 unlockableJobs,
-                currentJob == null ? VillagerAdvancements.all() : VillagerAdvancements.all().branch(currentJob.rootId())
+                currentJob == null || isCreative() ? VillagerAdvancements.all() : VillagerAdvancements.all().branch(currentJob.rootId())
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
@@ -89,6 +89,10 @@ public class VillagerAdvancementsScreen extends Screen {
                 return showBlockOfProgressTab;
             }
         });
+    }
+
+    private static boolean isCreative() {
+        return Minecraft.getInstance().player.isCreative();
     }
 
     protected void init() {

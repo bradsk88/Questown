@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 public class WorksBehaviour {
 
     public static Warper<ServerLevel, MCTownState> productionWarper(
+            BlockPos townPos,
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
@@ -45,6 +46,7 @@ public class WorksBehaviour {
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
         MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+                townPos,
                 id,
                 warpInput.villagerIndex(),
                 pauseForAction,
@@ -123,7 +125,8 @@ public class WorksBehaviour {
 
 
     public record WarpInput(
-            int villagerIndex
+            int villagerIndex,
+            BlockPos townFlagPos
     ) {
     }
 
@@ -185,13 +188,14 @@ public class WorksBehaviour {
                         workSound
                 ),
                 productionJobSnapshot(jobId),
-                location.isJobBlock(),
+                (sl, bp) -> location.isJobBlock().test(sl, bp, true),
                 location.baseRoom(),
                 ProductionStatus.FACTORY.idle(),
                 description.currentlyPossibleResults(),
                 description.initialRequest(),
                 (items) -> getProductionNeeds(jobId, states, items),
                 warpInput -> WorksBehaviour.productionWarper(
+                        warpInput.townFlagPos(),
                         jobId,
                         warpInput,
                         special.containsGlobal(SpecialRules.PRIORITIZE_EXTRACTION),

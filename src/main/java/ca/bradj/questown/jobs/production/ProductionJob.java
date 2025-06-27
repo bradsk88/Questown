@@ -131,7 +131,9 @@ public abstract class ProductionJob<
         boolean footSpotBlocked = footMaterial.isSolid();
         BlockState torsoMaterial = sl.getBlockState(bp.above());
         boolean torsoSpotBlocked = torsoMaterial.getMaterial().isSolid();
-        return !(footSpotBlocked || torsoSpotBlocked);
+        BlockState groundMaterial = sl.getBlockState(bp.below());
+        boolean groundSpotSolid = groundMaterial.getMaterial().isSolid();
+        return groundSpotSolid && !(footSpotBlocked || torsoSpotBlocked);
     }
 
     private BlockPos jobSite;
@@ -345,7 +347,7 @@ public abstract class ProductionJob<
                 this.setLookTarget(productionSpot.jobBlock());
                 return productionSpot.entityFeetPos();
             }
-            QT.JOB_LOGGER.error("Production spot was null somehow");
+            QT.JOB_LOGGER.debug("Production spot was null somehow");
             return null;
         }
 

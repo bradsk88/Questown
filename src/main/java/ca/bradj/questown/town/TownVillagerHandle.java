@@ -552,12 +552,23 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public void scheduleJobRootChange(UUID villagerUUID) {
+    public void scheduleJobRootChange(UUID villagerUUID,
+                                      boolean instant
+    ) {
         VisitorMobEntity e = getEntity(villagerUUID);
         if (e == null) {
             QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
             return;
         }
+        if (instant) {
+            QT.FLAG_LOGGER.debug(
+                    "Villager {} will change to a new job NOW (creative mode)",
+                    UtilClean.truncateMiddle(villagerUUID)
+            );
+            changeJobRootNow(e);
+            return;
+        }
+
         e.setJobChangePending(true);
         QT.FLAG_LOGGER.debug(
                 "Villager {} will change to a new job root in the morning.",
@@ -585,20 +596,24 @@ public class TownVillagerHandle implements VillagerHolder {
             if (!v.isJobChangePending()) {
                 return;
             }
-            ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
-            List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().equals(z)).toList();
-            if (allOtherJobs.isEmpty()) {
-                QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
-                v.setJobChangePending(false);
-                return;
-            }
-            ImmutableList<JobID> shuffled = Compat.shuffle(
-                    ImmutableSet.copyOf(allOtherJobs),
-                    town.getServerLevelUnsafe()
-            );
-            JobID newJob = shuffled.get(0);
-            town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
-            town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
+            changeJobRootNow(v);
         });
+    }
+
+    private void changeJobRootNow(VisitorMobEntity v) {
+        ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
+        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().equals(z)).toList();
+        if (allOtherJobs.isEmpty()) {
+            QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
+            v.setJobChangePending(false);
+            return;
+        }
+        ImmutableList<JobID> shuffled = Compat.shuffle(
+                ImmutableSet.copyOf(allOtherJobs),
+                town.getServerLevelUnsafe()
+        );
+        JobID newJob = shuffled.get(0);
+        town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
+        town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
     }
 }

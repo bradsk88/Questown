@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
@@ -190,7 +191,19 @@ public class ServerJobsRegistry {
                     idTest,
                     (id, owner) -> cached.apply(id).jobFunc.apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
-                    (id, bs, bp) -> cached.apply(id).isJobBlock.test(ignored -> bs.get(), bp),
+                    (id, bs, bp) -> cached.apply(id).isJobBlock.test(
+                            new WorkLocation.BlockInfo() {
+                                @Override
+                                public BlockState state(BlockPos bp) {
+                                    return bs.get();
+                                }
+
+                                @Override
+                                public @Nullable BlockEntity entity(BlockPos bp) {
+                                    return null;
+                                }
+                            }, bp
+                    ),
                     (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items))
             );
         }
@@ -222,13 +235,13 @@ public class ServerJobsRegistry {
     }
 
     public static boolean isJobBlock(
-            Function<BlockPos, BlockState> sl,
+            WorkLocation.BlockInfo sl,
             BlockPos bp
     ) {
-        if (sl.apply(bp).isAir()) {
+        if (sl.state(bp).isAir()) {
             return false;
         }
-        BlockState bs = sl.apply(bp);
+        BlockState bs = sl.state(bp);
         Block b = bs.getBlock();
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
         for (SpecialJob sj : specialJobs) {
@@ -271,6 +284,10 @@ public class ServerJobsRegistry {
                                                         .filter(v -> v.getKey().rootId().equals(rootId))
                                                         .filter(v -> include.test(v.getKey()))
                                                         .toList();
+        if (x.isEmpty()) {
+            QT.JOB_LOGGER.error("No jobs found for root ID: {}", rootId);
+            return Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get();
+        }
         Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
         return work;
     }

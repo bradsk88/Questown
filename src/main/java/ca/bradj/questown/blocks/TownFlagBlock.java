@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.ModItemGroup;
@@ -13,6 +14,7 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -45,6 +47,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -174,6 +177,11 @@ public class TownFlagBlock extends BaseEntityBlock {
         //  any other item and with the parent NBT stored on the new item.
         ItemStack converted = null;
 
+        for (Supplier<RoomBlock> blockSupplier : BlockAsRoomEntity.ALL) {
+            if (itemInHand.getItem().equals(blockSupplier.get().asItem())) {
+                converted = itemInHand.copy();
+            }
+        }
 
         if (itemInHand.getItem().equals(Items.STICK)) {
             converted = ItemsInit.TOWN_WAND.get().getDefaultInstance();
@@ -265,9 +273,17 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack itemInHand,
             BlockPos p
     ) {
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_x", Questown.MODID), p.getX());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_y", Questown.MODID), p.getY());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_z", Questown.MODID), p.getZ());
+        getParentData(p).forEach((key, value) -> itemInHand.getOrCreateTag().putInt(key, value));
+    }
+
+    public static ImmutableMap<String, Integer> getParentData(
+            BlockPos parentPos
+    ) {
+        return ImmutableMap.of(
+                String.format("%s.parent_pos_x", Questown.MODID), parentPos.getX(),
+                String.format("%s.parent_pos_y", Questown.MODID), parentPos.getY(),
+                String.format("%s.parent_pos_z", Questown.MODID), parentPos.getZ()
+        );
     }
 
     public static void StoreFlagInputOnOutputNBT(

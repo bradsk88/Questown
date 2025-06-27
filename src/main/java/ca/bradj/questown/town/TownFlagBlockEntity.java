@@ -212,7 +212,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean stopped = true;
     final TownQuests quests = new TownQuests();
-    private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
+    final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
@@ -283,7 +283,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        e.villagerHandle.entities().stream().findFirst().filter(v -> isMissingQuests(e)).ifPresent(v -> {
+        e.villagerHandle.entities().stream().findFirst().ifPresent(v -> {
+            if (!isMissingCompletableQuests(e)) {
+                e.ticksWithoutQuests = 0;
+                return;
+            }
             if (e.ticksWithoutQuests < 500) {
                 e.ticksWithoutQuests++;
                 return;
@@ -408,8 +412,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         profileTick(e, start);
     }
 
-    private static boolean isMissingQuests(TownFlagBlockEntity e) {
-        if (e.questsHandle.getAllQuestsWithRewards().size() > 1) {
+    private static boolean isMissingCompletableQuests(TownFlagBlockEntity e) {
+        ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> all = e.questsHandle.getAllQuestsWithRewards();
+        if (all.stream().anyMatch(v -> !v.getKey().isComplete())) {
             return false;
         }
         if (e.morningRewards.children.stream().anyMatch(MCReward::addsQuestsWhenApplied)) {
@@ -985,6 +990,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
+        roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                 getServerLevel(),
@@ -1056,10 +1062,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
         if (sender.getInventory().add(v)) {
             sender.getInventory().setChanged();
+            sender.inventoryMenu.broadcastChanges();
             return;
         }
         bp = bp.relative(Compat.getRandomHorizontal(getServerLevel()));
         ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
         level.addFreshEntity(item);
     }
+
+
 }

@@ -53,6 +53,13 @@ public abstract class JobPhaseModifier {
         return null;
     }
 
+    public <CONTEXT> @Nullable CONTEXT afterExtract(
+            CONTEXT ctxInput,
+            AfterExtractEvent<CONTEXT> event
+    ) {
+        return null;
+    }
+
     public <CONTEXT> @Nullable CONTEXT afterInsertItem(
             CONTEXT ctxInput,
             AfterInsertItemEvent<CONTEXT> event
