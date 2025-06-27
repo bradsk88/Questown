@@ -11,10 +11,10 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -30,7 +30,7 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
 
     public void render(FishingHook fishingHook, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
         LivingEntity player = fishingHook.getPlayerOwner();
-        BlockPos attachPoint = fishingHook.getMountPos();
+        Vec3 attachPoint = fishingHook.getMountPos();
         if (player != null && attachPoint != null) {
             poseStack.pushPose();
             poseStack.pushPose();
@@ -48,9 +48,9 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
             poseStack.popPose();
 
             // Attach string to attachPoint instead of player
-            double attachX = attachPoint.getX() + 0.5D;
-            double attachY = attachPoint.getY() + 0.5D;
-            double attachZ = attachPoint.getZ() + 0.5D;
+            double attachX = attachPoint.x;
+            double attachY = attachPoint.y;
+            double attachZ = attachPoint.z;
 
             double hookX = Mth.lerp((double)partialTicks, fishingHook.xo, fishingHook.getX());
             double hookY = Mth.lerp((double)partialTicks, fishingHook.yo, fishingHook.getY()) + 0.25D;
