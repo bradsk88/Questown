@@ -23,7 +23,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     protected final BlockPos flagPos;
     protected final UUID villagerUUID;
     private final InvWrapper gathererInventory;
-    private final InvWrapper playerInventory;
+    protected final InvWrapper playerInventory;
     private static final int inventoryLeftX = 8;
     private static final int boxHeight = 18;
     protected int gathererInventoryYOffset = boxHeight;

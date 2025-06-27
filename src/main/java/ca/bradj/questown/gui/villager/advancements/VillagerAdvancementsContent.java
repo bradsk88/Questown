@@ -64,7 +64,9 @@ public class VillagerAdvancementsContent extends GuiComponent {
         this.icon = p_97150_.getIcon();
         this.title = p_97150_.getTitle();
 
-        allJobs = allJobs.filtered(v -> unlockedJobs.contains(v) || unlockableJobs.contains(v));
+        if (!Minecraft.getInstance().player.isCreative()) {
+            allJobs = allJobs.filtered(v -> unlockedJobs.contains(v) || unlockableJobs.contains(v));
+        }
 
         Map<JobID, Float> ys = preComputeLayout(allJobs);
 

@@ -22,10 +22,12 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -37,18 +39,17 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Random;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Compat {
     public static final Random RANDOM = new Random();
+    public static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITIES;
 
     public static void playNeutralSound(
             ServerLevel serverLevel,
@@ -114,10 +115,19 @@ public class Compat {
             ImmutableCollection<X> c,
             ServerLevel serverLevel
     ) {
-        ArrayList<X> list = new ArrayList<>(c);
+        return shuffle(c.iterator(), serverLevel);
+    }
+
+    public static <X> ImmutableList<X> shuffle(
+            Iterator<X> iterator,
+            @Nullable ServerLevel serverLevel
+    ) {
+
+        ArrayList<X> list = new ArrayList<>();
+        iterator.forEachRemaining(list::add);
         int size = list.size();
         for (int i = size; i > 1; --i) {
-            Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
+            Collections.swap(list, i - 1, getRandomInt(serverLevel, i));
         }
         return ImmutableList.copyOf(list);
     }
@@ -289,6 +299,29 @@ public class Compat {
             out += (int) (font.lineHeight * 1.5);
         }
         return out;
+    }
+
+    public static double randomTriangle(
+            double min,
+            double max
+    ) {
+        // TODO: Double check this implementation on 1.18
+        return RANDOM.nextDouble() * (max - min) + min;
+    }
+
+    public static Vec3 relative(
+            Vec3 start,
+            Direction dir,
+            double amount
+    ) {
+        return start.add(dir.getStepX() * amount, dir.getStepY() * amount, dir.getStepZ() * amount);
+    }
+
+    public static float nextFloat(
+            float v,
+            float v1
+    ) {
+        return RANDOM.nextFloat() * (v1 - v) + v;
     }
     public static Capability<IItemHandler> getItemHandlerCapability() {
         return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY;

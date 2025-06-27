@@ -127,6 +127,15 @@ public class ItemsInit {
             )
     );
 
+
+    public static final RegistryObject<Item> FISHING_STATION_BLOCK = ITEMS.register(
+            FishingStationBlock.ITEM_ID,
+            () -> new BlockItem(
+                    BlocksInit.FISHING_STATION_BLOCK.get(),
+                    Questown.DEFAULT_ITEM_PROPS
+            )
+    );
+
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
             TownDoorItem.ITEM_ID,
             TownDoorItem::new

@@ -55,7 +55,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 new JobID(rootId, WORK_ID),
-                new WorkLocation((sl, bp) -> true, SpecialQuests.JOB_BOARD),
+                new WorkLocation((sl, bp, active) -> true, SpecialQuests.JOB_BOARD),
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,
@@ -84,6 +84,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             @Nullable SoundInfo sound
     ) {
         return new RealtimeWorldInteraction(
+                t -> t.town().getTownFlagBasePos(),
                 journal, maxState, checks, specialRules, resultGenerator, claimSpots, (x, need) -> {
             Work w = ServerJobsRegistry.getRandomWork(
                     x.town().getServerLevel(),

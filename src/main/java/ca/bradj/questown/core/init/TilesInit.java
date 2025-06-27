@@ -4,10 +4,13 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.blocks.entity.*;
 import ca.bradj.questown.town.TownFlagBlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+
+import java.util.function.Supplier;
 
 public class TilesInit {
     public static final DeferredRegister<BlockEntityType<?>> TILES = DeferredRegister.create(
@@ -57,6 +60,12 @@ public class TilesInit {
             SeedBinBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     SeedBinBlockEntity::new, BlocksInit.SEED_BIN.get()
             ).build(null)
+    );
+    public static final RegistryObject<BlockEntityType<BlockAsRoomEntity>> BLOCK_AS_ROOM = TILES.register(
+            "block_as_room", () -> {
+                Block[] array = BlockAsRoomEntity.ALL.stream().map(Supplier::get).toArray(Block[]::new);
+                return BlockEntityType.Builder.of(BlockAsRoomEntity::new, array).build(null);
+            }
     );
 
 }

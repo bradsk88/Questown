@@ -32,22 +32,19 @@ public class ResterWork {
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
-    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
-    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
-    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-    );
+    public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of();
+    public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of();
+    public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of();
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_BED, 1
+            BLOCK_STATE_NEED_BED,
+            1
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_REST, 2000
+            BLOCK_STATE_NEED_REST,
+            2000
     );
 
-    private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            Items.AIR.getDefaultInstance()
-    );
+    private static final Collection<ItemStack> RESULTS = ImmutableList.of(Items.AIR.getDefaultInstance());
     public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
@@ -59,9 +56,10 @@ public class ResterWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        (bs, bp) -> WorkLocation.isBlock(HospitalBedBlock.class).test(bs, bp) && bs.apply(bp).getValue(
-                                BedBlock.PART).equals(BedPart.HEAD),
-                        SpecialQuests.CLINIC
+                        (bs, bp, ac) -> {
+                            boolean isBlock = WorkLocation.isBlock(HospitalBedBlock.class).test(bs, bp);
+                            return isBlock && bs.state(bp).getValue(BedBlock.PART).equals(BedPart.HEAD);
+                        }, SpecialQuests.CLINIC
                 ),
                 new WorkStates(
                         MAX_STATE,
@@ -72,21 +70,20 @@ public class ResterWork {
                         Util.constant(TIME_REQUIRED_AT_STATES)
                 ),
                 new WorkWorldInteractions(
-                        PAUSE_FOR_ACTION,
-                        new ResultGenerator<>() {
-                            @Override
-                            public Iterable<MCHeldItem> generate(
-                                    ServerLevel level,
-                                    Collection<MCHeldItem> heldItems
-                            ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
-                            }
+                        PAUSE_FOR_ACTION, new ResultGenerator<>() {
+                    @Override
+                    public Iterable<MCHeldItem> generate(
+                            ServerLevel level,
+                            Collection<MCHeldItem> heldItems
+                    ) {
+                        return MCHeldItem.fromMCItemStacks(RESULTS);
+                    }
 
-                            @Override
-                            public boolean isResultAlwaysEmpty() {
-                                return true;
-                            }
-                        }
+                    @Override
+                    public boolean isResultAlwaysEmpty() {
+                        return true;
+                    }
+                }
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(
@@ -94,12 +91,11 @@ public class ResterWork {
                                 ImmutableList.of(SpecialRules.LIE_ON_WORKSPOT),
                                 ProductionStatus.EXTRACTING_PRODUCT,
                                 ImmutableList.of(SpecialRules.CLEAR_POSE)
-                        ),
-                        ImmutableList.of(
-                                SpecialRules.CLAIM_SPOT,
-                                SpecialRules.WORK_IN_EVENING,
-                                SpecialRules.PREFER_INTERACTION_STAND_ON_TOP
-                        )
+                        ), ImmutableList.of(
+                        SpecialRules.CLAIM_SPOT,
+                        SpecialRules.WORK_IN_EVENING,
+                        SpecialRules.PREFER_INTERACTION_STAND_ON_TOP
+                )
                 ),
                 null,
                 new ExpirationRules(

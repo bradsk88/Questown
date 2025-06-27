@@ -50,6 +50,7 @@ public class NeedsRegistrations<POS, EXTRA> {
             registerUnmetNeed.accept(extra, new Need(null, ingredientIndex));
             return;
         }
+        // TODO: Register needed ingredients beyond just the first and second work state
         if (hasInserted) {
             ingredientIndex += 1;
         }

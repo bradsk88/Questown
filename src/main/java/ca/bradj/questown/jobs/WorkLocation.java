@@ -3,23 +3,24 @@ package ca.bradj.questown.jobs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 
 public record WorkLocation(
-        BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock,
+        IsJobBlock isJobBlock,
         ResourceLocation baseRoom
 ) {
-    public static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isBlock(Class<? extends Block> blockClass) {
-        return (sl, bp) -> blockClass.isInstance(sl.apply(bp).getBlock());
+
+    public interface BlockInfo {
+        BlockState state(BlockPos bp);
+
+        @Nullable BlockEntity entity(BlockPos bp);
     }
 
-    public static WorkLocation nowhere() {
-        return new WorkLocation(
-                (a, b) -> false,
-                null // TODO: Redesign to avoid bugs
-        );
+    public static BiPredicate<BlockInfo, BlockPos> isBlock(Class<? extends Block> blockClass) {
+        return (sl, bp) -> blockClass.isInstance(sl.state(bp).getBlock());
     }
 }

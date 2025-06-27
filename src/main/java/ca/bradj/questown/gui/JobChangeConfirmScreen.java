@@ -58,7 +58,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             QuestownNetwork.CHANNEL.sendToServer(new JobRootChangeMessage(
                     menu.flagPos,
                     menu.villagerUUID,
-                    menu.jobId
+                    Minecraft.getInstance().player.isCreative()
             ));
             Minecraft.getInstance().setScreen(null);
         }
@@ -89,7 +89,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         }
 
         if (unlockButton != null) {
-            unlockButton.active = menu.hasBlockOfProgress();
+            unlockButton.active = menu.tx.hasBlockOfProgress();
         }
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
@@ -110,6 +110,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             bgY += 8;
         }
     }
+
     private void renderStatusText(
             PoseStack stack,
             int x,
@@ -117,7 +118,10 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
     ) {
         int bgY = y1;
         int textWidth = backgroundWidth;
-        List<FormattedCharSequence> parts = font.split(Compat.translatable("menu.unlock_root.already_pending"), textWidth);
+        List<FormattedCharSequence> parts = font.split(
+                Compat.translatable("menu.unlock_root.already_pending"),
+                textWidth
+        );
         for (FormattedCharSequence part : parts) {
             Compat.drawDarkText(font, stack, part, x, bgY);
             bgY += 8;

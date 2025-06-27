@@ -69,7 +69,7 @@ public class FlagMenus {
             Iterable<? extends VisitorMobEntity> es,
             int bopCount
     ) {
-        VillagerQuestsContainer.write(data, quests, flagInfo.flagPos());
+        TownQuestsContainer.write(data, quests, flagInfo.flagPos());
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {

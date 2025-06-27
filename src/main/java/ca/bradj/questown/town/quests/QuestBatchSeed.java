@@ -1,5 +1,8 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.logic.RoomRecipes;
@@ -122,11 +125,19 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
         if (cachedCosts.containsKey(qID)) {
             return cachedCosts.get(qID);
         }
-        Map<ResourceLocation, RoomRecipe> hydrated = recipes.get();
+        Map<ResourceLocation, RoomRecipe> hydrated = new HashMap<>(recipes.get());
+        for (Supplier<RoomBlock> e : BlockAsRoomEntity.ALL) {
+            ResourceLocation rID = RoomBlock.getRoomId(e.get());
+            Ingredient ingr = Ingredient.of(e.get().asItem());
+            hydrated.put(rID, new RoomRecipe(rID, NonNullList.withSize(1, ingr), 1, false));
+        }
         if (!hydrated.containsKey(qID)) {
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
         int recipeWeight = RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
+        if (recipeWeight == 0) {
+            QT.QUESTS_LOGGER.warn("Recipe weight is 0. This is probably a bug: {}", qID);
+        }
         cachedCosts.put(qID, recipeWeight);
         return recipeWeight;
     }

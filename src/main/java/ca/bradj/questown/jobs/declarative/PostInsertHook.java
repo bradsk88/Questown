@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
@@ -22,10 +23,11 @@ public class PostInsertHook {
             ServerLevel level,
             WorkedSpot<BlockPos> position,
             ItemStack item,
-            Function<TOWN, TOWN> bopClearer
+            Function<TOWN, TOWN> bopClearer,
+            UUID inserter
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        AfterInsertItemEvent<TOWN> bxEvent = new AfterInsertItemEvent<>(level, item, position, bopClearer);
+        AfterInsertItemEvent<TOWN> bxEvent = new AfterInsertItemEvent<>(level, item, position, bopClearer, inserter);
         return processMulti(town, appliers, (o, a) -> a.afterInsertItem(o, bxEvent));
     }
 }

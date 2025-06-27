@@ -20,6 +20,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -44,6 +45,7 @@ public class RealtimeWorldInteraction extends
 
     private final BiFunction<MCExtra, NeedsRegistrations.Need, String> getUnmetNeed;
     private final Supplier<String> jobRoom;
+    private final Function<MCExtra, BlockPos> townFlagPos;
     private int soundTicksLeft;
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
@@ -51,6 +53,7 @@ public class RealtimeWorldInteraction extends
     private final @Nullable SoundInfo sound;
 
     public RealtimeWorldInteraction(
+            Function<MCExtra, BlockPos> townFlagPos,
             ProductionJournal<MCTownItem, MCHeldItem> journal,
             int maxState,
             DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
@@ -84,6 +87,7 @@ public class RealtimeWorldInteraction extends
                 iia.handleExtractedItem(extra, bp);
             }
         });
+        this.townFlagPos = townFlagPos;
     }
 
     private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
@@ -368,6 +372,28 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
+    protected Boolean postExtractHook(
+            Boolean aBoolean,
+            Collection<String> rules,
+            MCExtra inputs,
+            BlockPos position,
+            MCHeldItem extractedItem
+    ) {
+        return PostExtractHook.run(
+                aBoolean,
+                inputs.town().getTownFlagBasePos(),
+                rules,
+                inputs.town().getServerLevel(),
+                position,
+                (town, itemData) -> {
+                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    itemData.forEach(t::putInt);
+                    return town;
+                }
+        );
+    }
+
+    @Override
     protected @NotNull Boolean postInsertHook(
             @NotNull Boolean aBoolean,
             Collection<String> rules,
@@ -379,7 +405,7 @@ public class RealtimeWorldInteraction extends
                 aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toMCItemStack(), (t) -> {
                     inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
                     return true;
-                }
+                }, inputs.entity().getUUID()
         );
     }
 
@@ -424,5 +450,10 @@ public class RealtimeWorldInteraction extends
             Function<MCHeldItem, MCHeldItem> push
     ) {
         Util.iterate(newItemsSource, push::apply);
+    }
+
+    @Override
+    protected BlockPos getTownPos(MCExtra inputs) {
+        return townFlagPos.apply(inputs);
     }
 }

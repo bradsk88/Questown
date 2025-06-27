@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "fisher/fish",
+  "priority": "1000",
+  "parent": null,
+  "icon": "minecraft:fishing_rod",
+  "initial_request": "minecraft:cod",
+  "result": {
+    "type": "loot",
+    "table": "gameplay/fishing",
+    "max_results": 2,
+    "attempts": 1
+  },
+  "block": "questown:fishing_station",
+  "room": "questown:block_room/block.questown.fishing_station",
+  "work_states": [
+    {
+      "ingredients": "minecraft:string",
+      "quantity": 1
+    },
+    {
+      "time": 1000
+    }
+  ],
+  "cooldown_ticks": 5,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "processing_state",
+      "state": 0,
+      "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
+    }
+  ]
+}

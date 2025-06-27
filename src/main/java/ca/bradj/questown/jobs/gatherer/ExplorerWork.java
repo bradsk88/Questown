@@ -123,7 +123,7 @@ public class ExplorerWork {
                 GathererUnmappedNoToolWorkQtrDay.ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
                 new WorkLocation(
-                        WorkLocation.isBlock(WelcomeMatBlock.class),
+                        (sl, bp, active) -> (WorkLocation.isBlock(WelcomeMatBlock.class).test(sl, bp)),
                         JOB_SITE
                 ),
                 new WorkStates(

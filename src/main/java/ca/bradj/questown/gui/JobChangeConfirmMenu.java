@@ -1,7 +1,6 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
@@ -20,6 +19,8 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     private static final int boxHeight = 18;
     final JobID jobId;
     public boolean changeAlreadyPending;
+
+    final BopTransactionSyncer tx = new BopTransactionSyncer(this::getSlot);
 
     public static JobChangeConfirmMenu ForClientSide(
             int windowId,
@@ -56,13 +57,6 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     public void removed(Player p_38940_) {
         super.removed(p_38940_);
         super.clearContainer(p_38940_);
-    }
-
-    public boolean hasBlockOfProgress() {
-        // First slot index after four rows of 9.
-        int slotIndex = 9 * 4;
-        // 35 is the last index of these rows, so 36 is BOP slot.
-        return getSlot(slotIndex).getItem().is(ItemsInit.BLOCK_OF_PROGRESS.get());
     }
 
     @Override

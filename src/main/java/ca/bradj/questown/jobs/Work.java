@@ -27,7 +27,7 @@ public class Work {
     public final ItemStack icon;
     public final WorksBehaviour.JobFunc jobFunc;
     final WorksBehaviour.SnapshotFunc snapshotFunc;
-    final BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock;
+    final BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock;
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
     public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
@@ -44,7 +44,7 @@ public class Work {
             ItemStack icon,
             WorksBehaviour.JobFunc jobFunc,
             WorksBehaviour.SnapshotFunc snapshotFunc,
-            BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock,
+            BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,

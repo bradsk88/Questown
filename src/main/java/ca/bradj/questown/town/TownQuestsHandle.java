@@ -14,6 +14,7 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
@@ -189,8 +190,9 @@ public class TownQuestsHandle implements QuestsHolder {
         for (MCQuestBatch b : t.quests.getBatches()) {
             if (batchID.equals(b.getBatchUUID())) {
                 if (t.quests.questBatches.decline(b)) {
+                    t.quests.playerDiscardedLastBatch = true;
                     QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, b.getOwner()));
+                    addReplacementQuestBatch(t, b);
                     t.setChanged();
                     if (!t.getAllQuests().isEmpty()) {
                         showQuestsUI(sender);
@@ -202,6 +204,32 @@ public class TownQuestsHandle implements QuestsHolder {
                 return;
             }
         }
+    }
+
+    private void addReplacementQuestBatch(
+            @NotNull TownFlagBlockEntity t,
+            MCQuestBatch b
+    ) {
+        if (Compat.getRandomBool(t.getServerLevel())) {
+            t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+            return;
+        }
+
+        UUID owner = b.getOwner();
+        if (owner != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
+        owner = t.getRandomVillager();
+        if (owner != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("No villagers to assign next upgrade quest batch to, falling back to randdom");
+        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
     }
 
     @Override

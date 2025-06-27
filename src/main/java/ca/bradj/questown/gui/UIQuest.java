@@ -1,6 +1,8 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
@@ -70,6 +72,10 @@ public class UIQuest implements Comparable<UIQuest> {
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        BlockAsRoomEntity.ALL.forEach(v -> {
+            RoomBlock vv = v.get();
+            rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
+        });
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
