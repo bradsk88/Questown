@@ -627,7 +627,7 @@ public class FishingHook extends Projectile {
     }
 
     public void setOwner(
-            Player p60506,
+            LivingEntity p60506,
             Vec3 attachPoint
     ) {
         setOwner(p60506);

@@ -27,6 +27,16 @@
     {
       "type": "global",
       "rules": ["claim_workspot"]
+    },
+    {
+      "type": "processing_state",
+      "state": 0,
+      "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
     }
   ]
 }

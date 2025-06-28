@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown._vanilla.VanillaSpecialRules;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -100,5 +101,7 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("require_two_free_spots"),
                 new RequireTwoFreeSpotsSpecialRule()
         );
+
+        VanillaSpecialRules.register();
     }
 }

@@ -292,7 +292,6 @@ public class ResourceJobLoader {
                 rules.forEach(rule -> registerRule(rule, rowObj, globals, stages));
             });
 
-
             return new WorkSpecialRules(
                     ImmutableMap.copyOf(stages),
                     globals.build()

@@ -379,7 +379,7 @@ public class RealtimeWorldInteraction extends
                 aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toMCItemStack(), (t) -> {
                     inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
                     return true;
-                }
+                }, inputs.entity().getUUID()
         );
     }
 

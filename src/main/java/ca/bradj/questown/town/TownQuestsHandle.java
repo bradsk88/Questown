@@ -14,6 +14,7 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
@@ -189,8 +190,13 @@ public class TownQuestsHandle implements QuestsHolder {
         for (MCQuestBatch b : t.quests.getBatches()) {
             if (batchID.equals(b.getBatchUUID())) {
                 if (t.quests.questBatches.decline(b)) {
+                    t.quests.playerDiscardedLastBatch = true;
                     QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, b.getOwner()));
+                    if (Compat.getRandomBool(t.getServerLevel())) {
+                        t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
+                    } else {
+                        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+                    }
                     t.setChanged();
                     if (!t.getAllQuests().isEmpty()) {
                         showQuestsUI(sender);

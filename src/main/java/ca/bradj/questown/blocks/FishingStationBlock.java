@@ -1,8 +1,7 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown._vanilla.entities.EntitiesInit;
-import ca.bradj.questown._vanilla.entities.FishingHook;
-import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown._vanilla.DeployFishingHookRule;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -12,9 +11,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
@@ -30,6 +30,49 @@ public class FishingStationBlock extends RoomBlock {
     ) {
         super(Properties.of(Material.WOOD, MaterialColor.WOOD).strength(1.0F, 10.0F).noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    public static Vec3 getRandomHookPos(
+            BlockPos blockPos,
+            ServerLevel sl
+    ) {
+        BlockState blockState = sl.getBlockState(blockPos);
+        if (!(blockState.getBlock() instanceof FishingStationBlock)) {
+            return null;
+        }
+        Direction facing = blockState.getValue(FACING).getOpposite();
+        BlockPos relative;
+
+        // Start with random
+        // TODO: Config
+        for (int i = 0; i < 20; i++) {
+            relative = blockPos.relative(facing, Compat.nextInt(sl, 5));
+            relative = relative.relative(facing.getClockWise(), Compat.nextInt(sl, 5) - 2);
+            relative = sl.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, relative);
+
+            // If block below is water and block above is air, we can place the hook here
+            BlockState below = sl.getBlockState(relative.below());
+            BlockState above = sl.getBlockState(relative);
+            if (below.is(Blocks.WATER) && above.isAir()) {
+                return Vec3.atBottomCenterOf(relative);
+            }
+        }
+        // If we can't find one randomly, sweep the area in front of the block
+        for (int i = 1; i <= 5; i++) {
+            relative = blockPos.relative(facing, i);
+            for (int j = -2; j <= 2; j++) {
+                BlockPos checkPos = relative.relative(facing.getClockWise(), j);
+                checkPos = sl.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, checkPos);
+                BlockState below = sl.getBlockState(checkPos.below());
+                BlockState above = sl.getBlockState(checkPos);
+                if (below.is(Blocks.WATER) && above.isAir()) {
+                    return Vec3.atBottomCenterOf(checkPos);
+                }
+            }
+        }
+
+        // If we still can't find one, return null
+        return null;
     }
 
     @Override
@@ -58,21 +101,13 @@ public class FishingStationBlock extends RoomBlock {
         if (!(p_60504_ instanceof ServerLevel sl)) {
             return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
         }
-        FishingHook e = EntitiesInit.FISHIN_HOOK.get().create(sl);
-        if (e == null) {
+        if (DeployFishingHookRule.deployHere(sl, p_60505_, p_60506_) != null) {
             return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
         }
-        e.setOwner(p_60506_, getAttachPoint(p_60505_, sl));
-        Vec3 push = Vec3.atCenterOf(p_60505_);
-        push = push.subtract(Vec3.atCenterOf(p_60506_.blockPosition()));
-        push = push.normalize();
-        push = push.multiply(3, 1, 3);
-        e.setPos(Vec3.atBottomCenterOf(p_60505_.offset(push.x, 0, push.z)));
-        sl.addFreshEntity(e);
         return InteractionResult.CONSUME;
     }
 
-    private Vec3 getAttachPoint(
+    public static Vec3 getAttachPoint(
             BlockPos p_60505_,
             ServerLevel sl
     ) {

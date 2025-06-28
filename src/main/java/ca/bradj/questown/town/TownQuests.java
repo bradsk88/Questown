@@ -3,9 +3,6 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.advancements.VisitorTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
@@ -29,7 +26,6 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -52,6 +48,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private final UnsafeTown town = new UnsafeTown(getClass());
+    boolean playerDiscardedLastBatch;
 
     TownQuests() {
         questBatches.addChangeListener(this);
@@ -70,7 +67,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     @NotNull
-    private static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
+    public static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
         UUID nextVisitorUUID = UUID.randomUUID();
@@ -100,39 +97,52 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID).stream().filter(Quest::isComplete)
-                                              .toList();
-        Collection<MCQuest> villagerQuests = completed.stream()
-                                                      // TODO: Filter out recipes that have already been slated for upgrade?
-                                                      .filter(v -> v.fromRecipeID().isEmpty()).toList();
+        Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
+                                                                .filter(Quest::isComplete)
+                                                                .toList();
+        List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
+                                                                               // TODO: Filter out recipes that have already been slated for upgrade?
+                                                                               .filter(v -> v.fromRecipeID().isEmpty())
+                                                                               .toList();
+        Collection<MCQuest> villagerQuests = doneAndReadyForFirstUpgrade;
 
         // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
         if (villagerQuests.isEmpty()) {
-            villagerQuests = completed;
+            villagerQuests = doneAndMaybeAlreadyUpgraded;
         }
 
         if (villagerQuests.isEmpty()) {
-            // TODO: Add a failure path
-            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
+            QT.QUESTS_LOGGER.error(
+                    "No upgrade paths could be determined because no quests have been completed yet for {}",
+                    visitorUUID
+            );
+            QT.QUESTS_LOGGER.info("Adding a random batch instead.");
+            TownQuests.addRandomBatchForVisitor(town, quests, visitorUUID);
             return;
         }
 
-        ImmutableList<MCQuest> questsList = ImmutableList.copyOf(villagerQuests);
+        ImmutableList<MCQuest> upgradableQuests = Compat.shuffle(villagerQuests.iterator(), town.getServerLevel());
 
-        int index = town.getServerLevel().getRandom().nextInt(questsList.size());
-        MCQuest quest = questsList.get(index);
+        for (MCQuest upgradable : upgradableQuests) {
+            ResourceLocation upgradeFrom = upgradable.getWantedId(); // This is the room acquired by the (completed) quest
+            ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), upgradeFrom);
+            if (upgradeRecipe == null) {
+                QT.QUESTS_LOGGER.debug("No upgrade recipe found for {}. Skipping.", upgradeFrom);
+                continue;
+            }
 
-        ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), quest.getWantedId());
-        if (upgradeRecipe == null) {
-            // TODO: Add a failure path
-            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
+            MCQuestBatch upgradeQuest = new MCQuestBatch(
+                    UUID.randomUUID(),
+                    visitorUUID,
+                    new MCDelayedReward(town, reward)
+            );
+            upgradeQuest.addNewUpgradeQuest(visitorUUID, upgradeFrom, upgradeRecipe);
+            quests.questBatches.add(upgradeQuest);
             return;
         }
 
-        MCQuestBatch upgradeQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCDelayedReward(town, reward));
-        upgradeQuest.addNewUpgradeQuest(visitorUUID, quest.getWantedId(), upgradeRecipe);
-
-        quests.questBatches.add(upgradeQuest);
+        Questown.LOGGER.error("No upgrade paths could be determined. Adding a random batch instead.");
+        TownQuests.addRandomBatchForVisitor(town, quests, visitorUUID);
     }
 
     public static void addJobQuest(
@@ -216,12 +226,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void tick(TownInterface town) {
         // TODO: Check if target weight (based on town size) has changed since last tick
         //  If it has, discard the pending quests and start over.
-        // FIXME: When a player discards a quest batch, the new batch is generated
-        //  with a bigger target size than it should have. Because there are now more
-        //  villagers in town than there were when the original batch was generated.
         ServerLevel level = town.getServerLevel();
-        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(
-                this).size() + 2)) / 2;
+        int size = getVillagers(this).size();
+        if (this.playerDiscardedLastBatch) {
+            size = size - 1;
+        }
+        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (size + 2)) / 2;
         if (pendingQuests == null) {
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
             pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight);
@@ -268,6 +278,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCQuestBatch q = pop.get(rw, pr.owner());
             questBatches.add(q);
             QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());
+            playerDiscardedLastBatch = false;
             return;
         }
 

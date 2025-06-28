@@ -40,8 +40,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -113,10 +113,19 @@ public class Compat {
             ImmutableCollection<X> c,
             ServerLevel serverLevel
     ) {
-        ArrayList<X> list = new ArrayList<>(c);
+        return shuffle(c.iterator(), serverLevel);
+    }
+
+    public static <X> ImmutableList<X> shuffle(
+            Iterator<X> iterator,
+            @Nullable ServerLevel serverLevel
+    ) {
+
+        ArrayList<X> list = new ArrayList<>();
+        iterator.forEachRemaining(list::add);
         int size = list.size();
         for (int i = size; i > 1; --i) {
-            Collections.swap(list, i - 1, serverLevel.getRandom().nextInt(i));
+            Collections.swap(list, i - 1, getRandomInt(serverLevel, i));
         }
         return ImmutableList.copyOf(list);
     }

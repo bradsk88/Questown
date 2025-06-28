@@ -283,7 +283,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        e.villagerHandle.entities().stream().findFirst().filter(v -> isMissingQuests(e)).ifPresent(v -> {
+        e.villagerHandle.entities().stream().findFirst().ifPresent(v -> {
+            if (!isMissingCompletableQuests(e)) {
+                e.ticksWithoutQuests = 0;
+                return;
+            }
             if (e.ticksWithoutQuests < 500) {
                 e.ticksWithoutQuests++;
                 return;
@@ -408,8 +412,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         profileTick(e, start);
     }
 
-    private static boolean isMissingQuests(TownFlagBlockEntity e) {
-        if (e.questsHandle.getAllQuestsWithRewards().size() > 1) {
+    private static boolean isMissingCompletableQuests(TownFlagBlockEntity e) {
+        ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> all = e.questsHandle.getAllQuestsWithRewards();
+        if (all.stream().anyMatch(v -> !v.getKey().isComplete())) {
             return false;
         }
         if (e.morningRewards.children.stream().anyMatch(MCReward::addsQuestsWhenApplied)) {

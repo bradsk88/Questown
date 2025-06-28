@@ -197,7 +197,7 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack(), ts -> ts.withBOPCleared(inputs.vUUID));
+        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack(), ts -> ts.withBOPCleared(inputs.vUUID), inputs.vUUID);
     }
 
     @Override
