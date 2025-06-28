@@ -1062,6 +1062,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
         if (sender.getInventory().add(v)) {
             sender.getInventory().setChanged();
+            sender.inventoryMenu.broadcastChanges();
             return;
         }
         bp = bp.relative(Compat.getRandomHorizontal(getServerLevel()));

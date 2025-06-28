@@ -24,6 +24,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -43,12 +44,15 @@ import java.util.function.Supplier;
 public class MCTownStateWorldInteraction extends
         AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
+    private final BlockPos townPos;
+
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
 
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
 
     public MCTownStateWorldInteraction(
+            BlockPos townPos,
             JobID jobId,
             int villagerIndex,
             int interval,
@@ -60,6 +64,7 @@ public class MCTownStateWorldInteraction extends
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
         this.resultGenerator = resultGenerator;
+        this.townPos = townPos;
     }
 
     @Override
@@ -197,7 +202,20 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(mcTownState, rules, inputs.level(), position, item.get().toMCItemStack(), ts -> ts.withBOPCleared(inputs.vUUID), inputs.vUUID);
+        return PostInsertHook.run(
+                mcTownState,
+                rules,
+                inputs.level(),
+                position,
+                item.get().toMCItemStack(),
+                ts -> ts.withBOPCleared(inputs.vUUID),
+                inputs.vUUID
+        );
+    }
+
+    @Override
+    protected BlockPos getTownPos(Inputs inputs) {
+        return townPos;
     }
 
     @Override
@@ -213,6 +231,28 @@ public class MCTownStateWorldInteraction extends
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, (ctx, up) -> ctx.withHungerFilledBy(inputs.vUUID, up), position, insertedItem, () -> {
+                }
+        );
+    }
+
+    @Override
+    protected MCTownState postExtractHook(
+            MCTownState mcTownState,
+            Collection<String> rules,
+            Inputs inputs,
+            BlockPos position,
+            MCHeldItem extractedItem
+    ) {
+        return PostExtractHook.run(
+                mcTownState,
+                townPos,
+                rules,
+                inputs.level(),
+                position,
+                (ctx, itemData) -> {
+                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    itemData.forEach(t::putInt);
+                    return ctx;
                 }
         );
     }

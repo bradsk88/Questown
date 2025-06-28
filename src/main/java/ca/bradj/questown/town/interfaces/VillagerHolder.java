@@ -109,7 +109,9 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    void scheduleJobRootChange(UUID villagerUUID);
+    void scheduleJobRootChange(UUID villagerUUID,
+                               boolean instant
+    );
 
     boolean isUnlocked(JobID jobID);
 }

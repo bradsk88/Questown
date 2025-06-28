@@ -84,6 +84,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             @Nullable SoundInfo sound
     ) {
         return new RealtimeWorldInteraction(
+                t -> t.town().getTownFlagBasePos(),
                 journal, maxState, checks, specialRules, resultGenerator, claimSpots, (x, need) -> {
             Work w = ServerJobsRegistry.getRandomWork(
                     x.town().getServerLevel(),

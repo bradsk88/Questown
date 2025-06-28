@@ -247,6 +247,7 @@ public class DeclarativeJob extends
             @Nullable SoundInfo sound
     ) {
         return new RealtimeWorldInteraction(
+                t -> t.town().getTownFlagBasePos(),
                 journal,
                 maxState,
                 checks,
@@ -832,7 +833,7 @@ public class DeclarativeJob extends
             return spot;
         }
 
-        QT.JOB_LOGGER.warn("choosing to approach job block from random side");
+        QT.JOB_LOGGER.trace("choosing to approach job block from random side");
         return getRandomAdjacent.apply(bp);
     }
 

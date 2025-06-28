@@ -4,12 +4,15 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -53,5 +56,13 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
     @Override
     protected BlockEntityType<BlockAsRoomEntity> getTickerEntityType() {
         return TilesInit.BLOCK_AS_ROOM.get();
+    }
+
+    public RoomRecipe asRecipe() {
+        Ingredient ing = Ingredient.of(asItem());
+        return RoomRecipes.standard(
+                getRoomId(this),
+                NonNullList.withSize(1, ing)
+        );
     }
 }

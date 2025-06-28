@@ -101,6 +101,10 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("require_two_free_spots"),
                 new RequireTwoFreeSpotsSpecialRule()
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("associate_item_with_town"),
+                new AssociateItemWithTownSpecialRule()
+        );
 
         VanillaSpecialRules.register();
     }

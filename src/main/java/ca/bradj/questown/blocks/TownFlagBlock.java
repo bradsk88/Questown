@@ -14,6 +14,7 @@ import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -272,9 +273,17 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack itemInHand,
             BlockPos p
     ) {
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_x", Questown.MODID), p.getX());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_y", Questown.MODID), p.getY());
-        itemInHand.getOrCreateTag().putInt(String.format("%s.parent_pos_z", Questown.MODID), p.getZ());
+        getParentData(p).forEach((key, value) -> itemInHand.getOrCreateTag().putInt(key, value));
+    }
+
+    public static ImmutableMap<String, Integer> getParentData(
+            BlockPos parentPos
+    ) {
+        return ImmutableMap.of(
+                String.format("%s.parent_pos_x", Questown.MODID), parentPos.getX(),
+                String.format("%s.parent_pos_y", Questown.MODID), parentPos.getY(),
+                String.format("%s.parent_pos_z", Questown.MODID), parentPos.getZ()
+        );
     }
 
     public static void StoreFlagInputOnOutputNBT(

@@ -2,6 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
@@ -37,6 +39,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
@@ -98,8 +101,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
         Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
-                                                                .filter(Quest::isComplete)
-                                                                .toList();
+                                                                .filter(Quest::isComplete).toList();
         List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
                                                                                // TODO: Filter out recipes that have already been slated for upgrade?
                                                                                .filter(v -> v.fromRecipeID().isEmpty())
@@ -245,8 +247,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {
-                    List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                                    .filter(v -> TownQuests.isNotSpecial(v.getId())).toList();
+                    List<RoomRecipe> rs = level.getRecipeManager()
+                                               .getAllRecipesFor(RecipesInit.ROOM).stream()
+                                               .filter(v -> TownQuests.isNotSpecial(v.getId()))
+                                               .toList();
+                    List<RoomRecipe> recipes = new ArrayList<>(rs);
+                    for (Supplier<RoomBlock> roomBlockSupplier : BlockAsRoomEntity.ALL) {
+                        recipes.add(roomBlockSupplier.get().asRecipe());
+                    }
                     List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }

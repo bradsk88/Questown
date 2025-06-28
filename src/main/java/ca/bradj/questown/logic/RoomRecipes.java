@@ -10,9 +10,9 @@ import com.electronwill.nightconfig.core.Config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public class RoomRecipes {
 
@@ -153,6 +152,13 @@ public class RoomRecipes {
             return false;
         }
         return found;
+    }
+
+    public static RoomRecipe standard(
+            @NotNull ResourceLocation roomId,
+            NonNullList<Ingredient> of
+    ) {
+        return new RoomRecipe(roomId, of, 1, false);
     }
 }
 

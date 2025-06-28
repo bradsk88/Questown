@@ -192,11 +192,7 @@ public class TownQuestsHandle implements QuestsHolder {
                 if (t.quests.questBatches.decline(b)) {
                     t.quests.playerDiscardedLastBatch = true;
                     QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    if (Compat.getRandomBool(t.getServerLevel())) {
-                        t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
-                    } else {
-                        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
-                    }
+                    addReplacementQuestBatch(t, b);
                     t.setChanged();
                     if (!t.getAllQuests().isEmpty()) {
                         showQuestsUI(sender);
@@ -208,6 +204,32 @@ public class TownQuestsHandle implements QuestsHolder {
                 return;
             }
         }
+    }
+
+    private void addReplacementQuestBatch(
+            @NotNull TownFlagBlockEntity t,
+            MCQuestBatch b
+    ) {
+        if (Compat.getRandomBool(t.getServerLevel())) {
+            t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+            return;
+        }
+
+        UUID owner = b.getOwner();
+        if (owner != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
+        owner = t.getRandomVillager();
+        if (owner != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("No villagers to assign next upgrade quest batch to, falling back to randdom");
+        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
     }
 
     @Override
