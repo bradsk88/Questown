@@ -92,14 +92,6 @@ public class FishingStationBlock extends RoomBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(
-            BlockPos p_153215_,
-            BlockState p_153216_
-    ) {
-        return TilesInit.BLOCK_AS_ROOM.get().create(p_153215_, p_153216_);
-    }
-
-    @Override
     public String getId() {
         return ITEM_ID;
     }

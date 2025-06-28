@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 
 public class QTNBT {
-    private static String keyify(String key) {
+    public static String keyify(String key) {
         return String.format("%s_%s", Questown.MODID, key);
     }
 

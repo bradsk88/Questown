@@ -114,7 +114,7 @@ public class TownPossibleWork {
         // FIXME: Only include jobs that are known by the villagers
         Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
-        e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w)));
+        e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w))); // FIXME: Convert to for loop for easier debugging
         ImmutableMap<JobID, Double> list = b.build();
         List<Map.Entry<JobID, Double>> out = filter(list, Config.PREFERRED_JOB_ACCEPTANCE.get());
         if (out.isEmpty()) {

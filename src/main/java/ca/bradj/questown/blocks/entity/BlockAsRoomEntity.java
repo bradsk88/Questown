@@ -55,6 +55,5 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
             BlockAsRoomEntity entity
     ) {
         entity.tickListeners.forEach(Runnable::run);
-
     }
 }

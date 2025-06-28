@@ -34,6 +34,8 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     private float speedModifier;
     private BlockPos entityPrevPos;
     private int stuckTicks;
+    private BlockPos entityPrevPosLastUnstick;
+    private int reallyStuckTicks;
 
     public MoveToTownTargetSink() {
         this(Compat.configGet(Config.WANDER_GIVEUP_TICKS).get(), Compat.configGet(Config.WANDER_GIVEUP_TICKS).get());
@@ -178,13 +180,29 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         } else {
             stuckTicks = 0;
         }
+        if (entityPrevPosLastUnstick != null && Jobs.isCloseTo(entityBlockPos, entityPrevPosLastUnstick)) {
+            reallyStuckTicks++;
+        } else {
+            reallyStuckTicks = 0;
+        }
 
         entityPrevPos = entityBlockPos;
+        if (reallyStuckTicks > 200) {
+            Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
+            QT.JOB_LOGGER.debug("Unsticking from {} by pushing MORE in direction {}", entityBlockPos, unstickTarget);
+            p_23618_.push(unstickTarget.getStepX() * 2, unstickTarget.getStepY() * 2, unstickTarget.getStepZ() * 2);
+            stuckTicks = 0;
+            reallyStuckTicks = 0;
+            brain.eraseMemory(MemoryModuleType.PATH);
+            return;
+        }
         if (stuckTicks > 100) {
+            entityPrevPosLastUnstick = entityBlockPos;
             Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
             QT.JOB_LOGGER.debug("Unsticking from {} by pushing in direction {}", entityBlockPos, unstickTarget);
             p_23618_.push(unstickTarget.getStepX() * 0.5, unstickTarget.getStepY() * 0.5, unstickTarget.getStepZ() * 0.5);
             stuckTicks = 0;
+            brain.eraseMemory(MemoryModuleType.PATH);
         }
     }
 

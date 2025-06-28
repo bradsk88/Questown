@@ -103,7 +103,7 @@ public final class TownFlagSubBlocks {
             ticksWithoutParent.put(pop, 0);
             dropOnOrphaned.put(pop, s::dropWhenOrphaned);
             s.addTickListener(() -> this.tick(sl, pop));
-            QT.FLAG_LOGGER.debug("Registered sub block of town flag: {}", s);
+            QT.FLAG_LOGGER.debug("Registered sub block of town flag: {}", s.getClass().getName());
             return true;
         }
         Integer newVal = this.pendingTicks.compute(pop, TownFlagSubBlocks::increment);

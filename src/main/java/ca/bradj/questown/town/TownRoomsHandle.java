@@ -45,6 +45,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntity> {
 
@@ -66,11 +67,10 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     public Collection<RoomRecipeMatch<MCRoom>> getRoomsMatching(ResourceLocation recipeId) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         Optional<ResourceLocation> blockRoom = BlockAsRoomEntity.ALL.stream().map(Supplier::get)
-                                                                    .map(RoomBlock::getRoomId)
-                                                                    .filter(recipeId::equals)
+                                                                    .map(RoomBlock::getRoomId).filter(recipeId::equals)
                                                                     .findFirst();
         if (blockRoom.isPresent()) {
-            return getMetaRooms(t, blockRoom.get());
+            return getBlockMetaRooms(t, blockRoom.get());
         }
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
             return getWelcomeMatMetaRooms(t);
@@ -99,23 +99,33 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             BlockPos clickedPos
     ) {
         UtilClean.addOrInitialize(roomBlocks, blockId, clickedPos, ArrayList::new);
+        QT.FLAG_LOGGER.debug("Registered block-room at {}: {}", clickedPos, blockId);
+        TownFlagBlockEntity t = town.getUnsafe();
+        t.subBlocks.register(clickedPos);
+        t.setChanged();
     }
 
-    private Collection<RoomRecipeMatch<MCRoom>> getMetaRooms(
+    private Collection<RoomRecipeMatch<MCRoom>> getBlockMetaRooms(
             @NotNull TownFlagBlockEntity t,
-            ResourceLocation resourceLocation
+            @Nullable ResourceLocation resourceLocation
     ) {
         ImmutableList.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableList.builder();
-        List<BlockPos> e = UtilClean.getOrDefault(roomBlocks, resourceLocation, ImmutableList.of());
-        for (BlockPos p : e) {
-            MCRoom mcRoom = Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get());
-            ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(
-                    t.getServerLevel(),
-                    mcRoom,
-                    false
-            );
-            b.add(new RoomRecipeMatch<>(mcRoom, ImmutableList.of(resourceLocation), blocksInRoom.entrySet()));
+        Stream<Map.Entry<ResourceLocation, List<BlockPos>>> e = roomBlocks.entrySet().stream();
+        if (resourceLocation != null) {
+            e = roomBlocks.get(resourceLocation).stream()
+                          .map(pos -> Map.entry(resourceLocation, ImmutableList.of(pos)));
         }
+        e.forEach(ee -> {
+            for (BlockPos p : ee.getValue()) {
+                MCRoom mcRoom = Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get());
+                ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(
+                        t.getServerLevel(),
+                        mcRoom,
+                        false
+                );
+                b.add(new RoomRecipeMatch<>(mcRoom, ImmutableList.of(ee.getKey()), blocksInRoom.entrySet()));
+            }
+        });
         return b.build();
     }
 
@@ -163,6 +173,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         b.add(flagMetaRoom);
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         getWelcomeMatMetaRooms(t).forEach(v -> b.add(v.room));
+        getBlockMetaRooms(t, null).forEach(v -> b.add(v.room));
         return b.build();
     }
 
@@ -334,6 +345,10 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
                 }
             }
         }
+    }
+
+    public ImmutableList<BlockPos> blockRooms() {
+        return roomBlocks.values().stream().flatMap(Collection::stream).collect(ImmutableList.toImmutableList());
     }
 
     private record Result(String debugArt, String room, String recipe) {

@@ -30,4 +30,11 @@ public interface TownFlagInitialization {
     CompoundTag serializeBOP();
 
     void initializeBOP(CompoundTag tag);
+
+    CompoundTag serializeBlockRooms();
+
+    boolean initBlockRooms(
+            CompoundTag tag,
+            TownFlagBlockEntity t
+    );
 }

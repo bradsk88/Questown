@@ -1,8 +1,19 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import com.google.common.collect.ImmutableList;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.Collection;
+import java.util.List;
 
 public class TownFlagInitializationImpl implements TownFlagInitialization {
     private final TownFlagBlockEntity flag;
@@ -76,5 +87,57 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     @Override
     public void initializeBOP(CompoundTag tag) {
         flag.bopCount = tag.getInt("count");
+    }
+
+    @Override
+    public CompoundTag serializeBlockRooms() {
+        List<BlockPos> allRooms = flag.roomsHandle.blockRooms();
+        ServerLevel sl = flag.getServerLevel();
+        allRooms = allRooms.stream().filter(v -> !isLegacy(v, sl)).toList();
+        return WelcomeMatsSerializer.INSTANCE.serializeNBT(allRooms, "pos");
+    }
+
+    private static final ImmutableList<Class<?>> LEGACY_BLOCKS = ImmutableList.of(
+            WelcomeMatBlock.class
+    );
+
+    // TODO: Switch welcome mats (etc) to be stored in this data instead of their current location
+    private static boolean isLegacy(
+            BlockPos v,
+            ServerLevel sl
+    ) {
+        Block block = sl.getBlockState(v).getBlock();
+        return LEGACY_BLOCKS.stream().anyMatch(c -> c.isInstance(block));
+    }
+
+    @Override
+    public boolean initBlockRooms(
+            CompoundTag tag,
+            TownFlagBlockEntity t
+    ) {
+        ServerLevel sl = t.getServerLevel();
+        if (sl == null) {
+            QT.FLAG_LOGGER.error("Cannot initialize block rooms, server level is null.");
+            return false;
+        }
+        Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(tag, "pos");
+        for (BlockPos blockPos : l) {
+            if (isLegacy(blockPos, sl)) {
+                continue;
+            }
+            BlockState current = sl.getBlockState(blockPos);
+            if (current.isAir()) {
+                QT.FLAG_LOGGER.warn("Block no longer exists. Lost block-room at {}", blockPos);
+                continue;
+            }
+            if (!(current.getBlock() instanceof RoomBlock rb)) {
+                QT.FLAG_LOGGER.warn("Block is not a room block. Lost block-room at {}", blockPos);
+                continue;
+            }
+
+            t.initializer().getRoomsHandle().registerBlockAsRoom(RoomBlock.getRoomId(rb), blockPos);
+        }
+        QT.FLAG_LOGGER.debug("Initialized block rooms from {}", tag);
+        return true;
     }
 }

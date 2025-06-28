@@ -212,7 +212,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean stopped = true;
     final TownQuests quests = new TownQuests();
-    private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
+    final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
@@ -985,6 +985,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
+        roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                 getServerLevel(),
