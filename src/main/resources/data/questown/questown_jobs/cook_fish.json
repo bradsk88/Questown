@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "cook/fish",
+  "priority": "1000",
+  "parent": null,
+  "icon": "minecraft:cooked_cod",
+  "initial_request": "minecraft:cooked_cod",
+  "result": {
+    "type": "loot",
+    "table": "gameplay/fishing",
+    "max_results": 2,
+    "attempts": 1
+  },
+  "block": "minecraft:furnace",
+  "room": "questown:kitchen",
+  "work_states": [
+    {
+      "ingredients": "minecraft:coal",
+      "quantity": 1
+    },
+    {
+      "ingredients": "#questown:raw_fishes",
+      "quantity": 1
+    },
+    {
+      "hold": true
+    },
+    {
+      "hold": true
+    }
+  ],
+  "cooldown_ticks": 5,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    },
+    {
+      "type": "processing_state",
+      "state": 0,
+      "rules": ["questown:insert_into_slot_1", "questown:skip_unless_empty"]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["questown:insert_into_slot_0"]
+    },
+    {
+      "type": "processing_state",
+      "state": 2,
+      "rules": ["questown_vanilla:drain_timer_when_unlit"]
+    },
+    {
+      "type": "processing_state",
+      "state": 3,
+      "rules": ["questown:take_from_slot_2"]
+    }
+  ]
+}
