@@ -35,4 +35,6 @@ public interface RoomsHolder {
     Optional<RoomRecipeMatch<MCRoom>> computeRecipe(MCRoom r);
 
     ImmutableSet<TownPosition> getAllRegisteredDoors();
+
+    void registerBlockAsRoom(ResourceLocation blockId, BlockPos clickedPos);
 }

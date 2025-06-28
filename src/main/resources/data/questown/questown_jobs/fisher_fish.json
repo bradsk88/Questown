@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "id": "fisher/fish",
+  "priority": "1000",
+  "parent": null,
+  "icon": "minecraft:fishing_rod",
+  "initial_request": "minecraft:cod",
+  "result": {
+    "type": "biome_loot",
+    "prefix": "jobs/gatherer_fishing",
+    "default": "jobs/gatherer_fishing/default",
+    "attempts": 1
+  },
+  "block": "questown:fishing_station",
+  "room": "questown:block_room/block.questown.fishing_station",
+  "work_states": [
+    {
+      "ingredients": "minecraft:string",
+      "quantity": 1
+    },
+    {
+      "time": 1000
+    }
+  ],
+  "cooldown_ticks": 100,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot"]
+    }
+  ]
+}

@@ -262,7 +262,7 @@ public class FishingHook extends Projectile {
                         }
 
                         if (!this.level.isClientSide) {
-                            this.catchingFish(blockpos);
+//                            this.catchingFish(blockpos);
                         }
                     } else {
                         this.outOfWaterTime = Math.min(10, this.outOfWaterTime + 1);

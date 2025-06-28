@@ -53,6 +53,7 @@ public class Questown {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
 
         BlocksInit.BLOCKS.register(bus);
+
         TilesInit.TILES.register(bus);
         ItemsInit.register(bus);
         MenuTypesInit.register(bus);

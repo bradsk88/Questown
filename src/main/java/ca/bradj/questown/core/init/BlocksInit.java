@@ -2,6 +2,7 @@ package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.materials.WallType;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.DeferredRegister;
@@ -64,7 +65,7 @@ public class BlocksInit {
     public static final RegistryObject<Block> BLOCK_OF_PROGRESS = BLOCKS.register(
             BlockOfProgress.ITEM_ID, BlockOfProgress::new
     );
-    public static final RegistryObject<Block> FISHING_STATION_BLOCK = BLOCKS.register(
+    public static final RegistryObject<Block> FISHING_STATION_BLOCK = BlockAsRoomEntity.register(BLOCKS.register(
             FishingStationBlock.ITEM_ID, FishingStationBlock::new
-    );
+    ));
 }

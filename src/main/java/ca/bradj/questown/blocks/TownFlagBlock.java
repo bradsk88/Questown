@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.ModItemGroup;
@@ -45,6 +46,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
@@ -174,6 +176,11 @@ public class TownFlagBlock extends BaseEntityBlock {
         //  any other item and with the parent NBT stored on the new item.
         ItemStack converted = null;
 
+        for (Supplier<RoomBlock> blockSupplier : BlockAsRoomEntity.ALL) {
+            if (itemInHand.getItem().equals(blockSupplier.get().asItem())) {
+                converted = itemInHand.copy();
+            }
+        }
 
         if (itemInHand.getItem().equals(Items.STICK)) {
             converted = ItemsInit.TOWN_WAND.get().getDefaultInstance();

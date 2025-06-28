@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown._vanilla.entities.EntitiesInit;
 import ca.bradj.questown._vanilla.entities.FishingHook;
+import ca.bradj.questown.core.init.TilesInit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Material;
@@ -21,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
-public class FishingStationBlock extends Block {
+public class FishingStationBlock extends RoomBlock {
     public static final String ITEM_ID = "fishing_station";
 
     public FishingStationBlock(
@@ -32,7 +34,8 @@ public class FishingStationBlock extends Block {
 
     @Override
     public @Nullable BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        BlockState blockState = this.defaultBlockState().setValue(FACING, ctx.getHorizontalDirection().getOpposite());
+        @Nullable BlockState blockState = super.getStateForPlacement(ctx);
+        blockState = blockState.setValue(FACING, ctx.getHorizontalDirection().getOpposite());
         return blockState;
     }
 
@@ -86,5 +89,18 @@ public class FishingStationBlock extends Block {
         }
         return tip;
 
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(
+            BlockPos p_153215_,
+            BlockState p_153216_
+    ) {
+        return TilesInit.BLOCK_AS_ROOM.get().create(p_153215_, p_153216_);
+    }
+
+    @Override
+    public String getId() {
+        return ITEM_ID;
     }
 }

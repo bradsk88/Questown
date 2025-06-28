@@ -1062,4 +1062,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
         level.addFreshEntity(item);
     }
+
+
 }
