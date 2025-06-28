@@ -6,9 +6,9 @@
   "icon": "minecraft:fishing_rod",
   "initial_request": "minecraft:cod",
   "result": {
-    "type": "biome_loot",
-    "prefix": "jobs/gatherer_fishing",
-    "default": "jobs/gatherer_fishing/default",
+    "type": "loot",
+    "table": "gameplay/fishing",
+    "max_results": 2,
     "attempts": 1
   },
   "block": "questown:fishing_station",
@@ -22,7 +22,7 @@
       "time": 1000
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 5,
   "special": [
     {
       "type": "global",

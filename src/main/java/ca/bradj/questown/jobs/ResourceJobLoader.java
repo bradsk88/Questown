@@ -40,6 +40,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.LootTables;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -328,6 +330,7 @@ public class ResourceJobLoader {
             ResultGenerator<MCHeldItem> g = switch (type) {
                 case "item" -> itemResult(object, rizz);
                 case "biome_loot" -> biomeLootResult(rizz);
+                case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
@@ -456,6 +459,29 @@ public class ResourceJobLoader {
                                 new GathererTools.LootTablePath(resultDefault)
                         )
                 );
+            }
+
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                return false;
+            }
+        };
+    }
+
+    private static @NotNull ResultGenerator<MCHeldItem> lootResult(
+            JsonObject rizz
+    ) {
+        String table = required(rizz, "table", JsonElement::getAsString);
+        int maxResults = requiredInt(rizz, "max_results");
+        return new ResultGenerator<MCHeldItem>() {
+            @Override
+            public Iterable<MCHeldItem> generate(
+                    ServerLevel level,
+                    Collection<MCHeldItem> heldItems
+            ) {
+                LootTables tables = level.getServer().getLootTables();
+                LootTable loot = tables.get(ResourceLocation.tryParse(table));
+                return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 
             @Override
