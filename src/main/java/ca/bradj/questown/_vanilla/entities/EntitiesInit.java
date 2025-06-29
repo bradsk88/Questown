@@ -1,6 +1,7 @@
 package ca.bradj.questown._vanilla.entities;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -13,7 +14,7 @@ import net.minecraftforge.registries.RegistryObject;
 public class EntitiesInit {
 
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(
-            ForgeRegistries.ENTITY_TYPES,
+            Compat.ENTITY_TYPES,
             Questown.MODID
     );
 

@@ -114,13 +114,13 @@ public class FishingStationBlock extends RoomBlock {
         BlockState bs = sl.getBlockState(p_60505_);
         Direction v = bs.getValue(FACING).getOpposite();
         Vec3 b = Vec3.atBottomCenterOf(p_60505_);
-        Vec3 tip = b.add(0, 1, 0).relative(v, 0.5);
+        Vec3 tip = Compat.relative(b.add(0, 1, 0), v, 0.5);
         // Randomly offset left or right
         int r = sl.getRandom().nextInt(3);
         if (r == 0) {
-            tip = tip.relative(v.getClockWise(), 0.1);
+            tip = Compat.relative(tip, v.getClockWise(), 0.1);
         } else if (r == 1) {
-            tip = tip.relative(v.getCounterClockWise(), 0.1);
+            tip = Compat.relative(tip, v.getCounterClockWise(), 0.1);
         }
         return tip;
 

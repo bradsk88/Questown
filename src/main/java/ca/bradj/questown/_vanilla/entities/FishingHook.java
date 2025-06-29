@@ -1,5 +1,6 @@
 package ca.bradj.questown._vanilla.entities;
 
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
@@ -14,7 +15,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 
 public class FishingHook extends Projectile {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private final RandomSource syncronizedRandom = RandomSource.create();
     private boolean biting;
     private int outOfWaterTime;
     private static final int MAX_OUT_OF_WATER_TIME = 10;
@@ -116,9 +115,9 @@ public class FishingHook extends Projectile {
         Vec3 vec3 = new Vec3((double) (-f3), (double) Mth.clamp(-(f5 / f4), -5.0F, 5.0F), (double) (-f2));
         double d3 = vec3.length();
         vec3 = vec3.multiply(
-                0.6D / d3 + this.random.triangle(0.5D, 0.0103365D),
-                0.6D / d3 + this.random.triangle(0.5D, 0.0103365D),
-                0.6D / d3 + this.random.triangle(0.5D, 0.0103365D)
+                0.6D / d3 + Compat.randomTriangle(0.5D, 0.0103365D),
+                0.6D / d3 + Compat.randomTriangle(0.5D, 0.0103365D),
+                0.6D / d3 + Compat.randomTriangle(0.5D, 0.0103365D)
         );
         this.setDeltaMovement(vec3);
         this.setYRot((float) (Mth.atan2(vec3.x, vec3.z) * (double) (180F / (float) Math.PI)));
@@ -146,7 +145,7 @@ public class FishingHook extends Projectile {
             if (this.biting) {
                 this.setDeltaMovement(
                         this.getDeltaMovement().x,
-                        (double) (-0.4F * Mth.nextFloat(this.syncronizedRandom, 0.6F, 1.0F)),
+                        (double) (-0.4F * Compat.nextFloat(0.6F, 1.0F)),
                         this.getDeltaMovement().z
                 );
             }
@@ -181,7 +180,7 @@ public class FishingHook extends Projectile {
     }
 
     public void tick() {
-        this.syncronizedRandom.setSeed(this.getUUID().getLeastSignificantBits() ^ this.level.getGameTime());
+//        this.syncronizedRandom.setSeed(this.getUUID().getLeastSignificantBits() ^ this.level.getGameTime());
         super.tick();
         LivingEntity player = this.getPlayerOwner();
         if (player == null) {
@@ -256,7 +255,7 @@ public class FishingHook extends Projectile {
                         if (this.biting) {
                             this.setDeltaMovement(this.getDeltaMovement().add(
                                     0.0D,
-                                    -0.1D * (double) this.syncronizedRandom.nextFloat() * (double) this.syncronizedRandom.nextFloat(),
+                                    -0.1D * (double) Compat.nextFloat(1, 1) * (double) Compat.nextFloat(1, 1),
                                     0.0D
                             ));
                         }
@@ -347,7 +346,7 @@ public class FishingHook extends Projectile {
         } else if (this.timeUntilHooked > 0) {
             this.timeUntilHooked -= i;
             if (this.timeUntilHooked > 0) {
-                this.fishAngle += (float) this.random.triangle(0.0D, 9.188D);
+                this.fishAngle += (float) Compat.randomTriangle(0.0D, 9.188D);
                 float f = this.fishAngle * ((float) Math.PI / 180F);
                 float f1 = Mth.sin(f);
                 float f2 = Mth.cos(f);
