@@ -50,10 +50,10 @@ import java.util.stream.Stream;
 public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntity> {
 
     private final TownRoomsMap roomsMap = new TownRoomsMap();
-    private UnsafeTown town = new UnsafeTown(TownRoomsHandle.class);
+    private final UnsafeTown town = new UnsafeTown(TownRoomsHandle.class);
     @Nullable
     private MCRoom flagMetaRoom;
-    private Map<ResourceLocation, List<BlockPos>> roomBlocks = new HashMap<>();
+    private final Map<ResourceLocation, List<BlockPos>> roomBlocks = new HashMap<>();
 
     public void initializeNew(TownFlagBlockEntity t) {
         this.town.initialize(t);
@@ -80,7 +80,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         }
         if (SpecialQuests.FARM.equals(recipeId)) {
             return roomsMap.getFarms().stream().map(v -> {
-                Function<BlockPos, BlockState> getBs = bp -> town.getUnsafe().getServerLevel().getBlockState(bp);
+                Function<BlockPos, BlockState> getBs = bp -> getServerLevel(town.getUnsafe()).getBlockState(bp);
                 ImmutableMap<BlockPos, Block> b = RecipeDetection.getBlocksInRoomV2(
                         bp -> getBs.apply(bp).getBlock(),
                         new MCRoom(v.getDoorPos(), v.getSpaces(), v.yCoord),
@@ -112,14 +112,14 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         ImmutableList.Builder<RoomRecipeMatch<MCRoom>> b = ImmutableList.builder();
         Stream<Map.Entry<ResourceLocation, List<BlockPos>>> e = roomBlocks.entrySet().stream();
         if (resourceLocation != null) {
-            e = roomBlocks.get(resourceLocation).stream()
-                          .map(pos -> Map.entry(resourceLocation, ImmutableList.of(pos)));
+            List<BlockPos> blocksInRoom = UtilClean.getOrDefault(roomBlocks, resourceLocation, ImmutableList.of());
+            e = blocksInRoom.stream().map(pos -> Map.entry(resourceLocation, ImmutableList.of(pos)));
         }
         e.forEach(ee -> {
             for (BlockPos p : ee.getValue()) {
                 MCRoom mcRoom = Spaces.metaRoomAround(p, Config.META_ROOM_DIAMETER.get());
                 ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(
-                        t.getServerLevel(),
+                        getServerLevel(t),
                         mcRoom,
                         false
                 );
@@ -131,16 +131,21 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
 
     private RoomRecipeMatch<MCRoom> getFlagMetaRoom(TownFlagBlockEntity t) {
         MCRoom mcRoom = Spaces.metaRoomAround(t.getTownFlagBasePos(), Config.META_ROOM_DIAMETER.get());
-        ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(t.getServerLevel(), mcRoom, false);
+        ImmutableMap<BlockPos, Block> blocksInRoom = RecipeDetection.getBlocksInRoom(getServerLevel(t), mcRoom, false);
         ResourceLocation questId = SpecialQuests.TOWN_FLAG;
         return new RoomRecipeMatch<>(mcRoom, ImmutableList.of(questId), blocksInRoom.entrySet());
+    }
+
+    @SuppressWarnings("DataFlowIssue") // We can be fairly confident that this will not return null
+    private static @NotNull ServerLevel getServerLevel(TownFlagBlockEntity t) {
+        return t.getServerLevel();
     }
 
     @NotNull
     private List<RoomRecipeMatch<MCRoom>> getWelcomeMatMetaRooms(@NotNull TownFlagBlockEntity t) {
         // TODO: Cache these
         Function<MCRoom, ImmutableMap<BlockPos, Block>> fn = room -> RecipeDetection.getBlocksInRoom(
-                t.getServerLevel(),
+                getServerLevel(t),
                 room,
                 false
         );
@@ -362,10 +367,10 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     ) {
         final int townY = t.getBlockPos().getY();
         return new MultiLevelRoomDetector(
-                t.getServerLevel(),
+                getServerLevel(t),
                 t.getY(),
-                p -> WallDetection.IsWall(t.getServerLevel(), p.toPosition(), townY + p.scanLevel),
-                p -> WallDetection.IsDoor(t.getServerLevel(), p.toPosition(), townY + p.scanLevel),
+                p -> WallDetection.IsWall(getServerLevel(t), p.toPosition(), townY + p.scanLevel),
+                p -> WallDetection.IsDoor(getServerLevel(t), p.toPosition(), townY + p.scanLevel),
                 (scanLevel, newRooms) -> {
                 },
                 recipesAtLevel::get,
@@ -383,7 +388,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
                 ImmutableList.of(clickedRRPos),
                 Config.MAX_ROOM_DIMENSION.get(),
                 Config.MAX_ROOM_SCAN_ITERATIONS.get(),
-                p -> WallDetection.IsWall(t.getServerLevel(), p, clickedPos.getY()),
+                p -> WallDetection.IsWall(getServerLevel(t), p, clickedPos.getY()),
                 true,
                 flightRecorder::add
         );
@@ -394,7 +399,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             }
             flightRecorder.forEach(QT.FLAG_LOGGER::debug);
             d.getDebugArt(true).forEach((k, v) -> QT.FLAG_LOGGER.debug("Art for {}\n{}", k.getUIString(), v));
-            Optional<Room> room = done.get(clickedRRPos);
+            Optional<Room> room = UtilClean.getOrDefault(done, clickedRRPos, Optional.empty());
             QT.FLAG_LOGGER.debug("Room is {}", room);
             room.ifPresent(r -> {
                 Optional<RoomRecipeMatch<MCRoom>> recipe = t.getRoomHandle().computeRecipe(new MCRoom(
@@ -421,7 +426,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             MCRoom r
     ) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        return roomsMap.computeRecipe(t.getServerLevel(), r, r.yCoord - t.getY());
+        return roomsMap.computeRecipe(getServerLevel(t), r, r.yCoord - t.getY());
     }
 
     @Override

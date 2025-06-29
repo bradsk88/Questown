@@ -24,10 +24,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -37,6 +39,7 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -48,6 +51,7 @@ import java.util.function.Supplier;
 
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
+    public static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;
 
     public static void playNeutralSound(
             ServerLevel serverLevel,
@@ -297,5 +301,27 @@ public class Compat {
             out += (int) (font.lineHeight * 1.5);
         }
         return out;
+    }
+
+    public static double randomTriangle(
+            double v,
+            double v1
+    ) {
+        return RANDOM.triangle(v, v1);
+    }
+
+    public static Vec3 relative(
+            Vec3 start,
+            Direction dir,
+            double amount
+    ) {
+        return start.relative(dir, amount);
+    }
+
+    public static float nextFloat(
+            float v,
+            float v1
+    ) {
+        return RANDOM.nextFloat() * (v1 - v) + v;
     }
 }
