@@ -188,7 +188,7 @@ public class WorksBehaviour {
                         workSound
                 ),
                 productionJobSnapshot(jobId),
-                location.isJobBlock(),
+                (sl, bp) -> location.isJobBlock().test(sl, bp, true),
                 location.baseRoom(),
                 ProductionStatus.FACTORY.idle(),
                 description.currentlyPossibleResults(),

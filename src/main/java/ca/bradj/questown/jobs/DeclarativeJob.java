@@ -58,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
+import static ca.bradj.questown.mc.Util.info;
 
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
 public class DeclarativeJob extends
@@ -189,7 +190,7 @@ public class DeclarativeJob extends
             );
         }
 
-        JobCheckReplacer globalJCR = new JobCheckReplacer(location.isJobBlock());
+        JobCheckReplacer globalJCR = new JobCheckReplacer((sl, bp) -> location.isJobBlock().test(sl, bp, logic.hasWorkedRecently() || hasInserted(0)));
         SupplyRoomCheckReplacer globalSRCR = new SupplyRoomCheckReplacer();
 
         DeclarativeJob self = this;
@@ -215,7 +216,7 @@ public class DeclarativeJob extends
                 checks.getAllRequiredWork(),
                 checks.getAllRequiredTime(),
                 SupplyRoomCheckReplacer.withItems(globalSRCR, self.journal::getItems),
-                JobCheckReplacer.withItemsAndLevel(globalJCR, self.journal::getItems, level::getBlockState)
+                JobCheckReplacer.withItemsAndLevel(globalJCR, self.journal::getItems, info(level))
         );
     }
 

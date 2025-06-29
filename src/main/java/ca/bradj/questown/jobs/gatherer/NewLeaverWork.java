@@ -69,7 +69,7 @@ public class NewLeaverWork {
                         initialRequest
                 ),
                 new WorkLocation(
-                        WorkLocation.isBlock(WelcomeMatBlock.class),
+                        (sl, bp, active) -> (WorkLocation.isBlock(WelcomeMatBlock.class).test(sl, bp)),
                         SpecialQuests.TOWN_GATE
                 ),
                 new WorkStates(

@@ -68,7 +68,7 @@ public class DinerNoTableWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        WorkLocation.isBlock(TownFlagBlock.class),
+                        (sl, bp, active) -> (WorkLocation.isBlock(TownFlagBlock.class).test(sl, bp)),
                         SpecialQuests.TOWN_FLAG
                 ),
                 new WorkStates(

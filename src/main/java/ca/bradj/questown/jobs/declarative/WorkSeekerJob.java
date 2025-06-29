@@ -55,7 +55,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 new JobID(rootId, WORK_ID),
-                new WorkLocation((sl, bp) -> true, SpecialQuests.JOB_BOARD),
+                new WorkLocation((sl, bp, active) -> true, SpecialQuests.JOB_BOARD),
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,

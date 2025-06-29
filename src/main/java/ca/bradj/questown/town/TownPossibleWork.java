@@ -33,6 +33,8 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static ca.bradj.questown.mc.Util.info;
+
 public class TownPossibleWork {
 
     private final UnsafeTown town = new UnsafeTown(getClass());
@@ -77,16 +79,20 @@ public class TownPossibleWork {
     }
 
     private void registerUnmetNeeds(String root) {
-        ServerLevel sl = town.getServerLevelUnsafe();
-        long tick = Util.getTick(sl);
-        VillagerHolder vh = town.getUnsafe().getVillagerHandle();
-        Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
-        NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
-        vh.entities()
-          .stream()
-          .map(v -> (VisitorMobEntity) v)
-          .filter(v -> root.equals(v.getJobId().rootId()))
-          .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
+        try {
+            ServerLevel sl = town.getServerLevelUnsafe();
+            long tick = Util.getTick(sl);
+            VillagerHolder vh = town.getUnsafe().getVillagerHandle();
+            Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
+            NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
+            vh.entities()
+              .stream()
+              .map(v -> (VisitorMobEntity) v)
+              .filter(v -> root.equals(v.getJobId().rootId()))
+              .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
+        } catch (Exception e) {
+            QT.FLAG_LOGGER.error("Failed to register unmet needs for root: {}", root, e);
+        }
     }
 
     private void registerUnmetNed(
@@ -178,7 +184,7 @@ public class TownPossibleWork {
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
                         rooms,
-                        (bp) -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        (bp) -> dj.location().isJobBlock().test(info(sl), bp, false),
                         (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {
@@ -199,7 +205,7 @@ public class TownPossibleWork {
                 List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
                         t,
                         r -> true,
-                        bp -> dj.location().isJobBlock().test(sl::getBlockState, bp),
+                        bp -> dj.location().isJobBlock().test(info(sl), bp, false),
                         js -> dj.location().baseRoom().equals(js),
                         false
                 );

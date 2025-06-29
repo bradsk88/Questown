@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "id": "cook/fish",
-  "priority": 2000,
+  "id": "cook/fuel",
+  "priority": 10000,
   "parent": "cook/extract",
-  "icon": "minecraft:cod",
+  "icon": "minecraft:furnace",
   "initial_request": "minecraft:cooked_cod",
   "result": {
     "type": "item",
@@ -12,33 +12,36 @@
   },
   "block": {
     "id": "minecraft:furnace",
-    "has_item_in_slot_initially": "0/minecraft:air"
+    "has_item_in_slot_initially": "1/minecraft:air"
   },
   "room": "questown:kitchen_small",
   "work_states": [
     {
-      "tools": "#questown:raw_fishes",
+      "tools": "#minecraft:coals",
       "work": 0.1
     },
     {
-      "ingredients": "#questown:raw_fishes"
+      "ingredients": "#minecraft:coals",
+      "quantity": 1
     }
   ],
   "cooldown_ticks": 50,
   "sound": {
-    "id": "minecraft:block.slime_block.hit",
+    "id": "minecraft:block.stone.hit",
     "chance": 100,
-    "duration": 100
+    "duration": 10
   },
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": [
+        "always_consider"
+      ]
     },
     {
       "type": "processing_state",
       "state": 1,
-      "rules": ["insert_into_slot_0"]
+      "rules": ["insert_into_slot_1"]
     }
   ]
 }

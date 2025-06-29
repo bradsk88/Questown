@@ -24,6 +24,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -455,5 +457,19 @@ public class Util {
     }
     public static String getTinyString(BlockPos target) {
         return String.format("[%d, %d]", target.getX(), target.getZ());
+    }
+
+    public static WorkLocation.BlockInfo info(ServerLevel level) {
+        return new WorkLocation.BlockInfo() {
+            @Override
+            public BlockState state(BlockPos bp) {
+                return level.getBlockState(bp);
+            }
+
+            @Override
+            public @Nullable BlockEntity entity(BlockPos bp) {
+                return level.getBlockEntity(bp);
+            }
+        };
     }
 }
