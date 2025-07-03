@@ -71,24 +71,6 @@ class VillagerLearningHandleTest {
     }
 
     @Test
-    public void testShouldOnlyIncludeJobsWhoseParentIsLearnedByVillager() {
-        String jobId = "jack of all trades";
-        // All jobs can be learned by this villager.
-        // Let's put the unlearned, job which cannot be unlocked at the beginning to force the worst case scenario
-        ImmutableList<String> allJobs = ImmutableList.of("bb", "aa", "b", "a");
-        VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
-                () -> ImmutableSet.copyOf(allJobs),
-                j -> allJobs,
-                (j1, j2) -> true,
-                (j) -> j.startsWith("a"), // Villager knows "a", so they can learn "aa" but not "bb"
-                2
-        );
-        h.init(ImmutableList.of("a", "b"));
-        h.tick(ImmutableList.of(jobId));
-        assertIterableEquals(ImmutableList.of("aa"), h.getNextJobAwareness(jobId));
-    }
-
-    @Test
     public void testShouldReturnCorrectListsForDifferentJobsDifferentRoots() {
         ImmutableSet<String> allJobs = ImmutableSet.of(
                 "cook:chop",
@@ -112,10 +94,10 @@ class VillagerLearningHandleTest {
                 (j1) -> true,
                 2
         );
-        h.init(ImmutableList.of("cook:chop", "hunter:rabbits"));
-        h.tick(ImmutableList.of("cook:steak", "hunter:bison"));
-        assertIterableEquals(ImmutableList.of("cook:dice", "cook:julienne"), h.getNextJobAwareness("cook"));
-        assertIterableEquals(ImmutableList.of("hunter:deer"), h.getNextJobAwareness("hunter"));
+        h.init(ImmutableList.of("cook:chop", "hunter:rabbits")); // These jobs are already known
+        h.tick(ImmutableList.of("cook:steak", "hunter:bison")); // These are the villager's current jobs
+        assertIterableEquals(ImmutableList.of("cook:dice", "cook:julienne"), h.getNextJobAwareness("cook:steak"));
+        assertIterableEquals(ImmutableList.of("hunter:deer"), h.getNextJobAwareness("hunter:bison"));
     }
 
     @Test

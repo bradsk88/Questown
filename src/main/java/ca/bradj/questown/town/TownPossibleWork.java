@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,10 +86,7 @@ public class TownPossibleWork {
             VillagerHolder vh = town.getUnsafe().getVillagerHandle();
             Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
             NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
-            vh.entities()
-              .stream()
-              .map(v -> (VisitorMobEntity) v)
-              .filter(v -> root.equals(v.getJobId().rootId()))
+            vh.entities().stream().map(v -> (VisitorMobEntity) v).filter(v -> root.equals(v.getJobId().rootId()))
               .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to register unmet needs for root: {}", root, e);
@@ -120,25 +118,24 @@ public class TownPossibleWork {
         // FIXME: Only include jobs that are known by the villagers
         Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
-        e.forEach(w -> b.put(w.getKey(), getWorkPercentPossible(t, w))); // FIXME: Convert to for loop for easier debugging
+        e.forEach(w -> b.put(
+                w.getKey(),
+                getWorkPercentPossible(t, w)
+        )); // FIXME: Convert to for loop for easier debugging
         ImmutableMap<JobID, Double> list = b.build();
         List<Map.Entry<JobID, Double>> out = filter(list, Config.PREFERRED_JOB_ACCEPTANCE.get());
         if (out.isEmpty()) {
             QT.FLAG_LOGGER.debug("Could not generate preferred work. Using fallbacks.");
             out = filter(list, Config.MIN_JOB_ACCEPTANCE.get());
         }
-        return out.stream()
-                  .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-                  .map(Map.Entry::getKey).toList();
+        return out.stream().sorted(Comparator.comparingDouble(Map.Entry::getValue)).map(Map.Entry::getKey).toList();
     }
 
     private static List<Map.Entry<JobID, Double>> filter(
             ImmutableMap<JobID, Double> list,
             Double threshold
     ) {
-        return list.entrySet().stream()
-                   .filter(v -> v.getValue() > threshold)
-                   .toList();
+        return list.entrySet().stream().filter(v -> v.getValue() > threshold).toList();
     }
 
     private static double getWorkPercentPossible(
@@ -184,7 +181,7 @@ public class TownPossibleWork {
                                                              .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
                         rooms,
-                        (bp) -> dj.location().isJobBlock().test(info(sl), bp, false),
+                        (bp) -> isJobBlock(t, dj, bp, sl),
                         (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
                 );
                 if (!roomsWS.isEmpty()) {
@@ -205,7 +202,7 @@ public class TownPossibleWork {
                 List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
                         t,
                         r -> true,
-                        bp -> dj.location().isJobBlock().test(info(sl), bp, false),
+                        bp -> isJobBlock(t, dj, bp, sl),
                         js -> dj.location().baseRoom().equals(js),
                         false
                 );
@@ -232,6 +229,20 @@ public class TownPossibleWork {
             }
         }
         return dj.getMaxState();
+    }
+
+    private static boolean isJobBlock(
+            TownFlagBlockEntity t,
+            DeclarativeJob dj,
+            BlockPos bp,
+            ServerLevel sl
+    ) {
+        return dj.location().isJobBlock()
+                 .test(new JobBlockTestContext(sl, info(sl), bp, ImmutableList::of, unique(t), false, false));
+    }
+
+    private static Supplier<? extends Collection<Item>> unique(TownFlagBlockEntity t) {
+        return () -> TownContainers.getUniqueItems(t);
     }
 
     public ImmutableList<JobID> getFor(JobID jobId) {

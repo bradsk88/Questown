@@ -30,31 +30,31 @@ public class JobTownStates {
             }
 
             @Override
-            public LZCD.Dependency<Void> canUseMoreSupplies() {
-                return new SupplyNeed(town.roomsNeedingIngredientsByStateV2());
+            public LZCD.Dependency<Void> containsWorkableBlocksAtAnyState() {
+                return new RoomsWithWorkableBlocksAtAnyState(town.roomsWithWorkableStatefulBlocks());
             }
         };
     }
 
-    private static class SupplyNeed implements LZCD.Dependency<Void> {
-        private static final String NAME = "town has rooms needing supplies";
+    private static class RoomsWithWorkableBlocksAtAnyState implements LZCD.Dependency<Void> {
+        private static final String NAME = "town has workable blocks for ANY WorkState";
 
-        private final Map<Integer, LZCD.Dependency<Void>> rooms;
-        private final Map<Integer, LZCD.Populated<WithReason<@Nullable Boolean>>> roomCache = new HashMap<>();
+        private final Map<Integer, ? extends LZCD.Dependency<Void>> rooms;
+        private final Map<Integer, Populated<WithReason<@Nullable Boolean>>> roomCache = new HashMap<>();
 
-        public SupplyNeed(Map<Integer, LZCD.Dependency<Void>> rooms) {
+        public RoomsWithWorkableBlocksAtAnyState(Map<Integer, ? extends LZCD.Dependency<Void>> rooms) {
             this.rooms = rooms;
         }
 
         @Override
-        public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+        public Populated<WithReason<@Nullable Boolean>> populate() {
             for (Integer i : rooms.keySet()) {
                 roomCache.put(i, rooms.get(i).populate());
             }
             ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
             roomCache.forEach((k, v) -> b.put(k.toString(), v));
             ImmutableMap<String, Object> build = b.build();
-            return new LZCD.Populated<>(
+            return new Populated<>(
                     getName(),
                     apply(() -> null),
                     build,
@@ -71,7 +71,7 @@ public class JobTownStates {
         public String describe() {
             StringBuilder b = new StringBuilder(NAME).append("{");
             for (Integer k : rooms.keySet()) {
-                b.append("\n\tStage: ").append(k).append(", RoomsNeedingIngredients=[");
+                b.append("\n\tStage: ").append(k).append(", RoomsWithWorkableBlocks=[");
                 b.append(rooms.get(k).describe());
                 b.append("]");
             }
@@ -87,7 +87,7 @@ public class JobTownStates {
         @Override
         public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
             for (Integer i : rooms.keySet()) {
-                LZCD.Populated<WithReason<@Nullable Boolean>> cacheGet = roomCache.get(i);
+                Populated<WithReason<@Nullable Boolean>> cacheGet = roomCache.get(i);
                 if (cacheGet == null) {
                     LZCD.Dependency<Void> voidDependency = rooms.get(i);
                     WithReason<Boolean> checkedTown = voidDependency.apply(voidSupplier);
@@ -103,7 +103,7 @@ public class JobTownStates {
             }
             return WithReason.always(
                     Boolean.FALSE,
-                    "No rooms found needing supplies for states [" +
+                    "No rooms found with workable blocks at states [" +
                             Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
                             "]"
             );

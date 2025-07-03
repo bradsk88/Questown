@@ -19,6 +19,10 @@
         {
           "type": "minecraft:item",
           "name": "minecraft:brown_mushroom"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:oak_sapling"
         }
       ],
       "weight": 1

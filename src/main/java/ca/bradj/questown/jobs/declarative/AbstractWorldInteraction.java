@@ -509,6 +509,7 @@ public abstract class AbstractWorldInteraction<
                 }
             }
             if (town != null) {
+                triggerCompletionAdvancement(inputs, position);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
             return town;
@@ -516,6 +517,10 @@ public abstract class AbstractWorldInteraction<
         }
         return null;
     }
+
+    protected abstract void triggerCompletionAdvancement(EXTRA inputs,
+                                                         POS position
+    );
 
     private void preStateChangeHooks(
             EXTRA inputs,

@@ -34,6 +34,7 @@ public record SyncBlockItemMessage(
     }
 
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void handle(
             Supplier<NetworkEvent.Context> ctx
     ) {

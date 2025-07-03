@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.EffectMetaItem;
@@ -455,5 +457,16 @@ public class RealtimeWorldInteraction extends
     @Override
     protected BlockPos getTownPos(MCExtra inputs) {
         return townFlagPos.apply(inputs);
+    }
+
+    @Override
+    protected void triggerCompletionAdvancement(MCExtra inputs,
+                                                BlockPos position
+    ) {
+        AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                inputs.town().getServerLevel(),
+                VisitorTrigger.Triggers.FirstJobDone,
+                position
+        );
     }
 }

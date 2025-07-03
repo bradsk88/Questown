@@ -5,6 +5,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
@@ -197,7 +198,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             UUID villagerUUID = uuids.get(i);
             IStatus<?> status = getSmoothedStatus(villagerUUID);
             JobID jobId = syncedData.villagers().get(villagerUUID).a();
-            ImmutableList<Component> components = JobTooltips.get(status, jobId);
+            ImmutableList<Component> components = JobTooltips.get((ProductionStatus) status, jobId);
             super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
             return;
         }

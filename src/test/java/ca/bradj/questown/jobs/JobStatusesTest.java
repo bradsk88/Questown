@@ -184,7 +184,7 @@ class JobStatusesTest {
     record ConstTown(
             LZCD.Dependency<Void> hasSupplies,
             LZCD.Dependency<Void> hasSpace,
-            LZCD.Dependency<Void> canUseMoreSupplies,
+            LZCD.Dependency<Void> containsWorkableBlocksAtAnyState,
             LZCD.Dependency<Void> isTimerActive
     ) implements TownStateProvider {
 
@@ -197,7 +197,7 @@ class JobStatusesTest {
         }
 
         private static LZCD.Dependency<Void> make(boolean v) {
-            return new LZCD.ConstantDep("test", v);
+            return new ConstantDep("test", v);
         }
     }
 
@@ -461,7 +461,10 @@ class JobStatusesTest {
     }
 
     @Test
-    void StatusShouldBe_NoJobsite_WhenThereIsNowhereToWork_AndOnlyAvailableSuppliesAreInTown() {
+    void StatusShouldBe_CollectingSupplies_WhenOnlyAvailableSuppliesAreInTown_EvenIfNoJobsiteExists() {
+        // Some jobs require supplies to be collected before they can identify a
+        // jobsite. For example: arborist requires saplings in hand before they
+        // can identify a spot that can accept the tree.
         boolean canDoWork = false;
         boolean townHasSupplies = true;
         boolean suppliesInInventory = false;
@@ -482,7 +485,7 @@ class JobStatusesTest {
                 new NoOpJob(),
                 TestStatus.FACTORY
         );
-        Assertions.assertEquals(TestStatus.NO_JOBSITE, s);
+        Assertions.assertEquals(TestStatus.COLLECTING_SUPPLIES, s);
     }
 
     @Test
@@ -493,7 +496,9 @@ class JobStatusesTest {
         boolean hasNonSupplyItems = false;
         boolean townHasSpace = true;
 
-        @NotNull LZCD<TestStatus> s = JobStatuses.usualRoutineRoot(
+        @NotNull LZCD<TestStatus> s = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "test"),
+                null,
                 true,
                 new EntityInvStateProvider<>() {
                     @Override
@@ -511,36 +516,38 @@ class JobStatusesTest {
                         return Map.of();
                     }
                 }, new TownStateProvider() {
-                    @Override
-                    public LZCD.Dependency<Void> hasSupplies() {
-                        return new LZCD.ConstantDep("test town supplies", townHasSupplies);
-                    }
+            @Override
+            public LZCD.Dependency<Void> hasSupplies() {
+                return new ConstantDep("test town supplies", townHasSupplies);
+            }
 
-                    @Override
-                    public LZCD.Dependency<Void> hasSpace() {
-                        return new LZCD.ConstantDep("test town space", townHasSpace);
-                    }
+            @Override
+            public LZCD.Dependency<Void> hasSpace() {
+                return new ConstantDep("test town space", townHasSpace);
+            }
 
-                    @Override
-                    public LZCD.Dependency<Void> isTimerActive() {
-                        return new LZCD.ConstantDep("test timers", false);
-                    }
+            @Override
+            public LZCD.Dependency<Void> isTimerActive() {
+                return new ConstantDep("test timers", false);
+            }
 
-                    @Override
-                    public LZCD.Dependency<Void> canUseMoreSupplies() {
-                        return new LZCD.ConstantDep("test town can use supplies", canUseSupplies);
-                    }
-                },
+            @Override
+            public LZCD.Dependency<Void> containsWorkableBlocksAtAnyState() {
+                return new ConstantDep("test town can use supplies", canUseSupplies);
+            }
+        },
                 new NoOpJob(),
                 TestStatus.FACTORY
-        );
+        ));
         TestStatus resolve = s.resolve();
         Assertions.assertEquals(TestStatus.NO_JOBSITE, resolve);
     }
 
     @Test
     void usualRoutineRoot_initializeAll_shouldClearSupplies() {
-        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "test"),
+                null,
                 true,
                 new EntityInvStateProvider<String>() {
                     @Override
@@ -561,22 +568,22 @@ class JobStatusesTest {
                 new TownStateProvider() {
                     @Override
                     public LZCD.Dependency<Void> hasSupplies() {
-                        return new LZCD.ConstantDep("test supplies", true);
+                        return new ConstantDep("test supplies", true);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> hasSpace() {
-                        return new LZCD.ConstantDep("test space available", true);
+                        return new ConstantDep("test space available", true);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> isTimerActive() {
-                        return new LZCD.ConstantDep("test timer active", false);
+                        return new ConstantDep("test timer active", false);
                     }
 
                     @Override
-                    public LZCD.Dependency<Void> canUseMoreSupplies() {
-                        return new LZCD.ConstantDep("test can use stuff", true);
+                    public LZCD.Dependency<Void> containsWorkableBlocksAtAnyState() {
+                        return new ConstantDep("test can use stuff", true);
                     }
                 },
                 new JobStatuses.Job<>() {
@@ -591,7 +598,7 @@ class JobStatusesTest {
                     }
                 },
                 TestStatus.FACTORY
-        );
+        ));
         root.populate();
 
         LZCD<LZCD.Dependency<TestStatus>> hasSupplies = getHasSupplies(root);
@@ -600,7 +607,7 @@ class JobStatusesTest {
         root.initializeAll();
 
         hasSupplies = getHasSupplies(root);
-        Assertions.assertNull(hasSupplies.value);
+        Assertions.assertNull(hasSupplies.getValue());
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
@@ -632,7 +639,9 @@ class JobStatusesTest {
 
     @Test
     void usualRoutineRoot_resolve_shouldReturnGoingToJob_IfItemWorkIsGTJ_AndItemlessWorkIsNull() {
-        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "test"),
+                null,
                 true,
                 new EntityInvStateProvider<String>() {
                     @Override
@@ -653,22 +662,22 @@ class JobStatusesTest {
                 new TownStateProvider() {
                     @Override
                     public LZCD.Dependency<Void> hasSupplies() {
-                        return new LZCD.ConstantDep("test supplies", false);
+                        return new ConstantDep("test supplies", false);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> hasSpace() {
-                        return new LZCD.ConstantDep("test space available", true);
+                        return new ConstantDep("test space available", true);
                     }
 
                     @Override
                     public LZCD.Dependency<Void> isTimerActive() {
-                        return new LZCD.ConstantDep("test timer active", false);
+                        return new ConstantDep("test timer active", false);
                     }
 
                     @Override
-                    public LZCD.Dependency<Void> canUseMoreSupplies() {
-                        return new LZCD.ConstantDep("test can use stuff", true);
+                    public LZCD.Dependency<Void> containsWorkableBlocksAtAnyState() {
+                        return new ConstantDep("test can use stuff", true);
                     }
                 },
                 new JobStatuses.Job<>() {
@@ -683,9 +692,71 @@ class JobStatusesTest {
                     }
                 },
                 TestStatus.FACTORY
-        );
+        ));
         TestStatus val = root.resolve();
         Assertions.assertEquals(TestStatus.FACTORY.goingToJobSite(), val);
+    }
+    @Test
+    void usualRoutineRoot_resolve_shouldNoJobSite_IfItemWorkIsGTJ_ButThereAreNoJobBlocks() {
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "test"),
+                null,
+                true,
+                new EntityInvStateProvider<String>() {
+                    @Override
+                    public boolean inventoryFull() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean hasNonSupplyItems() {
+                        return false;
+                    }
+
+                    @Override
+                    public Map<String, SupplyItemStatus> getSupplyItemStatus() {
+                        return Map.of(
+                                TestStatus.ITEM_WORK.inner, SupplyItemStatus.NEEDS_ITEM,
+                                TestStatus.ITEM_WORK_2.inner, SupplyItemStatus.NEEDS_ITEM
+                        );
+                    }
+                },
+                new TownStateProvider() {
+                    @Override
+                    public LZCD.Dependency<Void> hasSupplies() {
+                        return new ConstantDep("[test] are supplies available?", false);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> hasSpace() {
+                        return new ConstantDep("[test] is space available?", true);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> isTimerActive() {
+                        return new ConstantDep("[test] is timer active?", false);
+                    }
+
+                    @Override
+                    public LZCD.Dependency<Void> containsWorkableBlocksAtAnyState() {
+                        return new ConstantDep("[test:IMPORTANT]: Can supplies be used?", false);
+                    }
+                },
+                new JobStatuses.Job<>() {
+                    @Override
+                    public JobStatusesTest.TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.GOING_TO_JOB;
+                    }
+
+                    @Override
+                    public JobStatusesTest.TestStatus tryUsingSupplies(Map<String, SupplyItemStatus> supplyItemStatus) {
+                        return TestStatus.GOING_TO_JOB;
+                    }
+                },
+                TestStatus.FACTORY
+        ));
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.FACTORY.noJobSite(), val);
     }
 
     // TODO: Should not be dropping loot if can extract product and still have room

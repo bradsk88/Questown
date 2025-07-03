@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init.items;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.*;
@@ -22,134 +23,87 @@ public class ItemsInit {
 
     public static final RegistryObject<Item> TOWN_FLAG_BLOCK = ITEMS.register(
             TownFlagBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.COBBLESTONE_TOWN_FLAG.get(),
-                    TownFlagBlock.ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.COBBLESTONE_TOWN_FLAG.get(), TownFlagBlock.ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> WELCOME_MAT_BLOCK = ITEMS.register(
             WelcomeMatBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.WELCOME_MAT_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.WELCOME_MAT_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
-    public static final RegistryObject<Item> FALSE_WALL_BLOCK = ITEMS.register(
-            FalseWallBlock.ID,
-            FalseWallItem::new
-    );
+    public static final RegistryObject<Item> FALSE_WALL_BLOCK = ITEMS.register(FalseWallBlock.ID, FalseWallItem::new);
 
     public static final RegistryObject<Item> JOB_BOARD_BLOCK = ITEMS.register(
             JobBoardBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.JOB_BOARD_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.JOB_BOARD_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> BREAD_OVEN_BLOCK = ITEMS.register(
             BreadOvenBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.BREAD_OVEN_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.BREAD_OVEN_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> ORE_PROCESSING_BLOCK = ITEMS.register(
             OreProcessingBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.ORE_PROCESSING_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.ORE_PROCESSING_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> BLACKSMITHS_TABLE_BLOCK = ITEMS.register(
             BlacksmithsTableBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.BLACKSMITHS_TABLE_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.BLACKSMITHS_TABLE_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> PLATE_BLOCK = ITEMS.register(
             PlateBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.PLATE_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.PLATE_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> SOUP_POT_BLOCK = ITEMS.register(
             SoupPotBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.SOUP_POT.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.SOUP_POT.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> BOWL_RACK_BLOCK = ITEMS.register(
             BowlRackBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.BOWL_RACK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.BOWL_RACK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> SEED_BIN_BLOCK = ITEMS.register(
             SeedBinBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.SEED_BIN.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.SEED_BIN.get(), Questown.DEFAULT_ITEM_PROPS)
+    );
+    public static final RegistryObject<Item> AXE_RACK_BLOCK = ITEMS.register(
+            AxeRackBlock.ITEM_ID,
+            () -> new BlockItem(BlocksInit.AXE_RACK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> FOOD_DISPLAY_BLOCK = ITEMS.register(
             FoodDisplayBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.FOOD_DISPLAY.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.FOOD_DISPLAY.get(), Questown.DEFAULT_ITEM_PROPS)
     );
     public static final RegistryObject<Item> SMALL_SOUP_POT_BLOCK = ITEMS.register(
             SmallSoupPotBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.SOUP_POT_SMALL.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.SOUP_POT_SMALL.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> BLOCK_OF_PROGRESS = ITEMS.register(
             BlockOfProgress.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.BLOCK_OF_PROGRESS.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.BLOCK_OF_PROGRESS.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
 
     public static final RegistryObject<Item> FISHING_STATION_BLOCK = ITEMS.register(
             FishingStationBlock.ITEM_ID,
-            () -> new BlockItem(
-                    BlocksInit.FISHING_STATION_BLOCK.get(),
-                    Questown.DEFAULT_ITEM_PROPS
-            )
+            () -> new BlockItem(BlocksInit.FISHING_STATION_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
-    public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(
-            TownDoorItem.ITEM_ID,
-            TownDoorItem::new
-    );
+    public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(TownDoorItem.ITEM_ID, TownDoorItem::new);
 
     public static final RegistryObject<Item> TOWN_DOOR_TESTER = ITEMS.register(
             TownDoorTestItem.ITEM_ID,
             TownDoorTestItem::new
     );
 
-    public static final RegistryObject<Item> FALSE_DOOR = ITEMS.register(
-            FalseDoorItem.ITEM_ID,
-            FalseDoorItem::new
-    );
+    public static final RegistryObject<Item> FALSE_DOOR = ITEMS.register(FalseDoorItem.ITEM_ID, FalseDoorItem::new);
 
     public static final RegistryObject<Item> TOWN_FENCE_GATE = ITEMS.register(
             TownFenceGateItem.ITEM_ID,
@@ -157,15 +111,9 @@ public class ItemsInit {
     );
 
 
-    public static final RegistryObject<Item> GATHERER_MAP = ITEMS.register(
-            GathererMap.ITEM_ID,
-            GathererMap::new
-    );
+    public static final RegistryObject<Item> GATHERER_MAP = ITEMS.register(GathererMap.ITEM_ID, GathererMap::new);
 
-    public static final RegistryObject<Item> TOWN_WAND = ITEMS.register(
-            TownWand.ITEM_ID,
-            TownWand::new
-    );
+    public static final RegistryObject<Item> TOWN_WAND = ITEMS.register(TownWand.ITEM_ID, TownWand::new);
 
     public static final RegistryObject<Item> STOCK_REQUEST = ITEMS.register(
             StockRequestItem.ITEM_ID,
@@ -198,13 +146,17 @@ public class ItemsInit {
     );
 
 
-    public static final RegistryObject<Item> EFFECT = ITEMS.register(
-            EffectMetaItem.ITEM_ID,
-            EffectMetaItem::new
-    );
+    public static final RegistryObject<Item> EFFECT = ITEMS.register(EffectMetaItem.ITEM_ID, EffectMetaItem::new);
     public static final RegistryObject<Item> HOSPITAL_BED = ITEMS.register(
             HospitalBedBlock.ITEM_ID,
             () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))
+    );
+
+    // Vanilla items
+
+    public static final RegistryObject<Item> SAPLING_TESTER_BLOCK = ITEMS.register(
+            SaplingTesterBlock.ITEM_ID,
+            () -> new BlockItem(BlocksInit.SAPLING_TESTER_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static void register(IEventBus bus) {

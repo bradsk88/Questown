@@ -35,3 +35,4 @@ public class SpecialRulesRegistry {
         return b.build();
     }
 }
+

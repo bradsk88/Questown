@@ -26,6 +26,7 @@ import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -46,7 +47,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.common.util.Lazy;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -172,25 +172,11 @@ public class DeclarativeJob extends
         Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> jobTools = checks.getAllRequiredTools();
         PredicateCollection noCheck = PredicateCollection.empty("no requirements");
         for (int i = 0; i < maxState; i++) {
-            ingr.put(
-                    i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)) {
-                        @Override
-                        public String toString() {
-                            return "no check";
-                        }
-                    }
-            );
-            tool.put(
-                    i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)) {
-                        @Override
-                        public String toString() {
-                            return "no check";
-                        }
-                    }
-            );
+            ingr.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobIngrs, i, noCheck)));
+            tool.put(i, new ItemCheckReplacer<>(UtilClean.getOrDefault(jobTools, i, noCheck)));
         }
 
-        JobCheckReplacer globalJCR = new JobCheckReplacer((sl, bp) -> location.isJobBlock().test(sl, bp, logic.hasWorkedRecently() || hasInserted(0)));
+        JobCheckReplacer globalJCR = new JobCheckReplacer(this::isJobBlock);
         SupplyRoomCheckReplacer globalSRCR = new SupplyRoomCheckReplacer();
 
         DeclarativeJob self = this;
@@ -216,8 +202,25 @@ public class DeclarativeJob extends
                 checks.getAllRequiredWork(),
                 checks.getAllRequiredTime(),
                 SupplyRoomCheckReplacer.withItems(globalSRCR, self.journal::getItems),
-                JobCheckReplacer.withItemsAndLevel(globalJCR, self.journal::getItems, info(level))
+                JobCheckReplacer.withContext(
+                        globalJCR, new JobBlockTestContext(
+                                level,
+                                info(level),
+                                BlockPos.ZERO,
+                                self.journal::getItems,
+                                ImmutableList::of,
+                                false,
+                                false
+                        )
+                )
         );
+    }
+
+    private boolean isJobBlock(
+            JobBlockTestContext ctx
+    ) {
+        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(logic.hasWorkedRecently() || hasInserted(0))
+                                             .withJobAlreadyStarted(true));
     }
 
     @NotNull
@@ -400,11 +403,22 @@ public class DeclarativeJob extends
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools
     ) {
-        Lazy<Map<Integer, LZCD.Dependency<Void>>> roomsV2 = Lazy.of(() -> DeclarativeJobs.rooms(
+        WorkLocation.BlockInfo info = info(extra.town().getServerLevel());
+        Supplier<Map<Integer, DeclarativeJobs.RoomsWithWorkableStatefulBlocks>> roomsV2 = () -> DeclarativeJobs.rooms(
                 maxState,
                 roomsNeedingIngredientsOrTools,
-                work
-        ));
+                work,
+                (BlockPos bp) -> isJobBlock(new JobBlockTestContext(
+                        extra.town().getServerLevel(),
+                        info,
+                        bp,
+                        journal::getItems,
+                        () -> TownContainers.getUniqueItems(extra.town()),
+                        false, // Gets overridden
+                        false // Gets overridden
+
+                ))
+        );
 
         return new JobTownProvider<>() {
             private final Function<BlockPos, State> getJobBlockState = work::getJobBlockState;
@@ -420,7 +434,7 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+            public Map<Integer, ? extends LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
                 return roomsV2.get();
             }
 
@@ -439,10 +453,9 @@ public class DeclarativeJob extends
                         () -> extra.town().getRoomHandle().getRoomsMatching(location.baseRoom()).stream()
                                    .map(v -> (Supplier<Collection<BlockPos>>) () -> v.getContainedBlocks().keySet()
                                                                                      .stream()
-                                                                                     .filter(z -> isJobBlock(z))
-                                                                                     .toList()).toList(),
-                        getJobBlockState,
-                        (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
+                                                                                     .filter(z -> shouldInit(z, extra))
+                                                                                     .toList())
+                                   .toList(), getJobBlockState, (bp) -> work.canClaim(bp, () -> makeClaim(ownerUUID))
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(s -> {
@@ -493,6 +506,14 @@ public class DeclarativeJob extends
         };
     }
 
+    private boolean shouldInit(
+            BlockPos z,
+            MCExtra extra
+    ) {
+        WorkLocation.BlockInfo info = info(extra.town().getServerLevel());
+        return location.shouldInitializeWorkState().test(info, z);
+    }
+
     private Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
             TownInterface town,
             Function<BlockPos, State> getJobBlockState,
@@ -510,7 +531,7 @@ public class DeclarativeJob extends
     ) {
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         return Jobs.roomsWithState(
-                rooms, checks::isJobBlock, (bp) -> {
+                rooms, p -> location.shouldInitializeWorkState().test(info(town.getServerLevel()), p), (bp) -> {
                     State jbs = getJobBlockState.apply(bp);
                     if (jbs == null) {
                         return false;
@@ -564,7 +585,7 @@ public class DeclarativeJob extends
                             getWorkStatusHandle(town)::getJobBlockState,
                             new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
-                            bp -> isJobBlock(bp),
+                            bp -> location.shouldInitializeWorkState().test(info(sl), bp),
                             bp -> bp.relative(Compat.getRandomHorizontal(sl))
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
@@ -884,7 +905,7 @@ public class DeclarativeJob extends
     public void initializeStatusFromEntityData(@Nullable String s) {
         ProductionStatus from;
         try {
-            from = ProductionStatus.from(s);
+            from = ProductionStatus.fromNumber(s);
         } catch (NumberFormatException nfe) {
             QT.JOB_LOGGER.error("Ignoring exception: {}", nfe.getMessage());
             from = ProductionStatus.FACTORY.idle();
@@ -969,7 +990,16 @@ public class DeclarativeJob extends
         Collection<RoomRecipeMatch<MCRoom>> x = town.getRoomHandle().getRoomsMatching(location.baseRoom());
         Function<RoomRecipeMatch<MCRoom>, Collection<BlockPos>> gcb = m -> m.getContainedBlocks().keySet().stream()
                                                                             .toList();
-        return RoomsStatusLogic.compute(x, work, canClaim, this::isJobBlock, checks, gcb, maxState);
+        WorkLocation.BlockInfo info = info(town.getServerLevel());
+        return RoomsStatusLogic.compute(
+                x,
+                work,
+                canClaim,
+                p -> location.shouldInitializeWorkState().test(info, p),
+                checks,
+                gcb,
+                maxState
+        );
     }
 
     @Override

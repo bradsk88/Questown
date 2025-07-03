@@ -8,9 +8,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 public record WorkLocation(
-        IsJobBlock isJobBlock,
+        Predicate<JobBlockTestContext> isJobBlock,
+        BiPredicate<BlockInfo, BlockPos> shouldInitializeWorkState,
         ResourceLocation baseRoom
 ) {
 

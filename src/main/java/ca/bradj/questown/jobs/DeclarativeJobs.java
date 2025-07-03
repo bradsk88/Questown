@@ -141,41 +141,52 @@ public class DeclarativeJobs {
         );
     }
 
-    public static ImmutableMap<Integer, LZCD.Dependency<Void>> rooms(
+    public record Rooms(Map<BlockPos, Integer> spotStatuses, Map<MCRoom, ? extends Collection<Integer>> roomStatuses,
+                        Map<BlockPos, Boolean> spotJobBlocks) {
+    }
+
+    // TODO: Unit test. This calculation is fairly sensitive and critical.
+    public static ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks> rooms(
             @NotNull Integer maxState,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomHandle,
-            WorkStatusHandle<BlockPos, MCHeldItem> work
+            WorkStatusHandle<BlockPos, MCHeldItem> work,
+            Predicate<BlockPos> isJobBlock
     ) {
-        ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
-        Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> e = () -> {
+        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks> b = ImmutableMap.builder();
+        Supplier<Rooms> e = () -> {
             ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
+            ImmutableMap.Builder<BlockPos, Boolean> spotJBs = ImmutableMap.builder();
             Map<MCRoom, List<Integer>> roomStatuses = new HashMap<>();
             Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
 
             //TODO: Validate that this is actually needed
             rooms = rooms.filter(v -> !v.dueToWorkOnly());
 
-            rooms.forEach(match -> match.room().getContainedBlocks().forEach((bp, bv) -> {
-                State jobBlockState = work.getJobBlockState(bp);
-                if (jobBlockState == null) {
-                    return;
+            rooms.forEach(match -> {
+                for (Map.Entry<BlockPos, ?> entry : match.room().getContainedBlocks().entrySet()) {
+                    BlockPos bp = entry.getKey();
+                    State jobBlockState = work.getJobBlockState(bp);
+                    if (jobBlockState == null) {
+                        continue;
+                    }
+                    int v = jobBlockState.processingState();
+                    spotStatuses.put(bp, v);
+                    UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
+                    spotJBs.put(bp, isJobBlock.test(bp));
                 }
-                int v = jobBlockState.processingState();
-                spotStatuses.put(bp, v);
-                UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
-            }));
-            return new Pair<>(spotStatuses.build(), roomStatuses);
+            });
+            return new Rooms(spotStatuses.build(), roomStatuses, spotJBs.build());
         };
 
         for (int i = 0; i < maxState; i++) {
-            b.put(i, new RoomStates(i, e));
+            b.put(i, new RoomsWithWorkableStatefulBlocks(i, e));
         }
         return b.build();
     }
 
     public static LZCD.Dependency<Void> supplies(
             ServerLevel level,
-            Supplier<Map<Integer, LZCD.Dependency<Void>>> roomStatuses,
+            Supplier<? extends Map<Integer, ? extends LZCD.Dependency<Void>>> roomsHaveWorkableBlocks,
             TownInterface rooms,
             Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
             Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
@@ -183,7 +194,7 @@ public class DeclarativeJobs {
             Predicate<BlockPos> isJobBlock,
             Predicate<ResourceLocation> isJobSite
     ) {
-        return new LZCD.SimpleDependency("town has supplies") {
+        return new SimpleDependency("town has supplies") {
 
             @Override
             public String describe() {
@@ -191,22 +202,23 @@ public class DeclarativeJobs {
             }
 
             @Override
-            protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+            protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
                 ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
-                Map<Integer, LZCD.Dependency<Void>> needs = roomStatuses.get();
+                Map<Integer, ? extends LZCD.Dependency<Void>> needs = roomsHaveWorkableBlocks.get();
                 b.put("room needs", needs);
 
                 List<PredicateCollection<MCHeldItem, MCHeldItem>> neededIngredients = new ArrayList<>();
                 List<PredicateCollection<MCTownItem, MCTownItem>> neededTools = new ArrayList<>();
-                for (Map.Entry<Integer, LZCD.Dependency<Void>> v : needs.entrySet()) {
+                for (Map.Entry<Integer, ? extends LZCD.Dependency<Void>> v : needs.entrySet()) {
+                    Integer state = v.getKey();
                     if (!v.getValue().apply(() -> null).value) {
                         continue;
                     }
-                    PredicateCollection<MCHeldItem, MCHeldItem> ingt = ingredients.get(v.getKey());
+                    PredicateCollection<MCHeldItem, MCHeldItem> ingt = ingredients.get(state);
                     if (ingt != null) {
                         neededIngredients.add(ingt);
                     }
-                    PredicateCollection<MCTownItem, MCTownItem> tool = tools.get(v.getKey());
+                    PredicateCollection<MCTownItem, MCTownItem> tool = tools.get(state);
                     if (tool != null) {
                         neededTools.add(tool);
                     }
@@ -241,10 +253,8 @@ public class DeclarativeJobs {
                             continue;
                         }
                         MCHeldItem iHeld = MCHeldItem.fromTown(i);
-                        Optional<?> matchedIngredient = neededIngredients.
-                                stream().
-                                filter(ing -> ing.test(iHeld)).
-                                findFirst();
+                        Optional<?> matchedIngredient = neededIngredients.stream().filter(ing -> ing.test(iHeld))
+                                                                         .findFirst();
                         String result = matchedIngredient.map(Object::toString).orElse("No match");
                         b2.put(dPos, new Pair<>(result, c.toShortString(false)));
                         if (matchedIngredient.isPresent()) {
@@ -253,10 +263,7 @@ public class DeclarativeJobs {
                                 break;
                             }
                         }
-                        Optional<?> matchedTool = neededTools.
-                                stream().
-                                filter(ing -> ing.test(i)).
-                                findFirst();
+                        Optional<?> matchedTool = neededTools.stream().filter(ing -> ing.test(i)).findFirst();
                         result = matchedTool.map(Object::toString).orElse("No match");
                         b2.put(dPos, new Pair<>(result, c.toShortString(false)));
                         if (matchedTool.isPresent()) {
@@ -278,12 +285,7 @@ public class DeclarativeJobs {
                 b.put("supply checks", ImmutableMap.copyOf(b2));
                 b.put("predicate", ingredients);
                 ImmutableMap<String, Object> build = b.build();
-                return new LZCD.Populated<>(
-                        "town has supplies",
-                        found,
-                        build,
-                        null
-                ) {
+                return new Populated<>("town has supplies", found, build, null) {
                     @Override
                     protected String stringRep() {
                         return "town has supplies [" + build + "]";
@@ -293,24 +295,16 @@ public class DeclarativeJobs {
         };
     }
 
-    private record HandlerInputs(
-            MCTownStateWorldInteraction wi,
-            MCTownStateWorldInteraction.Inputs inState,
-            ProductionStatus status,
-            State workBlockState,
-            Integer maxState,
-            BlockPos fakePos
-    ) {
+    private record HandlerInputs(MCTownStateWorldInteraction wi, MCTownStateWorldInteraction.Inputs inState,
+                                 ProductionStatus status, State workBlockState, Integer maxState, BlockPos fakePos) {
     }
 
     public static void staticInitialize() {
-        ImmutableMap.Builder<ProductionStatus, Function<
-                HandlerInputs,
-                @Nullable MCTownState
-                >> b = ImmutableMap.builder();
+        ImmutableMap.Builder<ProductionStatus, Function<HandlerInputs, @Nullable MCTownState>> b = ImmutableMap.builder();
         Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
             @Nullable WorkOutput<MCTownState, WorkPosition<BlockPos>> v = ii.wi.tryWorking(
-                    ii.inState, new WorkPosition<>(ii.fakePos, ii.fakePos)
+                    ii.inState,
+                    new WorkPosition<>(ii.fakePos, ii.fakePos)
             );
             if (v == null) {
                 return null;
@@ -330,46 +324,19 @@ public class DeclarativeJobs {
                     }
             );
         }
-        b.put(
-                ProductionStatus.EXTRACTING_PRODUCT,
-                tryWorking
-        );
-        b.put(
-                ProductionStatus.DROPPING_LOOT,
-                i -> i.wi.simulateDropLoot(i.inState.town(), i.status)
-        );
+        b.put(ProductionStatus.EXTRACTING_PRODUCT, tryWorking);
+        b.put(ProductionStatus.DROPPING_LOOT, i -> i.wi.simulateDropLoot(i.inState.town(), i.status));
         b.put(
                 ProductionStatus.COLLECTING_SUPPLIES,
                 i -> i.wi.simulateCollectSupplies(i.inState.town(), i.workBlockState.processingState())
         );
-        b.put(
-                ProductionStatus.RELAXING,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.WAITING_FOR_TIMED_STATE,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.NO_SPACE,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.GOING_TO_JOB,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.NO_SUPPLIES,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.IDLE,
-                i -> null
-        );
-        b.put(
-                ProductionStatus.NO_JOBSITE,
-                i -> null
-        );
+        b.put(ProductionStatus.RELAXING, i -> null);
+        b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, i -> null);
+        b.put(ProductionStatus.NO_SPACE, i -> null);
+        b.put(ProductionStatus.GOING_TO_JOB, i -> null);
+        b.put(ProductionStatus.NO_SUPPLIES, i -> null);
+        b.put(ProductionStatus.IDLE, i -> null);
+        b.put(ProductionStatus.NO_JOBSITE, i -> null);
         handler = b.build();
     }
 
@@ -382,7 +349,8 @@ public class DeclarativeJobs {
         ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();
         if (!c.containsAll(productionStatuses)) {
             throw new IllegalStateException("Not all production states are handled. Difference: " + Sets.difference(
-                    ImmutableSet.copyOf(productionStatuses), ImmutableSet.copyOf(c)
+                    ImmutableSet.copyOf(productionStatuses),
+                    ImmutableSet.copyOf(c)
             ));
         }
 
@@ -416,7 +384,8 @@ public class DeclarativeJobs {
                 wi.injectTicks((int) ticksPassed);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-                        status, Signals.fromDayTime(Util.getDayTime(level)),
+                        status,
+                        Signals.fromDayTime(Util.getDayTime(level)),
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,
@@ -429,13 +398,19 @@ public class DeclarativeJobs {
                                 outState.containers
                         ),
                         DeclarativeJobs.alwaysInRoom(fakeRoom),
-                        STATUS_FACTORY, prioritizeExtraction
+                        STATUS_FACTORY,
+                        prioritizeExtraction
                 );
                 if (nuStatus != null) {
                     status = nuStatus;
                 }
                 MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
-                        wi, fState, status, ztate, maxState, fakePos
+                        wi,
+                        fState,
+                        status,
+                        ztate,
+                        maxState,
+                        fakePos
                 ));
                 if (affectedState != null) {
                     outState = affectedState;
@@ -478,18 +453,18 @@ public class DeclarativeJobs {
         };
     }
 
-    private static class RoomStates implements LZCD.Dependency<Void> {
+    public static final class RoomsWithWorkableStatefulBlocks implements LZCD.Dependency<Void> {
 
-        private static final String NAME = "rooms contain workstate";
+        private static final String NAME = "rooms contain workable blocks with state";
 
-        private final Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> inputs;
+        private final Supplier<Rooms> inputs;
         private final String name;
         private final int state;
-        private LZCD.Populated<WithReason<Boolean>> value;
+        private Populated<WithReason<Boolean>> value;
 
-        public RoomStates(
+        public RoomsWithWorkableStatefulBlocks(
                 int state,
-                Supplier<Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>>> inputs
+                Supplier<Rooms> inputs
         ) {
             this.inputs = inputs;
             this.name = NAME + " " + state;
@@ -497,36 +472,51 @@ public class DeclarativeJobs {
         }
 
         @Override
-        public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+        public Populated<WithReason<@Nullable Boolean>> populate() {
             // TODO[Performance]: Cache?
 //            if (value != null) {
 //                return value;
 //            }
-            Pair<Map<BlockPos, Integer>, Map<MCRoom, ? extends Collection<Integer>>> v = this.inputs.get();
-            Map<BlockPos, Integer> spotStates = v.a();
-            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotStates.entrySet().stream()
-                                                                         .filter(z -> Integer.compare(
-                                                                                 state,
-                                                                                 z.getValue()
-                                                                         ) == 0).findFirst();
-            WithReason<Boolean> hasSpot = foundSpot.map(
-                    zz -> WithReason.always(true, "town has workspot with state at " + foundSpot.get().getKey())
-            ).orElse(
-                    WithReason.always(false, "no spots found")
-            );
+            Rooms v = this.inputs.get();
+            Map<BlockPos, Integer> spotStates = v.spotStatuses();
+
+            List<Map.Entry<BlockPos, Integer>> spotsWithMatchingState = spotStates.entrySet().stream()
+                                                                                  .filter(z -> state == z.getValue())
+                                                                                  .toList();
+
+            List<Map.Entry<BlockPos, Boolean>> spotsThatAreJobBlocks = v.spotJobBlocks().entrySet().stream()
+                                                                        .filter(Map.Entry::getValue).toList();
+
+            // Find the first spot that is in both lists
+            Optional<Map.Entry<BlockPos, Integer>> foundSpot = spotsWithMatchingState.stream()
+                                                                                     .filter(z -> spotsThatAreJobBlocks.stream()
+                                                                                                                       .anyMatch(
+                                                                                                                               vv -> vv.getKey()
+                                                                                                                                       .equals(z.getKey())))
+                                                                                     .findFirst();
+
+            WithReason<Boolean> hasSpot = foundSpot.map(zz -> WithReason.always(
+                    true,
+                    "town has workable spot with state at " + foundSpot.get().getKey()
+            )).orElse(WithReason.always(false, "no spots found"));
 
             ImmutableMap.Builder<String, Object> css = ImmutableMap.builder();
             spotStates.forEach((k, vv) -> css.put(k.toShortString(), vv));
+            ImmutableMap.Builder<String, Object> cjs = ImmutableMap.builder();
+            v.spotJobBlocks().forEach((k, vv) -> cjs.put(k.toShortString(), vv));
             ImmutableMap.Builder<String, Object> crs = ImmutableMap.builder();
-            v.b().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
+            v.roomStatuses().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
 
             ImmutableMap<String, Object> bSpots = css.build();
+            ImmutableMap<String, Object> jBlocks = cjs.build();
             ImmutableMap<String, Object> bRooms = crs.build();
-            this.value = new LZCD.Populated<>(
-                    name, hasSpot, ImmutableMap.of(
-                    "spots", bSpots,
-                    "rooms", bRooms
-            ), null
+
+            // Capturing this data makes it easier to debug
+            this.value = new Populated<>(
+                    name,
+                    hasSpot,
+                    ImmutableMap.of("spots", bSpots, "rooms", bRooms, "job_blocks", jBlocks),
+                    null
             ) {
                 @Override
                 protected String stringRep() {
@@ -549,6 +539,11 @@ public class DeclarativeJobs {
         @Override
         public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
             return this.populate().value();
+        }
+
+        @Override
+        public String toString() {
+            return describe();
         }
     }
 }

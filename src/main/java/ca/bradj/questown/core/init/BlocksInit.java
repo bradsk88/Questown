@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.materials.WallType;
@@ -62,10 +63,19 @@ public class BlocksInit {
     public static final RegistryObject<Block> SEED_BIN = BLOCKS.register(
             SeedBinBlock.ITEM_ID, SeedBinBlock::new
     );
+    public static final RegistryObject<Block> AXE_RACK = BLOCKS.register(
+            AxeRackBlock.ITEM_ID, AxeRackBlock::new
+    );
     public static final RegistryObject<Block> BLOCK_OF_PROGRESS = BLOCKS.register(
             BlockOfProgress.ITEM_ID, BlockOfProgress::new
     );
     public static final RegistryObject<Block> FISHING_STATION_BLOCK = BlockAsRoomEntity.register(BLOCKS.register(
             FishingStationBlock.ITEM_ID, FishingStationBlock::new
     ));
+
+    // Vanilla Blocks
+
+    public static final RegistryObject<Block> SAPLING_TESTER_BLOCK = BLOCKS.register(
+            SaplingTesterBlock.ITEM_ID, SaplingTesterBlock::new
+    );
 }

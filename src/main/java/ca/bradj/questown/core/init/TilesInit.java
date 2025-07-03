@@ -61,6 +61,11 @@ public class TilesInit {
                     SeedBinBlockEntity::new, BlocksInit.SEED_BIN.get()
             ).build(null)
     );
+    public static final RegistryObject<BlockEntityType<AxeRackBlockEntity>> AXE_RACK = TILES.register(
+            AxeRackBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    AxeRackBlockEntity::new, BlocksInit.AXE_RACK.get()
+            ).build(null)
+    );
     public static final RegistryObject<BlockEntityType<BlockAsRoomEntity>> BLOCK_AS_ROOM = TILES.register(
             "block_as_room", () -> {
                 Block[] array = BlockAsRoomEntity.ALL.stream().map(Supplier::get).toArray(Block[]::new);

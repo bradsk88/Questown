@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.chat.Component;
@@ -16,10 +17,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class JobTooltips {
     public static ImmutableList<Component> get(
-            IStatus<?> status,
+            ProductionStatus status,
             JobID jobId
     ) {
-        Pair<String, String> overrides = ServerJobsRegistry.getStatusText(jobId, status);
+        Pair<String, String> overrides = ClientAccess.getStatusText(jobId, status);
         if (overrides != null) {
             return Pair.toList(Pair.monoMap(overrides, Compat::translatable));
         }

@@ -136,6 +136,10 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return canAccept.test(item);
     }
 
+    /**
+     * @deprecated Only use this interface directly in unit tests. Otherwise, use MCContainerInterface.
+     */
+    @Deprecated(since = "0.0.9", forRemoval = false)
     public interface Container<I extends Item<I>> extends ItemAccepting<I> {
 
         int size();

@@ -55,7 +55,11 @@ public class WorkSeekerJob extends DeclarativeJob {
                 ownerUUID,
                 inventoryCapacity,
                 new JobID(rootId, WORK_ID),
-                new WorkLocation((sl, bp, active) -> true, SpecialQuests.JOB_BOARD),
+                new WorkLocation(
+                        (ctx) -> true,
+                        (i, p) -> true,
+                        SpecialQuests.JOB_BOARD
+                ),
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE,
                 0,
                 INGREDIENTS_REQUIRED_AT_STATES,
@@ -133,9 +137,13 @@ public class WorkSeekerJob extends DeclarativeJob {
             Supplier<ProductionStatus> sc = super.getStateComputer(town, statusFactory, jtp, elp);
             return switch (super.getSignal()) {
                 case MORNING, NOON, UNDEFINED -> {
+                    if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
+                        town.changeJobForVisitorFromBoard(ownerUUID, getId());
+                    }
                     if (town.getPossibleWork().getFor(getId()).isEmpty()) {
                         if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
                             journal.changeStatus(statusFactory.noWorkPossible());
+                            town.getPossibleWork().invalidate();
                             registeredUnmet = true;
                         }
                         yield statusFactory.noWorkPossible();

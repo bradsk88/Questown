@@ -180,6 +180,14 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
+    protected void triggerCompletionAdvancement(
+            Inputs inputs,
+            BlockPos position
+    ) {
+        // Only trigger for realtime
+    }
+
+    @Override
     protected void preStateChangeHooks(
             @NotNull MCTownState ctx,
             Collection<String> rules,
@@ -412,7 +420,7 @@ public class MCTownStateWorldInteraction extends
             }
 
             @Override
-            public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+            public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
                 return Map.of(); // TODO[Warp]: Implement
             }
 

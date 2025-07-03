@@ -7,7 +7,7 @@ public interface ILZCD<T> {
 
     @Nullable T resolve();
 
-    LZCD.Populated<T> populate();
+    Populated<T> populate();
 
     boolean isValueNull(T value);
 }

@@ -173,6 +173,18 @@ public class QuestownNetwork {
                         decoder(SyncWorkForCommandsMessage::decode),
                 SyncWorkForCommandsMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(SyncStatusArtMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(SyncStatusArtMessage::encode).
+                        decoder(SyncStatusArtMessage::decode),
+                SyncStatusArtMessage::handle
+        ).add();
+        Compat.withConsumer(
+                registerMessage(SyncStatusTextMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(SyncStatusTextMessage::encode).
+                        decoder(SyncStatusTextMessage::decode),
+                SyncStatusTextMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(

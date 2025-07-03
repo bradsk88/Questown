@@ -1,5 +1,6 @@
 package ca.bradj.questown.integration.jobs;
 
+import ca.bradj.questown.jobs.JobBlockTestContext;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class JobPhaseModifier {
@@ -87,5 +88,11 @@ public abstract class JobPhaseModifier {
 
     public void beforeInit(BeforeInitEvent bxEvent) {
 
+    }
+
+    public boolean postJobBlockCheckPassed(
+            JobBlockTestContext ctx
+    ) {
+        return true;
     }
 }

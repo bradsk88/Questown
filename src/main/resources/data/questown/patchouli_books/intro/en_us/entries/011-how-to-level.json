@@ -1,0 +1,20 @@
+{
+  "sortnum": 11,
+  "name": "11: Villager Jobs and Skills",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_job_done",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "When villagers complete tasks, they will learn from their experiences.$(br2)Maybe, with enough practice, they will learn ways to help even more!"
+    },
+    {
+      "type": "patchouli:image",
+      "text": "Hint: Click the \"stats\" tab from the villager menu to see their experience.$(br2)Experience is unlocked when a task is done completely.",
+      "images": [
+        "questown:textures/guide/exp.png"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "sortnum": 11,
+  "name": "Villager Needs",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_unmet_needs",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Villagers usually need ingredients or tools to complete their tasks.$(br2)If they don't have what they need, they will leave town to gather supplies.$(br2)You can help them by providing the necessary items in the store room."
+    },
+    {
+      "type": "patchouli:image",
+      "text": "Hint: Click the \"economics\" tab from the villager or flag menus to see what items are needed.",
+      "images": [
+        "questown:textures/guide/needs.png"
+      ]
+    }
+  ]
+}

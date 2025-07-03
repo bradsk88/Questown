@@ -69,7 +69,6 @@ public class ServerJobsRegistry {
                 }
             }
         } catch (Exception e) {
-            // FIXME: Send this information as a message to the UIs, because "Work" is not Client-Safe
             QT.JOB_LOGGER.error("Failed to apply status texture override");
         }
         return StatusArt.getTexture(job, status);
@@ -86,7 +85,6 @@ public class ServerJobsRegistry {
             }
             return work.applyStatusTextOverride(status);
         } catch (Exception e) {
-            // FIXME: Send this information as a message to the UIs, because "Work" is not Client-Safe
             QT.JOB_LOGGER.error("Failed to apply status tooltip override");
             return null;
         }
@@ -170,7 +168,8 @@ public class ServerJobsRegistry {
     private record SpecialJob(Predicate<JobID> idTest,
                               BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
                               TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
-                              TriPredicate<JobID, Supplier<BlockState>, BlockPos> jobBlockTest,
+                              TriPredicate<JobID, Supplier<BlockState>, JobBlockTestContext> jobBlockTest,
+                              TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
                               BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs) {
 
         static SpecialJob fromWork(
@@ -191,7 +190,20 @@ public class ServerJobsRegistry {
                     idTest,
                     (id, owner) -> cached.apply(id).jobFunc.apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
-                    (id, bs, bp) -> cached.apply(id).isJobBlock.test(
+                    (id, bs, bp) -> cached.apply(id).isJobBlock.test(new JobBlockTestContext(
+                            null, new WorkLocation.BlockInfo() {
+                        @Override
+                        public BlockState state(BlockPos bp) {
+                            return bs.get();
+                        }
+
+                        @Override
+                        public @Nullable BlockEntity entity(BlockPos bp) {
+                            return null;
+                        }
+                    }, bp.blockPos(), bp.heldItems(), bp.townUniqueItems(), bp.jobBlockAlreadyUsed(),
+                    bp.jobActive())),
+                    (id, bs, bp) -> cached.apply(id).shouldInitializeWorkState.test(
                             new WorkLocation.BlockInfo() {
                                 @Override
                                 public BlockState state(BlockPos bp) {
@@ -202,7 +214,7 @@ public class ServerJobsRegistry {
                                 public @Nullable BlockEntity entity(BlockPos bp) {
                                     return null;
                                 }
-                            }, bp
+                            }, bp.b()
                     ),
                     (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items))
             );
@@ -222,6 +234,10 @@ public class ServerJobsRegistry {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
                 },
+                (id, bsSrc, bp) -> {
+                    Block block = bsSrc.get().getBlock();
+                    return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
+                },
                 (id, items) -> ImmutableList.of()
         ));
 
@@ -234,22 +250,56 @@ public class ServerJobsRegistry {
         specialJobs = b.build();
     }
 
-    public static boolean isJobBlock(
-            WorkLocation.BlockInfo sl,
-            BlockPos bp
+
+    public static boolean shouldInitializeWithState(
+            WorkLocation.BlockInfo info,
+            BlockPos pos
     ) {
-        if (sl.state(bp).isAir()) {
+        BlockState state = info.state(pos);
+        if (state.isAir()) {
             return false;
         }
-        BlockState bs = sl.state(bp);
+        BlockState bs = state;
         Block b = bs.getBlock();
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
         for (SpecialJob sj : specialJobs) {
-            if (sj.jobBlockTest.test(a, () -> bs, bp)) {
+            if (sj.shouldInit.test(a, () -> bs, new Pair<>(info, pos))) {
                 return true;
             }
         }
-        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(sl, bp));
+        boolean isWorkMatch = Works
+                .values()
+                .stream()
+                .anyMatch(v -> v.get().shouldInitializeWorkState.test(info, pos));
+
+        // TODO: This might not be needed anymore
+        if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
+            return true;
+        }
+        // TODO: This might not be needed anymore
+        if (Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
+            return true;
+        }
+
+        return isWorkMatch;
+    }
+
+    public static boolean isJobBlock(
+            JobBlockTestContext ctx
+    ) {
+        BlockState state = ctx.blockInfo().state(ctx.blockPos());
+        if (state.isAir()) {
+            return false;
+        }
+        BlockState bs = state;
+        Block b = bs.getBlock();
+        JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
+        for (SpecialJob sj : specialJobs) {
+            if (sj.jobBlockTest.test(a, () -> bs, ctx)) {
+                return true;
+            }
+        }
+        boolean isWorkMatch = Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(ctx));
         // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {
             return true;
@@ -573,7 +623,7 @@ public class ServerJobsRegistry {
             ImmutableList<MCHeldItem> heldItems
     ) {
         if (specialJobs.stream().anyMatch(j -> j.idTest().test(job))) {
-            return new SimpleSnapshot<>(job, ProductionStatus.from(status), heldItems);
+            return new SimpleSnapshot<>(job, ProductionStatus.fromNumber(status), heldItems);
         }
 
         Supplier<Work> f = Works.get(job);

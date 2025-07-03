@@ -14,7 +14,7 @@
   "room": "questown:crafting_room",
   "work_states": [
     {
-      "ingredients": "#minecraft:planks",
+      "ingredients": "#minecraft:saplings",
       "quantity": 1
     },
     {

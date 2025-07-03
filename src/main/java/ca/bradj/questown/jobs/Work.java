@@ -11,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -19,6 +18,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Work {
 
@@ -27,7 +27,8 @@ public class Work {
     public final ItemStack icon;
     public final WorksBehaviour.JobFunc jobFunc;
     final WorksBehaviour.SnapshotFunc snapshotFunc;
-    final BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock;
+    final Predicate<JobBlockTestContext> isJobBlock;
+    final BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitializeWorkState;
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
     public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
@@ -44,7 +45,8 @@ public class Work {
             ItemStack icon,
             WorksBehaviour.JobFunc jobFunc,
             WorksBehaviour.SnapshotFunc snapshotFunc,
-            BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock,
+            Predicate<JobBlockTestContext> isJobBlock,
+            BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitializeWorkState,
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
@@ -60,6 +62,7 @@ public class Work {
         this.jobFunc = jobFunc;
         this.snapshotFunc = snapshotFunc;
         this.isJobBlock = isJobBlock;
+        this.shouldInitializeWorkState = shouldInitializeWorkState;
         this.baseRoom = baseRoom;
         this.initialStatus = initialStatus;
         this.results = results;
@@ -73,17 +76,41 @@ public class Work {
 
     public Work withPriority(int priority) {
         return new Work(
-                id, parentID, icon, jobFunc, snapshotFunc,
-                isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
-                priority, hasNoOutput
+                id,
+                parentID,
+                icon,
+                jobFunc,
+                snapshotFunc,
+                isJobBlock,
+                shouldInitializeWorkState,
+                baseRoom,
+                initialStatus,
+                results,
+                initialRequest,
+                needs,
+                warper,
+                priority,
+                hasNoOutput
         );
     }
 
     public Work withNeeds(Function<List<MCHeldItem>, Collection<Ingredient>> needz) {
         return new Work(
-                id, parentID, icon, jobFunc, snapshotFunc,
-                isJobBlock, baseRoom, initialStatus, results, initialRequest, needz, warper,
-                priority, hasNoOutput
+                id,
+                parentID,
+                icon,
+                jobFunc,
+                snapshotFunc,
+                isJobBlock,
+                shouldInitializeWorkState,
+                baseRoom,
+                initialStatus,
+                results,
+                initialRequest,
+                needz,
+                warper,
+                priority,
+                hasNoOutput
         );
     }
 
@@ -97,9 +124,21 @@ public class Work {
 
     public Work withOverrides(@NotNull Overrides overrides) {
         Work work = new Work(
-                id, parentID, icon, jobFunc, snapshotFunc,
-                isJobBlock, baseRoom, initialStatus, results, initialRequest, needs, warper,
-                priority, hasNoOutput
+                id,
+                parentID,
+                icon,
+                jobFunc,
+                snapshotFunc,
+                isJobBlock,
+                shouldInitializeWorkState,
+                baseRoom,
+                initialStatus,
+                results,
+                initialRequest,
+                needs,
+                warper,
+                priority,
+                hasNoOutput
         );
         work.overrides = overrides;
         return work;

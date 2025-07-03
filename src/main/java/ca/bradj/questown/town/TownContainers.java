@@ -16,6 +16,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -293,5 +295,24 @@ public class TownContainers {
             ContainerTarget<MCContainer, MCTownItem> a
     ) {
         return pos.distSqr(a.getBlockPos()) / a.getRankingBoost();
+    }
+
+    public static Collection<Item> getUniqueItems(TownInterface t) {
+        // TODO[Performance]: This should probably be stored on the TownFlagBlockEntity
+        //  until the containers change.
+        List<ContainerTarget<MCContainer, MCTownItem>> all = getAllContainers(t, t.getServerLevel());
+        Set<Item> uniqueItems = new HashSet<>();
+        for (ContainerTarget<MCContainer, MCTownItem> container : all) {
+            if (container.getContainer() == null) {
+                continue;
+            }
+            for (int i = 0; i < container.getContainer().size(); i++) {
+                ItemStack stack = container.getContainer().getItem(i).toMCItemStack();
+                if (!stack.isEmpty()) {
+                    uniqueItems.add(stack.getItem());
+                }
+            }
+        }
+        return uniqueItems;
     }
 }

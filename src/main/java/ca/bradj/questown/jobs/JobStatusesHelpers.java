@@ -24,9 +24,9 @@ public class JobStatusesHelpers {
         private final String name;
 
         @Override
-        public LZCD.Populated<WithReason<@Nullable Boolean>> populate() {
+        public Populated<WithReason<@Nullable Boolean>> populate() {
             this.value = WithReason.always(s.get(), "input");
-            return new LZCD.Populated<>(
+            return new Populated<>(
                     name,
                     value,
                     ImmutableMap.of(),

@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -10,7 +11,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,12 +28,12 @@ public class RequireTwoFreeSpotsSpecialRule extends
     @Override
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
-        bxEvent.jobBlockCheckReplacer().accept(before -> (heldItems, bs, block) -> {
-            BlockEntity entity = bxEvent.level().get().getBlockEntity(block);
+        bxEvent.jobBlockCheckReplacer().accept(before -> (ctx) -> {
+            BlockEntity entity = bxEvent.level().get().getBlockEntity(ctx.blockPos());
             if (entity == null) {
                 return false;
             }
-            LazyOptional<IItemHandler> itemHandler = entity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
+            LazyOptional<IItemHandler> itemHandler = entity.getCapability(Compat.ITEM_HANDLER);
             if (!itemHandler.isPresent()) {
                 return false;
             }
@@ -43,7 +43,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
             }
             IItemHandler handler = resolve.get();
             if (hasTwoFreeSlots(handler.getSlots(), handler::getStackInSlot)) {
-                return before.test(heldItems, bs, block);
+                return before.test(ctx);
             }
             return false;
         });

@@ -7,5 +7,5 @@ public interface TownStateProvider {
 
     LZCD.Dependency<Void> isTimerActive();
 
-    LZCD.Dependency<Void> canUseMoreSupplies();
+    LZCD.Dependency<Void> containsWorkableBlocksAtAnyState();
 }

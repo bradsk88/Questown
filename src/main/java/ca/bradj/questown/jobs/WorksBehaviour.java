@@ -188,7 +188,8 @@ public class WorksBehaviour {
                         workSound
                 ),
                 productionJobSnapshot(jobId),
-                (sl, bp) -> location.isJobBlock().test(sl, bp, true),
+                location.isJobBlock(),
+                location.shouldInitializeWorkState(),
                 location.baseRoom(),
                 ProductionStatus.FACTORY.idle(),
                 description.currentlyPossibleResults(),
@@ -246,7 +247,7 @@ public class WorksBehaviour {
     public static SnapshotFunc productionJobSnapshot(JobID id) {
         return (jobId, status, items) -> new SimpleSnapshot<>(
                 id,
-                ProductionStatus.from(status),
+                ProductionStatus.fromNumber(status),
                 items
         );
     }

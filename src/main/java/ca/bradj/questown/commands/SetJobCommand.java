@@ -59,6 +59,7 @@ public class SetJobCommand {
             }
             TownInterface town = vme.getTown();
             town.getVillagerHandle().changeJobForVillager(vme.getUUID(), job, false);
+            town.getVillagerHandle().unlockJob(vme.getUUID(), job);
         }
         return 0;
     }

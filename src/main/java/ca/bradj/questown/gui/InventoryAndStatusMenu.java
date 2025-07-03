@@ -1,15 +1,16 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.init.MenuTypesInit;
-import ca.bradj.questown.core.network.JobWantedIngredientsMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,6 +19,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -76,6 +78,25 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     @Override
     public void statusChanged(IStatus<?> newStatus) {
         this.statusSlot.set(SessionUniqueOrdinals.getOrdinal(newStatus));
+        if (!(getPlayer() instanceof ServerPlayer sp)) {
+            return;
+        }
+        ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
+        @Nullable Pair<String, String> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
+        if (newStatus instanceof ProductionStatus ps) {
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sp),
+                    new SyncStatusArtMessage(jobId, ps, tex)
+            );
+            if (text == null) {
+                return;
+            }
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> sp),
+                    new SyncStatusTextMessage(jobId, ps, text.a(), text.b())
+            );
+        }
+
     }
 
     public String getRootJobId() {
@@ -104,6 +125,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         IStatus<?> status = e.getStatusForServer();
         addStatusListener(e, status);
         addWantedIngredientsListener(e, sender);
+        statusChanged(status);
     }
 
     @Override

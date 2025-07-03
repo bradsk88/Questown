@@ -11,6 +11,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -56,10 +57,9 @@ public class ResterWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        (bs, bp, ac) -> {
-                            boolean isBlock = WorkLocation.isBlock(HospitalBedBlock.class).test(bs, bp);
-                            return isBlock && bs.state(bp).getValue(BedBlock.PART).equals(BedPart.HEAD);
-                        }, SpecialQuests.CLINIC
+                        (ctx) -> isBed(ctx.blockInfo(), ctx.blockPos()),
+                        ResterWork::isBed,
+                        SpecialQuests.CLINIC
                 ),
                 new WorkStates(
                         MAX_STATE,
@@ -106,6 +106,14 @@ public class ResterWork {
                         WorkSeekerJob::getIDForRoot
                 )
         );
+    }
+
+    private static boolean isBed(
+            WorkLocation.BlockInfo i,
+            BlockPos p
+    ) {
+        boolean isBlock = WorkLocation.isBlock(HospitalBedBlock.class).test(i, p);
+        return isBlock && i.state(p).getValue(BedBlock.PART).equals(BedPart.HEAD);
     }
 
     public static JobID getIdForRoot(String rootId) {

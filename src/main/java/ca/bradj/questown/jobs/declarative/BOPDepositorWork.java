@@ -59,7 +59,8 @@ public class BOPDepositorWork {
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
                 new WorkLocation(
-                        (sl, bp, active) -> (WorkLocation.isBlock(TownFlagBlock.class).test(sl, bp)),
+                        (c) -> (WorkLocation.isBlock(TownFlagBlock.class).test(c.blockInfo(), c.blockPos())),
+                        (i, p) -> (WorkLocation.isBlock(TownFlagBlock.class).test(i, p)),
                         SpecialQuests.TOWN_FLAG
                 ),
                 new WorkStates(

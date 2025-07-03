@@ -405,7 +405,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.villagerHandle.tick(Util.getTick(sl), signals);
 
-        e.economics.tick();
+        if (e.economics.tick()) {
+            if (e.economics.getAggregatedItems(null).stream().anyMatch(v -> v.timesNeeded() > 4)) {
+                AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                        sl,
+                        VisitorTrigger.Triggers.FirstUnmetNeeds,
+                        e.getBlockPos()
+                );
+            }
+        }
 
         e.everScanned = true;
 
@@ -1069,6 +1077,4 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
         level.addFreshEntity(item);
     }
-
-
 }

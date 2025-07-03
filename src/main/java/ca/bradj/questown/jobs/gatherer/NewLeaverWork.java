@@ -68,10 +68,7 @@ public class NewLeaverWork {
                         t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
                         initialRequest
                 ),
-                new WorkLocation(
-                        (sl, bp, active) -> (WorkLocation.isBlock(WelcomeMatBlock.class).test(sl, bp)),
-                        SpecialQuests.TOWN_GATE
-                ),
+                SpecialQuests.TOWN_GATE_LOCATION,
                 new WorkStates(
                         maxState,
                         ingredientsRequiredAtStates,
