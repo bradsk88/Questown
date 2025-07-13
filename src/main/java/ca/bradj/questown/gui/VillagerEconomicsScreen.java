@@ -113,13 +113,14 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     }
 
     @Override
-    protected void renderCardContent(
+    protected List<Component> renderCardContent(
             PoseStack poseStack,
             Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
         renderDataAndIcons(poseStack, card.coords(), card.data());
+        return null;
     }
 
     private void renderDataAndIcons(

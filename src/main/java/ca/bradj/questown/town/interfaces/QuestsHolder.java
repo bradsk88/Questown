@@ -5,6 +5,7 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,4 +36,9 @@ public interface QuestsHolder {
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
     void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
+
+    void addItemQuest(
+            ResourceLocation itemId,
+            int count
+    );
 }

@@ -17,7 +17,7 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.apache.logging.log4j.util.TriConsumer;
+import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -51,7 +51,7 @@ public class ItemJobsScreen extends Screen {
                 () -> width,
                 () -> ImmutableList.copyOf(jobs),
                 UtilClean::noOpConsumer,
-                (s, c, p) -> this.renderCardContent(s, c, new Coordinate(p.a(), p.b())),
+                this::renderCardContent,
                 3,
                 16,
                 EXTRA_HEIGHT
@@ -188,9 +188,9 @@ public class ItemJobsScreen extends Screen {
         return this.delegate.mouseScrolled(p_94686_, p_94687_, p_94688_, this::isMouseOver, this::mouseScrolled);
     }
 
-    private void renderCardContent(
+    private List<Component> renderCardContent(
             PoseStack stack,
-            PagedCardScreen.Card<UIJob> card,
+            Card<UIJob> card,
             Coordinate mouse
     ) {
         PagedCardScreen.CardCoordinates c = card.coords();
@@ -205,19 +205,17 @@ public class ItemJobsScreen extends Screen {
 
         renderJobTitle(stack, d);
 
-        TriConsumer<CardCoordinates, List<Ingredient>, Boolean> renderStrip = (cc, ings, shiftRight) -> {
-            RenderUtil.stripOfRequestableItems(
-                    (ing, coord) -> Ingredients.render(itemRenderer, ing, coord.x(), coord.y()),
-                    (ing) -> ImmutableList.of(Ingredients.getName(ing)),
-                    (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
-                    (text, coord) -> renderTooltip(stack, text, Optional.empty(), coord.x(), coord.y()),
-                    (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
-                    ings,
-                    shiftRight ? cc.topLeft().shifted(64, 0) : cc.topLeft(),
-                    cc.bottomRight(),
-                    mouse
-            );
-        };
+        TriFunction<CardCoordinates, List<Ingredient>, Boolean, List<Component>> renderStrip = (cc, ings, shiftRight) ->
+                RenderUtil.stripOfRequestableItems(
+                        (ing, coord) -> Ingredients.render(itemRenderer, ing, coord.x(), coord.y()),
+                        (ing) -> ImmutableList.of(Ingredients.getName(ing)),
+                        (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
+                        (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
+                        ings,
+                        shiftRight ? cc.topLeft().shifted(64, 0) : cc.topLeft(),
+                        cc.bottomRight(),
+                        mouse
+                );
 
         Component itemsText = Compat.translatable("menu.item_jobs.items_used");
 
@@ -225,24 +223,24 @@ public class ItemJobsScreen extends Screen {
 
         Compat.drawDarkText(font, stack, itemsText, x, (c = down2.apply(c)).topY() + labelOffset);
 
-        renderStrip.accept(c, d.ingredients(), true);
+        List<Component> tt1 = renderStrip.apply(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component toolsText = Compat.translatable("menu.item_jobs.tools_used");
         Compat.drawDarkText(font, stack, toolsText, x, (c = down.apply(c)).topY() + labelOffset);
-        renderStrip.accept(c, d.tools(), true);
+        List<Component> tt2 = renderStrip.apply(c, d.tools(), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component producesText = Compat.translatable("menu.item_jobs.produces");
         Compat.drawDarkText(font, stack, producesText, x, (c = down.apply(c)).topY() + labelOffset);
         List<Ingredient> v = Ingredients.fromItems(d.result());
-        renderStrip.accept(c, putRequestedItemFirst(v), true);
+        List<Component> tt3 = renderStrip.apply(c, putRequestedItemFirst(v), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
         Component translatable = Compat.translatable("menu.item_jobs.room", roomName);
         Compat.drawDarkText(font, stack, translatable, x, (c = down.apply(c)).topY());
-        renderStrip.accept(scootch.apply(c), d.roomRecipe(), false);
+        List<Component> tt4 = renderStrip.apply(scootch.apply(c), d.roomRecipe(), false);
 
         int bgX = (width - backgroundWidth) / 2;
         int bgY = (height - delegate.backgroundHeight) / 2;
@@ -255,6 +253,7 @@ public class ItemJobsScreen extends Screen {
             stripOffset -= 1;
             blitFace(stack, bgX + Util.faceWidth - 3, stripY + stripOffset, uuid, i++);
         }
+        return UtilClean.lastNonNull(tt1, tt2, tt3, tt4);
     }
 
     private List<Ingredient> putRequestedItemFirst(List<Ingredient> v) {

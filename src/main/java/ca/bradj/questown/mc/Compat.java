@@ -48,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -255,8 +256,12 @@ public class Compat {
         font.drawShadow(stack, translatable, x, y, 0xFFFFFFFF);
     }
 
+    public static Component getItemName(ResourceLocation wantedId) {
+        return getItemName(ForgeRegistries.ITEMS.getValue(wantedId));
+    }
+
     public static Component getItemName(Item item) {
-        return translatable(getItemId(item).toString());
+        return item.getName(item.getDefaultInstance());
     }
 
     public static ResourceLocation getItemId(Item item) {
@@ -327,5 +332,13 @@ public class Compat {
             float v1
     ) {
         return RANDOM.nextFloat() * (v1 - v) + v;
+    }
+
+    public static List<FormattedCharSequence> splitText(
+            Font font,
+            Component text,
+            int width
+    ) {
+        return font.split(text, width);
     }
 }

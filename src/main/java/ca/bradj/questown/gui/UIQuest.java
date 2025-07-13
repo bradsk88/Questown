@@ -11,44 +11,58 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class UIQuest implements Comparable<UIQuest> {
 
-    private static final String NBT_VILLAGER_UUID = "villager_uuid";
-    private static final String NBT_BATCH_UUID = "batch_uuid";
-    private static final String NBT_JOB_NAME = "job_name";
-
+    public static final UIQuest BROKEN = new UIQuest(
+            null,
+            SpecialQuests.BROKEN,
+            Quest.QuestType.UNKNOWN,
+            null,
+            Quest.QuestStatus.ACTIVE,
+            null,
+            null,
+            null
+    );
     public final Quest.QuestStatus status;
-    private final RoomRecipe recipe;
+    private final ResourceLocation wantedId;
+    private final Quest.QuestType type;
+    private final ImmutableList<Ingredient> ingredients;
     public final ResourceLocation fromRecipe;
     private final String villagerUUID;
     private final UUID batchUUID;
     private final String jobName;
+    public final boolean isBroken;
 
     public UIQuest(
             UUID batchUUID,
-            RoomRecipe recipe,
+            ResourceLocation wantedId,
+            Quest.QuestType type,
+            @Nullable Collection<Ingredient> ingredients,
             Quest.QuestStatus status,
             @Nullable ResourceLocation fromRecipe,
             @Nullable String jobRecipientUUID,
             @Nullable String jobName
     ) {
-        this.recipe = recipe;
+        this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
+        this.wantedId = wantedId;
+        this.type = type;
+        this.ingredients = ingredients == null ? ImmutableList.of() : ImmutableList.copyOf(ingredients);
         this.status = status;
         this.fromRecipe = fromRecipe;
         this.villagerUUID = jobRecipientUUID;
@@ -80,11 +94,6 @@ public class UIQuest implements Comparable<UIQuest> {
 
         return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();
-            RoomRecipe q = rMap.get(v.getWantedId());
-            if (q == null) {
-                return null;
-            }
-            int recipeStrength = 1; // TODO: Add getter to RoomRecipes
 
             @Nullable String job = null;
             MCReward value = z.getValue();
@@ -99,13 +108,42 @@ public class UIQuest implements Comparable<UIQuest> {
             if (v.getUUID() != null) {
                 jobRecipientUUID = v.getUUID().toString();
             }
+            Collection<Ingredient> ingredientz = getIngredients(v, rMap);
             return new UIQuest(
                     v.getBatchUUID(),
-                    new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength, q.isFarmRecipe()),
-                    v.getStatus(), v.fromRecipeID().orElse(null),
-                    jobRecipientUUID, job
+                    v.getWantedId(),
+                    v.getType(),
+                    ingredientz,
+                    v.getStatus(),
+                    v.fromRecipeID().orElse(null),
+                    jobRecipientUUID,
+                    job
             );
         }).toList();
+    }
+
+    private static Collection<Ingredient> getIngredients(
+            Quest<ResourceLocation, MCRoom> v,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        IForgeRegistry<Item> reg = ForgeRegistries.ITEMS;
+        return switch (v.getType()) {
+            case ROOM -> getRoomIngredients(v, rMap);
+            case ITEM -> Collections.nCopies(v.getCount(), Ingredient.of(reg.getValue(v.getWantedId())));
+            case UNKNOWN -> ImmutableList.of();
+        };
+    }
+
+    private static Collection<Ingredient> getRoomIngredients(
+            Quest<ResourceLocation, MCRoom> v,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        RoomRecipe recip = rMap.get(v.getWantedId());
+        if (recip == null) {
+            Questown.LOGGER.warn("No recipe found for quest: " + v.getWantedId());
+            return null;
+        }
+        return recip.getIngredients();
     }
 
     @Nullable
@@ -136,22 +174,26 @@ public class UIQuest implements Comparable<UIQuest> {
         if (sComp != 0) {
             return sComp;
         }
-        return recipe.compareTo(uiQuest.recipe);
+        return 0; // TODO: Consider bringing back quest sorting in UI
     }
 
-    public ResourceLocation getRecipeId() {
-        return recipe.getId();
+    public ResourceLocation getWantedId() {
+        return wantedId;
     }
 
     public Collection<Ingredient> getIngredients() {
-        return recipe.getIngredients();
+        return ingredients;
     }
 
     public Component getName() {
-        if (SpecialQuests.isSpecialQuest(recipe.getId())) {
-            return Compat.translatable(recipe.getId().getPath());
+        if (SpecialQuests.isSpecialQuest(wantedId)) {
+            return Compat.translatable(wantedId.getPath());
         }
-        return RoomRecipes.getName(recipe.getId());
+        return switch (type) {
+            case ROOM -> RoomRecipes.getName(wantedId);
+            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+            case UNKNOWN -> Compat.literal("ERROR");
+        };
     }
 
     public String jobName() {
@@ -166,48 +208,20 @@ public class UIQuest implements Comparable<UIQuest> {
         return batchUUID;
     }
 
+    public Quest.QuestType getType() {
+        return type;
+    }
+
     public static class Serializer {
-
-        private final RoomRecipe.Serializer recipeSerializer;
-
-        public Serializer() {
-            this.recipeSerializer = new RoomRecipe.Serializer();
-        }
-
-        public UIQuest fromJson(
-                ResourceLocation p_44103_,
-                JsonObject p_44104_
-        ) {
-            String status = p_44104_.get("status").getAsString();
-            @NotNull RoomRecipe recipe = this.recipeSerializer.fromJson(
-                    p_44103_,
-                    p_44104_.getAsJsonObject("recipe")
-            );
-            ResourceLocation fromID = null;
-            if (p_44104_.has("from_id")) {
-                fromID = new ResourceLocation(p_44104_.get("from_id").getAsString());
-            }
-            String villagerUUID = null;
-            if (p_44104_.has(NBT_VILLAGER_UUID)) {
-                villagerUUID = p_44104_.get(NBT_VILLAGER_UUID).getAsString();
-            }
-            String batchUUID = null;
-            if (p_44104_.has(NBT_BATCH_UUID)) {
-                batchUUID = p_44104_.get(NBT_BATCH_UUID).getAsString();
-            }
-            String jobName = null;
-            if (p_44104_.has(NBT_JOB_NAME)) {
-                jobName = p_44104_.get(NBT_JOB_NAME).getAsString();
-            }
-            return new UIQuest(UUID.fromString(batchUUID), recipe, Quest.QuestStatus.valueOf(status), fromID, villagerUUID, jobName);
-        }
 
         public void toNetwork(
                 FriendlyByteBuf buf,
                 UIQuest p_44102_
         ) {
             buf.writeUtf(p_44102_.status.asString());
-            this.recipeSerializer.toNetwork(buf, p_44102_.recipe);
+            buf.writeResourceLocation(p_44102_.wantedId);
+            QuestTypes.toNetwork(buf, p_44102_.type);
+            buf.writeCollection(p_44102_.ingredients, (b, i) -> Ingredients.toNetwork(i, b));
             String fromStr = "";
             if (p_44102_.fromRecipe != null) {
                 fromStr = p_44102_.fromRecipe.toString();
@@ -231,8 +245,10 @@ public class UIQuest implements Comparable<UIQuest> {
                 ResourceLocation p_44105_,
                 FriendlyByteBuf buf
         ) {
-            String status = buf.readUtf();
-            RoomRecipe rec = this.recipeSerializer.fromNetwork(p_44105_, buf);
+            Quest.QuestStatus status = Quest.QuestStatus.fromString(buf.readUtf());
+            ResourceLocation wanteId = buf.readResourceLocation();
+            Quest.QuestType type = QuestTypes.fromNetwork(buf);
+            Collection<Ingredient> ingrs = buf.readList(Ingredients::fromNetwork);
             String fromStr = buf.readUtf();
             ResourceLocation from = null;
             if (!fromStr.isEmpty()) {
@@ -245,7 +261,7 @@ public class UIQuest implements Comparable<UIQuest> {
             if (!maybeBatchUUID.isEmpty()) {
                 batchUUID = UUID.fromString(maybeBatchUUID);
             }
-            return new UIQuest(batchUUID, rec, Quest.QuestStatus.fromString(status), from, villagerUUID, jobName);
+            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName);
         }
     }
 }

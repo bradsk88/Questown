@@ -18,6 +18,7 @@ import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,21 +30,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class TownQuestsHandle implements QuestsHolder {
-    @Nullable
-    private TownFlagBlockEntity town;
+
+    private UnsafeTown town = new UnsafeTown(TownQuestsHandle.class);
 
     public void initialize(TownFlagBlockEntity t) {
-        this.town = t;
+        this.town.initialize(t);
     }
 
     /**
      * Only safe to call after initialize
+     * @deprecated Use this.town directly.
      */
     private @NotNull TownFlagBlockEntity unsafeGetTown() {
-        if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
-        }
-        return town;
+        return town.getUnsafe();
     }
 
     @Override
@@ -141,6 +140,15 @@ public class TownQuestsHandle implements QuestsHolder {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
         t.setChanged();
+    }
+
+    @Override
+    public void addItemQuest(
+            ResourceLocation itemId,
+            int count
+    ) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addItemQuest(t, t.quests, itemId, count);
     }
 
     @Override

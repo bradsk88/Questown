@@ -15,6 +15,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 public interface VillagerHolder {
+    long size();
+
     void addStatsListener(Consumer<VillagerStatsData> l);
 
     void removeStatsListener(Consumer<VillagerStatsData> villagerStatsMenu);

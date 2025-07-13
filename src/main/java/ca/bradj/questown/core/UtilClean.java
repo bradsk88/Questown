@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class UtilClean {
 
@@ -177,6 +179,7 @@ public class UtilClean {
     ) {
         addAllOrInitialize(map, key, values, ArrayList::new);
     }
+
     public static <X, Y> void addOrInitializeList(
             Map<X, List<Y>> map,
             X key,
@@ -223,5 +226,35 @@ public class UtilClean {
             b.put(xEntry.getKey(), b2.build());
         }
         return b.build();
+    }
+
+    public static <X> ImmutableList<X> values(Collection<? extends AbstractMap.SimpleEntry<?, X>> quests) {
+        return fromEntryList(quests, AbstractMap.SimpleEntry::getValue);
+
+    }
+
+    public static <X> ImmutableList<X> keys(Collection<? extends AbstractMap.SimpleEntry<X, ?>> quests) {
+        return fromEntryList(quests, AbstractMap.SimpleEntry::getKey);
+    }
+
+    private static <Y, X> ImmutableList<X> fromEntryList(
+            Collection<Y> quests,
+            Function<Y, X> getValue
+    ) {
+        Stream<X> objectStream = quests.stream().map(getValue);
+        return objectStream
+                .filter(Objects::nonNull)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
+    }
+
+    public static <X> X lastNonNull(
+            X... inputs
+    ) {
+        for (int i = inputs.length - 1; i >= 0; i--) {
+            if (inputs[i] != null) {
+                return inputs[i];
+            }
+        }
+        return null;
     }
 }

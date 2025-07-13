@@ -5,15 +5,13 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
-import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
-import ca.bradj.questown.town.rewards.ChangeJobReward;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import ca.bradj.questown.town.rewards.*;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
@@ -73,7 +71,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
+
         UUID nextVisitorUUID = UUID.randomUUID();
+
+        if (town.getVillagerHandle().size() == 1) {
+            return new MCRewardList(
+                    town,
+                    new SpawnVisitorReward(town, nextVisitorUUID),
+                    new AddItemQuestReward(town, TagsInit.Items.VILLAGER_FOOD.location(), 20)
+            );
+        }
+
         MCRewardList newVisitor = new MCRewardList(
                 town,
                 new SpawnVisitorReward(town, nextVisitorUUID),
@@ -218,6 +226,20 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
         quests.questRequests.add(new PendingReward(visitorUUID, reward));
+    }
+
+
+
+    public static void addItemQuest(
+            TownFlagBlockEntity t,
+            TownQuests quests,
+            ResourceLocation itemId,
+            int count
+    ) {
+        @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
+        MCQuestBatch batch = new MCQuestBatch(UUID.randomUUID(), null, reward);
+        batch.addItemQuest(null, itemId, count);
+        quests.addBatch(batch);
     }
 
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {

@@ -15,8 +15,10 @@ import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
 import org.apache.logging.log4j.util.BiConsumer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.Function;
@@ -26,67 +28,70 @@ public class RenderUtil {
     public static final int SHADOW = 0x30000000;
     public static final int HIGHLIGHT = 0x80FFFFFF;
 
-    public static void renderEllipsesWithTooltip(
+    public static @Nullable List<Component> renderEllipsesAndReturnTooltip(
             EllipsesData data,
             BiConsumer<Component, Coordinate> renderDarkText,
-            BiConsumer<Component, Coordinate> renderTooltip,
             BiConsumer<Coordinate, Coordinate> renderHighlight
     ) {
         int itemX = data.topLeft.x() + (24 * data.maxItemsBeforeEllipses);
         Coordinate squareTopLeft = new Coordinate(itemX, data.topLeft.y());
         renderDarkText.accept(Compat.literal("…"), squareTopLeft.shifted(4, 2));
-        if (UtilClean.isCoordInBox(data.mouse, squareTopLeft, squareTopLeft.shifted(16, 16))) {
-            renderEllipseTooltip(data, renderTooltip, renderHighlight, itemX);
+        if (UtilClean.isCoordInBox(data.mouse, squareTopLeft.shifted(-4, 0), squareTopLeft.shifted(20, 16))) {
+            return getEllipseTooltip(data, renderHighlight, itemX);
         }
+        return null;
     }
 
-    private static void renderEllipseTooltip(
+    private static @Nullable List<Component> getEllipseTooltip(
             EllipsesData data,
-            BiConsumer<Component, Coordinate> renderTooltip,
             BiConsumer<Coordinate, Coordinate> renderHighlight,
             int itemX
     ) {
         Coordinate itemTopLeft = new Coordinate(itemX, data.topLeft.y());
         renderHighlight.accept(itemTopLeft, itemTopLeft.shifted(16, 16));
-        Component andMore = Compat.translatable(
+        MutableComponent andMore = Compat.translatable(
                 "menu.work_add_confirm.and_n_more",
                 data.totalItemCount - data.maxItemsBeforeEllipses
         );
-        renderTooltip.accept(andMore, itemTopLeft);
+        return ImmutableList.of(andMore);
     }
 
-    // TODO: Make this a widget so it can handle clicks
-    public static <ITEM> void stripOfRequestableItems(
+    // TODO: Make this a widget so it can handle clicks and send an OpenItemJobsMessage
+    public static <ITEM> @Nullable List<Component> stripOfRequestableItems(
             BiConsumer<ITEM, Coordinate> renderIngredient,
             Function<ITEM, ImmutableList<Component>> tooltipText,
             BiConsumer<Component, Coordinate> renderDarkText,
-            BiConsumer<List<Component>, Coordinate> renderTooltip,
             BiConsumer<Coordinate, Coordinate> renderHighlight,
             List<ITEM> d,
             Coordinate topLeft,
             Coordinate bottomRight,
             Coordinate mouse
     ) {
+        ImmutableList<Component> tooltips = null;
         int maxItemsOnX = (bottomRight.x() - topLeft.x()) / 24;
         for (int i = 0; i < Math.min(maxItemsOnX, d.size()); i++) {
             ITEM ing = d.get(i);
             Coordinate iTopLeft = new Coordinate(topLeft.x() + (i * 24), topLeft.y());
             renderIngredient.accept(ing, iTopLeft);
             Coordinate iBotRight = iTopLeft.shifted(16, 16);
-            if (UtilClean.isCoordInBox(mouse, iTopLeft, iBotRight)) {
+            if (UtilClean.isCoordInBox(mouse, iTopLeft.shifted(-4, 0), iBotRight.shifted(4, 0))) {
                 renderHighlight.accept(iTopLeft, iBotRight);
-                renderTooltip.accept(tooltipText.apply(ing), new Coordinate(iBotRight.x(), iTopLeft.y()));
+                tooltips = tooltipText.apply(ing);
             }
         }
+        @Nullable List<Component> ellipseTooltips = null;
         if (d.size() > maxItemsOnX) {
             RenderUtil.EllipsesData data = new RenderUtil.EllipsesData(mouse, topLeft, maxItemsOnX, d.size());
-            RenderUtil.renderEllipsesWithTooltip(
+            ellipseTooltips = RenderUtil.renderEllipsesAndReturnTooltip(
                     data,
                     renderDarkText,
-                    (text, coord) -> renderTooltip.accept(ImmutableList.of(text), coord),
                     renderHighlight
             );
         }
+        if (tooltips != null) {
+            return tooltips;
+        }
+        return ellipseTooltips;
     }
 
     public static void highlight(

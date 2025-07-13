@@ -49,6 +49,15 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newItemQuest(
+                    @Nullable UUID ownerId,
+                    ResourceLocation itemId,
+                    int count
+            ) {
+                return MCQuest.item(batchUUID, ownerId, itemId, count);
+            }
+
+            @Override
             public MCQuest completed(
                     MCRoom room,
                     MCQuest input

@@ -292,6 +292,7 @@ public class TownVillagerHandle implements VillagerHolder {
         return this.entities.isEmpty();
     }
 
+    @Override
     public long size() {
         return entities.size();
     }

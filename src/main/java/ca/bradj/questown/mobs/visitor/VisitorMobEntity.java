@@ -243,56 +243,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return b.build();
     }
 
-    private static void openDialogScreen(
-            ServerPlayer sp,
-            Collection<UIQuest> quests,
-            VisitorQuestsContainer.VisitorContext ctx
-    ) {
-        Compat.openScreen(
-                sp, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return Compat.literal("");
-                    }
-
-                    @Override
-                    public @NotNull AbstractContainerMenu createMenu(
-                            int windowId,
-                            @NotNull Inventory inv,
-                            @NotNull Player p
-                    ) {
-                        return new VisitorQuestsContainer(windowId, quests, ctx);
-                    }
-                }, data -> {
-                    UIQuest.Serializer ser = new UIQuest.Serializer();
-                    data.writeInt(quests.size());
-                    data.writeCollection(
-                            quests, (buf, recipe) -> {
-                                ResourceLocation id;
-                                if (recipe == null) {
-                                    id = SpecialQuests.BROKEN;
-                                    recipe = new UIQuest(
-                                            null,
-                                            SpecialQuests.SPECIAL_QUESTS.get(id),
-                                            Quest.QuestStatus.ACTIVE,
-                                            null,
-                                            null,
-                                            null
-                                    );
-                                } else {
-                                    id = recipe.getRecipeId();
-                                }
-                                buf.writeResourceLocation(id);
-                                ser.toNetwork(buf, recipe);
-                            }
-                    );
-                    data.writeBoolean(ctx.isFirstVillager);
-                    data.writeInt(ctx.finishedQuests);
-                    data.writeInt(ctx.unfinishedQuests);
-                }
-        );
-    }
-
 //    public static boolean debuggerReleaseControl() {
 //        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 //        return true;
@@ -1285,9 +1235,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 finishedQuests.size(),
                 unfinishedQuests.size()
         );
-        if (!Jobs.openInventoryAndStatusScreen(sp, this)) {
-            openDialogScreen(sp, quests, ctx);
-        }
+        Jobs.openInventoryAndStatusScreen(sp, this);
 
         return InteractionResult.sidedSuccess(isClientSide);
     }

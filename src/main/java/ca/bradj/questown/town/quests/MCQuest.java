@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -13,16 +14,29 @@ import java.util.UUID;
 public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static final Serializer SERIALIZER = new Serializer();
 
+
     MCQuest() {
         super();
     }
+
     private MCQuest(
             UUID batchUUID,
             @Nullable UUID ownerId,
             ResourceLocation wantedRecipe,
             @Nullable ResourceLocation fromRecipe
     ) {
-        super(batchUUID, ownerId, wantedRecipe, fromRecipe);
+        this(batchUUID, ownerId, wantedRecipe, fromRecipe, QuestType.ROOM, 1);
+    }
+
+    private MCQuest(
+            UUID batchUUID,
+            UUID ownerId,
+            ResourceLocation wantedRecipe,
+            @Nullable ResourceLocation fromRecipe,
+            QuestType questType,
+            int count
+    ) {
+        super(batchUUID, ownerId, wantedRecipe, fromRecipe, questType, count);
     }
 
     public static MCQuest standalone(
@@ -38,6 +52,15 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable UUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
     ) {
         return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId);
+    }
+
+    public static MCQuest item(
+            UUID batchUUID,
+            @Nullable UUID ownerId,
+            ResourceLocation itemId,
+            int count
+    ) {
+        return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
     public MCQuest completed(MCRoom room) {
@@ -60,6 +83,8 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
         private static final String NBT_UUID = "UUID";
         private static final String NBT_BATCH_UUID = "batch_uuid";
+        private static final String NBT_RECIPE_TYPE = "recipe_type";
+        private static final String NBT_COUNT = "count";
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_STATUS = "status";
@@ -76,6 +101,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (quest.getUUID() != null) {
                 ct.putUUID(NBT_UUID, quest.getUUID());
             }
+            ct.put(NBT_RECIPE_TYPE, QuestTypes.serializeNBT(quest.getType()));
+            ct.putInt(NBT_COUNT, quest.getCount());
+
             ct.putString(NBT_RECIPE_ID, quest.getWantedId().toString());
             ct.putString(NBT_STATUS, quest.getStatus().name());
 
@@ -101,6 +129,11 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (nbt.contains(NBT_UUID)) {
                 uuid = nbt.getUUID(NBT_UUID);
             }
+            QuestType type = QuestTypes.deserializeNBT(nbt.getCompound(NBT_RECIPE_TYPE));
+            int count = 1; // Default count, can be overridden by specific quest types.
+            if (nbt.contains(NBT_COUNT)) {
+                count = nbt.getInt(NBT_COUNT);
+            }
             ResourceLocation recipeId = new ResourceLocation(nbt.getString(NBT_RECIPE_ID));
             QuestStatus status = QuestStatus.valueOf(nbt.getString(NBT_STATUS));
             int doorX = nbt.getInt(NBT_COMPLETED_ON_DOORPOS_X);
@@ -117,7 +150,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 fromRecipeId = new ResourceLocation(nbt.getString(NBT_FROM_RECIPE_ID));
             }
             quest.initialize(
-                    uuid, recipeId, status,
+                    uuid, type, count, recipeId, status,
                     new MCRoom(doorPos, ImmutableList.of(space), doorY),
                     fromRecipeId
             );

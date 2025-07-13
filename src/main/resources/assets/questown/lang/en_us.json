@@ -338,6 +338,7 @@
   "menu.common.cancel": "Cancel",
   "menu.common.unlock": "Unlock",
   "menu.common.stat_tooltip": "%s (%d/%d)",
+  "menu.common.quantity": "%s x%d",
   "menu.work_add_confirm.title": "Requesting %s",
   "menu.work_add_confirm.there_are_n_known_jobs": "There are %d known jobs",
   "menu.work_add_confirm.which_produce_this_item": "which produce this item.",
@@ -347,6 +348,8 @@
   "menu.quests": "Quests",
   "menu.quests.confirm_remove_top": "Decline this batch of %d quests?",
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
+  "menu.quests.item_quest": "Add %d %s to town storage (Can be done by villagers or players)",
+  "menu.quests.room_quest": "Build a room containing the blocks shown here",
   "menu.jobs": "Jobs",
   "menu.decline": "Decline",
   "menu.back": "Back",
@@ -376,5 +379,8 @@
   "#questown:farmlands": "Farmlands",
   "#questown:fishing_rods": "Fishing Rods",
   "#questown:compostable": "Compostables",
+  "#questown:light_sources": "Light Source",
+  "#forge:chests": "Chest",
+  "#minecraft:beds": "Bed",
   "#minecraft:coals": "Coal"
 }

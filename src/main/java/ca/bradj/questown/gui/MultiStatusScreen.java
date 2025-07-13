@@ -77,15 +77,16 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     @Override
-    protected void renderCardContent(
+    protected List<Component> renderCardContent(
             PoseStack poseStack,
-            PagedCardScreen.Card<UUID> card,
+            Card<UUID> card,
             int mouseX,
             int mouseY
     ) {
         renderStatus(poseStack, card.coords(), card.data());
         renderInventory(card.coords(), card.data());
         renderFace(poseStack, card.coords(), card.data());
+        return null;
     }
 
     private void renderInventory(
