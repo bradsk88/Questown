@@ -76,14 +76,10 @@ public class WorkSpotFromHeldItemSpecialRule extends
             @Nullable MCRoom room
     ) {
         return new NVIRoom<>(new IRoomRecipeMatch<>() {
-            @Override
-            public ResourceLocation getRecipeID() {
-                return bxEvent.locInfo().baseRoom();
-            }
 
             @Override
             public ImmutableList<ResourceLocation> getRecipeIDs() {
-                return ImmutableList.of(getRecipeID());
+                return ImmutableList.of(bxEvent.locInfo().baseRoom());
             }
 
             @Override

@@ -17,6 +17,7 @@ import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.LevelRoomDetector;
@@ -221,9 +222,10 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     }
 
     @Override
-    public void deregisterDoor(BlockPos doorPos) {
+    public void deregisterDoor(Deregistration d) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        roomsMap.deRegisterDoor(Positions.FromBlockPos(doorPos), doorPos.getY() - t.getY());
+        Position doorPos = Positions.FromBlockPos(d.doorPos());
+        roomsMap.deRegisterDoor(doorPos, d.doorPos().getY() - t.getY(), d.reason());
         t.setChanged();
     }
 
@@ -402,7 +404,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             Optional<Room> room = UtilClean.getOrDefault(done, clickedRRPos, Optional.empty());
             QT.FLAG_LOGGER.debug("Room is {}", room);
             room.ifPresent(r -> {
-                Optional<RoomRecipeMatch<MCRoom>> recipe = t.getRoomHandle().computeRecipe(new MCRoom(
+                Optional<RoomRecipeMatches<MCRoom>> recipe = t.getRoomHandle().computeRecipe(new MCRoom(
                         r.getDoorPos(),
                         r.getSpaces(),
                         clickedPos.getY()
@@ -422,11 +424,11 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return roomsMap.isDoorRegistered(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
     }
 
-    public Optional<RoomRecipeMatch<MCRoom>> computeRecipe(
+    public Optional<RoomRecipeMatches<MCRoom>> computeRecipe(
             MCRoom r
     ) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        return roomsMap.computeRecipe(getServerLevel(t), r, r.yCoord - t.getY());
+        return roomsMap.computeRecipe(getServerLevel(t), r);
     }
 
     @Override

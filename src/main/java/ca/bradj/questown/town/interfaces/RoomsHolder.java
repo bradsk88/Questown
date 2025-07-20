@@ -2,6 +2,7 @@ package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
@@ -24,7 +25,10 @@ public interface RoomsHolder {
     void registerFenceGate(BlockPos doorPos);
 
     void registerDoor(BlockPos doorPos);
-    void deregisterDoor(BlockPos doorPos);
+
+    record Deregistration(BlockPos doorPos, String reason) {}
+
+    void deregisterDoor(Deregistration dereg);
 
     Supplier<Boolean> getDebugTaskForDoor(BlockPos clickedPos);
 
@@ -32,7 +36,7 @@ public interface RoomsHolder {
 
     boolean isDoorRegistered(BlockPos clickedPos);
 
-    Optional<RoomRecipeMatch<MCRoom>> computeRecipe(MCRoom r);
+    Optional<RoomRecipeMatches<MCRoom>> computeRecipe(MCRoom r);
 
     ImmutableSet<TownPosition> getAllRegisteredDoors();
 

@@ -4,9 +4,11 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
 import ca.bradj.questown.town.WallDetection;
+import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -44,7 +46,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
     private @Nullable MultiLevelRoomDetector pendingRooms;
-    private List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
+    private final List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
 
@@ -159,7 +161,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     this::unsafeGetTown
             ) {
                 @Override
-                protected Optional<RoomRecipeMatch<MCRoom>> getActiveRecipes(
+                protected Optional<RoomRecipeMatches<MCRoom>> getActiveRecipes(
                         ServerLevel level,
                         MCRoom room
                 ) {
@@ -217,8 +219,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                        })
                        .toList()
                        .forEach(tp -> {
-                           registeredDoors.remove(tp);
-                           QT.FLAG_LOGGER.debug("Door was de-registered due to not existing anymore");
+                           deRegisterDoor(tp.toPosition(), tp.scanLevel, "not existing anymore");
                        });
 
         Map<Integer, Collection<Position>> doorsAtLevel = new HashMap<>();
@@ -284,11 +285,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     deadDoor.scanLevel + flagPos.getY(),
                     deadDoor.z
             );
-            unsafeGetTown().getRoomHandle().deregisterDoor(p);
-            QT.FLAG_LOGGER.info(
-                    "De-registered door at {} because {} full town scans finished without finding a valid room",
-                    Positions.FromBlockPos(p).getUIString(), ticksToKeepNonRoomDoors
-            );
+            String reason  =String.format("%d full town scans finished without finding a valid room", times);
+            RoomsHolder.Deregistration dereg = new RoomsHolder.Deregistration(p, reason);
+            unsafeGetTown().getRoomHandle().deregisterDoor(dereg);
             // TODO: Why isn't this just "remove(deadDoor)"?
             doorsToDrop.remove(new TownPosition(p.getX(), p.getZ(), p.getY() - flagPos.getY()));
         });
@@ -425,10 +424,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public void deRegisterDoor(
             Position p,
-            int scanLevel
+            int scanLevel,
+            String reason
     ) {
         registeredDoors.remove(new TownPosition(p.x, p.z, scanLevel));
-        Questown.LOGGER.debug("Door was de-registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
+        Questown.LOGGER.debug("Door was de-registered at x={}, z={}, scanLevel={}, reason={}", p.x, p.z, scanLevel, reason);
+        TownRooms rooms = getOrCreateRooms(scanLevel);
+        Optional<MCRoom> oldRoom = rooms.get(p);
+        oldRoom.ifPresent(mcRoom -> rooms.roomDestroyed(p, mcRoom));
     }
 
     public void registerFenceGate(
@@ -498,12 +501,11 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 .anyMatch(v -> v.scanLevel == y && position.x == v.x && position.z == v.z);
     }
 
-    public Optional<RoomRecipeMatch<MCRoom>> computeRecipe(
+    public Optional<RoomRecipeMatches<MCRoom>> computeRecipe(
             ServerLevel serverLevel,
-            MCRoom r,
-            int scanLevel
+            MCRoom r
     ) {
-        return RecipeDetection.getActiveRecipe(serverLevel, r, getOrCreateRooms(scanLevel));
+        return RecipeDetection.getActiveRecipes(serverLevel, r, false);
     }
 
     public ImmutableSet<TownPosition> getAllRegisteredDoors() {

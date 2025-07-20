@@ -17,7 +17,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
@@ -102,7 +101,7 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             return new UIQuest(
                     v.getBatchUUID(),
-                    new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength),
+                    new RoomRecipe(v.getWantedId(), q.getIngredients(), recipeStrength, q.isFarmRecipe()),
                     v.getStatus(), v.fromRecipeID().orElse(null),
                     jobRecipientUUID, job
             );

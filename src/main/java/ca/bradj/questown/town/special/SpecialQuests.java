@@ -25,23 +25,25 @@ public class SpecialQuests {
 
     public static final Map<ResourceLocation, RoomRecipe> SPECIAL_QUESTS = ImmutableMap.of(
             BROKEN,
-            new RoomRecipe(BROKEN, NonNullList.create(), Integer.MAX_VALUE),
+            new RoomRecipe(BROKEN, NonNullList.create(), Integer.MAX_VALUE, false),
             CAMPFIRE,
-            new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE),
+            new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE, false),
             TOWN_GATE,
             new RoomRecipe(
                     TOWN_GATE,
                     NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())),
-                    Integer.MAX_VALUE
+                    Integer.MAX_VALUE,
+                    false
             ),
             TOWN_FLAG,
             new RoomRecipe(
                     TOWN_FLAG,
                     NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get())),
-                    Integer.MAX_VALUE
+                    Integer.MAX_VALUE,
+                    false
             ),
             FARM,
-            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(Items.DIRT)), Integer.MAX_VALUE)
+            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(Items.DIRT)), Integer.MAX_VALUE, true)
     );
     public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
     public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
