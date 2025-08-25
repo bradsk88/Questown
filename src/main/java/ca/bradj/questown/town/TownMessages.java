@@ -6,9 +6,10 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -75,16 +76,24 @@ public class TownMessages {
     }
 
     public void questCompleted(MCQuest quest) {
+        Component name = RoomRecipes.getName(quest.getWantedId());
+        if (quest.getType() == Quest.QuestType.ITEM) {
+            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
+        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
-                RoomRecipes.getName(quest.getWantedId())
+                name
         );
     }
 
     public void questLost(MCQuest quest) {
+        Component name = RoomRecipes.getName(quest.getWantedId());
+        if (quest.getType() == Quest.QuestType.ITEM) {
+            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
+        }
         broadcastMessage(
                 "messages.town_flag.quest_lost",
-                RoomRecipes.getName(quest.getWantedId())
+                name
         );
     }
 

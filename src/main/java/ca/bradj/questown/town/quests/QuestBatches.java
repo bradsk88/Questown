@@ -9,6 +9,7 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 public class QuestBatches<
@@ -42,6 +43,43 @@ public class QuestBatches<
 
     public boolean decline(BATCH b) {
         return batches.remove(b);
+    }
+
+    public interface Tracker<ITEM_KEY, ITEM, QUEST> {
+        int addCount(Map<ITEM_KEY, Integer> map, ITEM item);
+        void removeCount(Map<ITEM_KEY, Integer> map, QUEST quest);
+    }
+
+    public <ITEM_KEY, ITEM> void processItemQuests(
+            ImmutableList<ITEM> allStacks,
+            BiPredicate<KEY, ITEM> questMatchesStack,
+            Tracker<ITEM_KEY, ITEM, QUEST> tracker
+    ) {
+        List<QUEST> stacksToFind = getAll().stream()
+                                           .filter(v -> v.getType() == Quest.QuestType.ITEM)
+                                           .collect(Collectors.toCollection(ArrayList::new));
+        if (stacksToFind.isEmpty()) {
+            return;
+        }
+
+        Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
+        for (ITEM stack : allStacks) {
+            Optional<QUEST> quest = stacksToFind.stream()
+                                                .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
+                                                .findFirst();
+            if (quest.isEmpty()) {
+                continue;
+            }
+            int result = tracker.addCount(itemCounts, stack);
+            if (result >= quest.get().getCountNeeded()) {
+                markRecipeAsComplete(null, quest.get().getWantedId());
+                stacksToFind.remove(quest.get());
+                if (stacksToFind.isEmpty()) {
+                    return;
+                }
+                tracker.removeCount(itemCounts, quest.get());
+            }
+        }
     }
 
     public interface Factory<BATCH, REWARD> {
@@ -117,7 +155,7 @@ public class QuestBatches<
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 if (q.getType() == Quest.QuestType.ITEM) {
-                    e.addItemQuest(owner, q.getWantedId(), q.getCount());
+                    e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
                 } else {
                     e.addNewQuest(owner, q.getWantedId());
                 }
@@ -188,11 +226,11 @@ public class QuestBatches<
     }
 
     public void markRecipeAsComplete(
-            ROOM room,
+            @Nullable ROOM room,
             KEY recipeId
     ) {
         for (BATCH b : batches) {
-            if (b.getAll().stream()
+            if (room != null && b.getAll().stream()
                  .filter(Quest::isComplete)
                  .filter(v -> recipeId.equals(v.getWantedId()))
                  .anyMatch(v -> room.equals(v.completedOn))

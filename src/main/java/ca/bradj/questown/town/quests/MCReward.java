@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 public abstract class MCReward extends Reward {
 
     public static final Serializer SERIALIZER = new Serializer();
-    private final RewardType<? extends MCReward> rType;
+    public final RewardType<? extends MCReward> rType;
 
     public MCReward(
             RewardType<? extends MCReward> rType

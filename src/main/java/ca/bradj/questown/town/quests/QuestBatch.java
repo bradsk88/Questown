@@ -255,6 +255,10 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return batchUUID;
     }
 
+    public @Nullable String getCompletionMessage() {
+        return null;
+    };
+
     public interface ChangeListener<QUEST extends Quest<?, ?>> {
         void questCompleted(QUEST quest);
 

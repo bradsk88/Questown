@@ -6,6 +6,7 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
@@ -45,6 +46,31 @@ import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>> {
+    private static final QuestBatches.Tracker<ResourceLocation, MCTownItem, MCQuest> TRACKER = new QuestBatches.Tracker<ResourceLocation, MCTownItem, MCQuest>() {
+        @Override
+        public int addCount(
+                Map<ResourceLocation, Integer> map,
+                MCTownItem stack
+        ) {
+            return map.merge(
+                    Compat.getItemId(stack.get()),
+                    stack.toMCItemStack().getCount(),
+                    Integer::sum
+            );
+        }
+
+        @Override
+        public void removeCount(
+                Map<ResourceLocation, Integer> map,
+                MCQuest mcQuest
+        ) {
+            map.merge(
+                    mcQuest.getWantedId(),
+                    -mcQuest.getCountNeeded(),
+                    Integer::sum
+            );
+        }
+    };
     private @Nullable QuestBatchSeed pendingQuests = null;
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
@@ -229,7 +255,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
 
-
     public static void addItemQuest(
             TownFlagBlockEntity t,
             TownQuests quests,
@@ -237,7 +262,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             int count
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
-        MCQuestBatch batch = new MCQuestBatch(UUID.randomUUID(), null, reward);
+        MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
         batch.addItemQuest(null, itemId, count);
         quests.addBatch(batch);
     }
@@ -380,8 +405,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        town.getUnsafe().messages.broadcastMessage("dialog.visitors.instruction.sleep_visitors");
         town.getUnsafe().setChanged();
+        String completionMessage = quest.getCompletionMessage();
+        if (completionMessage == null || completionMessage.isBlank()) {
+            return;
+        }
+        town.getUnsafe().messages.broadcastMessage(completionMessage);
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
@@ -495,5 +524,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public void initialize(TownFlagBlockEntity t) {
         this.town.initialize(t);
+    }
+
+    public void processItemQuests(ImmutableList<MCTownItem> allStacks) {
+        questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
+    }
+
+    private boolean questMatchesStack(
+            ResourceLocation wantedId,
+            MCTownItem stack
+    ) {
+        return wantedId.equals(Compat.getItemId(stack.get()));
     }
 }

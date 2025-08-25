@@ -372,6 +372,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         if (stateChanged) {
             e.possibleWork.invalidate();
+            e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
         }
 
         e.workHandle.tick(sl);

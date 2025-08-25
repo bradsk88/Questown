@@ -310,23 +310,27 @@ public class TownFlagState {
             ContainerTarget<MCContainer, MCTownItem> v = matchIter.next();
             BlockPos bp = Positions.ToBlock(v.getPosition(), v.getYPosition());
             BlockEntity entity = level.getBlockEntity(bp);
-            LazyOptional<IItemHandler> cap = entity.getCapability(
-                    CapabilityItemHandler.ITEM_HANDLER_CAPABILITY);
-            if (cap != null && cap.isPresent()) {
-                int newValue = determineValue(cap.resolve().get());
-                if (listenedBlocks.containsKey(bp)) {
-                    Integer oldValue = listenedBlocks.get(bp);
-                    if (!oldValue.equals(newValue)) {
-                        QT.FLAG_LOGGER.debug("Chest tags changed");
-                        containersChanged = true;
-                    } else {
-                        continue;
-                    }
-                } else {
-                    containersChanged = true;
-                }
-                listenedBlocks.put(bp, newValue);
+            if (entity == null) {
+                QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
+                continue;
             }
+            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.ITEM_HANDLER);
+            if (!cap.isPresent()) {
+                continue;
+            }
+            int newValue = determineValue(cap.resolve().get());
+            if (listenedBlocks.containsKey(bp)) {
+                Integer oldValue = listenedBlocks.get(bp);
+                if (!oldValue.equals(newValue)) {
+                    QT.FLAG_LOGGER.debug("Chest tags changed");
+                    containersChanged = true;
+                } else {
+                    continue;
+                }
+            } else {
+                containersChanged = true;
+            }
+            listenedBlocks.put(bp, newValue);
         }
         return containersChanged;
     }

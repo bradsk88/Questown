@@ -44,14 +44,14 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable UUID ownerId,
             ResourceLocation recipeId
     ) {
-        return new MCQuest(batchUUID, ownerId, recipeId, null);
+        return new MCQuest(batchUUID, ownerId, recipeId, null, QuestType.ROOM, 1);
     }
 
     public static MCQuest upgrade(
             UUID batchUUID,
             @Nullable UUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
     ) {
-        return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId);
+        return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId, QuestType.ROOM, 1);
     }
 
     public static MCQuest item(
@@ -63,8 +63,10 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
-    public MCQuest completed(MCRoom room) {
-        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null));
+    // TODO: Consider changing this to a door instead of a room, since the room can change shape easily
+    //  and when the door is removed, the quest is invalidated anyway.
+    public MCQuest completed(@Nullable MCRoom room) {
+        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null), getType(), getCountNeeded());
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
@@ -72,7 +74,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     }
 
     public MCQuest lost() {
-        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null));
+        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null), QuestType.ROOM, 1);
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
@@ -102,7 +104,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 ct.putUUID(NBT_UUID, quest.getUUID());
             }
             ct.put(NBT_RECIPE_TYPE, QuestTypes.serializeNBT(quest.getType()));
-            ct.putInt(NBT_COUNT, quest.getCount());
+            ct.putInt(NBT_COUNT, quest.getCountNeeded());
 
             ct.putString(NBT_RECIPE_ID, quest.getWantedId().toString());
             ct.putString(NBT_STATUS, quest.getStatus().name());

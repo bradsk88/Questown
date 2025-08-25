@@ -12,6 +12,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -314,5 +315,14 @@ public class TownContainers {
             }
         }
         return uniqueItems;
+    }
+
+    public static ImmutableList<MCTownItem> getAllStacks(
+            TownFlagBlockEntity e,
+            ServerLevel serverLevel
+    ) {
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainers(e, serverLevel);
+        return cs.stream().map(ContainerTarget::getItems).flatMap(Collection::stream).filter(v -> !v.isEmpty())
+                 .collect(ImmutableList.toImmutableList());
     }
 }

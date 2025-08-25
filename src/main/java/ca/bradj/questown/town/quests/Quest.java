@@ -110,7 +110,7 @@ public class Quest<KEY, ROOM extends Room> {
         return type;
     }
 
-    public int getCount() {
+    public int getCountNeeded() {
         return count;
     }
 

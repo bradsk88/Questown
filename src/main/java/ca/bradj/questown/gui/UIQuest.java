@@ -129,7 +129,7 @@ public class UIQuest implements Comparable<UIQuest> {
         IForgeRegistry<Item> reg = ForgeRegistries.ITEMS;
         return switch (v.getType()) {
             case ROOM -> getRoomIngredients(v, rMap);
-            case ITEM -> Collections.nCopies(v.getCount(), Ingredient.of(reg.getValue(v.getWantedId())));
+            case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -141,7 +141,7 @@ public class UIQuest implements Comparable<UIQuest> {
         RoomRecipe recip = rMap.get(v.getWantedId());
         if (recip == null) {
             Questown.LOGGER.warn("No recipe found for quest: " + v.getWantedId());
-            return null;
+            return ImmutableList.of();
         }
         return recip.getIngredients();
     }

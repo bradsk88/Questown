@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -59,7 +60,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
             @Override
             public MCQuest completed(
-                    MCRoom room,
+                    @Nullable MCRoom room,
                     MCQuest input
             ) {
                 return input.completed(room);
@@ -158,5 +159,19 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
             return batchUUID;
         }
+    }
+
+    @Override
+    public String getCompletionMessage() {
+        if (!reward.rType.equals(RewardsInit.DELAYED.get())) {
+            return null;
+        }
+
+        MCDelayedReward r = (MCDelayedReward) reward;
+        if (r.getContainedRewards().stream().noneMatch(v -> v.rType.equals(RewardsInit.VISITOR.get()))) {
+            return null;
+        }
+
+        return "dialog.visitors.instruction.sleep_visitors";
     }
 }
