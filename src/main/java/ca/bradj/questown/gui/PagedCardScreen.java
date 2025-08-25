@@ -210,6 +210,7 @@ public final class PagedCardScreen<D> {
             int mouseY,
             boolean drawCardBg
     ) {
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         Coordinate mousePosition = new Coordinate(mouseX, mouseY);
         List<Component> tooltip = null;
         for (Card<D> card : cards()) {

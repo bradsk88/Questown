@@ -13,6 +13,7 @@ public class CommandInit {
     public static void on(RegisterCommandsEvent event) {
         // Dev commands
         DevQuestAddItemCommand.register(event.getDispatcher());
+        DevQuestDeserializeCommand.register(event.getDispatcher());
 
         // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());

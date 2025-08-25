@@ -174,7 +174,7 @@ public class UIQuest implements Comparable<UIQuest> {
         if (sComp != 0) {
             return sComp;
         }
-        return 0; // TODO: Consider bringing back quest sorting in UI
+        return type.compareTo(uiQuest.type); // TODO: Consider bringing back quest sorting in UI
     }
 
     public ResourceLocation getWantedId() {

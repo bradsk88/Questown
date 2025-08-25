@@ -116,7 +116,11 @@ public class QuestBatches<
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
-                e.addNewQuest(owner, q.getWantedId());
+                if (q.getType() == Quest.QuestType.ITEM) {
+                    e.addItemQuest(owner, q.getWantedId(), q.getCount());
+                } else {
+                    e.addNewQuest(owner, q.getWantedId());
+                }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
                     e.markRecipeAsComplete(q.completedOn, q.getWantedId());

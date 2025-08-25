@@ -129,7 +129,10 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (nbt.contains(NBT_UUID)) {
                 uuid = nbt.getUUID(NBT_UUID);
             }
-            QuestType type = QuestTypes.deserializeNBT(nbt.getCompound(NBT_RECIPE_TYPE));
+            QuestType type = QuestType.ROOM;
+            if (nbt.contains(NBT_RECIPE_TYPE)) {
+                type = QuestTypes.deserializeNBT(nbt.getCompound(NBT_RECIPE_TYPE));
+            }
             int count = 1; // Default count, can be overridden by specific quest types.
             if (nbt.contains(NBT_COUNT)) {
                 count = nbt.getInt(NBT_COUNT);
