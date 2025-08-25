@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
@@ -226,7 +227,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return false;
     }
 
-    public @Nullable UUID getUUID() {
+    public @Nullable VillagerUUID getUUID() {
         if (quests.isEmpty()) {
             return null;
         }
@@ -241,7 +242,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         ) + ", reward=" + reward + ", questFactory=" + questFactory + ", changeListener=" + changeListener + '}';
     }
 
-    public void assignTo(@NotNull UUID owner) {
+    public void assignTo(@NotNull VillagerUUID owner) {
         for (QUEST q : quests) {
             q.ownerUUID = owner;
         }

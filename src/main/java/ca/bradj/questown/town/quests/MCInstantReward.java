@@ -70,4 +70,9 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
     public String toNiceString() {
         return "Instantly{" + child.toNiceString() + "}";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return child.contains(reward);
+    }
 }

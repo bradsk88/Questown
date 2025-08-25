@@ -1,9 +1,9 @@
 package ca.bradj.questown.town.quests;
 
-import java.util.UUID;
+import ca.bradj.questown.core.VillagerUUID;
 
 public record PendingReward (
-        UUID owner,
+        VillagerUUID owner,
         MCRewardList reward
 ) {
 }

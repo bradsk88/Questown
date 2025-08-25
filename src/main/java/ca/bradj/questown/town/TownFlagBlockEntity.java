@@ -293,8 +293,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 return;
             }
 
-            QT.FLAG_LOGGER.warn("No quests found. This is a bug. Adding a batch for {}", v.getUUID());
-            e.questsHandle.addBatchOfRandomQuestsForVisitor(e.uuid);
+            QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getUUID());
+            e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getUUID());
             e.setChanged();
             e.ticksWithoutQuests = 0;
         });

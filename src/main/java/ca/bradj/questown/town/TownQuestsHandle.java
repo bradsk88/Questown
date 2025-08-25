@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.FlagMenus;
@@ -129,7 +130,7 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID) {
+    public void addBatchOfRandomQuestsForVisitor(@Nullable VillagerUUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addRandomBatchForVisitor(t, t.quests, visitorUUID);
         t.setChanged();

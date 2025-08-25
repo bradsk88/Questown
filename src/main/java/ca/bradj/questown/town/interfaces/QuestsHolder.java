@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -31,7 +32,7 @@ public interface QuestsHolder {
 
     Collection<MCQuest> getQuestsForVillager(UUID uuid);
 
-    void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID);
+    void addBatchOfRandomQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 

@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -104,7 +105,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return new MCRewardList(
                     town,
                     new SpawnVisitorReward(town, nextVisitorUUID),
-                    new AddItemQuestReward(town, TagsInit.Items.VILLAGER_FOOD.location(), 20)
+                    new AddItemQuestReward(town, Compat.getItemId(Items.APPLE), 10)
             );
         }
 
@@ -152,8 +153,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     "No upgrade paths could be determined because no quests have been completed yet for {}",
                     visitorUUID
             );
-            QT.QUESTS_LOGGER.info("Adding a random batch instead.");
-            TownQuests.addRandomBatchForVisitor(town, quests, visitorUUID);
+            QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
             return;
         }
 
@@ -177,8 +177,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return;
         }
 
-        Questown.LOGGER.error("No upgrade paths could be determined. Adding a random batch instead.");
-        TownQuests.addRandomBatchForVisitor(town, quests, visitorUUID);
+        QT.QUESTS_LOGGER.info("No upgrade paths could be determined.");
+        QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
     }
 
     public static void addJobQuest(
@@ -248,12 +248,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static void addRandomBatchForVisitor(
             TownInterface town,
             TownQuests quests,
-            @Nullable UUID visitorUUID
+            @Nullable VillagerUUID visitorUUID
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
         quests.questRequests.add(new PendingReward(visitorUUID, reward));
     }
-
 
     public static void addItemQuest(
             TownFlagBlockEntity t,

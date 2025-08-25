@@ -15,11 +15,11 @@ public class AddItemQuestReward extends MCReward {
 
     public AddItemQuestReward(
             TownInterface town,
-            ResourceLocation itemId,
+            ResourceLocation itemIdNotTag,
             int count
     ) {
         this(RewardsInit.ITEM_QUEST.get(), town);
-        this.itemId = itemId;
+        this.itemId = itemIdNotTag;
         this.count = count;
     }
 
@@ -34,6 +34,11 @@ public class AddItemQuestReward extends MCReward {
     @Override
     public String toNiceString() {
         return count + "x " + itemId.toString();
+    }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return rType.equals(reward);
     }
 
     @Override

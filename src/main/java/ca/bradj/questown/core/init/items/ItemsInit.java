@@ -5,6 +5,7 @@ import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.*;
+import ca.bradj.questown.town.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.BlockItem;
@@ -129,6 +130,10 @@ public class ItemsInit {
     public static void onInteractBlock(PlayerInteractEvent.RightClickBlock event) {
         final var level = event.getLevel();
         if (level.isClientSide) return; // Note this is fired both client and server side
+        if (level.getBlockEntity(event.getPos()) instanceof TownFlagBlockEntity) {
+            return;
+        }
+
         final var itemUsed = event.getItemStack().getItem();
         if (itemUsed instanceof TownWand item) {
             item.onRightClicked(

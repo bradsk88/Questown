@@ -65,6 +65,7 @@ public class QuestBatches<
         Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
         for (ITEM stack : allStacks) {
             Optional<QUEST> quest = stacksToFind.stream()
+                                                // TODO: Also handle tags
                                                 .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
                                                 .findFirst();
             if (quest.isEmpty()) {

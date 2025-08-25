@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -79,7 +80,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     }
 
     @Override
-    public void assignTo(@NotNull UUID owner) {
+    public void assignTo(@NotNull VillagerUUID owner) {
         this.owner = owner;
         super.assignTo(owner);
     }
@@ -163,15 +164,9 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
     @Override
     public String getCompletionMessage() {
-        if (!reward.rType.equals(RewardsInit.DELAYED.get())) {
-            return null;
+        if (reward.contains(RewardsInit.VISITOR.get())) {
+            return "dialog.visitors.instruction.sleep_visitors";
         }
-
-        MCDelayedReward r = (MCDelayedReward) reward;
-        if (r.getContainedRewards().stream().noneMatch(v -> v.rType.equals(RewardsInit.VISITOR.get()))) {
-            return null;
-        }
-
-        return "dialog.visitors.instruction.sleep_visitors";
+        return null;
     }
 }

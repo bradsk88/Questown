@@ -285,7 +285,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                     deadDoor.scanLevel + flagPos.getY(),
                     deadDoor.z
             );
-            String reason  =String.format("%d full town scans finished without finding a valid room", times);
+            String reason  =String.format("%d full town scans finished without finding a valid room", times.size());
             RoomsHolder.Deregistration dereg = new RoomsHolder.Deregistration(p, reason);
             unsafeGetTown().getRoomHandle().deregisterDoor(dereg);
             // TODO: Why isn't this just "remove(deadDoor)"?

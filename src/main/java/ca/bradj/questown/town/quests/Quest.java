@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 
@@ -12,7 +13,7 @@ public class Quest<KEY, ROOM extends Room> {
 
     final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
     @Nullable
-    protected UUID ownerUUID;
+    protected VillagerUUID ownerUUID;
     protected UUID batchUUID;
     protected KEY recipeId;
     protected QuestStatus status;
@@ -48,7 +49,7 @@ public class Quest<KEY, ROOM extends Room> {
 
     protected Quest(
             UUID batchUUID,
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             KEY recipe,
             @Nullable KEY oldRecipe,
             QuestType questType,
@@ -75,12 +76,12 @@ public class Quest<KEY, ROOM extends Room> {
         return status;
     }
 
-    public UUID getUUID() {
+    public VillagerUUID getUUID() {
         return this.ownerUUID;
     }
 
     public void initialize(
-            UUID uuid,
+            VillagerUUID uuid,
             QuestType type,
             int count,
             KEY recipeId,

@@ -69,4 +69,9 @@ public class AddRandomUpgradeQuest extends MCReward {
     public String toNiceString() {
         return "AddRandomUpgradeQuest";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return rType.equals(reward);
+    }
 }

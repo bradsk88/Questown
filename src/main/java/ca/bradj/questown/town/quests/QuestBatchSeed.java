@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -24,7 +25,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
 
     public MCQuestBatch get(
             MCReward rw,
-            UUID owner
+            VillagerUUID owner
     ) {
         batch.setReward(rw);
         batch.assignTo(owner);
@@ -33,7 +34,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
 
     public QuestBatchSeed(
             ServerLevel level,
-            UUID batchUUID,
+            VillagerUUID batchUUID,
             int targetItemWeight
     ) {
         super(Config.IDEAL_QUEST_THRESHOLD_TICKS.get(), Config.QUEST_GENERATION_MAX_TICKS.get(), targetItemWeight);

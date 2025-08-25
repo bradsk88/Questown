@@ -76,4 +76,9 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
         String vid = visitorUUID == null ? "unowned" : visitorUUID.toString();
         return "AddRandomQuestBatch[" + UtilClean.truncateMiddle(vid) + "]";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get().equals(reward);
+    }
 }

@@ -95,4 +95,9 @@ public class ChangeJobReward extends MCReward {
     public String toNiceString() {
         return "ChangeJob:" + jobName;
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return rType.equals(reward);
+    }
 }
