@@ -2,6 +2,7 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.Marker;
@@ -86,12 +87,13 @@ public class QuestBatches<
     public interface Factory<BATCH, REWARD> {
         BATCH getNew(
                 UUID batchUUID,
-                UUID owner,
+                VillagerUUID owner,
                 REWARD r
         );
     }
 
     public interface VillagerProvider<R extends Room> {
+        // TODO: Update all functions to use VillagerUUID
         UUID getRandomVillager();
 
         boolean isVillagerMissing(UUID uuid);
@@ -151,7 +153,7 @@ public class QuestBatches<
 
         ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
         bs.forEach(v -> {
-            final UUID owner = coerceUUID(villagers, v.getUUID());
+            final VillagerUUID owner = coerceUUID(villagers, v.getUUID());
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
@@ -173,12 +175,12 @@ public class QuestBatches<
     }
 
     @Nullable
-    private static <KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward, BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>> UUID coerceUUID(
+    private static <KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward, BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>> VillagerUUID coerceUUID(
             VillagerProvider villagers,
-            @Nullable UUID owner
+            @Nullable VillagerUUID owner
     ) {
-        if (owner != null && villagers.isVillagerMissing(owner)) {
-            UUID newOwner = villagers.getRandomVillager();
+        if (owner != null && villagers.isVillagerMissing(VillagerUUID.get(owner))) {
+            VillagerUUID newOwner = VillagerUUID.from(villagers.getRandomVillager());
             if (newOwner == null) {
                 // TODO: This will always happen because the flag gets initialized before entities
                 QT.LOGGER.warn("Could not repair quest belonging to {} because no other villagers exist", owner);
@@ -192,7 +194,7 @@ public class QuestBatches<
 
     private BATCH emptyBatch(
             UUID batchUUID,
-            UUID owner,
+            VillagerUUID owner,
             REWARD reward
     ) {
         return this.factory.getNew(batchUUID, owner, reward);

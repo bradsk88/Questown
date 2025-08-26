@@ -131,7 +131,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static void addUpgradeQuest(
             TownInterface town,
             TownQuests quests,
-            UUID visitorUUID
+            VillagerUUID visitorUUID
     ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
@@ -184,13 +184,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static void addJobQuest(
             TownFlagBlockEntity town,
             TownQuests quests,
-            UUID visitorUUID
+            VillagerUUID visitorUUID
     ) {
         List<String> jobs = ImmutableList.copyOf(town.getAvailableRootJobs());
         int jobIdx = Compat.getRandomInt(town.getServerLevel(), jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
-                town, new ChangeJobReward(town, visitorUUID, job),
+                town, new ChangeJobReward(town, VillagerUUID.get(visitorUUID), job),
                 // TODO: Randomize? Maybe do EITHER new villager or more quests
                 new AddBatchOfRandomQuestsForVisitorReward(town, town.getRandomVillager())
         );
@@ -268,6 +268,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
+                                                      .map(VillagerUUID::get)
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
@@ -423,7 +424,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return b.build();
     }
 
-    public Collection<MCQuest> getAllForVillager(UUID uuid) {
+    public Collection<MCQuest> getAllForVillager(VillagerUUID uuid) {
         return this.questBatches.getAllBatches().stream().filter(b -> uuid.equals(b.getOwner()))
                                 .flatMap(v -> v.getAll().stream()).toList();
     }

@@ -5,6 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
@@ -283,21 +284,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        e.villagerHandle.entities().stream().findFirst().ifPresent(v -> {
-            if (!isMissingCompletableQuests(e)) {
-                e.ticksWithoutQuests = 0;
-                return;
-            }
-            if (e.ticksWithoutQuests < 500) {
-                e.ticksWithoutQuests++;
-                return;
-            }
+        e.villagerHandle.entities()
+                        .stream()
+                        .filter(v -> v instanceof VisitorMobEntity)
+                        .map(v -> (VisitorMobEntity) v)
+                        .findFirst()
+                        .ifPresent(v -> {
+                            if (!isMissingCompletableQuests(e)) {
+                                e.ticksWithoutQuests = 0;
+                                return;
+                            }
+                            if (e.ticksWithoutQuests < 500) {
+                                e.ticksWithoutQuests++;
+                                return;
+                            }
 
-            QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getUUID());
-            e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getUUID());
-            e.setChanged();
-            e.ticksWithoutQuests = 0;
-        });
+                            QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
+                            e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getVUID());
+                            e.setChanged();
+                            e.ticksWithoutQuests = 0;
+                        });
 
         Player nearestPlayer = level.getNearestPlayer(
                 blockEntityPos.getX(),
@@ -762,7 +768,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public void addRandomJobQuestForVisitor(UUID visitorUUID) {
-        TownQuests.addJobQuest(this, quests, visitorUUID);
+        TownQuests.addJobQuest(this, quests, VillagerUUID.from(visitorUUID));
         setChanged();
         // TODO: Town should have owners who all get the cheevo
         BlockPos bp = getBlockPos();

@@ -34,7 +34,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
 
     public QuestBatchSeed(
             ServerLevel level,
-            VillagerUUID batchUUID,
+            UUID batchUUID,
             int targetItemWeight
     ) {
         super(Config.IDEAL_QUEST_THRESHOLD_TICKS.get(), Config.QUEST_GENERATION_MAX_TICKS.get(), targetItemWeight);

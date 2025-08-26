@@ -5,6 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
@@ -298,6 +299,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public void setJobChangePending(boolean value) {
         jobChangePending = value;
+    }
+
+    public @Nullable VillagerUUID getVUID() {
+        return VillagerUUID.from(getUUID());
     }
 
     public record WorkToUndo(

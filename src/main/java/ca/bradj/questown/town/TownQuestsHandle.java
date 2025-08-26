@@ -126,7 +126,7 @@ public class TownQuestsHandle implements QuestsHolder {
 
     @Override
     public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
-        return unsafeGetTown().quests.getAllForVillager(uuid);
+        return unsafeGetTown().quests.getAllForVillager(VillagerUUID.from(uuid));
     }
 
     @Override
@@ -139,7 +139,7 @@ public class TownQuestsHandle implements QuestsHolder {
     @Override
     public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        TownQuests.addUpgradeQuest(t, t.quests, VillagerUUID.from(visitorUUID));
         t.setChanged();
     }
 
@@ -224,14 +224,13 @@ public class TownQuestsHandle implements QuestsHolder {
             return;
         }
 
-        UUID owner = b.getOwner();
-        if (owner != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+        if (b.getOwner() != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.get(b.getOwner())));
             return;
         }
 
         QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
-        owner = t.getRandomVillager();
+        UUID owner = t.getRandomVillager();
         if (owner != null) {
             t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
             return;

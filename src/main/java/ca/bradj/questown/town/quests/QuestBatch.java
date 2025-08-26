@@ -60,26 +60,26 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     }
 
     public void addNewQuest(
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             KEY id
     ) {
-        this.quests.add(this.questFactory.newQuest(ownerId, id));
+        this.quests.add(this.questFactory.newQuest(VillagerUUID.get(ownerId), id));
     }
 
     public void addNewUpgradeQuest(
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             KEY fromID,
             KEY toID
     ) {
-        this.quests.add(this.questFactory.newUpgradeQuest(ownerId, fromID, toID));
+        this.quests.add(this.questFactory.newUpgradeQuest(VillagerUUID.get(ownerId), fromID, toID));
     }
 
     public void addItemQuest(
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             KEY itemId,
             int count
     ) {
-        this.quests.add(this.questFactory.newItemQuest(ownerId, itemId, count));
+        this.quests.add(this.questFactory.newItemQuest(VillagerUUID.get(ownerId), itemId, count));
     }
 
     public ImmutableList<QUEST> getAll() {

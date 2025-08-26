@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+    import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -21,7 +22,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     private MCQuest(
             UUID batchUUID,
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             ResourceLocation wantedRecipe,
             @Nullable ResourceLocation fromRecipe
     ) {
@@ -30,7 +31,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     private MCQuest(
             UUID batchUUID,
-            UUID ownerId,
+            VillagerUUID ownerId,
             ResourceLocation wantedRecipe,
             @Nullable ResourceLocation fromRecipe,
             QuestType questType,
@@ -41,7 +42,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     public static MCQuest standalone(
             UUID batchUUID,
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             ResourceLocation recipeId
     ) {
         return new MCQuest(batchUUID, ownerId, recipeId, null, QuestType.ROOM, 1);
@@ -49,14 +50,14 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     public static MCQuest upgrade(
             UUID batchUUID,
-            @Nullable UUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
+            @Nullable VillagerUUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
     ) {
         return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId, QuestType.ROOM, 1);
     }
 
     public static MCQuest item(
             UUID batchUUID,
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             ResourceLocation itemId,
             int count
     ) {
@@ -101,7 +102,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         public CompoundTag serializeNBT(Quest<ResourceLocation, MCRoom> quest) {
             CompoundTag ct = new CompoundTag();
             if (quest.getUUID() != null) {
-                ct.putUUID(NBT_UUID, quest.getUUID());
+                quest.getUUID().writeToNBT(ct, NBT_UUID);
             }
             ct.put(NBT_RECIPE_TYPE, QuestTypes.serializeNBT(quest.getType()));
             ct.putInt(NBT_COUNT, quest.getCountNeeded());
@@ -113,10 +114,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 ct.putInt(NBT_COMPLETED_ON_DOORPOS_X, quest.completedOn.getDoorPos().x);
                 ct.putInt(NBT_COMPLETED_ON_DOORPOS_Y, quest.completedOn.yCoord);
                 ct.putInt(NBT_COMPLETED_ON_DOORPOS_Z, quest.completedOn.getDoorPos().z);
-                ct.putInt(NBT_COMPLETED_ON_AA_X, quest.completedOn.getSpace().getWestX());
-                ct.putInt(NBT_COMPLETED_ON_AA_Z, quest.completedOn.getSpace().getNorthZ());
-                ct.putInt(NBT_COMPLETED_ON_BB_X, quest.completedOn.getSpace().getEastX());
-                ct.putInt(NBT_COMPLETED_ON_BB_Z, quest.completedOn.getSpace().getSouthZ());
+                putSpace(quest, ct);
             }
 
             if (quest.fromRecipeID().isPresent()) {
@@ -125,11 +123,22 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             return ct;
         }
 
+        @SuppressWarnings("removal") // See to-do on completed()
+        private void putSpace(
+                Quest<ResourceLocation, MCRoom> quest,
+                CompoundTag ct
+        ) {
+            ct.putInt(NBT_COMPLETED_ON_AA_X, quest.completedOn.getSpace().getWestX());
+            ct.putInt(NBT_COMPLETED_ON_AA_Z, quest.completedOn.getSpace().getNorthZ());
+            ct.putInt(NBT_COMPLETED_ON_BB_X, quest.completedOn.getSpace().getEastX());
+            ct.putInt(NBT_COMPLETED_ON_BB_Z, quest.completedOn.getSpace().getSouthZ());
+        }
+
         public MCQuest deserializeNBT(CompoundTag nbt) {
             MCQuest quest = new MCQuest();
-            @Nullable UUID uuid = null;
+            @Nullable VillagerUUID uuid = null;
             if (nbt.contains(NBT_UUID)) {
-                uuid = nbt.getUUID(NBT_UUID);
+                uuid =  VillagerUUID.fromNBT(nbt, NBT_UUID);
             }
             QuestType type = QuestType.ROOM;
             if (nbt.contains(NBT_RECIPE_TYPE)) {

@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
@@ -44,7 +45,7 @@ public class UIQuest implements Comparable<UIQuest> {
     private final Quest.QuestType type;
     private final ImmutableList<Ingredient> ingredients;
     public final ResourceLocation fromRecipe;
-    private final String villagerUUID;
+    private final VillagerUUID villagerUUID;
     private final UUID batchUUID;
     private final String jobName;
     public final boolean isBroken;
@@ -56,7 +57,7 @@ public class UIQuest implements Comparable<UIQuest> {
             @Nullable Collection<Ingredient> ingredients,
             Quest.QuestStatus status,
             @Nullable ResourceLocation fromRecipe,
-            @Nullable String jobRecipientUUID,
+            @Nullable VillagerUUID jobRecipientUUID,
             @Nullable String jobName
     ) {
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
@@ -104,9 +105,9 @@ public class UIQuest implements Comparable<UIQuest> {
                 job = findJob(value);
             }
 
-            String jobRecipientUUID = null;
+            VillagerUUID jobRecipientUUID = null;
             if (v.getUUID() != null) {
-                jobRecipientUUID = v.getUUID().toString();
+                jobRecipientUUID = v.getUUID();
             }
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
             return new UIQuest(
@@ -201,7 +202,7 @@ public class UIQuest implements Comparable<UIQuest> {
     }
 
     public String villagerUUID() {
-        return villagerUUID;
+        return VillagerUUID.getStringUUID(villagerUUID);
     }
 
     public UUID getBatchUUID() {
@@ -227,14 +228,10 @@ public class UIQuest implements Comparable<UIQuest> {
                 fromStr = p_44102_.fromRecipe.toString();
             }
             buf.writeUtf(fromStr);
-            String villagerUUID = "";
-            if (p_44102_.villagerUUID != null) {
-                villagerUUID = p_44102_.villagerUUID.toString();
-            }
-            buf.writeUtf(villagerUUID);
+            VillagerUUID.toNetwork(buf, p_44102_.villagerUUID);
             String jobName = "";
             if (p_44102_.jobName != null) {
-                jobName = p_44102_.jobName.toString();
+                jobName = p_44102_.jobName;
             }
             buf.writeUtf(jobName);
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
@@ -254,7 +251,7 @@ public class UIQuest implements Comparable<UIQuest> {
             if (!fromStr.isEmpty()) {
                 from = new ResourceLocation(fromStr);
             }
-            String villagerUUID = buf.readUtf();
+            VillagerUUID villagerUUID = VillagerUUID.fromNetwork(buf);
             String jobName = buf.readUtf();
             String maybeBatchUUID = buf.readUtf();
             UUID batchUUID = null;
