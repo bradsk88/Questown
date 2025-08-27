@@ -4,15 +4,19 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -28,6 +32,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public class SmallSoupPotBlock extends Block implements InsertedItemAware, StatefulJobBlock {
     public static final String ITEM_ID = "soup_pot_small";
@@ -89,21 +94,50 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
     @Override
     public InteractionResult use(
             BlockState p_60503_,
-            Level p_60504_,
-            BlockPos p_60505_,
-            Player p_60506_,
-            InteractionHand p_60507_,
+            Level level,
+            BlockPos blockPos,
+            Player player,
+            InteractionHand hand,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
-        if (p_60504_.isClientSide()) {
+        if (level.isClientSide()) {
             return InteractionResult.CONSUME;
         }
-        BlockState p = p_60504_.getBlockState(p_60505_);
-        int p61126 = (p.getValue(LEVEL) + 1) % 2;
-        p = p.setValue(LEVEL, p61126);
-        p_60504_.setBlockAndUpdate(p_60505_, p);
-        QT.BLOCK_LOGGER.debug("New level {}", p61126);
+
+        return tryTakeSoup(level, blockPos, LEVEL, 1, player, hand);
+    }
+
+    public static InteractionResult tryTakeSoup(
+            Level level,
+            BlockPos p_60505_,
+            IntegerProperty prop,
+            int takeAmount,
+            Player player,
+            InteractionHand hand
+    ) {
+        BlockState p = level.getBlockState(p_60505_);
+        ItemStack itemInHand = player.getItemInHand(hand);
+        if (itemInHand.getItem() instanceof BlockItem) {
+            return InteractionResult.PASS;
+        }
+
+        int oldVal = p.getValue(prop);
+        if (oldVal < takeAmount) {
+            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.questown.soup_pot.empty"));
+            return InteractionResult.CONSUME;
+        }
+
+        if (!itemInHand.is(Items.BOWL)) {
+            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.questown.soup_pot.need_bowl"));
+            return InteractionResult.CONSUME;
+        }
+
+
+        int levelValue = Math.max((p.getValue(prop) - takeAmount), 0);
+        p = p.setValue(prop, levelValue);
+        level.setBlockAndUpdate(p_60505_, p);
+        QT.BLOCK_LOGGER.debug("New level {}", levelValue);
+        player.setItemInHand(hand, Items.MUSHROOM_STEW.getDefaultInstance());
         return InteractionResult.CONSUME;
     }
 

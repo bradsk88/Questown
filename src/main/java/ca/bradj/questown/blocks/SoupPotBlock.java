@@ -24,6 +24,8 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
 
+import static ca.bradj.questown.blocks.SmallSoupPotBlock.tryTakeSoup;
+
 public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedItemAware {
     public static final String ITEM_ID = "soup_pot";
 
@@ -105,15 +107,10 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
             InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
-        BlockState p = p_60504_.getBlockState(p_60505_);
-        int p61126 = (p.getValue(LEVEL) + 1) % 13;
-        p = p.setValue(LEVEL, p61126);
-        p_60504_.setBlockAndUpdate(p_60505_, p);
-        QT.BLOCK_LOGGER.debug("New level {}", p61126);
-        return InteractionResult.CONSUME;
+
+        return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, p_60507_);
     }
 }

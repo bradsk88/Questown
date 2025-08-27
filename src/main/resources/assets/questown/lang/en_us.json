@@ -1,5 +1,7 @@
 {
   "itemGroup.questown": "Questown",
+  "message.questown.soup_pot.need_bowl": "You need a bowl to take soup from the pot",
+  "message.questown.soup_pot.empty": "Villagers can add mushrooms to the pot to make stew",
   "messages.building.room_created": "A new room was constructed at location %s",
   "messages.building.specific_room_created": "A new %s was constructed at location %s",
   "messages.building.recipe_created": "%s created at location %s",
@@ -366,6 +368,7 @@
   "menu.unlock_job.insert_bop": "Insert a Block of Progress to unlock job",
   "menu.unlock_root.insert_bop": "Insert a Block of Progress to change to a different, random profession (starting tomorrow morning)",
   "menu.unlock_root.already_pending": "This villager will change profession in the morning",
+  "menu.block_of_progress.town_has_1": "This village has 1 Block of Progress!",
   "menu.block_of_progress.town_has": "This village has %d Blocks of Progress!",
   "menu.block_of_progress.v_has_earned": "%s has earned a Block of Progress!",
   "menu.block_of_progress.many_uses": "Blocks of Progress can be used for unlocking many things in your village.",
