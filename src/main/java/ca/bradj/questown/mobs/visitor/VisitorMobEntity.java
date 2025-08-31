@@ -315,7 +315,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
-     * {@link TownInterface#changeJobForVisitorFromBoard(UUID, JobID)} instead.
+     * {@link TownInterface#getVillagerHandle().getJobsHandle().change(UUID, JobID)} instead.
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {

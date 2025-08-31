@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -56,6 +57,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private static final int TICK_FACTOR = 10;
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+    final TownVillagerJobsHandle jobs = new TownVillagerJobsHandle();
 
     public void initialize(
             Map<UUID, Integer> fullness,
@@ -179,6 +181,11 @@ public class TownVillagerHandle implements VillagerHolder {
         return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
+    @Override
+    public float getDamagePercent(VillagerUUID ownerUUID) {
+        return getDamagePercent(VillagerUUID.get(ownerUUID));
+    }
+
     public float getDamagePercent(UUID uuid) {
         return (float) Util.getOrDefault(damage, uuid, 0) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
     }
@@ -189,41 +196,12 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-
     public void changeJobForVillager(
             UUID visitorUUID,
             JobID jobID,
             boolean announce
     ) {
-        @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        VisitorMobEntity f = getEntity(visitorUUID);
-        if (f == null) {
-            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
-            return;
-        }
-
-        doSetJob(visitorUUID, jobID, f);
-        t.setChanged();
-        if (announce) {
-            t.messages.jobChanged(jobID, visitorUUID);
-        }
-
-        t.possibleWork.invalidate();
-        f.setJobChangePending(false);
-    }
-
-    @SuppressWarnings("deprecation")
-    private void doSetJob(
-            UUID visitorUUID,
-            JobID jobName,
-            VisitorMobEntity f
-    ) {
-        f.setJob(ServerJobsRegistry.getInitializedJob(
-                town.getServerLevelUnsafe(),
-                jobName,
-                f.getJobJournalSnapshot().items(),
-                visitorUUID
-        ));
+        getJobsHandle().change(VillagerUUID.from(visitorUUID), jobID, announce);
     }
 
     @Override
@@ -413,6 +391,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public void associate(TownFlagBlockEntity t) {
         this.town.initialize(t);
+        this.jobs.associate(t);
         this.learning.associate(t);
     }
 
@@ -439,6 +418,11 @@ public class TownVillagerHandle implements VillagerHolder {
         }
         QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
         visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
+    }
+
+    @Override
+    public VisitorMobEntity get(VillagerUUID visitorUUID) {
+        return getEntity(VillagerUUID.get(visitorUUID));
     }
 
     public VisitorMobEntity getEntity(UUID ownerUUID) {

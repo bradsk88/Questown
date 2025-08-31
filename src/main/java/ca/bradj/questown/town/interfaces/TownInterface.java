@@ -40,6 +40,10 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     void addRandomJobQuestForVisitor(UUID visitorUUID);
 
+    /**
+     * @deprecated Use getVillagerHandle().getJobsHandle()
+     */
+    @Deprecated(forRemoval = true, since="0.0.9")
     boolean changeJobForVisitorFromBoard(
             UUID ownerUUID,
             JobID currentJob

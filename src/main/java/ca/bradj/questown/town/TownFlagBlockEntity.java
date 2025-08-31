@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
@@ -18,8 +17,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
-import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -71,7 +68,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -86,7 +82,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
-    private int preferredBuffer;
     private boolean isMorning = false;
     private final NoMCEconomics economics = new NoMCEconomics();
     private int ticksWithoutQuests;
@@ -784,56 +779,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             UUID ownerUUID,
             JobID currentJob
     ) {
-        VisitorMobEntity villager = villagerHandle.getEntity(ownerUUID);
-        if (villager == null) {
-            return true;
-        }
-        float damagePercent = villagerHandle.getDamagePercent(ownerUUID);
-        if (damagePercent > 0) {
-            // The more damaged they are, the more likely they are to rest.
-            if (level.getRandom().nextFloat() < damagePercent) {
-                villagerHandle.changeJobForVillager(ownerUUID, ResterWork.getIdForRoot(currentJob.rootId()), false);
-                return true;
-            }
-        }
-
-        if (villagerHandle.hasBlockOfProgress(ownerUUID)) {
-            MCHeldItem bop = MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get());
-            villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
-            JobID depositor = BOPDepositorWork.getIdForRoot(currentJob.rootId());
-            villagerHandle.changeJobForVillager(ownerUUID, depositor, false);
-            return true;
-        }
-
-        ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
-        WorksBehaviour.TownData td = getTownData();
-        Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
-        Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
-        JobID work = TownVillagers.chooseFromList(
-                canFit,
-                canAlwaysStart,
-                requestedResults,
-                td,
-                possibleWork.getFor(villager.getJobId())
-        );
-        if (work != null) {
-            villagerHandle.changeJobForVillager(ownerUUID, work, false);
-            return true;
-        }
-
-        if (preferredBuffer < 100) {
-            preferredBuffer++;
-            return false;
-        }
-        preferredBuffer = 0;
-
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
-        if (work != null) {
-            villagerHandle.changeJobForVillager(ownerUUID, work, false);
-            return true;
-        }
-
-        return false;
+        return villagerHandle.getJobsHandle().changeFromBoard(VillagerUUID.from(ownerUUID), currentJob);
     }
 
     public WorksBehaviour.TownData getTownData() {

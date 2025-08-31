@@ -203,13 +203,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             player.giveExperiencePoints(100);
             // TODO: Advancement
         }
-        if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
-            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
-            // TODO: Advancement
-        }
-        if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
-            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
-        }
         if (itemInHand.getItem().equals(Items.COBBLESTONE)) {
             converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
         }
@@ -218,13 +211,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (itemInHand.getItem().equals(ItemsInit.FALSE_WALL_BLOCK.get())) {
             converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
-        }
-        if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
-            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
-            // TODO: Advancement
-        }
-        if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
-            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
         }
 
         if (itemInHand.getItem().equals(Items.GLASS_PANE)) {

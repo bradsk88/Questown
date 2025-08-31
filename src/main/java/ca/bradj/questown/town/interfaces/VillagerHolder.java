@@ -1,7 +1,9 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.JobsHandle;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.resources.ResourceLocation;
@@ -59,6 +61,11 @@ public interface VillagerHolder {
 
     Collection<JobID> getJobs();
 
+
+    /**
+     * @deprecated Use getJobsHandle().change(...)
+     */
+    @Deprecated(forRemoval = true, since="0.0.9")
     void changeJobForVillager(
             UUID villagerUUID,
             JobID newJob,
@@ -116,4 +123,10 @@ public interface VillagerHolder {
     );
 
     boolean isUnlocked(JobID jobID);
+
+    JobsHandle getJobsHandle();
+
+    VisitorMobEntity get(VillagerUUID visitorUUID);
+
+    float getDamagePercent(VillagerUUID ownerUUID);
 }
