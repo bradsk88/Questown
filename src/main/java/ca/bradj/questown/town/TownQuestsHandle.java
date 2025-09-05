@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.FlagMenus;
@@ -14,9 +15,11 @@ import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,21 +31,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class TownQuestsHandle implements QuestsHolder {
-    @Nullable
-    private TownFlagBlockEntity town;
+
+    private UnsafeTown town = new UnsafeTown(TownQuestsHandle.class);
 
     public void initialize(TownFlagBlockEntity t) {
-        this.town = t;
+        this.town.initialize(t);
     }
 
     /**
      * Only safe to call after initialize
+     * @deprecated Use this.town directly.
      */
     private @NotNull TownFlagBlockEntity unsafeGetTown() {
-        if (town == null) {
-            throw new IllegalStateException("Town has not been initialized on quest handle yet");
-        }
-        return town;
+        return town.getUnsafe();
     }
 
     @Override
@@ -125,11 +126,11 @@ public class TownQuestsHandle implements QuestsHolder {
 
     @Override
     public Collection<MCQuest> getQuestsForVillager(UUID uuid) {
-        return unsafeGetTown().quests.getAllForVillager(uuid);
+        return unsafeGetTown().quests.getAllForVillager(VillagerUUID.from(uuid));
     }
 
     @Override
-    public void addBatchOfRandomQuestsForVisitor(@Nullable UUID visitorUUID) {
+    public void addBatchOfRandomQuestsForVisitor(@Nullable VillagerUUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addRandomBatchForVisitor(t, t.quests, visitorUUID);
         t.setChanged();
@@ -138,8 +139,17 @@ public class TownQuestsHandle implements QuestsHolder {
     @Override
     public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        TownQuests.addUpgradeQuest(t, t.quests, VillagerUUID.from(visitorUUID));
         t.setChanged();
+    }
+
+    @Override
+    public void addItemQuest(
+            ResourceLocation itemId,
+            int count
+    ) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addItemQuest(t, t.quests, itemId, count);
     }
 
     @Override
@@ -189,8 +199,9 @@ public class TownQuestsHandle implements QuestsHolder {
         for (MCQuestBatch b : t.quests.getBatches()) {
             if (batchID.equals(b.getBatchUUID())) {
                 if (t.quests.questBatches.decline(b)) {
+                    t.quests.playerDiscardedLastBatch = true;
                     QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, b.getOwner()));
+                    addReplacementQuestBatch(t, b);
                     t.setChanged();
                     if (!t.getAllQuests().isEmpty()) {
                         showQuestsUI(sender);
@@ -202,6 +213,31 @@ public class TownQuestsHandle implements QuestsHolder {
                 return;
             }
         }
+    }
+
+    private void addReplacementQuestBatch(
+            @NotNull TownFlagBlockEntity t,
+            MCQuestBatch b
+    ) {
+        if (Compat.getRandomBool(t.getServerLevel())) {
+            t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+            return;
+        }
+
+        if (b.getOwner() != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.get(b.getOwner())));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
+        UUID owner = t.getRandomVillager();
+        if (owner != null) {
+            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            return;
+        }
+
+        QT.QUESTS_LOGGER.error("No villagers to assign next upgrade quest batch to, falling back to randdom");
+        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
     }
 
     @Override

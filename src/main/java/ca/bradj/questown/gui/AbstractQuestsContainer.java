@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
-import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -42,17 +41,10 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
                 quests, (buf, q) -> {
                     ResourceLocation id;
                     if (q == null) {
+                        q = UIQuest.BROKEN;
                         id = SpecialQuests.BROKEN;
-                        q = new UIQuest(
-                                null,
-                                SpecialQuests.SPECIAL_QUESTS.get(id),
-                                Quest.QuestStatus.ACTIVE,
-                                null,
-                                null,
-                                null
-                        );
                     } else {
-                        id = q.getRecipeId();
+                        id = q.getWantedId();
                     }
                     buf.writeResourceLocation(id);
                     ser.toNetwork(buf, q);

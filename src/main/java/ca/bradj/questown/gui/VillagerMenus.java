@@ -85,7 +85,7 @@ public class VillagerMenus {
             }
         };
 
-        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), e.getJobId(), flagPos, alreadyPending);
+        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), jobId, flagPos, alreadyPending);
         return menus;
     }
 

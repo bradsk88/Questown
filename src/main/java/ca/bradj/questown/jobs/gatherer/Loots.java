@@ -120,7 +120,7 @@ public class Loots {
     }
 
     @NotNull
-    private static List<MCTownItem> loadFromTables(
+    public static List<MCTownItem> loadFromTables(
             ServerLevel level,
             LootTable lootTable,
             int minItems,

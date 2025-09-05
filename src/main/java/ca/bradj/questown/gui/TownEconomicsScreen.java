@@ -113,13 +113,14 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     }
 
     @Override
-    protected void renderCardContent(
+    protected List<Component> renderCardContent(
             PoseStack poseStack,
-            PagedCardScreen.Card<ItemEconomicsData> card,
+            Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
         renderDataAndIcons(poseStack, card.coords(), card.data(), mouseX, mouseY);
+        return null;
     }
 
     private void renderDataAndIcons(

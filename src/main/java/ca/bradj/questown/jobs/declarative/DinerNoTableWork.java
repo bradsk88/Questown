@@ -67,10 +67,7 @@ public class DinerNoTableWork {
                 Items.APPLE.getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
-                new WorkLocation(
-                        WorkLocation.isBlock(TownFlagBlock.class),
-                        SpecialQuests.TOWN_FLAG
-                ),
+                SpecialQuests.DINING_ROOM_LOCATION,
                 new WorkStates(
                         MAX_STATE,
                         Util.constant(INGREDIENTS_REQUIRED_AT_STATES),

@@ -24,6 +24,8 @@ public class JobUnlockConfirmMenu extends AbstractVillagerMenu {
     private static final int boxHeight = 18;
     final JobID jobId;
 
+    final BopTransactionSyncer tx = new BopTransactionSyncer(this::getSlot);
+
     public static JobUnlockConfirmMenu ForClientSide(
             int windowId,
             Inventory inv,

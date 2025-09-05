@@ -179,7 +179,6 @@ public class WorkRequestConfirmScreen extends Screen {
                 },
                 (ingr) -> Jobs.getComponentsForTooltip(ingr.getKey()),
                 (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
-                (text, coord) -> renderTooltip(stack, text, Optional.empty(), coord.x(), coord.y()),
                 (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
                 iconsForJobsWhichProduceResult,
                 new Coordinate(xRef, y),

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCContainerInterface;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
@@ -10,6 +11,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
@@ -88,5 +90,24 @@ public class Containers {
             return true;
         }
         return false;
+    }
+
+    public static int addIfPossible(
+            ItemStack itemInHand,
+            MCContainerInterface rack
+    ) {
+        if (rack.isFull()) {
+            return -1;
+        }
+        if (!rack.canAcceptIfSpaceAllows(MCTownItem.fromMCItemStack(itemInHand))) {
+            return -1;
+        }
+        for (int i = 0; i < rack.size(); i++) {
+            if (rack.setItem(i, MCTownItem.fromMCItemStack(itemInHand))) {
+                itemInHand.shrink(1);
+                return i;
+            }
+        }
+        return -1;
     }
 }

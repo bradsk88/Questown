@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.mc.Compat;
@@ -14,8 +15,10 @@ import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import vazkii.patchouli.api.TriPredicate;
 
 import java.util.List;
@@ -24,6 +27,18 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public final class PagedCardScreen<D> {
+
+    public int backgroundWidth() {
+        return backgroundWidth;
+    }
+
+    public interface CardRenderer<D> {
+        List<Component> renderAndReturnTooltip(
+                PoseStack poseStack,
+                Card<D> card,
+                Coordinate mousePosition
+        );
+    }
 
     protected static final int backgroundWidth = 176;
     public final int backgroundHeight;
@@ -42,7 +57,7 @@ public final class PagedCardScreen<D> {
     final GuiIconButtonSmall previousPage;
     private final JEI.NineNine cardBackground;
     private final Consumer<D> setRenderColorForCard;
-    private final TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent;
+    private final CardRenderer<D> renderCardContent;
     private final Supplier<List<D>> cardsData;
     private final int MAX_CARDS_PER_PAGE;
     public final int cardHeight;
@@ -54,7 +69,7 @@ public final class PagedCardScreen<D> {
             Supplier<Integer> width,
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
-            TriConsumer<PoseStack, Card<D>, Pair<Integer, Integer>> renderCardContent,
+            CardRenderer<D> renderCardContent,
             // TODO: Replace Pair with Coordinate
             int heightScale,
             int buttonY,
@@ -114,13 +129,10 @@ public final class PagedCardScreen<D> {
             D data = cardsData.get(i);
             CardCoordinates coords = new CardCoordinates(
                     x,
-                    x + BIG_PADDING,
                     cardY,
-                    cardY + BIG_PADDING,
                     x + CARD_WIDTH,
-                    x + CARD_WIDTH - BIG_PADDING,
                     cardY + cardHeight,
-                    cardY + cardHeight - BIG_PADDING
+                    BIG_PADDING
             );
             b.add(new Card<>(i, coords, data));
         }
@@ -159,7 +171,7 @@ public final class PagedCardScreen<D> {
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
-    public void afterRender(
+    public @Nullable List<Component> afterRender(
             PoseStack poseStack,
             Font font,
             int mouseX,
@@ -169,7 +181,7 @@ public final class PagedCardScreen<D> {
             boolean drawCardBg
     ) {
         renderButtons(poseStack, font, mouseX, mouseY, partialTicks, cardsData);
-        renderCards(poseStack, mouseX, mouseY, drawCardBg);
+        return renderCards(poseStack, mouseX, mouseY, drawCardBg);
     }
 
     public void renderButtons(
@@ -192,13 +204,16 @@ public final class PagedCardScreen<D> {
         this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
     }
 
-    private void renderCards(
+    private @Nullable List<Component> renderCards(
             PoseStack poseStack,
             int mouseX,
             int mouseY,
             boolean drawCardBg
     ) {
-        cards().forEach(card -> {
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        Coordinate mousePosition = new Coordinate(mouseX, mouseY);
+        List<Component> tooltip = null;
+        for (Card<D> card : cards()) {
             if (drawCardBg) {
                 setRenderColorForCard.accept(card.data());
                 int x2 = card.coords().leftX();
@@ -206,8 +221,17 @@ public final class PagedCardScreen<D> {
                 this.cardBackground.draw(poseStack, x2, y2, CARD_WIDTH, cardHeight);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            renderCardContent.accept(poseStack, card, new Pair<>(mouseX, mouseY));
-        });
+            List<Component> tt = renderCardContent.renderAndReturnTooltip(poseStack, card, mousePosition);
+            if (tt == null) {
+                continue;
+            }
+            if (tooltip != null) {
+                QT.GUI_LOGGER.warn("Multiple tooltips returned for card. Newest will be used.");
+                continue;
+            }
+            tooltip = tt;
+        }
+        return tooltip;
     }
 
     public Iterable<Card<D>> cards() {
@@ -297,37 +321,28 @@ public final class PagedCardScreen<D> {
 
     public record CardCoordinates(
             int leftX,
-            int leftXPadded,
             int topY,
-            int topYPadded,
             int rightX,
-            int rightXPadded,
             int bottomY,
-            int bottomYPadded
+            int padding
     ) {
         public CardCoordinates shiftedUp(int i) {
             return new CardCoordinates(
                     leftX,
-                    leftXPadded,
                     topY - i,
-                    topYPadded - i,
                     rightX,
-                    rightXPadded,
                     bottomY,
-                    bottomYPadded
+                    padding
             );
         }
 
         public CardCoordinates shiftedDown(int i) {
             return new CardCoordinates(
                     leftX,
-                    leftXPadded,
                     topY + i,
-                    topYPadded + i,
                     rightX,
-                    rightXPadded,
                     bottomY,
-                    bottomYPadded
+                    padding
             );
         }
 
@@ -337,6 +352,32 @@ public final class PagedCardScreen<D> {
 
         public Coordinate bottomRight() {
             return new Coordinate(rightX, bottomY);
+        }
+
+        public CardCoordinates padded() {
+            return new CardCoordinates(
+                    leftXPadded(),
+                    topYPadded(),
+                    rightXPadded(),
+                    bottomYPadded(),
+                    padding
+            );
+        }
+
+        public int bottomYPadded() {
+            return bottomY - padding;
+        }
+
+        public int rightXPadded() {
+            return rightX - padding;
+        }
+
+        public int topYPadded() {
+            return topY + padding;
+        }
+
+        public int leftXPadded() {
+            return leftX + padding;
         }
     }
 }

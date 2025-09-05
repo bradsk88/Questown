@@ -79,4 +79,9 @@ public class MCDelayedReward extends MCReward implements MCRewardContainer {
     public String toNiceString() {
         return "InMorning{" + child.toNiceString() + "}";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return child.contains(reward);
+    }
 }

@@ -1,6 +1,8 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -18,7 +20,7 @@ import java.util.UUID;
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
 public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> {
     public static final Serializer SERIALIZER = new Serializer();
-    private UUID owner;
+    private VillagerUUID owner;
 
     MCQuestBatch() {
         this(null, null, null);
@@ -26,7 +28,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
     public MCQuestBatch(
             UUID batchUUID,
-            @Nullable UUID owner,
+            @Nullable VillagerUUID owner,
             @NotNull MCReward reward
     ) {
         super(new Quest.QuestFactory<ResourceLocation, MCRoom, MCQuest>() {
@@ -36,7 +38,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                     @Nullable UUID ownerID,
                     ResourceLocation recipeId
             ) {
-                return MCQuest.standalone(batchUUID, ownerID, recipeId);
+                return MCQuest.standalone(batchUUID, VillagerUUID.from(ownerID), recipeId);
             }
 
             @Override
@@ -45,12 +47,21 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                     ResourceLocation oldRecipeId,
                     ResourceLocation newRecipeId
             ) {
-                return MCQuest.upgrade(batchUUID, ownerID, oldRecipeId, newRecipeId);
+                return MCQuest.upgrade(batchUUID, VillagerUUID.from(ownerID), oldRecipeId, newRecipeId);
+            }
+
+            @Override
+            public MCQuest newItemQuest(
+                    @Nullable UUID ownerId,
+                    ResourceLocation itemId,
+                    int count
+            ) {
+                return MCQuest.item(batchUUID, VillagerUUID.from(ownerId), itemId, count);
             }
 
             @Override
             public MCQuest completed(
-                    MCRoom room,
+                    @Nullable MCRoom room,
                     MCQuest input
             ) {
                 return input.completed(room);
@@ -64,12 +75,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         this.owner = owner;
     }
 
-    public UUID getOwner() {
+    public VillagerUUID getOwner() {
         return owner;
     }
 
     @Override
-    public void assignTo(@NotNull UUID owner) {
+    public void assignTo(@NotNull VillagerUUID owner) {
         this.owner = owner;
         super.assignTo(owner);
     }
@@ -92,7 +103,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         ) {
             CompoundTag ct = new CompoundTag();
             if (quests.getOwner() != null) {
-                ct.putUUID(NBT_OWNER_UUID, quests.getOwner());
+                quests.getOwner().writeToNBT(ct, NBT_OWNER_UUID);
             }
             ImmutableList<MCQuest> aqs = quests.getAll();
             ct.putInt(NBT_NUM_QUESTS, aqs.size());
@@ -114,7 +125,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         ) {
             MCQuestBatch quests = new MCQuestBatch();
             if (nbt.contains(NBT_OWNER_UUID)) {
-                quests.owner = nbt.getUUID(NBT_OWNER_UUID);
+                quests.owner = VillagerUUID.fromNBT(nbt, NBT_OWNER_UUID);
             }
             ImmutableList.Builder<MCQuest> aqs = ImmutableList.builder();
             int num = nbt.getInt(NBT_NUM_QUESTS);
@@ -149,5 +160,13 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
             return batchUUID;
         }
+    }
+
+    @Override
+    public String getCompletionMessage() {
+        if (reward.contains(RewardsInit.VISITOR.get())) {
+            return "dialog.visitors.instruction.sleep_visitors";
+        }
+        return null;
     }
 }

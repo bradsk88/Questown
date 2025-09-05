@@ -4,8 +4,8 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncBlockItemMessage;
+import ca.bradj.questown.integration.minecraft.MCContainerInterface;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.leaver.RankBoost;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
@@ -19,8 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Collection;
 
-public class FoodDisplayEntity extends BlockEntity implements ItemAccepting<MCTownItem>,
-        ContainerTarget.Container<MCTownItem> {
+public class FoodDisplayEntity extends BlockEntity implements MCContainerInterface {
     private NonNullList<ItemStack> items = NonNullList.withSize(4, ItemStack.EMPTY);
 
     public FoodDisplayEntity(

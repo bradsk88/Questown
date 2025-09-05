@@ -27,16 +27,6 @@ public class QuestownJei implements IModPlugin {
             public List<Rect2i> getGuiExtraAreas(QuestsScreen containerScreen) {
                 return containerScreen.getExtraAreas();
             }
-
-            @Override
-            public @Nullable Object getIngredientUnderMouse(
-                    QuestsScreen containerScreen,
-                    double mouseX,
-                    double mouseY
-            ) {
-                ItemStack is = containerScreen.getHoveredIngredient((int) mouseX, (int) mouseY);
-                return is;
-            }
         });
         registration.addGuiContainerHandler(QuestRemoveConfirmScreen.class, new IGuiContainerHandler<>() {
             @Override

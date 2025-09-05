@@ -18,6 +18,8 @@ public class AdvancementEvents {
             VisitorTrigger.Triggers.FirstJobQuest.getID(),
             VisitorTrigger.Triggers.FirstJobRequest.getID(),
             VisitorTrigger.Triggers.FirstLeaveToGather.getID(),
+            VisitorTrigger.Triggers.FirstJobDone.getID(),
+            VisitorTrigger.Triggers.FirstUnmetNeeds.getID(),
             RoomTrigger.Triggers.FirstRoom.getID(),
             RoomTrigger.Triggers.FirstJobBlock.getID(),
             RoomTrigger.Triggers.WandGet.getID(),

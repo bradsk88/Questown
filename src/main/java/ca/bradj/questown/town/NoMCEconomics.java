@@ -75,13 +75,14 @@ public class NoMCEconomics {
         return map;
     }
 
-    public void tick() {
+    public boolean tick() {
         if (!needAggregate) {
-            return;
+            return false;
         }
         this.aggregated = aggregateForUI(unmetNeedsRecord);
         this.aggregatedAll = buildOverallData();
         this.roomsAll = aggregateRooms(unmetRoomsRecord);
+        return true;
     }
 
     private @Nullable ImmutableList<ItemEconomicsData> buildOverallData() {

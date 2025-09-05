@@ -1,7 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.EvictingQueue;
@@ -149,7 +149,9 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        RenderSystem.setShaderTexture(0, ServerJobsRegistry.getTexture(menu.jobId, getSmoothedStatus()));
+        if (getSmoothedStatus()instanceof ProductionStatus ps) {
+            RenderSystem.setShaderTexture(0, ClientAccess.getArt(menu.jobId, ps));
+        }
         int srcX = 0;
         int srcY = 0;
         int destX = x + backgroundWidth - 16 - 32;
@@ -200,7 +202,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         if (mouseX > leftX && mouseX < rightX) {
             if (mouseY > topY && mouseY < botY) {
                 IStatus<?> status = getSmoothedStatus();
-                ImmutableList<Component> components = JobTooltips.get(status, menu.jobId);
+                ImmutableList<Component> components = JobTooltips.get((ProductionStatus) status, menu.jobId);
                 super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
                 return;
             }

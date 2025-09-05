@@ -193,7 +193,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
                 recipeName = Compat.translatable("quests.completed_suffix", recipeName);
             }
-            if (SpecialQuests.BROKEN.equals(recipe.getRecipeId())) {
+            if (recipe.isBroken) {
                 RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
             }
             this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);

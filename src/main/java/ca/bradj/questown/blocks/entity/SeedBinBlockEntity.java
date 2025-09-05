@@ -2,8 +2,8 @@ package ca.bradj.questown.blocks.entity;
 
 import ca.bradj.questown.blocks.SeedBinBlock;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.integration.minecraft.MCContainerInterface;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.leaver.RankBoost;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class SeedBinBlockEntity extends BlockEntity implements ContainerTarget.Container<MCTownItem> {
+public class SeedBinBlockEntity extends BlockEntity implements MCContainerInterface {
 
     public static final Item INNER_ITEM = Items.WHEAT_SEEDS;
 

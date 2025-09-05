@@ -2,19 +2,18 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.advancements.VisitorTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
-import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
-import ca.bradj.questown.town.rewards.ChangeJobReward;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import ca.bradj.questown.town.rewards.*;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
@@ -29,7 +28,6 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -41,6 +39,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
@@ -48,10 +47,36 @@ import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
 
 public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>> {
+    private static final QuestBatches.Tracker<ResourceLocation, MCTownItem, MCQuest> TRACKER = new QuestBatches.Tracker<ResourceLocation, MCTownItem, MCQuest>() {
+        @Override
+        public int addCount(
+                Map<ResourceLocation, Integer> map,
+                MCTownItem stack
+        ) {
+            return map.merge(
+                    Compat.getItemId(stack.get()),
+                    stack.toMCItemStack().getCount(),
+                    Integer::sum
+            );
+        }
+
+        @Override
+        public void removeCount(
+                Map<ResourceLocation, Integer> map,
+                MCQuest mcQuest
+        ) {
+            map.merge(
+                    mcQuest.getWantedId(),
+                    -mcQuest.getCountNeeded(),
+                    Integer::sum
+            );
+        }
+    };
     private @Nullable QuestBatchSeed pendingQuests = null;
     private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
     private final UnsafeTown town = new UnsafeTown(getClass());
+    boolean playerDiscardedLastBatch;
 
     TownQuests() {
         questBatches.addChangeListener(this);
@@ -70,10 +95,20 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     @NotNull
-    private static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
+    public static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
+
         UUID nextVisitorUUID = UUID.randomUUID();
+
+        if (town.getVillagerHandle().size() == 1) {
+            return new MCRewardList(
+                    town,
+                    new SpawnVisitorReward(town, nextVisitorUUID),
+                    new AddItemQuestReward(town, Compat.getItemId(Items.APPLE), 10)
+            );
+        }
+
         MCRewardList newVisitor = new MCRewardList(
                 town,
                 new SpawnVisitorReward(town, nextVisitorUUID),
@@ -96,55 +131,66 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static void addUpgradeQuest(
             TownInterface town,
             TownQuests quests,
-            UUID visitorUUID
+            VillagerUUID visitorUUID
     ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> completed = quests.getAllForVillager(visitorUUID).stream().filter(Quest::isComplete)
-                                              .toList();
-        Collection<MCQuest> villagerQuests = completed.stream()
-                                                      // TODO: Filter out recipes that have already been slated for upgrade?
-                                                      .filter(v -> v.fromRecipeID().isEmpty()).toList();
+        Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
+                                                                .filter(Quest::isComplete).toList();
+        List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
+                                                                               // TODO: Filter out recipes that have already been slated for upgrade?
+                                                                               .filter(v -> v.fromRecipeID().isEmpty())
+                                                                               .toList();
+        Collection<MCQuest> villagerQuests = doneAndReadyForFirstUpgrade;
 
         // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
         if (villagerQuests.isEmpty()) {
-            villagerQuests = completed;
+            villagerQuests = doneAndMaybeAlreadyUpgraded;
         }
 
         if (villagerQuests.isEmpty()) {
-            // TODO: Add a failure path
-            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
+            QT.QUESTS_LOGGER.error(
+                    "No upgrade paths could be determined because no quests have been completed yet for {}",
+                    visitorUUID
+            );
+            QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
             return;
         }
 
-        ImmutableList<MCQuest> questsList = ImmutableList.copyOf(villagerQuests);
+        ImmutableList<MCQuest> upgradableQuests = Compat.shuffle(villagerQuests.iterator(), town.getServerLevel());
 
-        int index = town.getServerLevel().getRandom().nextInt(questsList.size());
-        MCQuest quest = questsList.get(index);
+        for (MCQuest upgradable : upgradableQuests) {
+            ResourceLocation upgradeFrom = upgradable.getWantedId(); // This is the room acquired by the (completed) quest
+            ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), upgradeFrom);
+            if (upgradeRecipe == null) {
+                QT.QUESTS_LOGGER.debug("No upgrade recipe found for {}. Skipping.", upgradeFrom);
+                continue;
+            }
 
-        ResourceLocation upgradeRecipe = getUpgradeRecipe(town.getServerLevel(), quest.getWantedId());
-        if (upgradeRecipe == null) {
-            // TODO: Add a failure path
-            Questown.LOGGER.error("No upgrade paths could be determined. This is a bug and may cause softlock.");
+            MCQuestBatch upgradeQuest = new MCQuestBatch(
+                    UUID.randomUUID(),
+                    visitorUUID,
+                    new MCDelayedReward(town, reward)
+            );
+            upgradeQuest.addNewUpgradeQuest(visitorUUID, upgradeFrom, upgradeRecipe);
+            quests.questBatches.add(upgradeQuest);
             return;
         }
 
-        MCQuestBatch upgradeQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCDelayedReward(town, reward));
-        upgradeQuest.addNewUpgradeQuest(visitorUUID, quest.getWantedId(), upgradeRecipe);
-
-        quests.questBatches.add(upgradeQuest);
+        QT.QUESTS_LOGGER.info("No upgrade paths could be determined.");
+        QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
     }
 
     public static void addJobQuest(
             TownFlagBlockEntity town,
             TownQuests quests,
-            UUID visitorUUID
+            VillagerUUID visitorUUID
     ) {
         List<String> jobs = ImmutableList.copyOf(town.getAvailableRootJobs());
         int jobIdx = Compat.getRandomInt(town.getServerLevel(), jobs.size());
         String job = jobs.get(jobIdx);
         MCRewardList reward = new MCRewardList(
-                town, new ChangeJobReward(town, visitorUUID, job),
+                town, new ChangeJobReward(town, VillagerUUID.get(visitorUUID), job),
                 // TODO: Randomize? Maybe do EITHER new villager or more quests
                 new AddBatchOfRandomQuestsForVisitorReward(town, town.getRandomVillager())
         );
@@ -202,26 +248,39 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public static void addRandomBatchForVisitor(
             TownInterface town,
             TownQuests quests,
-            @Nullable UUID visitorUUID
+            @Nullable VillagerUUID visitorUUID
     ) {
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
         quests.questRequests.add(new PendingReward(visitorUUID, reward));
     }
 
+    public static void addItemQuest(
+            TownFlagBlockEntity t,
+            TownQuests quests,
+            ResourceLocation itemId,
+            int count
+    ) {
+        @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
+        MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
+        batch.addItemQuest(null, itemId, count);
+        quests.addBatch(batch);
+    }
+
     public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
+                                                      .map(VillagerUUID::get)
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
     public void tick(TownInterface town) {
         // TODO: Check if target weight (based on town size) has changed since last tick
         //  If it has, discard the pending quests and start over.
-        // FIXME: When a player discards a quest batch, the new batch is generated
-        //  with a bigger target size than it should have. Because there are now more
-        //  villagers in town than there were when the original batch was generated.
         ServerLevel level = town.getServerLevel();
-        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (getVillagers(
-                this).size() + 2)) / 2;
+        int size = getVillagers(this).size();
+        if (this.playerDiscardedLastBatch) {
+            size = size - 1;
+        }
+        int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (size + 2)) / 2;
         if (pendingQuests == null) {
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
             pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight);
@@ -235,8 +294,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {
-                    List<RoomRecipe> recipes = level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                                    .filter(v -> TownQuests.isNotSpecial(v.getId())).toList();
+                    List<RoomRecipe> rs = level.getRecipeManager()
+                                               .getAllRecipesFor(RecipesInit.ROOM).stream()
+                                               .filter(v -> TownQuests.isNotSpecial(v.getId()))
+                                               .toList();
+                    List<RoomRecipe> recipes = new ArrayList<>(rs);
+                    for (Supplier<RoomBlock> roomBlockSupplier : BlockAsRoomEntity.ALL) {
+                        recipes.add(roomBlockSupplier.get().asRecipe());
+                    }
                     List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }
@@ -268,6 +333,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCQuestBatch q = pop.get(rw, pr.owner());
             questBatches.add(q);
             QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());
+            playerDiscardedLastBatch = false;
             return;
         }
 
@@ -339,8 +405,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
-        town.getUnsafe().messages.broadcastMessage("dialog.visitors.instruction.sleep_visitors");
         town.getUnsafe().setChanged();
+        String completionMessage = quest.getCompletionMessage();
+        if (completionMessage == null || completionMessage.isBlank()) {
+            return;
+        }
+        town.getUnsafe().messages.broadcastMessage(completionMessage);
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
@@ -354,7 +424,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return b.build();
     }
 
-    public Collection<MCQuest> getAllForVillager(UUID uuid) {
+    public Collection<MCQuest> getAllForVillager(VillagerUUID uuid) {
         return this.questBatches.getAllBatches().stream().filter(b -> uuid.equals(b.getOwner()))
                                 .flatMap(v -> v.getAll().stream()).toList();
     }
@@ -454,5 +524,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public void initialize(TownFlagBlockEntity t) {
         this.town.initialize(t);
+    }
+
+    public void processItemQuests(ImmutableList<MCTownItem> allStacks) {
+        questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
+    }
+
+    private boolean questMatchesStack(
+            ResourceLocation wantedId,
+            MCTownItem stack
+    ) {
+        return wantedId.equals(Compat.getItemId(stack.get()));
     }
 }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 
@@ -12,16 +13,18 @@ public class Quest<KEY, ROOM extends Room> {
 
     final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
     @Nullable
-    protected UUID ownerUUID;
+    protected VillagerUUID ownerUUID;
     protected UUID batchUUID;
     protected KEY recipeId;
     protected QuestStatus status;
     protected @Nullable ROOM completedOn;
+    private QuestType type;
+    private int count;
     @Nullable
     KEY fromRecipeID;
 
     Quest() {
-        this(null, null, null, null);
+        this(null, null, null, null, null, 1);
     }
 
     @Override
@@ -46,15 +49,19 @@ public class Quest<KEY, ROOM extends Room> {
 
     protected Quest(
             UUID batchUUID,
-            @Nullable UUID ownerId,
+            @Nullable VillagerUUID ownerId,
             KEY recipe,
-            @Nullable KEY oldRecipe
+            @Nullable KEY oldRecipe,
+            QuestType questType,
+            int count
     ) {
         this.batchUUID = batchUUID;
         this.ownerUUID = ownerId;
         this.recipeId = recipe;
         this.status = QuestStatus.ACTIVE;
         this.fromRecipeID = oldRecipe;
+        this.type = questType;
+        this.count = count;
     }
 
     public KEY getWantedId() {
@@ -69,12 +76,14 @@ public class Quest<KEY, ROOM extends Room> {
         return status;
     }
 
-    public UUID getUUID() {
+    public VillagerUUID getUUID() {
         return this.ownerUUID;
     }
 
     public void initialize(
-            UUID uuid,
+            VillagerUUID uuid,
+            QuestType type,
+            int count,
             KEY recipeId,
             QuestStatus status,
             @Nullable ROOM completedOn,
@@ -82,6 +91,8 @@ public class Quest<KEY, ROOM extends Room> {
     ) {
         // Batch ID on this quest is initialized by the batch itself.
         this.ownerUUID = uuid;
+        this.type = type;
+        this.count = count;
         this.recipeId = recipeId;
         this.status = status;
         this.completedOn = completedOn;
@@ -94,6 +105,14 @@ public class Quest<KEY, ROOM extends Room> {
 
     public UUID getBatchUUID() {
         return batchUUID;
+    }
+
+    public QuestType getType() {
+        return type;
+    }
+
+    public int getCountNeeded() {
+        return count;
     }
 
     public enum QuestStatus {
@@ -122,6 +141,10 @@ public class Quest<KEY, ROOM extends Room> {
         }
     }
 
+    public enum QuestType {
+        ITEM, ROOM, UNKNOWN;
+    }
+
     interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
         QUEST newQuest(
                 @Nullable UUID ownerId,
@@ -132,6 +155,12 @@ public class Quest<KEY, ROOM extends Room> {
                 @Nullable UUID ownerId,
                 KEY oldRecipeId,
                 KEY newRecipeId
+        );
+
+        QUEST newItemQuest(
+                @Nullable UUID ownerId,
+                KEY itemId,
+                int count
         );
 
         QUEST completed(

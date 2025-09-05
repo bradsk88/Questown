@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "crafter/fishing_rod",
+  "priority": "3600",
+  "parent": "crafter/stick",
+  "icon": "minecraft:fishing_rod",
+  "initial_request": "minecraft:fishing_rod",
+  "result": {
+    "type": "item",
+    "item": "minecraft:fishing_rod",
+    "quantity": 1
+  },
+  "block": "minecraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "minecraft:string",
+      "quantity": 1
+    },
+    {
+      "work": 50
+    }
+  ],
+  "cooldown_ticks": 20,
+  "sound": {
+    "id": "minecraft:block.wood.hit",
+    "chance": "100",
+    "duration": 5
+  }
+}

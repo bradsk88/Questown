@@ -24,7 +24,7 @@ public class SetJobCommand {
                 "entities",
                 EntityArgument.entities()
         );
-        RequiredArgumentBuilder<CommandSourceStack, JobID> amtArg = Commands.argument("amount", JobArgument.job(ctx));
+        RequiredArgumentBuilder<CommandSourceStack, JobID> amtArg = Commands.argument("job_id", JobArgument.job(ctx));
 
         LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("villagers");
         LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("jobs");
@@ -41,9 +41,27 @@ public class SetJobCommand {
                     .then(amtArg
                     .executes(css -> setJob(
                         EntityArgument.getEntities(css, "entities"),
-                        JobArgument.getJob(css, "amount")
+                        JobArgument.getJob(css, "job_id")
                     ))))
                 )
+            )
+        ));
+
+
+        // Also expose it via the jobs tree
+        subCmd = Commands.literal("jobs");
+        subSubCmd = Commands.literal("set");
+        src.register(
+            Commands.literal("qt").then(
+                subCmd.then(
+                subSubCmd
+                    .requires(AddExperienceCommand::isCreative)
+                    .then(entitiesArg
+                    .then(amtArg
+                    .executes(css -> setJob(
+                        EntityArgument.getEntities(css, "entities"),
+                        JobArgument.getJob(css, "job_id")
+                    ))))
             )
         ));
         // @formatter:on
@@ -59,6 +77,7 @@ public class SetJobCommand {
             }
             TownInterface town = vme.getTown();
             town.getVillagerHandle().changeJobForVillager(vme.getUUID(), job, false);
+            town.getVillagerHandle().unlockJob(vme.getUUID(), job);
         }
         return 0;
     }

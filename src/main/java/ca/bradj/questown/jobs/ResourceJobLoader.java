@@ -6,6 +6,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -29,6 +30,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
@@ -39,13 +41,19 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.LootTables;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.*;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 // TODO: When a job requires a block, and a room which does not include that block - raise a warning
 
@@ -85,7 +93,8 @@ public class ResourceJobLoader {
                             case 1 -> workFromJsonV1(object);
                             case 2 -> workFromJsonV2(object);
                             default -> throw new IllegalArgumentException(String.format(
-                                    "Unknown job file version \"%s\"", version
+                                    "Unknown job file version \"%s\"",
+                                    version
                             ));
                         };
                         QT.INIT_LOGGER.info("Work found in filesystem: {}", type.id);
@@ -94,7 +103,9 @@ public class ResourceJobLoader {
                     } catch (Exception e) {
                         QT.INIT_LOGGER.error(
                                 "Failed to load work {} using version {}",
-                                id, optional(object, "version", JsonElement::getAsInt), e
+                                id,
+                                optional(object, "version", JsonElement::getAsInt),
+                                e
                         );
                         if (Compat.configGet(Config.CRASH_ON_INVALID_JOBS).get()) {
                             throw e;
@@ -128,24 +139,26 @@ public class ResourceJobLoader {
                                                                                                        .getAsString());
                 }
             }
-            BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get(
-                    "block").getAsString());
+            BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block")
+                                                                                                          .getAsString());
             int cooldownTicks = requiredInt(object, "cooldown_ticks");
             WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
             JobID id = JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null));
-            Work wb = WorksBehaviour
-                    .productionWork(
-                            iconItem.getDefaultInstance(),
-                            id,
-                            JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                            description(initReq, object),
-                            new WorkLocation(isJobBlock, required(object, "room")),
-                            ResourceJobLoader.workStates(id, object),
-                            wwi,
-                            loadRulesV1(object),
-                            loadSoundV1(object)
-                    )
-                    .withPriority(requiredInt(object, "priority"));
+            Work wb = WorksBehaviour.productionWork(
+                    iconItem.getDefaultInstance(),
+                    id,
+                    JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
+                    description(initReq, object),
+                    new WorkLocation(
+                            (ctx) -> isJobBlock.test(ctx.blockInfo(), ctx.blockPos()),
+                            isJobBlock,
+                            required(object, "room")
+                    ),
+                    ResourceJobLoader.workStates(id, object),
+                    wwi,
+                    loadRulesV1(object),
+                    loadSoundV1(object)
+            ).withPriority(requiredInt(object, "priority"));
             @Nullable Overrides overrides = overridesFromJsonV2(object);
             if (overrides != null) {
                 return wb.withOverrides(overrides);
@@ -210,46 +223,47 @@ public class ResourceJobLoader {
             return textOverrides.build();
         }
 
-        private Work workFromJsonV2(JsonObject object) {
-            Item iconItem = ForgeRegistries.ITEMS.getValue(required(object, "icon"));
+        private Work workFromJsonV2(JsonObject obj) {
+            Item iconItem = ForgeRegistries.ITEMS.getValue(required(obj, "icon"));
             if (iconItem == null) {
-                throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
+                throw new IllegalArgumentException("Icon image does not exist: " + obj.get("icon").getAsString());
             }
             ResourceLocation initialRequest = optional(
-                    object,
+                    obj,
                     "initial_request",
                     el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
             );
             Item initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
             if (initReq == null) {
-                throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
-                                                                                                   .getAsString());
+                throw new IllegalArgumentException("Initial request item does not exist: " + obj.get("icon")
+                                                                                                .getAsString());
             }
-            WorkSpecialRules special = loadRulesV2(object);
-            boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
-            if (!object.get("block").isJsonObject()) {
+            WorkSpecialRules special = loadRulesV2(obj);
+            if (!obj.get("block").isJsonObject()) {
                 throw new IllegalArgumentException("block must be an object");
             }
 
             try {
-                BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock = ResourceJobLoader.isJobBlockV2(
-                        object.getAsJsonObject("block"),
-                        requireAirAbove
+                JsonObject block = obj.getAsJsonObject("block");
+                Predicate<JobBlockTestContext> isJobBlock = ResourceJobLoader.isJobBlockV2(
+                        block,
+                        special
                 );
-                int cooldownTicks = requiredInt(object, "cooldown_ticks");
-                WorkWorldInteractions wwi = worldWorkInt(object, cooldownTicks);
-                JobID id = JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null));
+                int cooldownTicks = requiredInt(obj, "cooldown_ticks");
+                WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
+                JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
+                BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
                 return WorksBehaviour.productionWork(
                         iconItem.getDefaultInstance(),
                         id,
-                        JobID.fromJSON(Util.getOrDefault(object, "parent", JsonElement::getAsString, null)),
-                        description(initReq, object),
-                        new WorkLocation(isJobBlock, required(object, "room")),
-                        ResourceJobLoader.workStates(id, object),
+                        JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
+                        description(initReq, obj),
+                        new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
+                        ResourceJobLoader.workStates(id, obj),
                         wwi,
                         special,
-                        loadSoundV1(object)
-                ).withPriority(requiredInt(object, "priority"));
+                        loadSoundV1(obj)
+                ).withPriority(requiredInt(obj, "priority"));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }
@@ -271,10 +285,7 @@ public class ResourceJobLoader {
             });
 
 
-            return new WorkSpecialRules(
-                    ImmutableMap.copyOf(stages),
-                    globals.build()
-            );
+            return new WorkSpecialRules(ImmutableMap.copyOf(stages), globals.build());
         }
 
         private WorkSpecialRules loadRulesV2(JsonObject object) {
@@ -292,11 +303,7 @@ public class ResourceJobLoader {
                 rules.forEach(rule -> registerRule(rule, rowObj, globals, stages));
             });
 
-
-            return new WorkSpecialRules(
-                    ImmutableMap.copyOf(stages),
-                    globals.build()
-            );
+            return new WorkSpecialRules(ImmutableMap.copyOf(stages), globals.build());
         }
 
         private @Nullable SoundInfo loadSoundV1(JsonObject object) {
@@ -329,6 +336,7 @@ public class ResourceJobLoader {
             ResultGenerator<MCHeldItem> g = switch (type) {
                 case "item" -> itemResult(object, rizz);
                 case "biome_loot" -> biomeLootResult(rizz);
+                case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
@@ -381,7 +389,11 @@ public class ResourceJobLoader {
             }
             case "processing_state": {
                 int state = requiredInt(rowObj, "state");
-                UtilClean.addOrInitializeList(writeableStages, ProductionStatus.fromJobBlockStatus(state), rule.getAsString());
+                UtilClean.addOrInitializeList(
+                        writeableStages,
+                        ProductionStatus.fromJobBlockStatus(state),
+                        rule.getAsString()
+                );
                 break;
             }
             case "core_state": {
@@ -397,9 +409,7 @@ public class ResourceJobLoader {
     private static ProductionStatus getCore(JsonObject rowObj) {
         String name = required(rowObj, "state", JsonElement::getAsString);
         ImmutableSet<ProductionStatus> all = ProductionStatus.allStatuses();
-        ProductionStatus productionStatus = all.stream()
-                                               .filter(v -> v.name.equals(name))
-                                               .findFirst()
+        ProductionStatus productionStatus = all.stream().filter(v -> v.name.equals(name)).findFirst()
                                                .orElseThrow(() -> new NotValidCoreStatus(name, all));
         return productionStatus;
     }
@@ -457,6 +467,29 @@ public class ResourceJobLoader {
                                 new GathererTools.LootTablePath(resultDefault)
                         )
                 );
+            }
+
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                return false;
+            }
+        };
+    }
+
+    private static @NotNull ResultGenerator<MCHeldItem> lootResult(
+            JsonObject rizz
+    ) {
+        String table = required(rizz, "table", JsonElement::getAsString);
+        int maxResults = requiredInt(rizz, "max_results");
+        return new ResultGenerator<MCHeldItem>() {
+            @Override
+            public Iterable<MCHeldItem> generate(
+                    ServerLevel level,
+                    Collection<MCHeldItem> heldItems
+            ) {
+                LootTables tables = level.getServer().getLootTables();
+                LootTable loot = tables.get(ResourceLocation.tryParse(table));
+                return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 
             @Override
@@ -573,7 +606,7 @@ public class ResourceJobLoader {
                 int work1 = v.get("work").getAsInt();
                 work.put(i, () -> work1);
                 maxState = Math.max(maxState, i + 1);
-                valid = true;
+                valid = valid || i != 0; // ONLY work is not sufficient for state 0
             }
             if (v.has("time")) {
                 int time1 = v.get("time").getAsInt();
@@ -583,6 +616,9 @@ public class ResourceJobLoader {
             }
             if (!valid) {
                 String fmt = "Job %s is missing ingredients, tools, work, or time for state at index %d: %s";
+                if (i == 0) {
+                    fmt = "Job %s is missing ingredients, tools, or time for state at index %d: %s";
+                }
                 throw new IllegalJobDefinition(String.format(fmt, id.toNiceString(), i, v));
             }
         }
@@ -596,9 +632,9 @@ public class ResourceJobLoader {
         );
     }
 
-    private static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlock(String block) {
+    private static BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock(String block) {
         Ingredient ing = getIngredient(block);
-        return (sl, bp) -> ing.test(sl.apply(bp).getBlock().asItem().getDefaultInstance());
+        return (sl, bp) -> ing.test(sl.state(bp).getBlock().asItem().getDefaultInstance());
     }
 
 
@@ -606,36 +642,112 @@ public class ResourceJobLoader {
             BlockState state,
             String name
     ) {
-        return state.getValues().entrySet().stream()
-                    .filter(v -> v.getKey().getName().equals(name))
-                    .filter(v -> v.getKey().getValueClass().equals(Integer.class))
-                    .map(v -> (Integer) v.getValue())
+        return state.getValues().entrySet().stream().filter(v -> v.getKey().getName().equals(name))
+                    .filter(v -> v.getKey().getValueClass().equals(Integer.class)).map(v -> (Integer) v.getValue())
                     .findFirst();
     }
 
-    private static BiPredicate<Function<BlockPos, BlockState>, BlockPos> isJobBlockV2(
+    private static Optional<ItemStack> getSlotValue(
+            BlockEntity state,
+            int slot
+    ) {
+        if (!(state instanceof Container c)) {
+            return Optional.empty();
+        }
+        return Optional.of(c.getItem(slot));
+    }
+
+    private static BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS(
             JsonObject block,
-            boolean requireAirAbove
+            WorkSpecialRules special
     ) {
         Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
 
         Optional<BlockStateComparator> stateComparator = getStateComparator(block);
+        Optional<BlockSlotComparator> slotComparator = getSlotComparator(block);
 
-        return (sl, bp) -> {
-            if (requireAirAbove && !sl.apply(bp.above()).isAir()) {
+        boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
+
+        return (i, p) -> {
+            if (requireAirAbove && !i.state(p.above()).isAir()) {
                 return false;
             }
-            BlockState state = sl.apply(bp);
+            BlockState state = i.state(p);
+            return baseTest.test(state);
+        };
+    }
+
+    private static Predicate<JobBlockTestContext> isJobBlockV2(
+            JsonObject block,
+            WorkSpecialRules special
+    ) {
+        Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
+
+        Optional<BlockStateComparator> stateComparator = getStateComparator(block);
+        Optional<BlockSlotComparator> slotComparator = getSlotComparator(block);
+
+        boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
+
+        return (ctx) -> {
+            if (requireAirAbove && !ctx.blockInfo().state(ctx.blockPos().above()).isAir()) {
+                return false;
+            }
+            BlockState state = ctx.blockInfo().state(ctx.blockPos());
             if (!baseTest.test(state)) {
                 return false;
             }
-            return stateComparator.map(comparator -> comparator.test(state)).orElse(true);
+            Boolean stateCheck = stateComparator.map(comparator -> comparator.test(state)).orElse(true);
+            if (!stateCheck) {
+                return false;
+            }
+
+            if (ctx.jobBlockAlreadyUsed()) {
+                // Often, jobs that use the slot comparator also modify the slot contents
+                // This modified state can cause the slot check to fail, resulting in a
+                // sort of deadlock caused by the villager themselves.
+                return true;
+            }
+
+            BlockEntity entity = ctx.blockInfo().entity(ctx.blockPos());
+            boolean slotOk = slotComparator.map(comparator -> comparator.test(entity)).orElse(true);
+            if (!slotOk) {
+                return false;
+            }
+            // All checks passed, now try special rule
+            return trySpecialRuleIsJobBlock(ctx, special);
         };
+    }
+
+    /**
+     * Calls out to special rule appliers if all other isJobBlock checks fail.
+     * Allows mod integrators to provide custom logic for job block validation.
+     */
+    private static boolean trySpecialRuleIsJobBlock(
+            JobBlockTestContext ctx,
+            WorkSpecialRules special
+    ) {
+        // Gather all global and per-status rules
+        ImmutableList<String> allRules = ImmutableList.<String>builder().addAll(special.specialGlobalRules()).build();
+        // Query all registered JobPhaseModifier appliers
+        boolean passed = false;
+        for (JobPhaseModifier rule : ca.bradj.questown.integration.SpecialRulesRegistry.getRuleAppliers(allRules)) {
+            if (rule.postJobBlockCheckPassed(ctx)) {
+                passed = true;
+                continue;
+            }
+            return false;
+        }
+        return passed;
     }
 
     private static Optional<BlockStateComparator> getStateComparator(JsonObject block) {
         String stateStr = optional(block, "int_state", JsonElement::getAsString);
         return stateStr == null ? Optional.empty() : BlockStateComparator.parse(stateStr);
+    }
+
+    private static Optional<BlockSlotComparator> getSlotComparator(JsonObject block) {
+        String stateStr = optional(block, "has_item_in_slot_initially", JsonElement::getAsString);
+        return stateStr == null ? Optional.empty() : BlockSlotComparator.parse(stateStr);
     }
 
     private static class BlockStateComparator {
@@ -651,9 +763,7 @@ public class ResourceJobLoader {
         }
 
         public boolean test(BlockState state) {
-            return getStateValue(state, name)
-                    .map(compare)
-                    .orElse(true);
+            return getStateValue(state, name).map(compare).orElse(true);
         }
 
         public static Optional<BlockStateComparator> parse(String stateStr) {
@@ -676,6 +786,38 @@ public class ResourceJobLoader {
                         value -> value.compareTo(Integer.parseInt(gt[1])) > 0
                 ));
             }
+            return Optional.empty();
+        }
+    }
+
+    private static class BlockSlotComparator {
+        private final int slotIndex;
+        private final Function<ItemStack, Boolean> compare;
+
+        public BlockSlotComparator(
+                int slot,
+                Function<ItemStack, Boolean> compare
+        ) {
+            this.slotIndex = slot;
+            this.compare = compare;
+        }
+
+        public boolean test(BlockEntity entity) {
+            return getSlotValue(entity, slotIndex).map(compare).orElse(true);
+        }
+
+        public static Optional<BlockSlotComparator> parse(String stateStr) {
+            String[] eq = stateStr.split("/");
+            if (eq.length > 1) {
+                int slot = Integer.parseInt(eq[0]);
+                // Not using getIngredient because "empty" is valid here
+                Predicate<ItemStack> check = ItemStack::isEmpty;
+                if (!eq[1].equals("minecraft:air")) {
+                    check = Ingredients.fromString(eq[1]);
+                }
+                return Optional.of(new BlockSlotComparator(slot, check::test));
+            }
+
             return Optional.empty();
         }
     }

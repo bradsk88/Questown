@@ -177,11 +177,27 @@ public class TestWorldInteraction extends
     }
 
     @Override
+    protected Position getTownPos(Void inputs) {
+        return null;
+    }
+
+    @Override
     protected @Nullable Boolean preExtractHook(
             Boolean aBoolean,
             Collection<String> rules,
             Void inputs,
             Position position
+    ) {
+        return null;
+    }
+
+    @Override
+    protected Boolean postExtractHook(
+            Boolean aBoolean,
+            Collection<String> rules,
+            Void inputs,
+            Position position,
+            GathererJournalTest.TestItem extractedItem
     ) {
         return null;
     }

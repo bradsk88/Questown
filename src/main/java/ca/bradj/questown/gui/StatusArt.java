@@ -13,6 +13,7 @@ import java.util.Map;
 public class StatusArt {
 
     private static final Map<ProductionStatus, String> pArt;
+    public static final ResourceLocation ERROR_TEX = new ResourceLocation("questown", "textures/error.png");
 
     static {
         ImmutableMap.Builder<ProductionStatus, String> b = ImmutableMap.builder();
@@ -44,6 +45,6 @@ public class StatusArt {
         }
 
         // TODO: Smelter statuses
-        return new ResourceLocation("questown", "textures/error.png");
+        return ERROR_TEX;
     }
 }

@@ -10,7 +10,7 @@ public interface JobTownProvider<ROOM> extends TownProvider {
 
     RoomsNeedingVillagerInput<ROOM, ?, ?> roomsNeedingIngredientsByState();
 
-    Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2();
+    Map<Integer, ? extends LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks();
     LZCD.Dependency<Void> hasSuppliesV2();
 
     boolean isUnfinishedTimeWorkPresent();

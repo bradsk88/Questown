@@ -1,0 +1,9 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "questown:block/axe_rack_block"
+      }
+    }
+  ]
+}

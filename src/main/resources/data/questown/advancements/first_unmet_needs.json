@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Awareness",
+      "color": "white"
+    },
+    "description": {
+      "text": "Learn about the unmet needs of your villagers"
+    },
+    "icon": {
+      "item": "minecraft:bone"
+    },
+    "frame": "goal",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:visitor_trigger",
+      "conditions": {
+        "context": "first_unmet_needs"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:first_job_request"
+}

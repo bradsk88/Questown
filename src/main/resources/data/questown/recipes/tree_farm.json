@@ -1,0 +1,10 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "farm": true,
+  "ingredients": [
+    {
+      "item": "questown:axe_rack_block"
+    }
+  ]
+}

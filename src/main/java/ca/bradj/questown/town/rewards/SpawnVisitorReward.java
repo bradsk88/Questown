@@ -118,4 +118,9 @@ public class SpawnVisitorReward extends MCReward {
     public String toNiceString() {
         return "SpawnNewVillager[" + UtilClean.truncateMiddle(visitorUUID.toString()) + "]";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return RewardsInit.VISITOR.get().equals(reward);
+    }
 }

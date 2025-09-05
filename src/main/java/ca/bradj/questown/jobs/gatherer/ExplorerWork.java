@@ -122,10 +122,7 @@ public class ExplorerWork {
                 ID,
                 GathererUnmappedNoToolWorkQtrDay.ID,
                 WorksBehaviour.standardDescription(() -> RESULT),
-                new WorkLocation(
-                        WorkLocation.isBlock(WelcomeMatBlock.class),
-                        JOB_SITE
-                ),
+                SpecialQuests.TOWN_GATE_LOCATION,
                 new WorkStates(
                         MAX_STATE,
                         Util.constant(INGREDIENTS_REQUIRED_AT_STATES),

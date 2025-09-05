@@ -18,7 +18,9 @@ public class AddRandomUpgradeQuest extends MCReward {
     private AddRandomUpgradeQuest(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
-            UUID visitorUUID // Allowed to be null because rewards get deserialized at runtime.
+            // Allowed to be null because rewards get deserialized at runtime.
+            // But should never be /set/ to null.
+            UUID visitorUUID
     ) {
         super(rType);
         this.visitorUUID = visitorUUID;
@@ -66,5 +68,10 @@ public class AddRandomUpgradeQuest extends MCReward {
     @Override
     public String toNiceString() {
         return "AddRandomUpgradeQuest";
+    }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return rType.equals(reward);
     }
 }

@@ -2,8 +2,8 @@ package ca.bradj.questown.blocks.entity;
 
 import ca.bradj.questown.blocks.BowlRackBlock;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.integration.minecraft.MCContainerInterface;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.leaver.RankBoost;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,7 +11,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class BowlRackBlockEntity extends BlockEntity implements ContainerTarget.Container<MCTownItem> {
+public class BowlRackBlockEntity extends BlockEntity implements MCContainerInterface {
     public BowlRackBlockEntity(
             BlockPos p_155229_,
             BlockState p_155230_

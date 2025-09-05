@@ -1,17 +1,9 @@
 package ca.bradj.questown.integration.jobs;
 
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
+import ca.bradj.questown.jobs.JobBlockTestContext;
 
-import java.util.Collection;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
-public interface JobCheck {
+public interface JobCheck extends Predicate<JobBlockTestContext> {
 
-    boolean test(
-            Collection<MCHeldItem> heldItems,
-            Function<BlockPos, BlockState> blockState,
-            BlockPos block
-    );
 }

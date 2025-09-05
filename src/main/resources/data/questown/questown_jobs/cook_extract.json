@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "id": "cook/extract",
+  "priority": 1000,
+  "parent": null,
+  "icon": "minecraft:cooked_cod",
+  "initial_request": "minecraft:cooked_cod",
+  "note": "initial request is actually ignored due to 'always consider' in global rules",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air",
+    "quantity": 1
+  },
+  "block": {
+    "id": "minecraft:furnace",
+    "has_item_in_slot_initially": "2/#questown:villager_food"
+  },
+  "room": "questown:kitchen_small",
+  "work_states": [
+    {
+      "tools": "minecraft:stick",
+      "note": "//TODO: Make jobs work without tools",
+      "work": 0.1
+    }
+  ],
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:entity.item.pickup",
+    "chance": 100,
+    "duration": 100
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": ["always_consider"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown:take_from_slot_2"]
+    }
+  ]
+}

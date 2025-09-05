@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown._vanilla.VanillaSpecialRules;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -100,5 +101,23 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("require_two_free_spots"),
                 new RequireTwoFreeSpotsSpecialRule()
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("associate_item_with_town"),
+                new AssociateItemWithTownSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("insert_into_slot_0"),
+                new InsertIntoSlotSpecialRule(0)
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("insert_into_slot_1"),
+                new InsertIntoSlotSpecialRule(1)
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation("take_from_slot_2"),
+                new TakeFromSlotSpecialRule(2)
+        );
+
+        VanillaSpecialRules.register();
     }
 }

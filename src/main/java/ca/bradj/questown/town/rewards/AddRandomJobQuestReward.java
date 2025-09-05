@@ -68,4 +68,9 @@ public class AddRandomJobQuestReward extends MCReward {
     public String toNiceString() {
         return "AddRandomJobQuest";
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return rType.equals(reward);
+    }
 }

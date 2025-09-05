@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
@@ -108,12 +109,22 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
     ) {
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
+        MutableComponent text = Compat.translatable(
+                "menu.block_of_progress.town_has",
+                menu.blocksOfProgressCount
+        );
+        if (menu.blocksOfProgressCount == 1) {
+            text = Compat.translatable(
+                    "menu.block_of_progress.town_has_1",
+                    menu.blocksOfProgressCount
+            );
+        }
         bgY += Compat.drawDarkTextWrap(
                 font,
                 poseStack,
                 topLeft.withY(bgY),
                 tWidth,
-                Compat.translatable("menu.block_of_progress.town_has", menu.blocksOfProgressCount)
+                text
         );
         bgY += 8;
         bgY += Compat.drawDarkTextWrap(

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
@@ -11,15 +12,11 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 // Quests is a unit testable module for the quests of a town
-public class QuestBatch<
-        KEY,
-        ROOM extends Room,
-        QUEST extends Quest<KEY, ROOM>,
-        REWARD extends Reward
-        > {
+public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward> {
 
     private final List<QUEST> quests = new ArrayList<>();
-    @NotNull protected REWARD reward;
+    @NotNull
+    protected REWARD reward;
 
     private final Quest.QuestFactory<KEY, ROOM, QUEST> questFactory;
 
@@ -62,12 +59,27 @@ public class QuestBatch<
         return this.quests.stream().filter(Quest::isComplete).map(Quest::getWantedId).toList();
     }
 
-    public void addNewQuest(@Nullable UUID ownerId, KEY id) {
-        this.quests.add(this.questFactory.newQuest(ownerId, id));
+    public void addNewQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newQuest(VillagerUUID.get(ownerId), id));
     }
 
-    public void addNewUpgradeQuest(@Nullable UUID ownerId, KEY fromID, KEY toID) {
-        this.quests.add(this.questFactory.newUpgradeQuest(ownerId, fromID, toID));
+    public void addNewUpgradeQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY fromID,
+            KEY toID
+    ) {
+        this.quests.add(this.questFactory.newUpgradeQuest(VillagerUUID.get(ownerId), fromID, toID));
+    }
+
+    public void addItemQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY itemId,
+            int count
+    ) {
+        this.quests.add(this.questFactory.newItemQuest(VillagerUUID.get(ownerId), itemId, count));
     }
 
     public ImmutableList<QUEST> getAll() {
@@ -87,7 +99,10 @@ public class QuestBatch<
         this.reward = reward;
     }
 
-    public boolean markRecipeAsComplete(ROOM room, KEY recipe) {
+    public boolean markRecipeAsComplete(
+            ROOM room,
+            KEY recipe
+    ) {
         Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
@@ -107,14 +122,13 @@ public class QuestBatch<
         return true;
     }
 
-    public boolean canMarkRecipeAsConverted(KEY oldRecipeID, KEY newRecipeID) {
-        Stream<QUEST> newMatches = this.quests.stream()
-                .filter(v -> newRecipeID.equals(v.getWantedId()));
+    public boolean canMarkRecipeAsConverted(
+            KEY oldRecipeID,
+            KEY newRecipeID
+    ) {
+        Stream<QUEST> newMatches = this.quests.stream().filter(v -> newRecipeID.equals(v.getWantedId()));
         Optional<QUEST> incomplete = newMatches.filter(Predicate.not(Quest::isComplete)).findFirst();
-        return incomplete.isPresent() &&
-                incomplete.get().fromRecipeID()
-                        .map(v -> v.equals(oldRecipeID))
-                        .orElse(false);
+        return incomplete.isPresent() && incomplete.get().fromRecipeID().map(v -> v.equals(oldRecipeID)).orElse(false);
     }
 
     public boolean markRecipeAsConverted(
@@ -122,11 +136,8 @@ public class QuestBatch<
             KEY oldRecipeID,
             KEY newRecipeID
     ) {
-        Stream<QUEST> newMatches = this.quests.stream()
-                .filter(v -> newRecipeID.equals(v.getWantedId()));
-        Optional<QUEST> incomplete = newMatches
-                .filter(Predicate.not(Quest::isComplete))
-                .findFirst();
+        Stream<QUEST> newMatches = this.quests.stream().filter(v -> newRecipeID.equals(v.getWantedId()));
+        Optional<QUEST> incomplete = newMatches.filter(Predicate.not(Quest::isComplete)).findFirst();
         if (incomplete.isEmpty()) {
             return false;
         }
@@ -160,26 +171,31 @@ public class QuestBatch<
         return this.quests.size();
     }
 
-    public void changeRoomOnly(ROOM oldRoom, ROOM newRoom) {
+    public void changeRoomOnly(
+            ROOM oldRoom,
+            ROOM newRoom
+    ) {
         List<QUEST> snapshot = ImmutableList.copyOf(this.quests);
         this.quests.clear();
-        this.quests.addAll(snapshot.stream().peek(
-                v -> {
-                    if (oldRoom.equals(v.completedOn)) {
-                        QT.QUESTS_LOGGER.debug(
-                                "Quest completion room updated after room size change. {} -> {}",
-                                oldRoom, newRoom
-                        );
-                        v.completedOn = newRoom;
-                    }
-                }
-        ).toList());
+        this.quests.addAll(snapshot.stream().peek(v -> {
+            if (oldRoom.equals(v.completedOn)) {
+                QT.QUESTS_LOGGER.debug(
+                        "Quest completion room updated after room size change. {} -> {}",
+                        oldRoom,
+                        newRoom
+                );
+                v.completedOn = newRoom;
+            }
+        }).toList());
     }
 
-    public @Nullable QUEST findMatch(ROOM room, KEY oldRecipeID) {
+    public @Nullable QUEST findMatch(
+            ROOM room,
+            KEY oldRecipeID
+    ) {
         Optional<QUEST> found = this.quests.stream()
-                .filter(v -> room.equals(v.completedOn) && oldRecipeID.equals(v.recipeId))
-                .findFirst();
+                                           .filter(v -> room.equals(v.completedOn) && oldRecipeID.equals(v.recipeId))
+                                           .findFirst();
         return found.orElse(null);
     }
 
@@ -189,7 +205,10 @@ public class QuestBatch<
         this.quests.remove(match);
     }
 
-    public boolean markRecipeAsLost(@NotNull ROOM oldRoom, @NotNull KEY recipeID) {
+    public boolean markRecipeAsLost(
+            @NotNull ROOM oldRoom,
+            @NotNull KEY recipeID
+    ) {
         QUEST foundQuest = null;
         for (QUEST q : quests) {
             if (oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())) {
@@ -208,7 +227,7 @@ public class QuestBatch<
         return false;
     }
 
-    public @Nullable UUID getUUID() {
+    public @Nullable VillagerUUID getUUID() {
         if (quests.isEmpty()) {
             return null;
         }
@@ -217,15 +236,13 @@ public class QuestBatch<
 
     @Override
     public String toString() {
-        return "QuestBatch[ID="+ batchUUID +"]{" +
-                "quests=" + String.join(", ", quests.stream().map(Object::toString).toList()) +
-                ", reward=" + reward +
-                ", questFactory=" + questFactory +
-                ", changeListener=" + changeListener +
-                '}';
+        return "QuestBatch[ID=" + batchUUID + "]{" + "quests=" + String.join(
+                ", ",
+                quests.stream().map(Object::toString).toList()
+        ) + ", reward=" + reward + ", questFactory=" + questFactory + ", changeListener=" + changeListener + '}';
     }
 
-    public void assignTo(@NotNull UUID owner) {
+    public void assignTo(@NotNull VillagerUUID owner) {
         for (QUEST q : quests) {
             q.ownerUUID = owner;
         }
@@ -238,6 +255,10 @@ public class QuestBatch<
     public UUID getBatchUUID() {
         return batchUUID;
     }
+
+    public @Nullable String getCompletionMessage() {
+        return null;
+    };
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {
         void questCompleted(QUEST quest);

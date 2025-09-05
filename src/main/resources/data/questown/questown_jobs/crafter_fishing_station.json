@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "crafter/fishing_station",
+  "priority": "3700",
+  "parent": "crafter/fishing_rod",
+  "icon": "questown:fishing_station",
+  "initial_request": "questown:fishing_station",
+  "result": {
+    "type": "item",
+    "item": "questown:fishing_station",
+    "quantity": 1
+  },
+  "block": "minecraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "minecraft:fishing_rod",
+      "quantity": 4
+    },
+    {
+      "work": 200
+    }
+  ],
+  "cooldown_ticks": 5,
+  "sound": {
+    "id": "minecraft:block.wood.hit",
+    "chance": "100",
+    "duration": 5
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": [
+        "questown:associate_item_with_town"
+      ]
+    }
+  ]
+}

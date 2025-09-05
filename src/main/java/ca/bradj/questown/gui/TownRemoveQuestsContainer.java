@@ -66,9 +66,9 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
             ResourceLocation id;
             if (q == null) {
                 id = SpecialQuests.BROKEN;
-                q = new UIQuest(null, SpecialQuests.SPECIAL_QUESTS.get(id), Quest.QuestStatus.ACTIVE, null, null, null);
+                q = UIQuest.BROKEN;
             } else {
-                id = q.getRecipeId();
+                id = q.getWantedId();
             }
             buf.writeResourceLocation(id);
             ser.toNetwork(buf, q);

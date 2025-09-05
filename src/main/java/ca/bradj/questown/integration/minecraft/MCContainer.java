@@ -1,6 +1,5 @@
 package ca.bradj.questown.integration.minecraft;
 
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.leaver.RankBoost;
 import ca.bradj.questown.mc.Util;
 import net.minecraft.world.Container;
@@ -10,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class MCContainer implements ContainerTarget.Container<MCTownItem> {
+public class MCContainer implements MCContainerInterface {
 
     private final Container container;
 

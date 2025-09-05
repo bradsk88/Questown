@@ -5,14 +5,16 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.Registry;
 import ca.bradj.questown.town.rewards.RewardType;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class MCReward extends Reward {
 
     public static final Serializer SERIALIZER = new Serializer();
-    private final RewardType<? extends MCReward> rType;
+    public final RewardType<? extends MCReward> rType;
 
     public MCReward(
             RewardType<? extends MCReward> rType
@@ -27,6 +29,8 @@ public abstract class MCReward extends Reward {
     }
 
     public abstract String toNiceString();
+
+    public abstract boolean contains(@NotNull RewardType<?> reward);
 
     public static class Serializer {
 

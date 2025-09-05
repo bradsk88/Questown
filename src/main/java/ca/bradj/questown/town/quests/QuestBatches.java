@@ -2,6 +2,7 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.Marker;
@@ -9,6 +10,7 @@ import org.apache.logging.log4j.MarkerManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 public class QuestBatches<
@@ -44,15 +46,54 @@ public class QuestBatches<
         return batches.remove(b);
     }
 
+    public interface Tracker<ITEM_KEY, ITEM, QUEST> {
+        int addCount(Map<ITEM_KEY, Integer> map, ITEM item);
+        void removeCount(Map<ITEM_KEY, Integer> map, QUEST quest);
+    }
+
+    public <ITEM_KEY, ITEM> void processItemQuests(
+            ImmutableList<ITEM> allStacks,
+            BiPredicate<KEY, ITEM> questMatchesStack,
+            Tracker<ITEM_KEY, ITEM, QUEST> tracker
+    ) {
+        List<QUEST> stacksToFind = getAll().stream()
+                                           .filter(v -> v.getType() == Quest.QuestType.ITEM)
+                                           .collect(Collectors.toCollection(ArrayList::new));
+        if (stacksToFind.isEmpty()) {
+            return;
+        }
+
+        Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
+        for (ITEM stack : allStacks) {
+            Optional<QUEST> quest = stacksToFind.stream()
+                                                // TODO: Also handle tags
+                                                .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
+                                                .findFirst();
+            if (quest.isEmpty()) {
+                continue;
+            }
+            int result = tracker.addCount(itemCounts, stack);
+            if (result >= quest.get().getCountNeeded()) {
+                markRecipeAsComplete(null, quest.get().getWantedId());
+                stacksToFind.remove(quest.get());
+                if (stacksToFind.isEmpty()) {
+                    return;
+                }
+                tracker.removeCount(itemCounts, quest.get());
+            }
+        }
+    }
+
     public interface Factory<BATCH, REWARD> {
         BATCH getNew(
                 UUID batchUUID,
-                UUID owner,
+                VillagerUUID owner,
                 REWARD r
         );
     }
 
     public interface VillagerProvider<R extends Room> {
+        // TODO: Update all functions to use VillagerUUID
         UUID getRandomVillager();
 
         boolean isVillagerMissing(UUID uuid);
@@ -112,11 +153,15 @@ public class QuestBatches<
 
         ImmutableList.Builder<BATCH> bld = ImmutableList.builder();
         bs.forEach(v -> {
-            final UUID owner = coerceUUID(villagers, v.getUUID());
+            final VillagerUUID owner = coerceUUID(villagers, v.getUUID());
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
-                e.addNewQuest(owner, q.getWantedId());
+                if (q.getType() == Quest.QuestType.ITEM) {
+                    e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                } else {
+                    e.addNewQuest(owner, q.getWantedId());
+                }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
                     e.markRecipeAsComplete(q.completedOn, q.getWantedId());
@@ -130,12 +175,12 @@ public class QuestBatches<
     }
 
     @Nullable
-    private static <KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward, BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>> UUID coerceUUID(
+    private static <KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward, BATCH extends QuestBatch<KEY, ROOM, QUEST, REWARD>> VillagerUUID coerceUUID(
             VillagerProvider villagers,
-            @Nullable UUID owner
+            @Nullable VillagerUUID owner
     ) {
-        if (owner != null && villagers.isVillagerMissing(owner)) {
-            UUID newOwner = villagers.getRandomVillager();
+        if (owner != null && villagers.isVillagerMissing(VillagerUUID.get(owner))) {
+            VillagerUUID newOwner = VillagerUUID.from(villagers.getRandomVillager());
             if (newOwner == null) {
                 // TODO: This will always happen because the flag gets initialized before entities
                 QT.LOGGER.warn("Could not repair quest belonging to {} because no other villagers exist", owner);
@@ -149,7 +194,7 @@ public class QuestBatches<
 
     private BATCH emptyBatch(
             UUID batchUUID,
-            UUID owner,
+            VillagerUUID owner,
             REWARD reward
     ) {
         return this.factory.getNew(batchUUID, owner, reward);
@@ -184,11 +229,11 @@ public class QuestBatches<
     }
 
     public void markRecipeAsComplete(
-            ROOM room,
+            @Nullable ROOM room,
             KEY recipeId
     ) {
         for (BATCH b : batches) {
-            if (b.getAll().stream()
+            if (room != null && b.getAll().stream()
                  .filter(Quest::isComplete)
                  .filter(v -> recipeId.equals(v.getWantedId()))
                  .anyMatch(v -> room.equals(v.completedOn))

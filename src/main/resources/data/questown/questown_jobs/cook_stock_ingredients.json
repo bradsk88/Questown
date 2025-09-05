@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "cook/stock_ingredients",
+  "priority": "15000",
+  "parent": "cook/extract",
+  "icon": "minecraft:chest",
+  "initial_request": "minecraft:cooked_cod",
+  "note": "initial request is actually ignored due to 'always consider' in global rules",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": "#forge:chests",
+  "room": "questown:kitchen_stocked",
+  "work_states": [
+    {
+      "tools": "#questown:raw_ingredients",
+      "work": 0.1
+    },
+    {
+      "ingredients": "#questown:raw_ingredients"
+    }
+  ],
+  "cooldown_ticks": 50,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["claim_workspot", "always_consider"]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["add_item_to_container"]
+    }
+  ]
+}

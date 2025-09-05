@@ -86,7 +86,7 @@ public class MultiLevelRoomDetector {
             TownRooms cur = currentRoomsAtYOffset.apply(nextDetector.scanLevel);
             @Nullable ImmutableMap<Position, Optional<Room>> result;
             if (cur != null) {
-                result = nextDetector.detector.proceed(cur::get);
+                result = nextDetector.detector.proceed(p -> cur.get(p).map(v -> v));
             } else {
                 result = nextDetector.detector.proceed();
             }

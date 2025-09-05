@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
@@ -15,7 +16,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     public static final String ID = "add_random_batch_of_quests";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
     private final TownInterface town;
-    private @Nullable UUID visitorUUID;
+    private @Nullable VillagerUUID visitorUUID;
 
     public AddBatchOfRandomQuestsForVisitorReward(
             RewardType<? extends MCReward> rType,
@@ -23,7 +24,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
             @Nullable UUID visitorUUID
     ) {
         super(rType);
-        this.visitorUUID = visitorUUID;
+        this.visitorUUID = VillagerUUID.from(visitorUUID);
         this.town = entity;
     }
 
@@ -48,7 +49,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     protected CompoundTag serializeNbt() {
         CompoundTag compoundTag = new CompoundTag();
         if (this.visitorUUID != null) {
-            compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
+            visitorUUID.writeToNBT(compoundTag, NBT_VISITOR_UUID);
         }
         return compoundTag;
     }
@@ -59,7 +60,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
             CompoundTag tag
     ) {
         if (tag.contains(NBT_VISITOR_UUID)) {
-            this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
+            this.visitorUUID = VillagerUUID.fromNBT(tag, NBT_VISITOR_UUID);
         }
     }
 
@@ -75,5 +76,10 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
     public String toNiceString() {
         String vid = visitorUUID == null ? "unowned" : visitorUUID.toString();
         return "AddRandomQuestBatch[" + UtilClean.truncateMiddle(vid) + "]";
+    }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get().equals(reward);
     }
 }

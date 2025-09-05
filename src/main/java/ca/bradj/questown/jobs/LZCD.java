@@ -1,130 +1,20 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class LZCD<T> implements ILZCD<T> {
 
-    public static Dependency<Void> invert(Dependency<Void> voidDependency) {
-        return new SimpleDependency(voidDependency.getName() + " (result inverted)") {
-            @Override
-            protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                Populated<WithReason<Boolean>> p = voidDependency.populate();
-                return new Populated<>(p.name, p.value.map(v -> !v).wrap("inverted"), p.conditions, p.ifCondFailOrNull) {
-                    @Override
-                    protected String stringRep() {
-                        return "inverted value of " + voidDependency.getName();
-                    }
-                };
-            }
-
-            @Override
-            public String describe() {
-                return voidDependency.describe() + "(result inverted)";
-            }
-        };
-    }
-
-    public static class ConstantDep extends SimpleDependency {
-        private final Populated<WithReason<Boolean>> value;
-
-        public ConstantDep(
-                String name,
-                boolean bVal
-        ) {
-            super(name);
-            this.value = new LZCD.Populated<>(
-                    "test supplies",
-                    WithReason.always(bVal, "input"),
-                    ImmutableMap.of(),
-                    null
-            ) {
-                @Override
-                protected String stringRep() {
-                    return "Constant [" + bVal + "]";
-                }
-            };
-        }
-
-        @Override
-        protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-            return value;
-        }
-
-        @Override
-        public String describe() {
-            return "constant: " + getName();
-        }
-    }
-
-    public static abstract class Populated<T> {
-        private final String name;
-        private final @Nullable T value;
-        private final Map<String, Object> conditions;
-        private final Populated<T> ifCondFailOrNull;
-
-        public Populated(
-                String name,
-                @Nullable T value,
-                Map<String, Object> conditions,
-                Populated<T> ifCondFailOrNull
-        ) {
-            this.name = name;
-            this.value = value;
-            this.conditions = conditions;
-            this.ifCondFailOrNull = ifCondFailOrNull;
-        }
-
-        public String name() {
-            return name;
-        }
-
-        public @Nullable T value() {
-            return value;
-        }
-
-        public Map<String, Object> conditions() {
-            return conditions;
-        }
-
-        public Populated<T> ifCondFailOrNull() {
-            return ifCondFailOrNull;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (obj == null || obj.getClass() != this.getClass()) return false;
-            var that = (Populated) obj;
-            return Objects.equals(this.name, that.name) && Objects.equals(
-                    this.value,
-                    that.value
-            ) && Objects.equals(this.conditions, that.conditions) && Objects.equals(
-                    this.ifCondFailOrNull,
-                    that.ifCondFailOrNull
-            );
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, value, conditions, ifCondFailOrNull);
-        }
-
-        @Override
-        public String toString() {
-            return stringRep();
-        }
-
-        protected abstract String stringRep();
-
+    public @Nullable T getValue() {
+        return value;
     }
 
     public interface Dependency<T> extends Function<Supplier<T>, WithReason<Boolean>> {
@@ -136,29 +26,20 @@ public class LZCD<T> implements ILZCD<T> {
         String getName();
     }
 
-    public final String name;
+    public final Pair<JobID, String> jobAndName;
 
     final ILZCD<T> wrapped;
     final Collection<? extends ILZCD<Dependency<T>>> conditions;
     final ILZCD<T> ifCondFail;
-    @Nullable T value = null;
-
-    public static <T> LZCD<T> oneDep(
-            String name,
-            ILZCD<T> wrapped,
-            ILZCD<Dependency<T>> condition,
-            ILZCD<T> ifCondFail
-    ) {
-        return new LZCD<>(name, wrapped, ImmutableList.of(condition), ifCondFail);
-    }
+    private @Nullable T value = null;
 
     public LZCD(
-            String name,
+            Pair<JobID, String> jobAndName,
             ILZCD<T> wrapped,
             Collection<? extends ILZCD<Dependency<T>>> conditions,
             ILZCD<T> ifCondFail
     ) {
-        this.name = name;
+        this.jobAndName = jobAndName;
         this.wrapped = wrapped;
         this.conditions = ImmutableList.copyOf(conditions);
         this.ifCondFail = ifCondFail;
@@ -176,96 +57,26 @@ public class LZCD<T> implements ILZCD<T> {
         }
     }
 
-    public static <T> LZCD<T> noDeps(
-            String name,
-            Supplier<T> o,
-            Predicate<T> isNull
-    ) {
-        return new LZCD<>(
-                name, new ILZCD<T>() {
-            private Populated<T> populated = null;
-            private T val;
-
-            @Override
-            public void initializeAll() {
-                val = null;
-                populated = null;
-            }
-
-            @Override
-            public boolean isValueNull(T val) {
-                return isNull.test(val);
-            }
-
-            @Override
-            public T resolve() {
-                this.val = o.get();
-                return val;
-            }
-
-            @Override
-            public Populated<T> populate() {
-                if (populated != null) {
-                    return populated;
-                }
-                populated = new Populated<>(name, resolve(), ImmutableMap.of(), null) {
-                    @Override
-                    protected String stringRep() {
-                        return name + " [no dependencies]";
-                    }
-                };
-                return populated;
-            }
-        }, ImmutableList.of(), leaf(() -> null, (v) -> true)
-        );
-    }
-
-    public static <T> ILZCD<T> leaf(
-            Supplier<T> o,
-            Predicate<T> isNull
-    ) {
-        return new ILZCD<T>() {
-
-            private Populated<T> populated = null;
-            @Nullable T value = null;
-
-            @Override
-            public void initializeAll() {
-                value = null;
-            }
-
-            @Override
-            public boolean isValueNull(T value) {
-                return isNull.test(value);
-            }
-
-            @Override
-            public T resolve() {
-                return o.get();
-            }
-
-            @Override
-            public Populated<T> populate() {
-                if (populated != null) {
-                    return populated;
-                }
-                value = resolve();
-                populated = new Populated<>("value resolver", value, ImmutableMap.of(), null) {
-                    @Override
-                    protected String stringRep() {
-                        return "leaf node [" + value + "]";
-                    }
-                };
-                return populated;
-            }
-        };
-    }
-
     public T resolve() {
         if (!isValueNull(this.value)) {
             return this.value;
         }
 
+        Supplier<T> cacher = getValueWithCaching();
+
+        int condPassed = checkConditions(cacher);
+        if (condPassed < conditions.size()) {
+            return ifCondFail.resolve();
+        }
+
+        T vv = this.setValue(cacher.get());
+        if (vv == null) {
+            return ifCondFail.resolve();
+        }
+        return vv;
+    }
+
+    private @NotNull Supplier<T> getValueWithCaching() {
         AtomicReference<T> cached = new AtomicReference<>();
 
         Supplier<T> cacher = () -> {
@@ -274,28 +85,30 @@ public class LZCD<T> implements ILZCD<T> {
             }
             return cached.get();
         }; // TODO: Encapsulate in function
+        return cacher;
+    }
 
+    private int checkConditions(Supplier<T> cachedSelf) {
         int condPassed = 0;
+        boolean v;
         for (ILZCD<Dependency<T>> d : conditions) {
             Dependency<T> resolve = d.resolve();
             if (resolve == null) {
                 continue;
             }
-            WithReason<Boolean> apply = resolve.apply(cacher);
-            boolean v = apply.value();
+            WithReason<Boolean> apply = resolve.apply(cachedSelf);
+            v = apply.value();
             if (!v) {
                 continue;
             }
             condPassed++;
         }
-        if (condPassed < conditions.size()) {
-            return ifCondFail.resolve();
-        }
-        this.value = cacher.get();
-        if (value == null) {
-            return ifCondFail.resolve();
-        }
-        return value;
+        return condPassed;
+    }
+
+    private T setValue(@Nullable T t) {
+//        xyz = t;
+        return t;
     }
 
     public boolean isValueNull(T value) {
@@ -306,9 +119,13 @@ public class LZCD<T> implements ILZCD<T> {
         Map<String, Object> b = new HashMap<>();
         for (ILZCD<Dependency<T>> d : conditions) {
             d.populate();
-            Dependency<T> resolve = d.resolve();
-            Populated<WithReason<Boolean>> v = resolve.populate();
-            b.put(resolve.describe(), v);
+            Populated<Dependency<T>> resolve = d.populate();
+            if (resolve.value() == null) {
+                // TODO: Is this even possible?
+                continue;
+            }
+            Populated<WithReason<Boolean>> v = resolve.value().populate();
+            b.put(resolve.value().describe(), v);
         }
 
         T resolve = wrapped.resolve();
@@ -316,10 +133,10 @@ public class LZCD<T> implements ILZCD<T> {
             b.put("wrapped value", "null (so fallback will be used)");
         }
 
-        return new Populated<>(name, resolve, Collections.unmodifiableMap(b), ifCondFail.populate()) {
+        return new Populated<>(jobAndName.b(), resolve, Collections.unmodifiableMap(b), ifCondFail.populate()) {
             @Override
             protected String stringRep() {
-                return name; // TODO: Good enough?
+                return jobAndName.b(); // TODO: Good enough?
             }
         };
     }
@@ -328,10 +145,10 @@ public class LZCD<T> implements ILZCD<T> {
     public String toString() {
         String v = value == null ? "<?>" : value.toString();
         if (conditions.isEmpty()) {
-            return name + "=" + v;
+            return jobAndName.b() + "=" + v;
         }
         return String.format(
-                "(%s=%s) if [%s] else (%s)", name, v, String.join(
+                "(%s=%s) if [%s] else (%s)", jobAndName.b(), v, String.join(
                         ",", conditions.stream().map(z -> {
                             Populated<Dependency<T>> resolve = z.populate();
                             if (resolve == null) {
@@ -343,29 +160,4 @@ public class LZCD<T> implements ILZCD<T> {
         );
     }
 
-    public static abstract class SimpleDependency implements Dependency<Void> {
-        public SimpleDependency(String name) {
-            this.name = name;
-        }
-
-        private final String name;
-
-        @Override
-        public Populated<WithReason<@Nullable Boolean>> populate() {
-            return doPopulate(false);
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public WithReason<Boolean> apply(Supplier<Void> voidSupplier) {
-            LZCD.Populated<WithReason<Boolean>> pop = doPopulate(true);
-            return pop.value();
-        }
-
-        protected abstract Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue);
-    }
 }

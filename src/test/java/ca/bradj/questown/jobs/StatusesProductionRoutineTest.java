@@ -82,16 +82,16 @@ public class StatusesProductionRoutineTest {
             RoomsNeedingVillagerInput<Room, String, Position> roomsNeedingIngredientsByState
     ) implements JobTownProvider<Room> {
         @Override
-        public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+        public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
             return Map.of();
         }
 
         @Override
         public LZCD.Dependency<Void> hasSuppliesV2() {
-            return new LZCD.SimpleDependency("test dep") {
+            return new SimpleDependency("test dep") {
                 @Override
-                protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                    return new LZCD.Populated<>(
+                protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                    return new Populated<>(
                             "test",
                             WithReason.always(stopOnTrue, "test dep"),
                             ImmutableMap.of(),
@@ -821,16 +821,16 @@ public class StatusesProductionRoutineTest {
             boolean isUnfinishedTimeWorkPresent
     ) implements JobTownProvider<Room> {
         @Override
-        public Map<Integer, LZCD.Dependency<Void>> roomsNeedingIngredientsByStateV2() {
+        public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
             return Map.of();
         }
 
         @Override
         public LZCD.Dependency<Void> hasSuppliesV2() {
-            return new LZCD.SimpleDependency("test") {
+            return new SimpleDependency("test") {
                 @Override
-                protected LZCD.Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
-                    return new LZCD.Populated<>(
+                protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                    return new Populated<>(
                             "test",
                             WithReason.always(stopOnTrue, "test"),
                             ImmutableMap.of(),

@@ -114,4 +114,9 @@ public class MCRewardList extends MCReward implements MCRewardContainer {
                 "children=" + String.join(", ", children.stream().map(MCReward::toNiceString).toList()) +
                 '}';
     }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return children.stream().anyMatch(v -> v.contains(reward));
+    }
 }

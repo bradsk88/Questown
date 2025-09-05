@@ -163,7 +163,7 @@ public class ProductionStatus implements IProductionStatus<ProductionStatus> {
         this.name = name;
     }
 
-    public static ProductionStatus from(String s) {
+    public static ProductionStatus fromNumber(String s) {
         int i = Integer.parseInt(s);
         return UtilClean.getOrDefault2(allStatuses, i, () -> new ProductionStatus(s, i));
     }

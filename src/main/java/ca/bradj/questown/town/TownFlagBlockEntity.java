@@ -5,6 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
@@ -212,7 +213,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean stopped = true;
     final TownQuests quests = new TownQuests();
-    private final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
+    final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     private final MCAsapRewards asapRewards = new MCAsapRewards();
@@ -283,17 +284,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        e.villagerHandle.entities().stream().findFirst().filter(v -> isMissingQuests(e)).ifPresent(v -> {
-            if (e.ticksWithoutQuests < 500) {
-                e.ticksWithoutQuests++;
-                return;
-            }
+        e.villagerHandle.entities()
+                        .stream()
+                        .filter(v -> v instanceof VisitorMobEntity)
+                        .map(v -> (VisitorMobEntity) v)
+                        .findFirst()
+                        .ifPresent(v -> {
+                            if (!isMissingCompletableQuests(e)) {
+                                e.ticksWithoutQuests = 0;
+                                return;
+                            }
+                            if (e.ticksWithoutQuests < 500) {
+                                e.ticksWithoutQuests++;
+                                return;
+                            }
 
-            QT.FLAG_LOGGER.warn("No quests found. This is a bug. Adding a batch for {}", v.getUUID());
-            e.questsHandle.addBatchOfRandomQuestsForVisitor(e.uuid);
-            e.setChanged();
-            e.ticksWithoutQuests = 0;
-        });
+                            QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
+                            e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getVUID());
+                            e.setChanged();
+                            e.ticksWithoutQuests = 0;
+                        });
 
         Player nearestPlayer = level.getNearestPlayer(
                 blockEntityPos.getX(),
@@ -368,6 +378,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         if (stateChanged) {
             e.possibleWork.invalidate();
+            e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
         }
 
         e.workHandle.tick(sl);
@@ -401,15 +412,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         e.villagerHandle.tick(Util.getTick(sl), signals);
 
-        e.economics.tick();
+        if (e.economics.tick()) {
+            if (e.economics.getAggregatedItems(null).stream().anyMatch(v -> v.timesNeeded() > 4)) {
+                AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
+                        sl,
+                        VisitorTrigger.Triggers.FirstUnmetNeeds,
+                        e.getBlockPos()
+                );
+            }
+        }
 
         e.everScanned = true;
 
         profileTick(e, start);
     }
 
-    private static boolean isMissingQuests(TownFlagBlockEntity e) {
-        if (e.questsHandle.getAllQuestsWithRewards().size() > 1) {
+    private static boolean isMissingCompletableQuests(TownFlagBlockEntity e) {
+        ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> all = e.questsHandle.getAllQuestsWithRewards();
+        if (all.stream().anyMatch(v -> !v.getKey().isComplete())) {
             return false;
         }
         if (e.morningRewards.children.stream().anyMatch(MCReward::addsQuestsWhenApplied)) {
@@ -748,7 +768,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public void addRandomJobQuestForVisitor(UUID visitorUUID) {
-        TownQuests.addJobQuest(this, quests, visitorUUID);
+        TownQuests.addJobQuest(this, quests, VillagerUUID.from(visitorUUID));
         setChanged();
         // TODO: Town should have owners who all get the cheevo
         BlockPos bp = getBlockPos();
@@ -985,6 +1005,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
+        roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                 getServerLevel(),
@@ -1056,6 +1077,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
         if (sender.getInventory().add(v)) {
             sender.getInventory().setChanged();
+            sender.inventoryMenu.broadcastChanges();
             return;
         }
         bp = bp.relative(Compat.getRandomHorizontal(getServerLevel()));
