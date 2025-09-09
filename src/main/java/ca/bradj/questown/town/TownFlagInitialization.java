@@ -38,4 +38,6 @@ public interface TownFlagInitialization {
             CompoundTag tag,
             TownFlagBlockEntity t
     );
+
+    CompoundTag serializeBonusGiven();
 }

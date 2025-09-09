@@ -12,7 +12,9 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
-import ca.bradj.questown.integration.minecraft.*;
+import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -44,6 +46,7 @@ import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -51,6 +54,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -89,6 +95,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     int bopCount = 0;
 
     private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
+    boolean givenBonusFood;
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
@@ -771,7 +778,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {
-       TownFlagBOPItemHandler.eject(this, sender);
+        TownFlagBOPItemHandler.eject(this, sender);
     }
 
     void setChangedMC(
@@ -780,5 +787,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             BlockState state
     ) {
         setChanged(sl, blockEntityPos, state);
+    }
+
+    public void giveBonusFood(ServerPlayer sp) {
+        if (givenBonusFood) {
+            Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
+            return;
+        }
+        BlockPos pos = getBlockPos();
+        ItemStack stack = new ItemStack(Items.CARROT, 5);
+        level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
+        givenBonusFood = true;
     }
 }

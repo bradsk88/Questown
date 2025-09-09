@@ -144,12 +144,17 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     @Nullable
     private static InteractionResult convertItemInHand(
-            Level level,
-            Player player,
+            ServerLevel level,
+            ServerPlayer player,
             InteractionHand hand,
             TownFlagBlockEntity entity
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
+
+        if (itemInHand.getItem().equals(Items.DIRT)) {
+            entity.giveBonusFood(player);
+            return InteractionResult.CONSUME;
+        }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
             for (UUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
@@ -360,7 +365,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             InteractionHand hand,
             BlockHitResult p_60508_
     ) {
-        if (level.isClientSide()) {
+        if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(true);
         }
 
@@ -370,7 +375,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         TownFlagBlockEntity entity = oEntity.get();
 
-        InteractionResult sidedSuccess = convertItemInHand(level, player, hand, entity);
+        InteractionResult sidedSuccess = convertItemInHand(sl, (ServerPlayer) player, hand, entity);
         if (sidedSuccess != null) {
             return sidedSuccess;
         }

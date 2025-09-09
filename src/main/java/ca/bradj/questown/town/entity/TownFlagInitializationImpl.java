@@ -141,4 +141,11 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         QT.FLAG_LOGGER.debug("Initialized block rooms from {}", tag);
         return true;
     }
+
+    @Override
+    public CompoundTag serializeBonusGiven() {
+        CompoundTag compoundTag = new CompoundTag();
+        compoundTag.putBoolean("value", flag.givenBonusFood);
+        return compoundTag;
+    }
 }
