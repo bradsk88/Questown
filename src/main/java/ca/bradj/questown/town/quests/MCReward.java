@@ -1,11 +1,9 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.core.init.RewardsInit;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.Registry;
 import ca.bradj.questown.town.rewards.RewardType;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;

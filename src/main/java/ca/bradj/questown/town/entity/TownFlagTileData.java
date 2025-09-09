@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -6,6 +6,7 @@ import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;

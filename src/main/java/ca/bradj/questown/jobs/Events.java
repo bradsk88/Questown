@@ -2,7 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.TownVillagerHandle;
+import ca.bradj.questown.town.entity.TownVillagerHandle;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;

@@ -1,8 +1,9 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import com.google.common.collect.ImmutableList;

@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
@@ -25,6 +25,7 @@ import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -74,8 +75,8 @@ import java.util.stream.Collectors;
 
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
 import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
-import static ca.bradj.questown.town.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
-import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
+import static ca.bradj.questown.town.entity.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
+import static ca.bradj.questown.town.entity.TownFlagState.NBT_TOWN_STATE;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, TownPois.Listener {
@@ -85,71 +86,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
     private final NoMCEconomics economics = new NoMCEconomics();
-    private final TownFlagTicker ticker = new TownFlagTicker();
+    final TownFlagTicker ticker = new TownFlagTicker();
 
     int bopCount = 0;
 
-    private LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new IItemHandler() {
-
-        @Override
-        public int getSlots() {
-            return 64;
-        }
-
-        @Override
-        public @NotNull ItemStack getStackInSlot(int i) {
-            if (i >= bopCount) {
-                return ItemStack.EMPTY;
-            }
-            return new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
-        }
-
-        @Override
-        public @NotNull ItemStack insertItem(
-                int i,
-                @NotNull ItemStack itemStack,
-                boolean simulate
-        ) {
-            if (!isItemValid(i, itemStack)) {
-                return itemStack;
-            }
-            itemStack.shrink(1);
-            if (!simulate) {
-                bopCount++;
-                QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", bopCount);
-            }
-            return itemStack;
-        }
-
-        @Override
-        public @NotNull ItemStack extractItem(
-                int i,
-                int i1,
-                boolean b
-        ) {
-            // Extraction is not currently supported
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int i) {
-            return 1;
-        }
-
-        @Override
-        public boolean isItemValid(
-                int i,
-                @NotNull ItemStack itemStack
-        ) {
-            if (i >= getSlots()) {
-                return false;
-            }
-            if (i < bopCount) {
-                return false;
-            }
-            return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());
-        }
-    });
+    private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
@@ -852,7 +793,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void toggleDebugMode() {
         this.ticker.toggleDebugMode();
-        messages.debugToggled(this.ticker.debugMode);
+        messages.debugToggled(this.ticker.isDebugEnabled());
     }
 
     TownFlagInitialization initializer() {

@@ -274,4 +274,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     public void toggleDebugMode() {
         this.debugMode = !this.debugMode;
     }
+
+    public boolean isDebugEnabled() {
+        return debugMode;
+    }
 }

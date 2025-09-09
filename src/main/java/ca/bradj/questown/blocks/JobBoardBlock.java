@@ -2,7 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

@@ -1,7 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.jobs.gatherer.GathererTools;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Collection;

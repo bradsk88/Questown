@@ -1,7 +1,7 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.town.TownRooms;
+import ca.bradj.questown.town.entity.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
@@ -15,9 +15,14 @@ import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class MultiLevelRoomDetector {
     private final ServerLevel level;
