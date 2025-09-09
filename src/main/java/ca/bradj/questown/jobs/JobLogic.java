@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;

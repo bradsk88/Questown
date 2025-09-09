@@ -1,6 +1,8 @@
 package ca.bradj.questown.blocks.entity;
 
-import ca.bradj.questown.blocks.*;
+import ca.bradj.questown.blocks.RoomBlock;
+import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.blocks.TownFlagSubEntity;
 import ca.bradj.questown.core.init.TilesInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;

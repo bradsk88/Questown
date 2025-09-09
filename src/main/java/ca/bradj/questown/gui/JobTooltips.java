@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;

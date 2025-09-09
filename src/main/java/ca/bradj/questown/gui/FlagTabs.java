@@ -2,12 +2,10 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 

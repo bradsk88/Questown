@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;

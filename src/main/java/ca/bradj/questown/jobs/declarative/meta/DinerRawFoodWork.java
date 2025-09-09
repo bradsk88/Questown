@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative.meta;
 
-import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;

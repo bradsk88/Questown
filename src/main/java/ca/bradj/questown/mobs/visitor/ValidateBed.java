@@ -12,7 +12,6 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.Collection;
 import java.util.Optional;
 
 public class ValidateBed extends Behavior<VisitorMobEntity> {

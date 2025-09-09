@@ -1,13 +1,9 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.gui.ClientAccess;
-import ca.bradj.questown.gui.Ingredients;
-import ca.bradj.questown.gui.UIJob;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
