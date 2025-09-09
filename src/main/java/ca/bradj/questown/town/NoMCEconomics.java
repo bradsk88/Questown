@@ -75,7 +75,7 @@ public class NoMCEconomics {
         return map;
     }
 
-    public boolean tick() {
+    public boolean update() {
         if (!needAggregate) {
             return false;
         }
@@ -121,7 +121,7 @@ public class NoMCEconomics {
         this.needAggregate = true;
     }
 
-    public ImmutableList<ItemEconomicsData> getAggregatedItems(UUID villagerId) {
+    public ImmutableList<ItemEconomicsData> getAggregatedItems(@Nullable UUID villagerId) {
         return getAggregated(aggregatedAll, aggregated, villagerId);
     }
 
@@ -136,7 +136,7 @@ public class NoMCEconomics {
     private static <S extends Needable> ImmutableList<S> getAggregated(
             List<S> all,
             Map<UUID, ? extends List<S>> allSplitByVillager,
-            UUID villagerId
+            @Nullable UUID villagerId
     ) {
         List<S> l = all;
         if (villagerId != null) {

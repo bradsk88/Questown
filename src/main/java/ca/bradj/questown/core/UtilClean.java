@@ -1,11 +1,13 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
