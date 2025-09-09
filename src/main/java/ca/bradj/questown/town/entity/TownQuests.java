@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
@@ -9,6 +9,8 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.NoMCEconomics;
+import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.*;

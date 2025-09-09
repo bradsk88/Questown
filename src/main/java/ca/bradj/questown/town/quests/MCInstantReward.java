@@ -5,7 +5,6 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;

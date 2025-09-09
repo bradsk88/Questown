@@ -3,7 +3,7 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;

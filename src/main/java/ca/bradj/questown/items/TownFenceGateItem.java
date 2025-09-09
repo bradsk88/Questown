@@ -3,7 +3,7 @@ package ca.bradj.questown.items;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;

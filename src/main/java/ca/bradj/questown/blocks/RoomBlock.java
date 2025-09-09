@@ -5,7 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.logic.RoomRecipes;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;

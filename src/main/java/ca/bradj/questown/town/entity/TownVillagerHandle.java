@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
@@ -10,6 +10,7 @@ import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;

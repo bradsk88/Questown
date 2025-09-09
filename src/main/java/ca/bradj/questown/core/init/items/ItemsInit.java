@@ -5,7 +5,7 @@ import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.*;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.BlockItem;

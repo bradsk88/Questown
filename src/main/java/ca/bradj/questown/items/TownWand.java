@@ -5,7 +5,7 @@ import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;

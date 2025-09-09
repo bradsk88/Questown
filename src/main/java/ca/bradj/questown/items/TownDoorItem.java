@@ -5,7 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;

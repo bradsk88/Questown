@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.VillagerUUID;
@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;

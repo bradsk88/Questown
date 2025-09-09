@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
@@ -8,6 +8,8 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.UnsafeTown;
+import ca.bradj.questown.town.VillagerLearningHandle;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

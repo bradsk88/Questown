@@ -3,7 +3,7 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.init.CommandsInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;

@@ -1,0 +1,75 @@
+package ca.bradj.questown.town.entity;
+
+import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.items.IItemHandler;
+import org.jetbrains.annotations.NotNull;
+
+public class TownFlagBOPItemHandler implements IItemHandler {
+
+    private final TownFlagBlockEntity town;
+
+    public TownFlagBOPItemHandler(TownFlagBlockEntity town) {
+        this.town = town;
+    }
+
+    @Override
+    public int getSlots() {
+        return 64;
+    }
+
+    @Override
+    public @NotNull ItemStack getStackInSlot(int i) {
+        if (i >= town.bopCount) {
+            return ItemStack.EMPTY;
+        }
+        return new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+
+    @Override
+    public @NotNull ItemStack insertItem(
+            int i,
+            @NotNull ItemStack itemStack,
+            boolean simulate
+    ) {
+        if (!isItemValid(i, itemStack)) {
+            return itemStack;
+        }
+        itemStack.shrink(1);
+        if (!simulate) {
+            town.bopCount++;
+            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
+        }
+        return itemStack;
+    }
+
+    @Override
+    public @NotNull ItemStack extractItem(
+            int i,
+            int i1,
+            boolean b
+    ) {
+        // Extraction is not currently supported
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public int getSlotLimit(int i) {
+        return 1;
+    }
+
+    @Override
+    public boolean isItemValid(
+            int i,
+            @NotNull ItemStack itemStack
+    ) {
+        if (i >= getSlots()) {
+            return false;
+        }
+        if (i < town.bopCount) {
+            return false;
+        }
+        return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+}

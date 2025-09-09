@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -9,6 +9,8 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
+import ca.bradj.questown.town.UnsafeTown;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.MultiLevelRoomDetector;

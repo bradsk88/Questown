@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.Questown;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
@@ -24,7 +24,7 @@ public class TownFlags {
     @SubscribeEvent
     public static void OnWake(SleepFinishedTimeEvent event) {
         for (TownFlagBlockEntity e : flags.values()) {
-            e.onMorning(event.getNewTime());
+            e.ticker.onMorning(TownFlagTicker.TickData.fromFlag(e), event.getNewTime());
         }
     }
 

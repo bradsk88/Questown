@@ -35,7 +35,11 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     BlockPos getRandomWanderTarget(BlockPos avoiding);
 
+    /**
+     * @deprecated Use TownContainers static function
+     */
     @Nullable
+    @Deprecated(forRemoval = true)
     ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c);
 
     void addRandomJobQuestForVisitor(UUID visitorUUID);

@@ -5,7 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;

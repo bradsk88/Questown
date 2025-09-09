@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
@@ -10,6 +10,8 @@ import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.AbstractTownFlagTicker;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -283,5 +285,8 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             BlockState state,
             TownFlagBlockEntity entity
     ) {
+        public static TickData fromFlag(TownFlagBlockEntity e) {
+            return new TickData(e.getServerLevel(), e.getBlockPos(), e.getBlockState(), e);
+        }
     }
 }

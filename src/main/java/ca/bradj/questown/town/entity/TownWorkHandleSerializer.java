@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.requests.WorkRequest;

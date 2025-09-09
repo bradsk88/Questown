@@ -1,13 +1,12 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-import java.util.Random;
 
 public class TownHealingHandle extends HealingStore<BlockPos> {
     public static final TownHealingSerializer SERIALIZER = new TownHealingSerializer();

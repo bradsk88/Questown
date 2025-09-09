@@ -5,7 +5,6 @@ import ca.bradj.questown.items.QTNBT;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 
 import java.util.List;
 
