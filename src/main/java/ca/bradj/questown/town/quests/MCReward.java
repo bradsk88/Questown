@@ -64,8 +64,6 @@ public abstract class MCReward extends Reward {
         }
     }
 
-    public abstract boolean addsQuestsWhenApplied();
-
     protected abstract CompoundTag serializeNbt();
     protected abstract void deserializeNbt(TownInterface entity, CompoundTag tag);
 }

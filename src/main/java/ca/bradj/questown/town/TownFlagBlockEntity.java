@@ -4,7 +4,6 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.RoomTrigger;
@@ -16,7 +15,6 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
@@ -52,7 +50,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -83,13 +80,12 @@ import static ca.bradj.questown.town.TownFlagState.NBT_TOWN_STATE;
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, TownPois.Listener {
 
-    private final TownKnownBiomes biomes = new TownKnownBiomes();
+    final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
     private int preferredBuffer;
-    private boolean isMorning = false;
     private final NoMCEconomics economics = new NoMCEconomics();
-    private int ticksWithoutQuests;
+    private final TownFlagTicker ticker = new TownFlagTicker();
 
     int bopCount = 0;
 
@@ -211,30 +207,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public static final String ID = "flag_base_block_entity";
 
-    private boolean stopped = true;
     final TownQuests quests = new TownQuests();
     final TownFlagSubBlocks subBlocks = new TownFlagSubBlocks(getBlockPos());
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
-    private final MCAsapRewards asapRewards = new MCAsapRewards();
+    final MCAsapRewards asapRewards = new MCAsapRewards();
     private final UUID uuid = UUID.randomUUID();
-    private final TownFlagState state = new TownFlagState(this);
+    final TownFlagState state = new TownFlagState(this);
     public long advancedTimeOnTick = -1;
     boolean isInitializedQuests = false;
-    private boolean everScanned = false;
-    private boolean changed = false;
+    boolean changed = false;
 
     // Farmer specific stuff
     private final ArrayList<UUID> assignedFarmers = new ArrayList<>();
 
-    private final ArrayList<Integer> times = new ArrayList<>();
-
     final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
-    private final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
+    final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
 
     final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
-    private final Stack<Long> mornings = new Stack<>();
-    private final LinkedBlockingQueue<Function<TownFlagBlockEntity, Boolean>> initializers = new LinkedBlockingQueue<>();
+    final LinkedBlockingQueue<Function<TownFlagBlockEntity, Boolean>> initializers = new LinkedBlockingQueue<>();
 
     final TownKnowledgeStore knowledgeHandle = new TownKnowledgeStore();
     final TownQuestsHandle questsHandle = new TownQuestsHandle();
@@ -252,9 +243,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownVillagerHandle villagerHandle = new TownVillagerHandle();
     private final TownWorldInteraction world = new TownWorldInteraction();
 
-    private @Nullable Supplier<Boolean> debugTask;
-    private boolean debugMode;
-
     public TownFlagBlockEntity(
             BlockPos p_155229_,
             BlockState p_155230_
@@ -271,174 +259,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             BlockState state,
             TownFlagBlockEntity e
     ) {
-        if (!(level instanceof ServerLevel sl)) {
-            return;
-        }
-
-        if (!e.initializers.isEmpty()) {
-            QT.FLAG_LOGGER.info("Running initializer ({} left) @ {}", e.initializers.size() - 1, e.getBlockPos());
-            Function<TownFlagBlockEntity, Boolean> initr = e.initializers.remove();
-            if (!initr.apply(e)) {
-                e.initializers.add(initr);
-            }
-            return;
-        }
-
-        e.villagerHandle.entities()
-                        .stream()
-                        .filter(v -> v instanceof VisitorMobEntity)
-                        .map(v -> (VisitorMobEntity) v)
-                        .findFirst()
-                        .ifPresent(v -> {
-                            if (!isMissingCompletableQuests(e)) {
-                                e.ticksWithoutQuests = 0;
-                                return;
-                            }
-                            if (e.ticksWithoutQuests < 500) {
-                                e.ticksWithoutQuests++;
-                                return;
-                            }
-
-                            QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
-                            e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getVUID());
-                            e.setChanged();
-                            e.ticksWithoutQuests = 0;
-                        });
-
-        Player nearestPlayer = level.getNearestPlayer(
-                blockEntityPos.getX(),
-                blockEntityPos.getY(),
-                blockEntityPos.getZ(),
-                -1,
-                null
-        );
-        if (nearestPlayer == null) {
-            return;
-        }
-        double distToPlayer = nearestPlayer.blockPosition().distSqr(e.worldPosition);
-        if (distToPlayer > Config.TOWN_TICK_RADIUS.get()) {
-            if (!e.stopped) {
-                QT.FLAG_LOGGER.info(
-                        "Town flag at {} stopped ticking because closest player is further away than limit {}: {}",
-                        blockEntityPos,
-                        Config.TOWN_TICK_RADIUS.get(),
-                        distToPlayer
-                );
-                e.subBlocks.parentUnloaded();
-            }
-            e.stopped = true;
-            return;
-        }
-
-        e.stopped = false;
-
-        long start = System.currentTimeMillis();
-
-        // Must tick sub-blocks even with debug mode enabled,
-        // because non-ticked sub-blocks will self-destruct.
-        e.subBlocks.parentTick(sl);
-
-        if (e.debugMode) {
-            if (e.debugTask != null) {
-                boolean done = e.debugTask.get();
-                if (done) {
-                    e.debugTask = null;
-                }
-            }
-            return;
-        }
-
-
-        Signals.DayTime dayTime = Util.getDayTime(sl);
-        Signals signals = Signals.fromDayTime(dayTime);
-        if (signals == Signals.MORNING) {
-            if (!e.isMorning) {
-                e.isMorning = true;
-                e.onMorning(Util.getTick(sl));
-            }
-        } else {
-            if (e.isMorning) {
-                e.isMorning = false;
-            }
-        }
-
-        if (!e.mornings.empty()) {
-            e.morningTick(e.mornings.pop());
-        }
-
-        CompoundTag tag = Compat.getBlockStoredTagData(e);
-        boolean stateChanged = e.state.tick(e, tag, sl);
-
-        if ((stateChanged || e.changed) && e.everScanned) {
-            e.writeTownData(tag);
-            e.state.putStateOnTile(tag, e.uuid);
-            e.changed = false;
-            setChanged(level, blockEntityPos, state);
-        }
-
-        if (stateChanged) {
-            e.possibleWork.invalidate();
-            e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
-        }
-
-        e.workHandle.tick(sl);
-        e.quests.tick(e);
-        e.biomes.tick();
-        e.healing.tick();
-        e.possibleWork.tick();
-
-        e.roomsHandle.tick(sl, blockEntityPos);
-
-        long gameTime = level.getGameTime();
-        long l = gameTime % Config.FLAG_TICK_INTERVAL.get();
-        if (l != 0) {
-            return;
-        }
-
-        Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMetaAndFarms();
-        e.jobHandle.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get());
-        e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get()));
-
-        e.asapRewards.tick();
-
-        e.pois.tick(sl, blockEntityPos, (int) e.villagerHandle.stream().count());
-        if ((signals == Signals.NIGHT || signals == Signals.EVENING) && !e.getVillagerHandle().entities().isEmpty()) {
-            AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
-                    sl,
-                    VisitorTrigger.Triggers.FirstNightFall,
-                    e.getBlockPos()
-            );
-        }
-
-        e.villagerHandle.tick(Util.getTick(sl), signals);
-
-        if (e.economics.tick()) {
-            if (e.economics.getAggregatedItems(null).stream().anyMatch(v -> v.timesNeeded() > 4)) {
-                AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
-                        sl,
-                        VisitorTrigger.Triggers.FirstUnmetNeeds,
-                        e.getBlockPos()
-                );
-            }
-        }
-
-        e.everScanned = true;
-
-        profileTick(e, start);
+        e.ticker.tick(level, blockEntityPos, state, e);
     }
 
-    private static boolean isMissingCompletableQuests(TownFlagBlockEntity e) {
-        ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> all = e.questsHandle.getAllQuestsWithRewards();
-        if (all.stream().anyMatch(v -> !v.getKey().isComplete())) {
-            return false;
-        }
-        if (e.morningRewards.children.stream().anyMatch(MCReward::addsQuestsWhenApplied)) {
-            return false;
-        }
-        return true;
-    }
 
-    private void morningTick(Long newTime) {
+    void morningTick(Long newTime) {
         this.assignedFarmers.clear();
         for (MCReward r : this.morningRewards.popChildren()) {
             this.asapRewards.push(r);
@@ -447,24 +272,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         villagerHandle.handleMorning();
         roomsHandle.handleMorning();
         Compat.getBlockStoredTagData(this).putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
-    }
-
-    private static void profileTick(
-            TownFlagBlockEntity e,
-            long start
-    ) {
-        if (Config.TICK_SAMPLING_RATE.get() > 0) {
-            long end = System.currentTimeMillis();
-            e.times.add((int) (end - start));
-
-            if (e.times.size() > Config.TICK_SAMPLING_RATE.get()) {
-                QT.PROFILE_LOGGER.debug(
-                        "Average tick length: {}",
-                        e.times.stream().mapToInt(Integer::intValue).average().getAsDouble()
-                );
-                e.times.clear();
-            }
-        }
     }
 
 //    public static boolean debuggerReleaseControl() {
@@ -949,13 +756,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.questBatches.getAllWithRewards();
     }
 
-    void onMorning(long newTime) {
-        this.mornings.push(newTime);
-        // IMPORTANT: DO NOTHING ELSE IN THIS FUNCTION
-        // Adding logic here may cause the game to lock up.
-        // Do morning logic via morningTick().
-    }
-
     @Override
     public void campfireFound(BlockPos bp) {
         Position pos = Positions.FromBlockPos(bp);
@@ -1044,16 +844,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void startDebugTask(Supplier<Boolean> debugTask) {
-        if (!this.debugMode) {
-            messages.startDebugFailed();
+        if (ticker.startDebugTask(debugTask)) {
             return;
         }
-        this.debugTask = debugTask;
+        messages.startDebugFailed();
     }
 
     public void toggleDebugMode() {
-        this.debugMode = !this.debugMode;
-        messages.debugToggled(debugMode);
+        this.ticker.toggleDebugMode();
+        messages.debugToggled(this.ticker.debugMode);
     }
 
     TownFlagInitialization initializer() {
@@ -1083,5 +882,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         bp = bp.relative(Compat.getRandomHorizontal(getServerLevel()));
         ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
         level.addFreshEntity(item);
+    }
+
+    void setChangedMC(
+            ServerLevel sl,
+            BlockPos blockEntityPos,
+            BlockState state
+    ) {
+        setChanged(sl, blockEntityPos, state);
     }
 }

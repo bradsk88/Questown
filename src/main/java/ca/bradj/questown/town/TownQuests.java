@@ -1,12 +1,10 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
-import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;

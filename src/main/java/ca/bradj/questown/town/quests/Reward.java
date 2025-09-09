@@ -35,4 +35,6 @@ public abstract class Reward {
 
     protected abstract @NotNull RewardApplier getApplier();
 
+    public abstract boolean addsQuestsWhenApplied();
+
 }

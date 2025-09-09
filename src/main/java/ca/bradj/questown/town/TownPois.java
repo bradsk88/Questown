@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+// TODO: Clarify the purpose of "POIs"
 public class TownPois {
 
     private final TownFlagSubBlocks subBlocks;

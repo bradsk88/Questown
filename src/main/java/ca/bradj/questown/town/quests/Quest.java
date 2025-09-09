@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-public class Quest<KEY, ROOM extends Room> {
+public class Quest<KEY, ROOM extends Room> implements Completable {
 
     final UUID selfUUID = UUID.randomUUID(); // Mostly just for equality
     @Nullable
@@ -68,6 +68,7 @@ public class Quest<KEY, ROOM extends Room> {
         return recipeId;
     }
 
+    @Override
     public boolean isComplete() {
         return QuestStatus.COMPLETED.equals(status);
     }
