@@ -2,6 +2,12 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
@@ -12,6 +18,31 @@ public class TownFlagBOPItemHandler implements IItemHandler {
 
     public TownFlagBOPItemHandler(TownFlagBlockEntity town) {
         this.town = town;
+    }
+
+    public static void eject(
+            TownFlagBlockEntity flag,
+            ServerPlayer recipient
+    ) {
+        flag.bopCount--;
+        flag.setChanged();
+        ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
+        BlockPos bp = flag.getTownFlagBasePos();
+        flag.messages.broadcastMessage(
+                "messages.player.took_bop",
+                recipient.getName(),
+                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
+                Util.getTinyString(bp)
+        );
+        if (recipient.getInventory().add(v)) {
+            recipient.getInventory().setChanged();
+            recipient.inventoryMenu.broadcastChanges();
+            return;
+        }
+        ServerLevel level = flag.getServerLevel();
+        bp = bp.relative(Compat.getRandomHorizontal(level));
+        ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
+        level.addFreshEntity(item);
     }
 
     @Override
