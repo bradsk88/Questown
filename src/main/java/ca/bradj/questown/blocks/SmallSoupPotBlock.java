@@ -32,7 +32,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 public class SmallSoupPotBlock extends Block implements InsertedItemAware, StatefulJobBlock {
     public static final String ITEM_ID = "soup_pot_small";

@@ -12,8 +12,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import java.util.Random;
-
 @OnlyIn(Dist.CLIENT)
 public abstract class VisitorStuckInBodyLayer extends RenderLayer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
     public VisitorStuckInBodyLayer(RenderLayerParent<VisitorMobEntity, PlayerModel<VisitorMobEntity>> p_117564_) {

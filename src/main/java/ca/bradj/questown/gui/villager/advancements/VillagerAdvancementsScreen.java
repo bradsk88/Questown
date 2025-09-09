@@ -1,7 +1,6 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.gui.RenderContext;
@@ -9,7 +8,6 @@ import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;

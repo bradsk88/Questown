@@ -1,7 +1,6 @@
 package ca.bradj.questown.commands;
 
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Works;
 import com.google.common.collect.ImmutableList;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;

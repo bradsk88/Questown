@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Objects;
-import java.util.Set;
 
 public record JobID(String rootId, String jobId) {
     public static @Nullable JobID fromJSON(@Nullable String val) {
