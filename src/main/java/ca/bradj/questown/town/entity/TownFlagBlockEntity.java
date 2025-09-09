@@ -26,6 +26,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.TownVillagers;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -50,8 +51,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -76,7 +75,6 @@ import java.util.stream.Collectors;
 import static ca.bradj.questown.roomrecipes.Matches.getTopMatch;
 import static ca.bradj.questown.roomrecipes.Matches.runForTopMatch;
 import static ca.bradj.questown.town.entity.TownFlagState.NBT_TIME_WARP_REFERENCE_TICK;
-import static ca.bradj.questown.town.entity.TownFlagState.NBT_TOWN_STATE;
 
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, TownPois.Listener {
@@ -159,9 +157,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     boolean isInitializedQuests = false;
     boolean changed = false;
 
-    // Farmer specific stuff
-    private final ArrayList<UUID> assignedFarmers = new ArrayList<>();
-
     final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
     final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
 
@@ -205,7 +200,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
 
     void morningTick(Long newTime) {
-        this.assignedFarmers.clear();
         for (MCReward r : this.morningRewards.popChildren()) {
             this.asapRewards.push(r);
         }
@@ -300,7 +294,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 //            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
 //        }
         TownFlagTileData.write(Util.getTick(getServerLevel()), tag, this.initializer);
-        // TODO: Serialization for ASAPss
+        // TODO: Serialization for ASAPs
     }
 
     @Override
@@ -711,34 +705,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         quests.markQuestAsComplete(room, SpecialQuests.TOWN_GATE);
     }
 
-    public void assumeStateFromTown(
-            VisitorMobEntity visitorMobEntity,
-            ServerLevel sl
-    ) {
-        if (!Compat.getBlockStoredTagData(this).contains(NBT_TOWN_STATE)) {
-            QT.FLAG_LOGGER.error(
-                    "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
-            return;
-        }
-        MCTownState state = TownStateSerializer.INSTANCE.load(
-                Compat.getBlockStoredTagData(this)
-                      .getCompound(NBT_TOWN_STATE),
-                sl,
-                bp -> this.pois.getWelcomeMats().contains(bp)
-        );
-        Optional<TownState.VillagerData<MCHeldItem>> match = state.villagers.stream()
-                                                                            .filter(v -> v.uuid.equals(visitorMobEntity.getUUID()))
-                                                                            .findFirst();
-        if (match.isEmpty()) {
-            QT.FLAG_LOGGER.error(
-                    "Villager entity exists but is not present on town state. This is a bug and may cause unexpected behaviour.");
-            return;
-        }
-        villagerHandle.register(visitorMobEntity);
-        TownState.VillagerData<MCHeldItem> m = match.get();
-        visitorMobEntity.initialize(this, m.uuid, m.xPosition, m.yPosition, m.zPosition, m.journal);
-    }
-
     @Override
     public UUID getUUID() {
         return uuid;
@@ -805,24 +771,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {
-        bopCount--;
-        setChanged();
-        ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
-        BlockPos bp = getTownFlagBasePos();
-        messages.broadcastMessage(
-                "messages.player.took_bop",
-                sender.getName(),
-                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
-                Util.getTinyString(bp)
-        );
-        if (sender.getInventory().add(v)) {
-            sender.getInventory().setChanged();
-            sender.inventoryMenu.broadcastChanges();
-            return;
-        }
-        bp = bp.relative(Compat.getRandomHorizontal(getServerLevel()));
-        ItemEntity item = new ItemEntity(level, bp.getX(), bp.getY(), bp.getZ(), v);
-        level.addFreshEntity(item);
+       TownFlagBOPItemHandler.eject(this, sender);
     }
 
     void setChangedMC(
